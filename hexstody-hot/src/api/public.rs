@@ -13,7 +13,7 @@ use warp::{Filter, Rejection, Reply};
 
 // impl rweb::reject::Reject for queries::Error {}
 
-#[post("/ping")]
+#[get("/ping")]
 #[openapi(
     tags("helpers"),
     summary = "Returns 200 if all systems are OK",
