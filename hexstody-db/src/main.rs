@@ -11,7 +11,7 @@ struct Args {
         long,
         short,
         default_value = "postgres://hexstody:hexstody@localhost/hexstody",
-        env = "HEXSTODY_POSTGRES"
+        env = "DATABASE_URL"
     )]
     dbconnect: String,
     #[clap(subcommand)]

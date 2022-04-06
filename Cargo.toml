@@ -1,6 +1,7 @@
 [workspace]
 
 members = [
+    "hexstody-client",
     "hexstody-hot",
     "hexstody-db",
 ]

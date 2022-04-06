@@ -1,15 +1,15 @@
 mod api;
 mod db;
 
-#[cfg(test)]
-#[macro_use]
-extern crate maplit;
-
 use clap::Parser;
+use futures::future::{AbortHandle, Abortable, Aborted};
 use log::*;
 use std::error::Error;
 use std::time::Duration;
-use tokio::time::{sleep, timeout};
+use tokio::time::sleep;
+
+use db::create_db_pool;
+use api::public::*;
 
 #[derive(Parser, Debug, Clone)]
 #[clap(about, version, author)]
@@ -21,7 +21,7 @@ struct Args {
         long,
         short,
         default_value = "postgres://hexstody:hexstody@localhost/hexstody",
-        env = "HEXSTODY_POSTGRES"
+        env = "DATABASE_URL"
     )]
     dbconnect: String,
     #[clap(subcommand)]
@@ -58,6 +58,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             public_port,
         } => loop {
             let args = args.clone();
+            let (_abort_api_handle, abort_api_reg) = AbortHandle::new_pair();
 
             info!("Connecting to database");
             let pool = create_db_pool(&args.dbconnect).await?;
@@ -76,7 +77,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             info!("Adding {:?} delay before restarting logic", restart_dt);
             sleep(restart_dt).await;
         },
-        SubCommand::Swagger => {
+        SubCommand::SwaggerPublic => {
             let pool = create_db_pool(&args.dbconnect).await?;
             let specs = public_api_specs(pool).await?;
             let specs_str = serde_json::to_string_pretty(&specs)?;
