@@ -1,4 +1,4 @@
-use crate::db::Pool;
+use hexstody_db::Pool;
 use rweb::openapi::Spec;
 use rweb::*;
 use serde::Serialize;

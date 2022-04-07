@@ -638,6 +638,7 @@ dependencies = [
  "futures-channel",
  "futures-util",
  "hexstody-client",
+ "hexstody-db",
  "log",
  "maplit",
  "rweb",

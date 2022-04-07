@@ -1,5 +1,4 @@
 mod api;
-mod db;
 
 use clap::Parser;
 use futures::future::{AbortHandle, Abortable, Aborted};
@@ -8,7 +7,7 @@ use std::error::Error;
 use std::time::Duration;
 use tokio::time::sleep;
 
-use db::create_db_pool;
+use hexstody_db::create_db_pool;
 use api::public::*;
 
 #[derive(Parser, Debug, Clone)]
