@@ -4,10 +4,13 @@ use clap::Parser;
 use futures::future::{AbortHandle, Abortable, Aborted};
 use log::*;
 use std::error::Error;
+use std::sync::Arc;
 use std::time::Duration;
+use tokio::sync::{Mutex, Notify};
 use tokio::time::sleep;
 
 use hexstody_db::create_db_pool;
+use hexstody_db::queries::query_state;
 use api::public::*;
 
 #[derive(Parser, Debug, Clone)]
@@ -63,8 +66,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
             let pool = create_db_pool(&args.dbconnect).await?;
             info!("Connected");
 
+            info!("Reconstructing state from database");
+            let state = query_state(&pool).await?;
+            let state_mx = Arc::new(Mutex::new(state));
+            let state_notify = Arc::new(Notify::new());
+
             info!("Serving API");
-            let public_api_fut = serve_public_api(&public_host, public_port, pool);
+            let public_api_fut = serve_public_api(&public_host, public_port, pool, state_mx, state_notify);
             match Abortable::new(public_api_fut, abort_api_reg).await {
                 Ok(mres) => mres?,
                 Err(Aborted) => {

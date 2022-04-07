@@ -11,6 +11,7 @@ in stdenv.mkDerivation rec {
     llvmPackages.libclang
     openssl
     cacert
+    sqlx-cli
     #podman-compose
     docker-compose
   ];
