@@ -1,3 +1,5 @@
+cd "$(dirname "$0")"
+
 USERNAME=${1:-hexstody}
 DATABASE=${2:-hexstody}
 HOST=${3:-127.0.0.1}
