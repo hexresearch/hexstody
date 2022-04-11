@@ -1,4 +1,5 @@
-use crate::db::Pool;
+use hexstody_db::Pool;
+use hexstody_db::state::State;
 use rweb::openapi::Spec;
 use rweb::*;
 use serde::Serialize;
@@ -7,6 +8,8 @@ use std::convert::Infallible;
 use std::error::Error;
 use std::net::IpAddr;
 use std::str::FromStr;
+use std::sync::Arc;
+use tokio::sync::{Mutex, Notify};
 
 use warp::http::StatusCode;
 use warp::{Filter, Rejection, Reply};
@@ -37,6 +40,8 @@ pub async fn serve_public_api(
     host: &str,
     port: u16,
     pool: Pool,
+    state: Arc<Mutex<State>>,
+    state_notify: Arc<Notify>,
 ) -> Result<(), Box<dyn Error>> {
     let filter = ping_endpoint(pool)
         .recover(handle_rejection)
@@ -117,13 +122,20 @@ mod tests {
     {
         let _ = env_logger::builder().is_test(true).try_init();
 
+        let state_mx = Arc::new(Mutex::new(State::default()));
+        let state_notify = Arc::new(Notify::new());
+
         let (sender, receiver) = tokio::sync::oneshot::channel();
         tokio::spawn({
+            let state = state_mx.clone();
+            let state_notify = state_notify.clone();
             async move {
                 let serve_task = serve_public_api(
                     SERVICE_TEST_HOST,
                     SERVICE_TEST_PORT,
                     pool,
+                    state,
+                    state_notify,
                 );
                 futures::pin_mut!(serve_task);
                 futures::future::select(serve_task, receiver.map_err(drop)).await;

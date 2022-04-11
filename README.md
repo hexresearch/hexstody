@@ -1,24 +1,25 @@
 # How to build
 You need to run local PostgreSQL instance to allow compiler to check SQL quieries in advance:
-1. Create `hexstody` user with `hexstody` password.
-2. Allow database creation for the user. That is required for temporary databases for tests. `ALTER USER hexstody CREATEDB;`
-3. Create `hexstody` database and add `hexstody` as owner.
-
-Run build:
+1. Create `hexstody` user with `hexstody` password and allow to create databases for tests:
 ```
-DATABASE_URL=postgresql://hexstody:hexstody@localhost:5432/hexstody cargo build
+create role hexstody login createdb password 'hexstody';
+create database hexstody owner hexstody;
 ```
-
-Run tests:
+2. Run `./hexstody-db/migrate.sh`;
+3. Set `DATABASE_URL` env:
 ```
-DATABASE_URL=postgresql://hexstody:hexstody@localhost:5432/hexstody cargo test
+export DATABASE_URL=postgresql://hexstody:hexstody@localhost:5432/hexstody
 ```
 
-Next, I will assume that `DATABASE_URL` is accessible by cargo commands.
+How to build and run:
+```
+cargo test
+cargo run -- serve
+```
 
 # Swagger
 
 The binary can produce OpenAPI specification:
 ```
-cargo run --bin hexstody-hot -- swagger-public
+cargo run -- swagger-public
 ```

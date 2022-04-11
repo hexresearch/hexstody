@@ -1,3 +1,8 @@
+pub mod domain;
+pub mod queries;
+pub mod state;
+pub mod update;
+
 use sqlx::postgres::{PgPoolOptions, Postgres};
 
 pub type Pool = sqlx::Pool<Postgres>;

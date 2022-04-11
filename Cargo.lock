@@ -618,11 +618,18 @@ dependencies = [
 name = "hexstody-db"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "clap",
  "dotenv",
  "env_logger",
+ "futures",
  "log",
+ "maplit",
+ "serde",
+ "serde_json",
  "sqlx",
+ "sqlx-database-tester",
+ "thiserror",
  "tokio",
 ]
 
@@ -638,6 +645,7 @@ dependencies = [
  "futures-channel",
  "futures-util",
  "hexstody-client",
+ "hexstody-db",
  "log",
  "maplit",
  "rweb",
