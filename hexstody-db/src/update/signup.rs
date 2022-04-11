@@ -17,5 +17,5 @@ pub enum SignupAuth {
     Password(String),
     /// Lightning users should provide signature for each session, so there
     /// is no need to store additional information in persistent storage.
-    Lightning(),
+    Lightning,
 }

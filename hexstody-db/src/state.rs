@@ -5,6 +5,7 @@ use thiserror::Error;
 
 use super::update::{StateUpdate, UpdateBody};
 use super::update::signup::{SignupInfo, UserId, SignupAuth};
+use crate::domain::{Currency, CurrencyAddress};
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct State {
@@ -24,6 +25,8 @@ pub struct UserInfo {
     pub auth: SignupAuth,
     /// When the user was created
     pub created_at: NaiveDateTime,
+    /// Required information for making deposit for the user in different currencies.
+    pub deposit_info: HashMap<Currency, Vec<CurrencyAddress>>,
 }
 
 impl From<(NaiveDateTime, SignupInfo)> for UserInfo {
@@ -32,6 +35,7 @@ impl From<(NaiveDateTime, SignupInfo)> for UserInfo {
             username: value.1.username,
             auth: value.1.auth,
             created_at: value.0,
+            deposit_info: HashMap::new(),
         }
     }
 }
@@ -96,5 +100,41 @@ impl State {
 impl Default for State {
     fn default() -> Self {
         State::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::queries::*;
+    use crate::update::StateUpdate;
+    use crate::update::signup::SignupInfo;
+    use super::*;
+
+    #[sqlx_database_tester::test(
+        pool(
+            variable = "pool",
+            migrations = "./migrations"
+        ),
+    )]
+    async fn test_signup_update() {
+        let mut state0 = State::default();
+        let username = "aboba".to_owned();
+        let upd = StateUpdate::new(UpdateBody::Signup(SignupInfo {
+            username: username.clone(),
+            auth: SignupAuth::Lightning,
+        }));
+        insert_update(&pool, upd.body.clone(), Some(upd.created)).await.unwrap();
+        let created_at = upd.created;
+        state0.apply_update(upd).unwrap();
+
+        let state = query_state(&pool).await.unwrap();
+        let expected_user = UserInfo {
+            username: username.clone(),
+            auth: SignupAuth::Lightning,
+            deposit_info: HashMap::new(),
+            created_at,
+        };
+        let extracted_user = state.users.get(&username).cloned().map(|mut u| { u.created_at = created_at; u} );
+        assert_eq!(extracted_user, Some(expected_user));
     }
 }

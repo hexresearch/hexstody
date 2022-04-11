@@ -55,8 +55,8 @@ pub async fn query_updates(pool: &Pool) -> Result<Vec<StateUpdate>> {
 }
 
 /// Insert new update in the chain of updates in database
-pub async fn insert_update(pool: &Pool, update: UpdateBody) -> Result<()> {
-    let now = Utc::now().naive_utc();
+pub async fn insert_update(pool: &Pool, update: UpdateBody, timestamp: Option<NaiveDateTime>) -> Result<()> {
+    let now = timestamp.unwrap_or_else(|| Utc::now().naive_utc());
     let tag = format!("{}", update.tag());
     let body = update.json()?;
     sqlx::query!(
@@ -76,4 +76,31 @@ pub async fn insert_update(pool: &Pool, update: UpdateBody) -> Result<()> {
 pub async fn query_state(pool: &Pool) -> Result<State> {
     let updates = query_updates(pool).await?;
     Ok(State::collect(updates.into_iter().rev())?)
+}
+
+#[cfg(test)]
+mod tests {
+    #[sqlx_database_tester::test(
+        pool(
+            variable = "migrated_pool",
+            migrations = "./migrations"
+        ),
+        pool(
+            variable = "empty_db_pool",
+            transaction_variable = "empty_db_transaction",
+            skip_migrations
+        )
+    )]
+    async fn test_server_start() {
+        let migrated_pool_tables = sqlx::query!("SELECT * FROM pg_catalog.pg_tables")
+            .fetch_all(&migrated_pool)
+            .await
+            .unwrap();
+        let empty_pool_tables = sqlx::query!("SELECT * FROM pg_catalog.pg_tables")
+            .fetch_all(&empty_db_pool)
+            .await
+            .unwrap();
+        println!("Migrated pool tables: \n {:#?}", migrated_pool_tables);
+        println!("Empty pool tables: \n {:#?}", empty_pool_tables);
+    }
 }

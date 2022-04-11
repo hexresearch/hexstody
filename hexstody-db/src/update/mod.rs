@@ -18,6 +18,15 @@ pub struct StateUpdate {
     pub body: UpdateBody,
 }
 
+impl StateUpdate {
+    pub fn new(body: UpdateBody) -> Self {
+        StateUpdate {
+            created: Utc::now().naive_utc(),
+            body,
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub enum UpdateBody {
     /// Create new account for user

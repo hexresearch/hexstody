@@ -624,9 +624,11 @@ dependencies = [
  "env_logger",
  "futures",
  "log",
+ "maplit",
  "serde",
  "serde_json",
  "sqlx",
+ "sqlx-database-tester",
  "thiserror",
  "tokio",
 ]
