@@ -1,4 +1,5 @@
 pub mod signup;
+pub mod withdrawal;
 
 use chrono::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -6,8 +7,9 @@ use std::fmt;
 use std::str::FromStr;
 use thiserror::Error;
 
-use super::state::State;
 use self::signup::SignupInfo;
+use self::withdrawal::WithdrawalRequestInfo;
+use super::state::State;
 
 /// All database updates are collected to a single table that
 /// allows to reconstruct current state of the system by replaying
@@ -33,6 +35,8 @@ pub enum UpdateBody {
     Signup(SignupInfo),
     /// Caching current state to database for speeding startup time
     Snapshot(State),
+    /// Create new withdrawal request
+    NewWithdrawalRequest(WithdrawalRequestInfo),
 }
 
 impl UpdateBody {
@@ -40,6 +44,7 @@ impl UpdateBody {
         match self {
             UpdateBody::Signup(_) => UpdateTag::Signup,
             UpdateBody::Snapshot(_) => UpdateTag::Snapshot,
+            UpdateBody::NewWithdrawalRequest(_) => UpdateTag::NewWithdrawalRequest,
         }
     }
 
@@ -47,6 +52,7 @@ impl UpdateBody {
         match self {
             UpdateBody::Signup(v) => serde_json::to_value(v),
             UpdateBody::Snapshot(v) => serde_json::to_value(v),
+            UpdateBody::NewWithdrawalRequest(v) => serde_json::to_value(v),
         }
     }
 }
@@ -55,6 +61,7 @@ impl UpdateBody {
 pub enum UpdateTag {
     Signup,
     Snapshot,
+    NewWithdrawalRequest,
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -77,6 +84,7 @@ impl fmt::Display for UpdateTag {
         match self {
             UpdateTag::Signup => write!(f, "signup"),
             UpdateTag::Snapshot => write!(f, "snapshot"),
+            UpdateTag::NewWithdrawalRequest => write!(f, "withdrawal request"),
         }
     }
 }
@@ -88,6 +96,7 @@ impl FromStr for UpdateTag {
         match s.to_lowercase().as_ref() {
             "signup" => Ok(UpdateTag::Signup),
             "snapshot" => Ok(UpdateTag::Snapshot),
+            "withdrawal request" => Ok(UpdateTag::NewWithdrawalRequest),
             _ => Err(UnknownUpdateTag(s.to_owned())),
         }
     }
@@ -123,6 +132,9 @@ impl UpdateTag {
         match self {
             UpdateTag::Signup => Ok(UpdateBody::Signup(serde_json::from_value(value)?)),
             UpdateTag::Snapshot => Ok(UpdateBody::Snapshot(serde_json::from_value(value)?)),
+            UpdateTag::NewWithdrawalRequest => Ok(UpdateBody::NewWithdrawalRequest(
+                serde_json::from_value(value)?,
+            )),
         }
     }
 }
