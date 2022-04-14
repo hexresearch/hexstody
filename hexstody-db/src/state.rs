@@ -4,6 +4,7 @@ use p256::NistP256;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use thiserror::Error;
+use uuid::Uuid;
 
 use super::update::signup::{SignupAuth, SignupInfo, UserId};
 use super::update::withdrawal::WithdrawalRequestInfo;
@@ -46,7 +47,7 @@ impl From<(NaiveDateTime, SignupInfo)> for UserInfo {
 }
 
 /// It is unique withdrawal request ID whithin the system.
-pub type WithdrawalRequestId = u64;
+pub type WithdrawalRequestId = Uuid;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct WithdrawalRequest {
@@ -137,20 +138,13 @@ impl State {
         Ok(())
     }
 
-    fn get_new_withdrawal_request_id(&self) -> WithdrawalRequestId {
-        match self.withdrawal_requests.keys().max() {
-            Some(v) => v + 1,
-            None => 0,
-        }
-    }
-
     /// Apply new withdrawal request update
     fn with_new_withdrawal_request(
         &mut self,
         timestamp: NaiveDateTime,
         withdrawal_request_info: WithdrawalRequestInfo,
     ) -> Result<(), StateUpdateErr> {
-        let request_id = self.get_new_withdrawal_request_id();
+        let request_id = Uuid::new_v4();
         let withdrawal_request: WithdrawalRequest =
             (timestamp, request_id, withdrawal_request_info).into();
         self.withdrawal_requests
@@ -220,8 +214,9 @@ mod tests {
         let mut state0 = State::default();
         let username = "bob".to_owned();
         let amount: u64 = 1;
-        let request_id: u64 = 0;
-        let address = CurrencyAddress::BTC(BtcAddress("bc1qpv8tczdsft9lmlz4nhz8058jdyl96velqqlwgj".to_owned()));
+        let address = CurrencyAddress::BTC(BtcAddress(
+            "bc1qpv8tczdsft9lmlz4nhz8058jdyl96velqqlwgj".to_owned(),
+        ));
         let upd = StateUpdate::new(UpdateBody::NewWithdrawalRequest(WithdrawalRequestInfo {
             user: username.clone(),
             address: address.clone(),
@@ -230,22 +225,15 @@ mod tests {
         insert_update(&pool, upd.body.clone(), Some(upd.created))
             .await
             .unwrap();
-        let created_at = upd.created;
         state0.apply_update(upd).unwrap();
-
         let state = query_state(&pool).await.unwrap();
-        let expected_withdrawal_request = WithdrawalRequest {
-            id: request_id,
-            user: username.clone(),
-            address: address.clone(),
-            created_at,
-            amount,
-            confrimtaion_status: WithdrawalRequestStatus::Confirmations(Vec::new()),
-        };
-        let extracted_withdrawal_request = state.withdrawal_requests.get(&request_id).cloned().map(|mut u| {
-            u.created_at = created_at;
-            u
-        });
-        assert_eq!(extracted_withdrawal_request, Some(expected_withdrawal_request));
+        let extracted_withdrawal_request = state.withdrawal_requests.iter().next().unwrap().1;
+        assert_eq!(extracted_withdrawal_request.user, username);
+        assert_eq!(extracted_withdrawal_request.address, address);
+        assert_eq!(extracted_withdrawal_request.amount, amount);
+        assert_eq!(
+            extracted_withdrawal_request.confrimtaion_status,
+            WithdrawalRequestStatus::Confirmations(Vec::new())
+        );
     }
 }
