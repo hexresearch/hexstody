@@ -3,10 +3,13 @@ name = "hexstody-hot"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "operator-keygen"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-chrono = { version = "0.4.19", features = [ "serde" ] }
+chrono = { version = "0.4.19", features = ["serde"] }
 clap = { version = "3.0.0-rc.4", features = ["derive", "env"] }
 dotenv = "0.15.0"
 env_logger = { version = "0.9.0" }
@@ -19,11 +22,23 @@ log = "0.4.14"
 rweb = { version = "0.15.0", features = ["openapi", "chrono"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-sqlx = { version = "0.5", features = [ "runtime-tokio-rustls", "migrate", "macros", "postgres", "json", "chrono" ] }
+sqlx = { version = "0.5", features = [
+    "runtime-tokio-rustls",
+    "migrate",
+    "macros",
+    "postgres",
+    "json",
+    "chrono",
+] }
 thiserror = "1.0"
 tokio = { version = "1", features = ["full"] }
-uuid = { version = "0.8.2", features = ["v4"]}
+p256 = { version = "0.10.1", features = ["pem"] }
+pkcs8 = { version = "0.8.0", features = ["pem", "encryption", "std"] }
+rand = "0.8.5"
+der = "0.5.0"
+rpassword = "6.0"
+anyhow = "1.0"
 
 [dev-dependencies]
 maplit = "1.0.2"
-sqlx-database-tester = { version = "0.2.0", features = [ "runtime-tokio" ] }
+sqlx-database-tester = { version = "0.2.0", features = ["runtime-tokio"] }
