@@ -35,7 +35,6 @@ tokio = { version = "1", features = ["full"] }
 p256 = { version = "0.10.1", features = ["pem"] }
 pkcs8 = { version = "0.8.0", features = ["pem", "encryption", "std"] }
 rand = "0.8.5"
-der = "0.5.0"
 rpassword = "6.0"
 anyhow = "1.0"
 

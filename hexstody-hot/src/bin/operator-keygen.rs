@@ -1,17 +1,12 @@
-#![allow(unused)]
-
-use rand::rngs::OsRng;
-
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use clap::Parser;
-use der::Document;
-use p256::{PublicKey, SecretKey};
-use pkcs8::{EncodePrivateKey, EncodePublicKey, EncryptedPrivateKeyDocument};
+use p256::{SecretKey};
+use pkcs8::{EncodePrivateKey, EncodePublicKey};
+use rand::rngs::OsRng;
 use rpassword;
-use std::fs;
 use std::fs::OpenOptions;
 use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::{PathBuf};
 
 /// Program to generate NIST P-256 keypair and store them to files
 #[derive(Parser, Debug)]
@@ -43,10 +38,10 @@ fn main() -> Result<()> {
     // Generate secret key
     let secret_key = SecretKey::random(&mut OsRng);
     let encoded_secret_key = match password {
-        Some(password) => secret_key
-            .to_pkcs8_encrypted_pem(&mut OsRng, password, Default::default())?,
-        None => secret_key
-            .to_pkcs8_pem(Default::default())?,
+        Some(password) => {
+            secret_key.to_pkcs8_encrypted_pem(&mut OsRng, password, Default::default())?
+        }
+        None => secret_key.to_pkcs8_pem(Default::default())?,
     };
 
     // Write secret key to file
