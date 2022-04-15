@@ -1,12 +1,12 @@
 use anyhow::{bail, Context, Result};
 use clap::Parser;
-use p256::{SecretKey};
+use p256::SecretKey;
 use pkcs8::{EncodePrivateKey, EncodePublicKey};
 use rand::rngs::OsRng;
 use rpassword;
 use std::fs::OpenOptions;
 use std::io::Write;
-use std::path::{PathBuf};
+use std::path::PathBuf;
 
 /// Program to generate NIST P-256 keypair and store them to files
 #[derive(Parser, Debug)]
