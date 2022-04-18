@@ -74,7 +74,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
             info!("Serving API");
 
-            let public_api_fut = tokio::spawn(serve_public_api2());
+            let public_api_fut = tokio::spawn(serve_public_api2(pool, state_mx, state_notify));
             //let public_api_fut = serve_public_api(&public_host, public_port, pool, state_mx, state_notify);
             match Abortable::new(public_api_fut, abort_api_reg).await {
                 Ok(mres) => mres?,
