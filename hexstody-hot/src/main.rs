@@ -12,6 +12,7 @@ use tokio::time::sleep;
 use hexstody_db::create_db_pool;
 use hexstody_db::queries::query_state;
 use api::public::*;
+use api::webserver::*;
 
 #[derive(Parser, Debug, Clone)]
 #[clap(about, version, author)]
@@ -72,7 +73,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
             let state_notify = Arc::new(Notify::new());
 
             info!("Serving API");
-            let public_api_fut = serve_public_api(&public_host, public_port, pool, state_mx, state_notify);
+
+            let public_api_fut = tokio::spawn(serve_public_api2());
+            //let public_api_fut = serve_public_api(&public_host, public_port, pool, state_mx, state_notify);
             match Abortable::new(public_api_fut, abort_api_reg).await {
                 Ok(mres) => mres?,
                 Err(Aborted) => {
