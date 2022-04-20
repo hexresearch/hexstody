@@ -14,7 +14,7 @@ use rocket::http::Status;
 use rocket::response::{content, status};
 
 #[openapi(tag = "ping")]
-#[get("/")]
+#[get("/ping")]
 fn json() -> content::Json<()> {
     content::Json(())
 }
@@ -38,6 +38,10 @@ mod tests {
     use futures::FutureExt;
     use futures_util::future::TryFutureExt;
     use std::panic::AssertUnwindSafe;
+    use futures::Future;
+
+    const SERVICE_TEST_PORT: u16 = 8000;
+    const SERVICE_TEST_HOST: &str = "127.0.0.1";
 
     async fn run_api_test<F, Fut>(pool: Pool, test_body: F)
     where
@@ -54,7 +58,7 @@ mod tests {
             let state = state_mx.clone();
             let state_notify = state_notify.clone();
             async move {
-                let serve_task = serve_public_api2(
+                let serve_task = serve_public_api(
                     pool,
                     state,
                     state_notify,
@@ -69,5 +73,26 @@ mod tests {
         sender.send(()).unwrap();
 
         assert!(res.is_ok());
+    }
+
+    #[sqlx_database_tester::test(pool(
+        variable = "pool",
+        migrations = "../hexstody-db/migrations"
+    ))]
+    async fn test_public_api_ping() {
+        run_api_test(
+            pool,
+            || async {
+                let client = HexstodyClient::new(&format!(
+                    "http://{}:{}",
+                    SERVICE_TEST_HOST, SERVICE_TEST_PORT
+                ));
+                client
+                    .ping()
+                    .await
+                    .unwrap();
+            },
+        )
+        .await;
     }
 }
