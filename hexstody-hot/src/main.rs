@@ -11,7 +11,9 @@ use tokio::time::sleep;
 
 use hexstody_db::create_db_pool;
 use hexstody_db::queries::query_state;
-use api::webserver::*;
+
+use api::public::*;
+
 
 #[derive(Parser, Debug, Clone)]
 #[clap(about, version, author)]
@@ -33,20 +35,7 @@ struct Args {
 #[derive(Parser, Debug, Clone)]
 enum SubCommand {
     /// Start listening incoming API requests
-    Serve {
-        /// Host name to bind the service to
-        #[clap(
-            long,
-            default_value = "0.0.0.0",
-            env = "HEXSTODY_HOST"
-        )]
-        public_host: String,
-        /// Port to bind the service to
-        #[clap(long, short, default_value = "8480", env = "HEXSTODY_PORT")]
-        public_port: u16,
-    },
-    /// Output swagger spec for public API
-    SwaggerPublic,
+    Serve
 }
 
 #[tokio::main]
@@ -55,10 +44,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     env_logger::init();
 
     match args.subcmd.clone() {
-        SubCommand::Serve {
-            public_host,
-            public_port,
-        } => loop {
+        SubCommand::Serve => loop {
             let args = args.clone();
             let (_abort_api_handle, abort_api_reg) = AbortHandle::new_pair();
 
@@ -75,18 +61,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
             let public_api_fut = tokio::spawn(serve_public_api(pool, state_mx, state_notify));
             match Abortable::new(public_api_fut, abort_api_reg).await {
-                Ok(mres) => mres?,
+                Ok(mres) => (),
                 Err(Aborted) => {
-                    error!("API thread aborted");
+                    error!("API thread aborted")
                 }
             }
 
             let restart_dt = Duration::from_secs(5);
             info!("Adding {:?} delay before restarting logic", restart_dt);
             sleep(restart_dt).await;
-        },
-        SubCommand::SwaggerPublic => {
-            
         }
     }
     Ok(())
