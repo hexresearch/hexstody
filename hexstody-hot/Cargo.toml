@@ -22,12 +22,12 @@ log = "0.4.14"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sqlx = { version = "0.5", features = [
-    "runtime-tokio-rustls",
-    "migrate",
-    "macros",
-    "postgres",
-    "json",
-    "chrono",
+  "runtime-tokio-rustls",
+  "migrate",
+  "macros",
+  "postgres",
+  "json",
+  "chrono",
 ] }
 thiserror = "1.0"
 tokio = { version = "1", features = ["full"] }
@@ -35,10 +35,15 @@ anyhow = "1.0"
 p256 = { version = "0.10.1", features = ["pem"] }
 pkcs8 = { version = "0.8.0", features = ["pem", "encryption", "std", "pkcs5"] }
 rand_core = "0.6.3"
-rocket = { version = "0.5.0-rc.1", default-features = false, features = ["json"] }
-rocket_okapi = { git = "https://github.com/GREsau/okapi", branch = "master", features = ["swagger"]}
+rocket = { version = "0.5.0-rc.1", default-features = false, features = [
+  "json",
+] }
+rocket_okapi = { git = "https://github.com/GREsau/okapi", branch = "master", features = [
+  "swagger",
+] }
 rpassword = "6.0"
-uuid = { version = "0.8.2", features = ["v4"]}
+uuid = { version = "0.8.2", features = ["v4"] }
+rocket_dyn_templates = { version = "0.1.0-rc.1", features = ["handlebars"] }
 
 [dev-dependencies]
 maplit = "1.0.2"
