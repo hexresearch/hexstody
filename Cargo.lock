@@ -791,7 +791,7 @@ dependencies = [
  "maplit",
  "p256",
  "pkcs8",
- "rand",
+ "rand_core",
  "rpassword",
  "rweb",
  "serde",

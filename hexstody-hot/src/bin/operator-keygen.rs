@@ -1,8 +1,8 @@
 use anyhow::{bail, Context, Result};
 use clap::Parser;
 use p256::SecretKey;
-use pkcs8::{EncodePrivateKey, EncodePublicKey};
-use rand::rngs::OsRng;
+use pkcs8::{der::Document, pkcs5::pbes2, EncodePrivateKey, EncodePublicKey};
+use rand_core::{OsRng, RngCore};
 use rpassword;
 use std::fs::OpenOptions;
 use std::io::Write;
@@ -39,9 +39,19 @@ fn main() -> Result<()> {
     let secret_key = SecretKey::random(&mut OsRng);
     let encoded_secret_key = match password {
         Some(password) => {
-            secret_key.to_pkcs8_encrypted_pem(&mut OsRng, password, Default::default())?
+            let mut salt = [0u8; 16];
+            OsRng.fill_bytes(&mut salt);
+            let mut iv = [0u8; 16];
+            OsRng.fill_bytes(&mut iv);
+            // For some reason pkcs8::pkcs5::Error doesn't automaticaly converts to pkcs8::Error with '?'
+            let pbes2_params =
+                pbes2::Parameters::pbkdf2_sha256_aes256cbc(100_000, &salt, &iv).unwrap();
+            secret_key
+                .to_pkcs8_der()?
+                .encrypt_with_params(pbes2_params, password)?
+                .to_pem(Default::default())?
         }
-        None => secret_key.to_pkcs8_pem(Default::default())?,
+        None => secret_key.to_pkcs8_der()?.to_pem(Default::default())?,
     };
 
     // Write secret key to file
