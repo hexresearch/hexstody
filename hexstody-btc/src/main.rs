@@ -9,25 +9,11 @@ use std::time::Duration;
 use tokio::sync::{Mutex, Notify};
 use tokio::time::sleep;
 
-use hexstody_db::create_db_pool;
-use hexstody_db::queries::query_state;
-
 use api::public::*;
-
 
 #[derive(Parser, Debug, Clone)]
 #[clap(about, version, author)]
 struct Args {
-    // #[clap(long, env = "KOLLIDER_API_KEY", hide_env_values = true)]
-    // api_key: String,
-    /// PostgreSQL connection string
-    #[clap(
-        long,
-        short,
-        default_value = "postgres://hexstody:hexstody@localhost/hexstody",
-        env = "DATABASE_URL"
-    )]
-    dbconnect: String,
     #[clap(subcommand)]
     subcmd: SubCommand,
 }
@@ -48,18 +34,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
             let args = args.clone();
             let (_abort_api_handle, abort_api_reg) = AbortHandle::new_pair();
 
-            info!("Connecting to database");
-            let pool = create_db_pool(&args.dbconnect).await?;
-            info!("Connected");
-
-            info!("Reconstructing state from database");
-            let state = query_state(&pool).await?;
-            let state_mx = Arc::new(Mutex::new(state));
-            let state_notify = Arc::new(Notify::new());
-
             info!("Serving API");
 
-            let public_api_fut = tokio::spawn(serve_public_api(pool, state_mx, state_notify));
+            let public_api_fut = tokio::spawn(serve_public_api());
             match Abortable::new(public_api_fut, abort_api_reg).await {
                 Ok(mres) => (),
                 Err(Aborted) => {
