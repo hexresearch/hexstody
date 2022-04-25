@@ -697,6 +697,41 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 
 [[package]]
+name = "hexstody-btc"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "clap",
+ "dotenv",
+ "env_logger",
+ "futures",
+ "futures-channel",
+ "futures-util",
+ "hexstody-btc-client",
+ "hexstody-db",
+ "log",
+ "maplit",
+ "rocket",
+ "rocket_okapi",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
+name = "hexstody-btc-client"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "hexstody-client"
 version = "0.1.0"
 dependencies = [
