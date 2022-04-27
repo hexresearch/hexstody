@@ -1,40 +1,57 @@
-
-use rocket::response::{content};
-use rocket::{get};
+use rocket::fs::{relative, FileServer};
+use rocket::response::content;
+use rocket::{get, routes};
+use rocket_dyn_templates::Template;
 use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
-use std::error::Error;
+use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{Mutex, Notify};
 
-use hexstody_db::Pool;
 use hexstody_db::state::State;
+use hexstody_db::Pool;
 
 #[openapi(tag = "ping")]
 #[get("/ping")]
-fn json() -> content::Json<()> {
+fn ping() -> content::Json<()> {
     content::Json(())
 }
 
-pub async fn serve_public_api(pool: Pool, state: Arc<Mutex<State>>, state_notify: Arc<Notify> ) -> () {
-  rocket::build()
-    .mount("/", openapi_get_routes![json])
-    .mount(
-      "/swagger/",
-      make_swagger_ui(&SwaggerUIConfig {
-          url: "../openapi.json".to_owned(),
-          ..Default::default()
-      }))
-     .launch().await;
+#[openapi(skip)]
+#[get("/")]
+fn index() -> Template {
+    let context = HashMap::from([("title", "Index"), ("parent", "base")]);
+    Template::render("index", context)
+}
+
+pub async fn serve_public_api(
+    pool: Pool,
+    state: Arc<Mutex<State>>,
+    state_notify: Arc<Notify>,
+) -> () {
+    rocket::build()
+        .mount("/static", FileServer::from(relative!("static/")))
+        .mount("/", openapi_get_routes![ping])
+        .mount("/", routes![index])
+        .mount(
+            "/swagger/",
+            make_swagger_ui(&SwaggerUIConfig {
+                url: "../openapi.json".to_owned(),
+                ..Default::default()
+            }),
+        )
+        .attach(Template::fairing())
+        .launch()
+        .await;
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hexstody_client::client::HexstodyClient;
+    use futures::Future;
     use futures::FutureExt;
     use futures_util::future::TryFutureExt;
+    use hexstody_client::client::HexstodyClient;
     use std::panic::AssertUnwindSafe;
-    use futures::Future;
 
     const SERVICE_TEST_PORT: u16 = 8000;
     const SERVICE_TEST_HOST: &str = "127.0.0.1";
@@ -54,11 +71,7 @@ mod tests {
             let state = state_mx.clone();
             let state_notify = state_notify.clone();
             async move {
-                let serve_task = serve_public_api(
-                    pool,
-                    state,
-                    state_notify,
-                );
+                let serve_task = serve_public_api(pool, state, state_notify);
                 futures::pin_mut!(serve_task);
                 futures::future::select(serve_task, receiver.map_err(drop)).await;
             }
@@ -76,19 +89,13 @@ mod tests {
         migrations = "../hexstody-db/migrations"
     ))]
     async fn test_public_api_ping() {
-        run_api_test(
-            pool,
-            || async {
-                let client = HexstodyClient::new(&format!(
-                    "http://{}:{}",
-                    SERVICE_TEST_HOST, SERVICE_TEST_PORT
-                ));
-                client
-                    .ping()
-                    .await
-                    .unwrap();
-            },
-        )
+        run_api_test(pool, || async {
+            let client = HexstodyClient::new(&format!(
+                "http://{}:{}",
+                SERVICE_TEST_HOST, SERVICE_TEST_PORT
+            ));
+            client.ping().await.unwrap();
+        })
         .await;
     }
 }

@@ -29,11 +29,11 @@ pub enum CurrencyAddress {
 
 /// Validated bitcoin address
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct BtcAddress(String);
+pub struct BtcAddress(pub String);
 
 /// Validated ethereum account address
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct EthAccount(String);
+pub struct EthAccount(pub String);
 
 impl Currency {
     /// List supported currencies at the moment
