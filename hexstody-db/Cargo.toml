@@ -23,7 +23,6 @@ tokio = { version = "1", features = [ "full" ] }
 ecdsa = { version = "0.13.4", features = [ "serde", "pem" ] }
 p256 = "0.10.1"
 uuid = { version = "0.8", features = [ "serde", "v4" ] }
-schemars = "0.8.8"
 
 [dev-dependencies]
 maplit = "1.0.2"

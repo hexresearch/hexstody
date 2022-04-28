@@ -1039,7 +1039,6 @@ dependencies = [
  "log",
  "maplit",
  "p256",
- "schemars",
  "serde",
  "serde_json",
  "sqlx",
