@@ -6,9 +6,44 @@ use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{Mutex, Notify};
+use rocket::serde::json::Json;
+use rocket_okapi::okapi::schemars;
+use rocket_okapi::okapi::schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 use hexstody_db::state::State;
+use hexstody_db::domain::currency::{Currency};
 use hexstody_db::Pool;
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+struct Balance {
+    pub currency : Currency,
+    pub value : u64
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+struct HistoryItem {
+    pub is_deposit : bool, 
+    pub currency : Currency,
+    pub value : u64
+}
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+struct Overview {
+    pub balances: Vec<Balance>,
+    pub history: Vec<HistoryItem>
+
+} 
+
+#[openapi(tag = "get_overview")]
+#[get("/get_overview")]
+fn get_overview() -> Json<Overview> {
+    let x = Overview {
+        balances : vec![],
+        history : vec![]
+    };
+
+    Json(x)
+}
 
 #[openapi(tag = "ping")]
 #[get("/ping")]
@@ -23,6 +58,13 @@ fn index() -> Template {
     Template::render("index", context)
 }
 
+#[openapi(skip)]
+#[get("/overview")]
+fn overview() -> Template {
+    let context = HashMap::from([("title", "Overview"), ("parent", "base")]);
+    Template::render("overview", context)
+}
+
 pub async fn serve_public_api(
     pool: Pool,
     state: Arc<Mutex<State>>,
@@ -30,8 +72,8 @@ pub async fn serve_public_api(
 ) -> () {
     rocket::build()
         .mount("/static", FileServer::from(relative!("static/")))
-        .mount("/", openapi_get_routes![ping])
-        .mount("/", routes![index])
+        .mount("/", openapi_get_routes![ping, get_overview])
+        .mount("/", routes![index, overview])
         .mount(
             "/swagger/",
             make_swagger_ui(&SwaggerUIConfig {

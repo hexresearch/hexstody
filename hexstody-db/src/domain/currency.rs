@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 
 /// A currency that custody understands. Can be extended in future.
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Currency {
     BTC,
     ETH,
@@ -9,7 +10,7 @@ pub enum Currency {
 }
 
 /// Description of ERC20 token that allows to distinguish them between each other
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Erc20Token {
     /// Short name of the token like USDT or WBTC
     pub ticker: String,
