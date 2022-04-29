@@ -14,12 +14,6 @@ export DATABASE_URL=postgresql://hexstody:hexstody@localhost:5432/hexstody
 How to build and run:
 ```
 cargo test
+cd hexstody-hot
 cargo run --bin hexstody-hot -- serve
-```
-
-# Swagger
-
-The binary can produce OpenAPI specification:
-```
-cargo run --bin hexstody-hot -- swagger-public
 ```

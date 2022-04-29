@@ -1,0 +1,10 @@
+[default]
+template_dir = "templates"
+public_api_enabled = true
+public_api_port = 8000
+operator_api_enabled = true
+operator_api_port = 8001
+
+[default.shutdown]
+ctrlc = false
+signals = ["term", "hup"]
