@@ -94,29 +94,63 @@ async fn serve_api(
     };
     info!("Serving {api_type} API");
     match api_type {
+        // TODO: Factor out repeated code into separate function.
         ApiType::Public => loop {
             let (_abort_api_handle, abort_api_reg) = AbortHandle::new_pair();
-            let api_fut = tokio::spawn(serve_public_api(
-                pool.clone(),
-                state_mx.clone(),
-                state_notify.clone(),
-                port,
+            let abortable_api_futute = tokio::spawn(Abortable::new(
+                serve_public_api(pool.clone(), state_mx.clone(), state_notify.clone(), port),
+                abort_api_reg,
             ));
-            match Abortable::new(api_fut, abort_api_reg).await {
+            match abortable_api_futute.await {
+                Ok(Err(Aborted)) => error!("{api_type} API thread aborted"),
                 Ok(_) => (),
-                Err(Aborted) => {
-                    error!("{api_type} API thread aborted")
-                }
-            }
+                Err(error) => error!("{:?}", error),
+            };
             let restart_dt = Duration::from_secs(5);
-            info!(
-                "Adding {:?} delay before restarting {api_type} API logic",
-                restart_dt
-            );
+            info!("Adding {:?} delay before restarting logic", restart_dt);
             sleep(restart_dt).await;
         },
-        ApiType::Operator => tokio::spawn(serve_operator_api(pool, state_mx, state_notify, port)),
+        ApiType::Operator => loop {
+            let (_abort_api_handle, abort_api_reg) = AbortHandle::new_pair();
+            let abortable_api_futute = tokio::spawn(Abortable::new(
+                serve_operator_api(pool.clone(), state_mx.clone(), state_notify.clone(), port),
+                abort_api_reg,
+            ));
+            match abortable_api_futute.await {
+                Ok(Err(Aborted)) => error!("{api_type} API thread aborted"),
+                Ok(_) => (),
+                Err(error) => error!("{:?}", error),
+            };
+            let restart_dt = Duration::from_secs(5);
+            info!("Adding {:?} delay before restarting logic", restart_dt);
+            sleep(restart_dt).await;
+        },
     };
+}
+
+async fn serve_apis(
+    pool: Pool,
+    state_mx: Arc<Mutex<State>>,
+    state_notify: Arc<Notify>,
+    api_config: ApiConfig,
+) -> () {
+    let public_api_fut = serve_api(
+        pool.clone(),
+        state_mx.clone(),
+        state_notify.clone(),
+        ApiType::Public,
+        api_config.public_api_enabled,
+        api_config.public_api_port,
+    );
+    let operator_api_fut = serve_api(
+        pool,
+        state_mx,
+        state_notify,
+        ApiType::Operator,
+        api_config.operator_api_enabled,
+        api_config.operator_api_port,
+    );
+    tokio::join!(public_api_fut, operator_api_fut);
 }
 
 #[tokio::main]
@@ -133,23 +167,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             let state = query_state(&pool).await?;
             let state_mx = Arc::new(Mutex::new(state));
             let state_notify = Arc::new(Notify::new());
-            let public_api_fut = serve_api(
-                pool.clone(),
-                state_mx.clone(),
-                state_notify.clone(),
-                ApiType::Public,
-                api_config.public_api_enabled,
-                api_config.public_api_port,
-            );
-            let operator_api_fut = serve_api(
-                pool,
-                state_mx,
-                state_notify,
-                ApiType::Operator,
-                api_config.operator_api_enabled,
-                api_config.operator_api_port,
-            );
-            tokio::join!(public_api_fut, operator_api_fut);
+            serve_apis(pool, state_mx, state_notify, api_config).await;
         }
     }
     Ok(())
