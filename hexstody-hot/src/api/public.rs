@@ -41,7 +41,11 @@ struct History {
 #[get("/get_balance")]
 fn get_balance() -> Json<Balance> {
     let x = Balance {
-        balances : vec![]
+        balances : vec![BalanceItem{
+            currency: Currency::BTC,
+            value : 100
+
+        }]
     };
 
     Json(x)
@@ -51,7 +55,11 @@ fn get_balance() -> Json<Balance> {
 #[get("/get_history")]
 fn get_history() -> Json<History> {
     let x = History {
-        historyItems : vec![]
+        historyItems : vec![HistoryItem{
+            is_deposit: true,
+            currency : Currency::BTC,
+            value : 100
+        }]
     };
 
     Json(x)
