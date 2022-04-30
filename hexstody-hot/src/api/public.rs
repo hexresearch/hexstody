@@ -16,7 +16,7 @@ use hexstody_db::domain::currency::{Currency};
 use hexstody_db::Pool;
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-struct Balance {
+struct BalanceItem {
     pub currency : Currency,
     pub value : u64
 }
@@ -28,18 +28,30 @@ struct HistoryItem {
     pub value : u64
 }
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-struct Overview {
-    pub balances: Vec<Balance>,
-    pub history: Vec<HistoryItem>
+struct Balance {
+    pub balances: Vec<BalanceItem>
+}
 
-} 
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+struct History {
+    pub historyItems: Vec<HistoryItem>
+}
 
-#[openapi(tag = "get_overview")]
-#[get("/get_overview")]
-fn get_overview() -> Json<Overview> {
-    let x = Overview {
-        balances : vec![],
-        history : vec![]
+#[openapi(tag = "get_balance")]
+#[get("/get_balance")]
+fn get_balance() -> Json<Balance> {
+    let x = Balance {
+        balances : vec![]
+    };
+
+    Json(x)
+}
+
+#[openapi(tag = "get_history")]
+#[get("/get_history")]
+fn get_history() -> Json<History> {
+    let x = History {
+        historyItems : vec![]
     };
 
     Json(x)
@@ -72,7 +84,7 @@ pub async fn serve_public_api(
 ) -> () {
     rocket::build()
         .mount("/static", FileServer::from(relative!("static/")))
-        .mount("/", openapi_get_routes![ping, get_overview])
+        .mount("/", openapi_get_routes![ping, get_balance, get_history])
         .mount("/", routes![index, overview])
         .mount(
             "/swagger/",
