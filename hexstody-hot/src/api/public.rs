@@ -1,6 +1,6 @@
 use rocket::fs::{relative, FileServer};
 use rocket::response::content;
-use rocket::{get, routes};
+use rocket::{get};
 use rocket_dyn_templates::Template;
 use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
 use std::sync::Arc;
@@ -20,7 +20,7 @@ pub async fn serve_public_api(
     state: Arc<Mutex<State>>,
     state_notify: Arc<Notify>,
     port: u16,
-) -> () {
+) -> Result<(), rocket::Error> {
     let figment = rocket::Config::figment().merge(("port", port));
     rocket::custom(figment)
         .mount("/static", FileServer::from(relative!("static/")))
@@ -34,7 +34,8 @@ pub async fn serve_public_api(
         )
         .attach(Template::fairing())
         .launch()
-        .await;
+        .await?;
+    Ok(())
 }
 
 #[cfg(test)]

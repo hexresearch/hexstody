@@ -1,7 +1,7 @@
 use rocket::fs::{relative, FileServer};
 use rocket::{self, get, routes};
 use rocket_dyn_templates::Template;
-use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
+use rocket_okapi::{openapi, swagger_ui::*};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{Mutex, Notify};
@@ -21,7 +21,7 @@ pub async fn serve_operator_api(
     state: Arc<Mutex<State>>,
     state_notify: Arc<Notify>,
     port: u16
-) -> () {
+) -> Result<(), rocket::Error> {
     let figment = rocket::Config::figment().merge(("port", port));
     rocket::custom(figment)
         .mount("/", routes![index])
@@ -35,5 +35,6 @@ pub async fn serve_operator_api(
         )
         .attach(Template::fairing())
         .launch()
-        .await;
+        .await?;
+    Ok(())
 }

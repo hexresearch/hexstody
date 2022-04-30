@@ -1,7 +1,8 @@
 mod api;
 
 use clap::Parser;
-use futures::future::{AbortHandle, Abortable, Aborted};
+use futures::future::{join_all, AbortHandle, AbortRegistration, Abortable, Aborted};
+use futures::Future;
 use log::*;
 use serde::Deserialize;
 use std::error::Error;
@@ -41,7 +42,7 @@ enum SubCommand {
     Serve,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 enum ApiType {
     Public,
     Operator,
@@ -80,6 +81,26 @@ fn parse_api_config() -> ApiConfig {
     }
 }
 
+async fn serve_abortable<F, Fut, Out>(
+    api_type: ApiType,
+    abort_reg: AbortRegistration,
+    api_future: F,
+) where
+    F: FnOnce() -> Fut,
+    Fut: Future<Output = Out> + Send + 'static,
+    Out: Send + 'static,
+{
+    let abortable_api_futute = tokio::spawn(Abortable::new(api_future(), abort_reg));
+    match abortable_api_futute.await {
+        Ok(Err(Aborted)) => {
+            error!("{api_type} API thread aborted");
+            return ();
+        }
+        Ok(_) => (),
+        Err(error) => error!("{:?}", error),
+    };
+}
+
 async fn serve_api(
     pool: Pool,
     state_mx: Arc<Mutex<State>>,
@@ -87,6 +108,7 @@ async fn serve_api(
     api_type: ApiType,
     api_enabled: bool,
     port: u16,
+    abort_reg: AbortRegistration,
 ) -> () {
     if !api_enabled {
         info!("{api_type} API disabled");
@@ -94,37 +116,18 @@ async fn serve_api(
     };
     info!("Serving {api_type} API");
     match api_type {
-        // TODO: Factor out repeated code into separate function.
-        ApiType::Public => loop {
-            let (_abort_api_handle, abort_api_reg) = AbortHandle::new_pair();
-            let abortable_api_futute = tokio::spawn(Abortable::new(
-                serve_public_api(pool.clone(), state_mx.clone(), state_notify.clone(), port),
-                abort_api_reg,
-            ));
-            match abortable_api_futute.await {
-                Ok(Err(Aborted)) => error!("{api_type} API thread aborted"),
-                Ok(_) => (),
-                Err(error) => error!("{:?}", error),
-            };
-            let restart_dt = Duration::from_secs(5);
-            info!("Adding {:?} delay before restarting logic", restart_dt);
-            sleep(restart_dt).await;
-        },
-        ApiType::Operator => loop {
-            let (_abort_api_handle, abort_api_reg) = AbortHandle::new_pair();
-            let abortable_api_futute = tokio::spawn(Abortable::new(
-                serve_operator_api(pool.clone(), state_mx.clone(), state_notify.clone(), port),
-                abort_api_reg,
-            ));
-            match abortable_api_futute.await {
-                Ok(Err(Aborted)) => error!("{api_type} API thread aborted"),
-                Ok(_) => (),
-                Err(error) => error!("{:?}", error),
-            };
-            let restart_dt = Duration::from_secs(5);
-            info!("Adding {:?} delay before restarting logic", restart_dt);
-            sleep(restart_dt).await;
-        },
+        ApiType::Public => {
+            serve_abortable(api_type, abort_reg, || {
+                serve_public_api(pool.clone(), state_mx.clone(), state_notify.clone(), port)
+            })
+            .await;
+        }
+        ApiType::Operator => {
+            serve_abortable(api_type, abort_reg, || {
+                serve_operator_api(pool.clone(), state_mx.clone(), state_notify.clone(), port)
+            })
+            .await;
+        }
     };
 }
 
@@ -133,7 +136,9 @@ async fn serve_apis(
     state_mx: Arc<Mutex<State>>,
     state_notify: Arc<Notify>,
     api_config: ApiConfig,
-) -> () {
+    api_abort: AbortRegistration,
+) -> Result<(), Aborted> {
+    let (public_handle, public_abort) = AbortHandle::new_pair();
     let public_api_fut = serve_api(
         pool.clone(),
         state_mx.clone(),
@@ -141,7 +146,9 @@ async fn serve_apis(
         ApiType::Public,
         api_config.public_api_enabled,
         api_config.public_api_port,
+        public_abort,
     );
+    let (operator_handle, operator_abort) = AbortHandle::new_pair();
     let operator_api_fut = serve_api(
         pool,
         state_mx,
@@ -149,17 +156,28 @@ async fn serve_apis(
         ApiType::Operator,
         api_config.operator_api_enabled,
         api_config.operator_api_port,
+        operator_abort,
     );
-    tokio::join!(public_api_fut, operator_api_fut);
+
+    let abortable_apis =
+        Abortable::new(join_all(vec![public_api_fut, operator_api_fut]), api_abort);
+    if let Err(Aborted) = abortable_apis.await {
+        public_handle.abort();
+        operator_handle.abort();
+        info!("All APIs are aborted!");
+        return Err(Aborted);
+    } else {
+        return Ok(());
+    }
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
-    let api_config = parse_api_config();
     env_logger::init();
     match args.subcmd.clone() {
-        SubCommand::Serve => {
+        SubCommand::Serve => loop {
+            let api_config = parse_api_config();
             info!("Connecting to database");
             let pool = create_db_pool(&args.dbconnect).await?;
             info!("Connected");
@@ -167,8 +185,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
             let state = query_state(&pool).await?;
             let state_mx = Arc::new(Mutex::new(state));
             let state_notify = Arc::new(Notify::new());
-            serve_apis(pool, state_mx, state_notify, api_config).await;
-        }
+            let (_api_abort_handle, api_abort_reg) = AbortHandle::new_pair();
+            if let Err(Aborted) =
+                serve_apis(pool, state_mx, state_notify, api_config, api_abort_reg).await
+            {
+                info!("Logic aborted, exiting...");
+                return Ok(());
+            }
+
+            let restart_dt = Duration::from_secs(5);
+            info!("Adding {:?} delay before restarting logic", restart_dt);
+            sleep(restart_dt).await;
+        },
     }
-    Ok(())
 }
