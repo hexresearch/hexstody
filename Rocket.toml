@@ -1,6 +1,0 @@
-[default]
-template_dir = "hexstody-hot/templates"
-
-[default.shutdown]
-ctrlc = false
-signals = ["term", "hup"]

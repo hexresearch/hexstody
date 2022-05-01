@@ -1,9 +1,8 @@
 use rocket::fs::{relative, FileServer};
 use rocket::response::content;
-use rocket::{get, routes};
+use rocket::{get};
 use rocket_dyn_templates::Template;
 use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
-use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{Mutex, Notify};
 
@@ -16,22 +15,16 @@ fn ping() -> content::Json<()> {
     content::Json(())
 }
 
-#[openapi(skip)]
-#[get("/")]
-fn index() -> Template {
-    let context = HashMap::from([("title", "Index"), ("parent", "base")]);
-    Template::render("index", context)
-}
-
 pub async fn serve_public_api(
     pool: Pool,
     state: Arc<Mutex<State>>,
     state_notify: Arc<Notify>,
-) -> () {
-    rocket::build()
+    port: u16,
+) -> Result<(), rocket::Error> {
+    let figment = rocket::Config::figment().merge(("port", port));
+    rocket::custom(figment)
         .mount("/static", FileServer::from(relative!("static/")))
         .mount("/", openapi_get_routes![ping])
-        .mount("/", routes![index])
         .mount(
             "/swagger/",
             make_swagger_ui(&SwaggerUIConfig {
@@ -41,7 +34,8 @@ pub async fn serve_public_api(
         )
         .attach(Template::fairing())
         .launch()
-        .await;
+        .await?;
+    Ok(())
 }
 
 #[cfg(test)]
@@ -71,7 +65,7 @@ mod tests {
             let state = state_mx.clone();
             let state_notify = state_notify.clone();
             async move {
-                let serve_task = serve_public_api(pool, state, state_notify);
+                let serve_task = serve_public_api(pool, state, state_notify, SERVICE_TEST_PORT);
                 futures::pin_mut!(serve_task);
                 futures::future::select(serve_task, receiver.map_err(drop)).await;
             }
