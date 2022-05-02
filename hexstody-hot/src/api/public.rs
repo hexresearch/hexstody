@@ -6,13 +6,48 @@ use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
 use std::sync::Arc;
 use tokio::sync::{Mutex, Notify};
 
+use rocket::serde::json::Json;
+use rocket_okapi::okapi::schemars;
+use rocket_okapi::okapi::schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+
 use hexstody_db::state::State;
 use hexstody_db::Pool;
+use super::api_types::*;
+use hexstody_db::domain::currency::{Currency};
 
 #[openapi(tag = "ping")]
 #[get("/ping")]
 fn ping() -> content::Json<()> {
     content::Json(())
+}
+
+#[openapi(tag = "get_balance")]
+#[get("/get_balance")]
+fn get_balance() -> Json<Balance> {
+    let x = Balance {
+        balances : vec![BalanceItem{
+            currency: Currency::BTC,
+            value : 100
+
+        }]
+    };
+
+    Json(x)
+}
+
+#[openapi(tag = "get_history")]
+#[get("/get_history")]
+fn get_history() -> Json<History> {
+    let x = History {
+        history_items : vec![HistoryItem{
+            is_deposit: true,
+            currency : Currency::BTC,
+            value : 100
+        }]
+    };
+
+    Json(x)
 }
 
 pub async fn serve_public_api(
@@ -24,7 +59,7 @@ pub async fn serve_public_api(
     let figment = rocket::Config::figment().merge(("port", port));
     rocket::custom(figment)
         .mount("/static", FileServer::from(relative!("static/")))
-        .mount("/", openapi_get_routes![ping])
+        .mount("/", openapi_get_routes![ping, get_balance, get_balance])
         .mount(
             "/swagger/",
             make_swagger_ui(&SwaggerUIConfig {
