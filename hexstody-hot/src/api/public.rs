@@ -1,10 +1,11 @@
 use rocket::fs::{relative, FileServer};
 use rocket::response::content;
-use rocket::{get};
+use rocket::{get, routes};
 use rocket_dyn_templates::Template;
 use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
 use std::sync::Arc;
 use tokio::sync::{Mutex, Notify};
+use std::collections::HashMap;
 
 use rocket::serde::json::Json;
 use rocket_okapi::okapi::schemars;
@@ -50,6 +51,20 @@ fn get_history() -> Json<History> {
     Json(x)
 }
 
+#[openapi(skip)]
+#[get("/")]
+fn index() -> Template {
+    let context = HashMap::from([("title", "Index"), ("parent", "base")]);
+    Template::render("index", context)
+}
+
+#[openapi(skip)]
+#[get("/overview")]
+fn overview() -> Template {
+    let context = HashMap::from([("title", "Overview"), ("parent", "base")]);
+    Template::render("overview", context)
+}
+
 pub async fn serve_public_api(
     pool: Pool,
     state: Arc<Mutex<State>>,
@@ -59,7 +74,8 @@ pub async fn serve_public_api(
     let figment = rocket::Config::figment().merge(("port", port));
     rocket::custom(figment)
         .mount("/static", FileServer::from(relative!("static/")))
-        .mount("/", openapi_get_routes![ping, get_balance, get_balance])
+        .mount("/", openapi_get_routes![ping, get_balance, get_history])
+        .mount("/", routes![index, overview])
         .mount(
             "/swagger/",
             make_swagger_ui(&SwaggerUIConfig {
