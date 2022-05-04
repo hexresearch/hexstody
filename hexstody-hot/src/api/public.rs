@@ -1,11 +1,15 @@
-use rocket::fs::{relative, FileServer};
-use rocket::response::content;
-use rocket::{get};
-use rocket_dyn_templates::Template;
-use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
+use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{Mutex, Notify};
 
+use rocket::fs::{relative, FileServer};
+use rocket::response::content;
+use rocket::{get, routes};
+use rocket_dyn_templates::Template;
+use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
+
+use super::types::*;
+use hexstody_db::domain::currency::Currency;
 use hexstody_db::state::State;
 use hexstody_db::Pool;
 
@@ -13,6 +17,52 @@ use hexstody_db::Pool;
 #[get("/ping")]
 fn ping() -> content::Json<()> {
     content::Json(())
+}
+
+#[openapi(tag = "get_balance")]
+#[get("/get_balance")]
+fn get_balance() -> Json<Balance> {
+    let x = Balance {
+        balances: vec![BalanceItem {
+            currency: Currency::BTC,
+            value: 100,
+        }],
+    };
+
+    Json(x)
+}
+
+#[openapi(tag = "get_history")]
+#[get("/get_history")]
+fn get_history() -> Json<History> {
+    let x = History {
+        history_items: vec![
+            HistoryItem::Deposit(DepositHistoryItem {
+                currency: Currency::BTC,
+                value: 100,
+            }),
+            HistoryItem::Withdrawal(WithdrawalHistoryItem {
+                currency: Currency::ETH,
+                value: 300,
+            }),
+        ],
+    };
+
+    Json(x)
+}
+
+#[openapi(skip)]
+#[get("/")]
+fn index() -> Template {
+    let context = HashMap::from([("title", "Index"), ("parent", "base")]);
+    Template::render("index", context)
+}
+
+#[openapi(skip)]
+#[get("/overview")]
+fn overview() -> Template {
+    let context = HashMap::from([("title", "Overview"), ("parent", "base")]);
+    Template::render("overview", context)
 }
 
 pub async fn serve_public_api(
@@ -24,7 +74,8 @@ pub async fn serve_public_api(
     let figment = rocket::Config::figment().merge(("port", port));
     rocket::custom(figment)
         .mount("/static", FileServer::from(relative!("static/")))
-        .mount("/", openapi_get_routes![ping])
+        .mount("/", openapi_get_routes![ping, get_balance, get_history])
+        .mount("/", routes![index, overview])
         .mount(
             "/swagger/",
             make_swagger_ui(&SwaggerUIConfig {
