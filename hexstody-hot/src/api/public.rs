@@ -1,18 +1,14 @@
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{Mutex, Notify};
 
 use rocket::fs::{relative, FileServer};
 use rocket::response::content;
-use rocket::serde::json::Json;
 use rocket::{get, routes};
 use rocket_dyn_templates::Template;
-use rocket_okapi::okapi::schemars;
-use rocket_okapi::okapi::schemars::JsonSchema;
 use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
 
-use super::api_types::*;
+use super::types::*;
 use hexstody_db::domain::currency::Currency;
 use hexstody_db::state::State;
 use hexstody_db::Pool;
