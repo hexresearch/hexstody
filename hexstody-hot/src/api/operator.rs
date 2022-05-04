@@ -20,7 +20,7 @@ pub async fn serve_operator_api(
     pool: Pool,
     state: Arc<Mutex<State>>,
     state_notify: Arc<Notify>,
-    port: u16
+    port: u16,
 ) -> Result<(), rocket::Error> {
     let figment = rocket::Config::figment().merge(("port", port));
     rocket::custom(figment)

@@ -8,14 +8,14 @@ use rocket::response::content;
 use rocket::serde::json::Json;
 use rocket::{get, routes};
 use rocket_dyn_templates::Template;
-use rocket_okapi::okapi::schemars::JsonSchema;
 use rocket_okapi::okapi::schemars;
+use rocket_okapi::okapi::schemars::JsonSchema;
 use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
 
-use hexstody_db::Pool;
-use hexstody_db::domain::currency::{Currency};
-use hexstody_db::state::State;
 use super::api_types::*;
+use hexstody_db::domain::currency::Currency;
+use hexstody_db::state::State;
+use hexstody_db::Pool;
 
 #[openapi(tag = "ping")]
 #[get("/ping")]
@@ -27,11 +27,10 @@ fn ping() -> content::Json<()> {
 #[get("/get_balance")]
 fn get_balance() -> Json<Balance> {
     let x = Balance {
-        balances : vec![BalanceItem{
+        balances: vec![BalanceItem {
             currency: Currency::BTC,
-            value : 100
-
-        }]
+            value: 100,
+        }],
     };
 
     Json(x)
@@ -41,16 +40,16 @@ fn get_balance() -> Json<Balance> {
 #[get("/get_history")]
 fn get_history() -> Json<History> {
     let x = History {
-        history_items : vec![
-        HistoryItem::Deposit(DepositHistoryItem{
-            currency : Currency::BTC,
-            value : 100
-        }),
-        HistoryItem::Withdrawal(WithdrawalHistoryItem{
-            currency : Currency::ETH,
-            value : 300
-        })
-        ]
+        history_items: vec![
+            HistoryItem::Deposit(DepositHistoryItem {
+                currency: Currency::BTC,
+                value: 100,
+            }),
+            HistoryItem::Withdrawal(WithdrawalHistoryItem {
+                currency: Currency::ETH,
+                value: 300,
+            }),
+        ],
     };
 
     Json(x)
