@@ -3,7 +3,7 @@ use rocket_okapi::okapi::schemars;
 use rocket_okapi::okapi::schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use hexstody_db::domain::currency::{Currency};
+use hexstody_db::domain::currency::{Currency}; 
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct BalanceItem {
@@ -12,10 +12,23 @@ pub struct BalanceItem {
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct HistoryItem {
-    pub is_deposit : bool, 
+pub struct DepositHistoryItem {
     pub currency : Currency,
     pub value : u64
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct WithdrawalHistoryItem {
+    pub currency : Currency,
+    pub value : u64
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[serde(tag = "type")]
+#[serde(rename_all = "camelCase")]
+pub enum HistoryItem {
+     Deposit ( DepositHistoryItem),
+     Withdrawal ( WithdrawalHistoryItem)
 }
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct Balance {

@@ -1,21 +1,21 @@
-use rocket::fs::{relative, FileServer};
-use rocket::response::content;
-use rocket::{get, routes};
-use rocket_dyn_templates::Template;
-use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{Mutex, Notify};
-use std::collections::HashMap;
 
+use rocket::fs::{relative, FileServer};
+use rocket::response::content;
 use rocket::serde::json::Json;
-use rocket_okapi::okapi::schemars;
+use rocket::{get, routes};
+use rocket_dyn_templates::Template;
 use rocket_okapi::okapi::schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use rocket_okapi::okapi::schemars;
+use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
 
-use hexstody_db::state::State;
 use hexstody_db::Pool;
-use super::api_types::*;
 use hexstody_db::domain::currency::{Currency};
+use hexstody_db::state::State;
+use super::api_types::*;
 
 #[openapi(tag = "ping")]
 #[get("/ping")]
@@ -41,11 +41,16 @@ fn get_balance() -> Json<Balance> {
 #[get("/get_history")]
 fn get_history() -> Json<History> {
     let x = History {
-        history_items : vec![HistoryItem{
-            is_deposit: true,
+        history_items : vec![
+        HistoryItem::Deposit(DepositHistoryItem{
             currency : Currency::BTC,
             value : 100
-        }]
+        }),
+        HistoryItem::Withdrawal(WithdrawalHistoryItem{
+            currency : Currency::ETH,
+            value : 300
+        })
+        ]
     };
 
     Json(x)
