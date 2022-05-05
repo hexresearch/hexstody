@@ -4,9 +4,10 @@ use clap::Parser;
 use futures::future::{AbortHandle, Abortable, Aborted};
 use log::*;
 use std::error::Error;
+use std::net::IpAddr;
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::sync::{Mutex, Notify};
+use tokio::sync::Notify;
 use tokio::time::sleep;
 
 use api::public::*;
@@ -21,7 +22,17 @@ struct Args {
 #[derive(Parser, Debug, Clone)]
 enum SubCommand {
     /// Start listening incoming API requests
-    Serve
+    Serve {
+        #[clap(long, short, default_value = "8180", env = "HEXSTODY_BTC_API_PORT")]
+        port: u16,
+        #[clap(
+            long,
+            short,
+            default_value = "127.0.0.1",
+            env = "HEXSTODY_BTC_API_ADDRESS"
+        )]
+        address: IpAddr,
+    },
 }
 
 #[tokio::main]
@@ -30,15 +41,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
     env_logger::init();
 
     match args.subcmd.clone() {
-        SubCommand::Serve => loop {
-            let args = args.clone();
+        SubCommand::Serve { address, port } => loop {
             let (_abort_api_handle, abort_api_reg) = AbortHandle::new_pair();
 
             info!("Serving API");
-
-            let public_api_fut = tokio::spawn(serve_public_api());
+            let start_notify = Arc::new(Notify::new());
+            let public_api_fut = tokio::spawn(serve_public_api(address, port, start_notify));
             match Abortable::new(public_api_fut, abort_api_reg).await {
-                Ok(mres) => (),
+                Ok(_) => (),
                 Err(Aborted) => {
                     error!("API thread aborted")
                 }
@@ -47,7 +57,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
             let restart_dt = Duration::from_secs(5);
             info!("Adding {:?} delay before restarting logic", restart_dt);
             sleep(restart_dt).await;
-        }
+        },
     }
-    Ok(())
 }

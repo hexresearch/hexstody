@@ -22,7 +22,7 @@ thiserror = "1.0"
 tokio = { version = "1", features = ["full"] }
 uuid = { version = "0.8.2", features = ["v4"]}
 rocket = { version = "0.5.0-rc.1", default-features = false, features = ["json"] }
-rocket_okapi = { git = "https://github.com/GREsau/okapi", branch = "master", features = ["swagger"]}
+rocket_okapi = { git = "https://github.com/GREsau/okapi", branch = "master", features = ["swagger", "rapidoc"]}
 
 [dev-dependencies]
 maplit = "1.0.2"
