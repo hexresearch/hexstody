@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 chrono = { version = "0.4.19", features = [ "serde" ] }
 clap = { version = "3.0.0-rc.4", features = ["derive", "env"] }
+ctrlc = "3.2.2"
 dotenv = "0.15.0"
 env_logger = { version = "0.9.0" }
 futures = "0.3.19"
@@ -16,13 +17,13 @@ futures-util = "0.3.19"
 hexstody-btc-client = { path = "../hexstody-btc-client" }
 hexstody-db = { path = "../hexstody-db" }
 log = "0.4.14"
+rocket = { version = "0.5.0-rc.1", default-features = false, features = ["json"] }
+rocket_okapi = { git = "https://github.com/GREsau/okapi", branch = "master", features = ["swagger", "rapidoc"]}
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 thiserror = "1.0"
 tokio = { version = "1", features = ["full"] }
 uuid = { version = "0.8.2", features = ["v4"]}
-rocket = { version = "0.5.0-rc.1", default-features = false, features = ["json"] }
-rocket_okapi = { git = "https://github.com/GREsau/okapi", branch = "master", features = ["swagger", "rapidoc"]}
 
 [dev-dependencies]
 maplit = "1.0.2"

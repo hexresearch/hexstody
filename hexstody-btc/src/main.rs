@@ -38,11 +38,15 @@ enum SubCommand {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
-    env_logger::init();
+    env_logger::init_from_env(
+        env_logger::Env::default().filter_or(env_logger::DEFAULT_FILTER_ENV, "info"),
+    );
 
     match args.subcmd.clone() {
         SubCommand::Serve { address, port } => loop {
-            let (_abort_api_handle, abort_api_reg) = AbortHandle::new_pair();
+            let (abort_api_handle, abort_api_reg) = AbortHandle::new_pair();
+            ctrlc::set_handler(move || abort_api_handle.abort())
+                .expect("Error setting Ctrl-C handler");
 
             info!("Serving API");
             let start_notify = Arc::new(Notify::new());
@@ -50,7 +54,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
             match Abortable::new(public_api_fut, abort_api_reg).await {
                 Ok(_) => (),
                 Err(Aborted) => {
-                    error!("API thread aborted")
+                    error!("API thread aborted");
+                    return Ok(());
                 }
             }
 
