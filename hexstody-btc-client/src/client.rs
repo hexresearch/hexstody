@@ -1,5 +1,6 @@
 use log::*;
 use thiserror::Error;
+use hexstody_btc_api::deposit::*;
 
 #[derive(Error, Debug)]
 pub enum Error {
@@ -38,5 +39,20 @@ impl BtcClient {
             .await?;
         debug!("Response ping: {}", response);
         Ok(())
+    }
+
+    pub async fn deposit_events(&self) -> Result<DepositEvents> {
+        let path = "/events/deposit";
+        let endpoint = format!("{}{}", self.server, path);
+        let request = self.client.post(endpoint).build()?;
+        let response = self
+            .client
+            .execute(request)
+            .await?
+            .error_for_status()?
+            .text()
+            .await?;
+        debug!("Response events/deposit: {}", response);
+        Ok(serde_json::from_str(&response)?)
     }
 }

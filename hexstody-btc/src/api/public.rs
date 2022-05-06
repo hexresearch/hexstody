@@ -1,4 +1,4 @@
-use super::types::*;
+use hexstody_btc_api::deposit::*;
 use crate::state::ScanState;
 use log::*;
 use rocket::fairing::AdHoc;

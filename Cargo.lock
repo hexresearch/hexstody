@@ -1066,6 +1066,7 @@ dependencies = [
  "futures",
  "futures-channel",
  "futures-util",
+ "hexstody-btc-api",
  "hexstody-btc-client",
  "hexstody-db",
  "log",
@@ -1080,9 +1081,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "hexstody-btc-api"
+version = "0.1.0"
+dependencies = [
+ "rocket_okapi",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "hexstody-btc-client"
 version = "0.1.0"
 dependencies = [
+ "hexstody-btc-api",
  "log",
  "reqwest",
  "serde",

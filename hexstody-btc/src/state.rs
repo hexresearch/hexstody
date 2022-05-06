@@ -1,7 +1,7 @@
-use bitcoin::hash_types::BlockHash;
 use bitcoin::blockdata::constants::genesis_block;
-use super::api::types::deposit::*;
+use bitcoin::hash_types::BlockHash;
 use bitcoin::network::constants::Network;
+use hexstody_btc_api::deposit::*;
 
 pub struct ScanState {
     pub last_block: BlockHash,

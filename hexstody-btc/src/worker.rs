@@ -1,8 +1,8 @@
-use crate::api::types::*;
 use crate::state::ScanState;
 use bitcoin::hash_types::BlockHash;
 use bitcoincore_rpc::{Client, RpcApi};
 use bitcoincore_rpc_json::{GetTransactionResultDetailCategory, ListTransactionResult};
+use hexstody_btc_api::deposit::*;
 use log::*;
 use std::sync::Arc;
 use tokio::sync::{Mutex, Notify};
@@ -16,7 +16,7 @@ pub async fn node_worker(
         {
             let mut state_rw = state.lock().await;
             match scan_from(client, state_rw.last_block).await {
-                Ok((mut events, next_hash)) =>  {
+                Ok((mut events, next_hash)) => {
                     state_rw.last_block = next_hash;
                     state_rw.deposit_events.append(&mut events);
                     state_notify.notify_one();
@@ -24,9 +24,8 @@ pub async fn node_worker(
                 Err(e) => {
                     error!("Failed to query node: {e}");
                 }
-            }    
+            }
         }
-        
         tokio::time::sleep(std::time::Duration::from_secs(30)).await;
     }
 }
