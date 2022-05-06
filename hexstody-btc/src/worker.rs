@@ -19,6 +19,7 @@ pub async fn node_worker(
                 Ok((mut events, next_hash)) =>  {
                     state_rw.last_block = next_hash;
                     state_rw.deposit_events.append(&mut events);
+                    state_notify.notify_one();
                 }
                 Err(e) => {
                     error!("Failed to query node: {e}");

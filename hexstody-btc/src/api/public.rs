@@ -1,14 +1,16 @@
+use super::types::*;
 use crate::state::ScanState;
 use log::*;
-use rocket_okapi::{openapi, openapi_get_routes, rapidoc::*, swagger_ui::*};
-use rocket_okapi::settings::UrlObject;
-use rocket::{get, post, serde::json::Json, Config, State};
 use rocket::fairing::AdHoc;
 use rocket::figment::{providers::Env, Figment};
+use rocket::{get, post, serde::json::Json, Config, State};
+use rocket_okapi::settings::UrlObject;
+use rocket_okapi::{openapi, openapi_get_routes, rapidoc::*, swagger_ui::*};
 use std::net::IpAddr;
 use std::sync::Arc;
-use super::types::*;
+use std::time::Duration;
 use tokio::sync::{Mutex, Notify};
+use tokio::time::timeout;
 
 #[openapi(tag = "misc")]
 #[get("/ping")]
@@ -23,8 +25,14 @@ async fn deposit_events(
     state_notify: &State<Arc<Notify>>,
 ) -> Json<DepositEvents> {
     info!("Awaiting state events");
-    state_notify.notified().await;
-    info!("Got new events for deposit");
+    match timeout(Duration::from_secs(30), state_notify.notified()).await {
+        Ok(_) => {
+            info!("Got new events for deposit");
+        }
+        Err(_) => {
+            info!("No new events but releasing long poll");
+        }
+    }
     let mut state_rw = state.lock().await;
     let result = Json(DepositEvents {
         events: state_rw.deposit_events.clone(),
