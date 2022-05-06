@@ -1,12 +1,12 @@
 use super::types::*;
+use rocket::fairing::AdHoc;
 use rocket::figment::{providers::Env, Figment};
-use rocket::{get, serde::json::Json, Config};
+use rocket::{get, post, serde::json::Json, Config};
 use rocket_okapi::settings::UrlObject;
 use rocket_okapi::{openapi, openapi_get_routes, rapidoc::*, swagger_ui::*};
-use rocket::fairing::AdHoc;
 use std::net::IpAddr;
-use tokio::sync::Notify;
 use std::sync::Arc;
+use tokio::sync::Notify;
 
 #[openapi(tag = "misc")]
 #[get("/ping")]
@@ -15,12 +15,16 @@ fn ping() -> Json<()> {
 }
 
 #[openapi(tag = "events")]
-#[get("/deposit")]
-async fn deposit() -> Json<DepositEvents> {
+#[post("/events/deposit?<blockhash>")]
+async fn deposit_events(blockhash: BlockHashHex) -> Json<DepositEvents> {
     Json(DepositEvents { events: vec![] })
 }
 
-pub async fn serve_public_api(address: IpAddr, port: u16, start_notify: Arc<Notify>) -> Result<(), rocket::Error> {
+pub async fn serve_public_api(
+    address: IpAddr,
+    port: u16,
+    start_notify: Arc<Notify>,
+) -> Result<(), rocket::Error> {
     let figment = Figment::from(Config {
         address,
         port,
@@ -28,12 +32,14 @@ pub async fn serve_public_api(address: IpAddr, port: u16, start_notify: Arc<Noti
     })
     .merge(Env::prefixed("HEXSTODY_BTC_").global());
 
-    let on_ready = AdHoc::on_liftoff("API Start!", |_| Box::pin(async move {
-        start_notify.notify_one();
-    }));
+    let on_ready = AdHoc::on_liftoff("API Start!", |_| {
+        Box::pin(async move {
+            start_notify.notify_one();
+        })
+    });
 
     rocket::custom(figment)
-        .mount("/", openapi_get_routes![ping, deposit])
+        .mount("/", openapi_get_routes![ping, deposit_events])
         .mount(
             "/swagger/",
             make_swagger_ui(&SwaggerUIConfig {
@@ -86,14 +92,16 @@ mod tests {
         tokio::spawn({
             let start_notify = start_notify.clone();
             async move {
-                let serve_task =
-                    serve_public_api(SERVICE_TEST_HOST.parse().unwrap(), SERVICE_TEST_PORT, start_notify);
+                let serve_task = serve_public_api(
+                    SERVICE_TEST_HOST.parse().unwrap(),
+                    SERVICE_TEST_PORT,
+                    start_notify,
+                );
                 futures::pin_mut!(serve_task);
                 futures::future::select(serve_task, receiver.map_err(drop)).await;
             }
         });
         start_notify.notified().await;
-        
         let res = AssertUnwindSafe(test_body()).catch_unwind().await;
 
         sender.send(()).unwrap();
