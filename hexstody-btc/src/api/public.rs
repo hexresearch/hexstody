@@ -1,12 +1,14 @@
-use super::types::*;
+use crate::state::ScanState;
+use log::*;
+use rocket_okapi::{openapi, openapi_get_routes, rapidoc::*, swagger_ui::*};
+use rocket_okapi::settings::UrlObject;
+use rocket::{get, post, serde::json::Json, Config, State};
 use rocket::fairing::AdHoc;
 use rocket::figment::{providers::Env, Figment};
-use rocket::{get, post, serde::json::Json, Config};
-use rocket_okapi::settings::UrlObject;
-use rocket_okapi::{openapi, openapi_get_routes, rapidoc::*, swagger_ui::*};
 use std::net::IpAddr;
 use std::sync::Arc;
-use tokio::sync::Notify;
+use super::types::*;
+use tokio::sync::{Mutex, Notify};
 
 #[openapi(tag = "misc")]
 #[get("/ping")]
@@ -15,15 +17,28 @@ fn ping() -> Json<()> {
 }
 
 #[openapi(tag = "events")]
-#[post("/events/deposit?<blockhash>")]
-async fn deposit_events(blockhash: BlockHashHex) -> Json<DepositEvents> {
-    Json(DepositEvents { events: vec![] })
+#[post("/events/deposit")]
+async fn deposit_events(
+    state: &State<Arc<Mutex<ScanState>>>,
+    state_notify: &State<Arc<Notify>>,
+) -> Json<DepositEvents> {
+    info!("Awaiting state events");
+    state_notify.notified().await;
+    info!("Got new events for deposit");
+    let mut state_rw = state.lock().await;
+    let result = Json(DepositEvents {
+        events: state_rw.deposit_events.clone(),
+    });
+    state_rw.deposit_events = vec![];
+    result
 }
 
 pub async fn serve_public_api(
     address: IpAddr,
     port: u16,
     start_notify: Arc<Notify>,
+    state: Arc<Mutex<ScanState>>,
+    state_notify: Arc<Notify>,
 ) -> Result<(), rocket::Error> {
     let figment = Figment::from(Config {
         address,
@@ -62,6 +77,8 @@ pub async fn serve_public_api(
                 ..Default::default()
             }),
         )
+        .manage(state)
+        .manage(state_notify)
         .attach(on_ready)
         .launch()
         .await?;
@@ -91,11 +108,15 @@ mod tests {
         let (sender, receiver) = tokio::sync::oneshot::channel();
         tokio::spawn({
             let start_notify = start_notify.clone();
+            let state = Arc::new(Mutex::new(ScanState::default()));
+            let state_notify = Arc::new(Notify::new());
             async move {
                 let serve_task = serve_public_api(
                     SERVICE_TEST_HOST.parse().unwrap(),
                     SERVICE_TEST_PORT,
                     start_notify,
+                    state,
+                    state_notify,
                 );
                 futures::pin_mut!(serve_task);
                 futures::future::select(serve_task, receiver.map_err(drop)).await;

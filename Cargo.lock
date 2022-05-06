@@ -1057,6 +1057,7 @@ dependencies = [
  "bitcoin",
  "bitcoin_hashes",
  "bitcoincore-rpc",
+ "bitcoincore-rpc-json",
  "chrono",
  "clap",
  "ctrlc",

@@ -1,19 +1,19 @@
 use rocket_okapi::okapi::schemars;
-use rocket_okapi::okapi::schemars::{JsonSchema};
+use rocket_okapi::okapi::schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DepositEvents {
     pub events: Vec<DepositEvent>,
 }
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum DepositEvent {
-    New(DepositTxUpdate),
+    Update(DepositTxUpdate),
     Cancel(DepositTxCancel),
 }
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DepositTxUpdate {
     /// Transaction ID (txid)
     pub txid: String,
@@ -26,11 +26,11 @@ pub struct DepositTxUpdate {
     /// 0 means unconfirmed
     pub confirmations: u64,
     /// UNIX timestamp when the event occured
-    pub timestamp: i64,
+    pub timestamp: u64,
 }
 
 /// Unconfirmed tx cancel or even reorg cancel
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DepositTxCancel {
     /// Transaction ID (txid)
     pub txid: String,
@@ -41,6 +41,5 @@ pub struct DepositTxCancel {
     /// Sats amount
     pub amount: u64,
     /// UNIX timestamp when the event occured
-    pub timestamp: i64,
+    pub timestamp: u64,
 }
-
