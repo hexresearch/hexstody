@@ -27,6 +27,10 @@ fn get_balance() -> Json<Balance> {
         balances: vec![BalanceItem {
             currency: Currency::BTC,
             value: 100,
+        }, 
+        BalanceItem {
+            currency: Currency::ETH,
+            value: 10,
         }],
     };
 
