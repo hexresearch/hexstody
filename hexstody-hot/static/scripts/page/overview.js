@@ -4,16 +4,23 @@ async function init () {
 
     balanceTemplate = await (await fetch("/static/templates/balance.html.hbs")).text();
     const b = Handlebars.compile(balanceTemplate);
-    const x = b ({
-        firstname: "Yehuda",
-        lastname: "Katz",
-      });
+    balanceTemplate = await (await fetch("/static/templates/history.html.hbs")).text();
+    const h = Handlebars.compile(balanceTemplate);
+    Handlebars.registerHelper('isDeposit', function (h) {
+      return h.type === "deposit";
+    });
+
+    const [balance, history] = await Promise.allSettled([getBalances(), getHistory(0,100)]);
+
+    const x = b (balance.value);
 
     const element = document.getElementById("balance");
     element.innerHTML = x;
-    const [balance, history] = await Promise.allSettled([getBalances(), getHistory(0,100)]);
 
+    const x1 = h (history.value);
 
+    const element1 = document.getElementById("history");
+    element1.innerHTML = x1;
 
     await new Promise((resolve) => setTimeout(resolve, 3000));
     init();

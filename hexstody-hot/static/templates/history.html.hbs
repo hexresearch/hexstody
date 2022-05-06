@@ -1,6 +1,7 @@
 <div>
-    {{#each balances}}
+    {{#each history_items}}
        <div>
+          {{#if (isDeposit this)}}+{{else}}-{{/if}}
           {{this.currency}}  {{this.value}} 
        </div>
     {{/each}}
