@@ -1,7 +1,14 @@
-<div>
+<div class="row is-center">
     {{#each balances}}
-       <div>
-          {{this.currency}}  {{this.value}} 
-       </div>
+    <div class="col-6 card">
+        <div class="row">
+            <div class="col">
+                {{this.currency}}
+            </div>
+            <div class="col">
+                {{formatCurrencyValue}}
+            </div>
+        </div>
+    </div>
     {{/each}}
 </div>

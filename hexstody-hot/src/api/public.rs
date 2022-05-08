@@ -26,11 +26,11 @@ fn get_balance() -> Json<Balance> {
     let x = Balance {
         balances: vec![BalanceItem {
             currency: Currency::BTC,
-            value: 100,
+            value: u64::MAX,
         }, 
         BalanceItem {
             currency: Currency::ETH,
-            value: 10,
+            value: u64::MAX,
         }],
     };
 
@@ -44,11 +44,11 @@ fn get_history() -> Json<History> {
         history_items: vec![
             HistoryItem::Deposit(DepositHistoryItem {
                 currency: Currency::BTC,
-                value: 100,
+                value: u64::MAX,
             }),
             HistoryItem::Withdrawal(WithdrawalHistoryItem {
                 currency: Currency::ETH,
-                value: 300,
+                value: u64::MAX,
             }),
         ],
     };
