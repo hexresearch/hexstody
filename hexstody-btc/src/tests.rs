@@ -3,11 +3,12 @@ use nix::sys::signal::{self, Signal};
 use nix::unistd::Pid;
 use std::future::Future;
 use std::panic::AssertUnwindSafe;
-use std::process::{Child, Command};
+use std::process::{Child, Command, Stdio};
 use bitcoincore_rpc::{Auth, Client, RpcApi};
 use tempdir::TempDir;
 use log::*;
 use rand::{thread_rng, Rng};
+use bitcoin::Amount;
 
 fn setup() -> (Child, u16, TempDir) {
     println!("Starting regtest node");
@@ -18,10 +19,12 @@ fn setup() -> (Child, u16, TempDir) {
     let node_handle = Command::new("bitcoind")
         .arg("-regtest")
         .arg("-server")
+        .arg("-listen=0")
         .arg("-rpcuser=regtest")
         .arg("-rpcpassword=regtest")
         .arg(format!("-rpcport={}", rpc_port))
         .arg(format!("-datadir={}", tmp_dir.path().to_str().unwrap()))
+        .stdout(Stdio::null())
         .spawn()
         .expect("bitcoin node starts");
 
@@ -34,6 +37,17 @@ fn teardown(mut node_handle: Child) {
     node_handle.wait().expect("Node terminated");
 }
 
+async fn wait_for_node(client: &Client) -> () {
+    for _ in 0 .. 100 {
+        let res = client.get_blockchain_info();
+        if let Ok(_) = res {
+            return;
+        } 
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    }
+    client.get_blockchain_info().expect("final check on connection");
+}
+
 async fn run_test<F, Fut>(test_body: F)
 where
     F: FnOnce(Client) -> Fut,
@@ -44,7 +58,7 @@ where
     info!("Running bitcoin node on {rpc_port}");
     let rpc_url = format!("http://127.0.0.1:{rpc_port}");
     let client = Client::new(&rpc_url, Auth::UserPass("regtest".to_owned(), "regtest".to_owned())).expect("Node client");
-    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+    wait_for_node(&client).await;
     let res = AssertUnwindSafe(test_body(client)).catch_unwind().await;
     teardown(node_handle);
     assert!(res.is_ok());
@@ -56,5 +70,17 @@ async fn basic_test() {
         println!("Running basic test");
         let info = client.get_blockchain_info().expect("blockchain info");
         assert_eq!(info.chain, "regtest");
+    }).await;
+}
+
+#[tokio::test]
+async fn generate_test() {
+    run_test(|client| async move { 
+        println!("Running generate test");
+        client.create_wallet("", None, None, None, None).expect("create default wallet");
+        let address = client.get_new_address(None, None).expect("new address");
+        client.generate_to_address(101, &address).expect("mined blocks");
+        let balance = client.get_balance(None, None).expect("balance");
+        assert_eq!(balance, Amount::from_btc(50.0).unwrap());
     }).await;
 }
