@@ -1,6 +1,8 @@
 mod api;
 mod state;
 mod worker;
+#[cfg(test)]
+mod tests;
 
 use bitcoincore_rpc::{Auth, Client};
 use clap::Parser;

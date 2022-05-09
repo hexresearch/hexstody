@@ -32,3 +32,7 @@ uuid = { version = "0.8.2", features = ["v4"]}
 
 [dev-dependencies]
 maplit = "1.0.2"
+inventory = "0.2.3"
+nix = "0.24.1"
+tempdir = "0.3.7"
+rand = "0.8.5"
