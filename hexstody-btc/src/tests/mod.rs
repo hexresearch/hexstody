@@ -7,11 +7,16 @@ use hexstody_btc_api::deposit::*;
 use runner::*;
 
 // Get 50 BTC to the node wallet
-async fn fund_wallet(client: &Client) {
-    let address = new_address(client);
+fn fund_wallet(client: &Client) {
     let mature_blocks = 100;
+    mine_blocks(client, mature_blocks + 1);
+}
+
+// Mine some blocks to self wallet
+fn mine_blocks(client: &Client, amount: u64) {
+    let address = new_address(client);
     client
-        .generate_to_address(mature_blocks + 1, &address)
+        .generate_to_address(amount, &address)
         .expect("mined blocks");
 }
 
@@ -27,6 +32,7 @@ fn send_funds(client: &Client, address: &Address, amount: Amount) -> Txid {
         .expect("funds sent")
 }
 
+// Check that we have node and API operational
 #[tokio::test]
 async fn basic_test() {
     run_test(|btc, api| async move {
@@ -38,34 +44,99 @@ async fn basic_test() {
     .await;
 }
 
+// Check if we have balance after generating blocks
 #[tokio::test]
 async fn generate_test() {
     run_test(|btc, _| async move {
         println!("Running generate test");
-        fund_wallet(&btc).await;
+        fund_wallet(&btc);
         let balance = btc.get_balance(None, None).expect("balance");
         assert_eq!(balance, Amount::from_btc(50.0).unwrap());
     })
     .await;
 }
 
+// Deposit unconfirmed transation
 #[tokio::test]
-async fn deposit_test() {
+async fn deposit_unconfirmed_test() {
     run_test(|btc, api| async move {
         println!("Running simple deposit test");
-        fund_wallet(&btc).await;
+        fund_wallet(&btc);
         let deposit_address = new_address(&btc);
         let dep_txid = send_funds(&btc, &deposit_address, Amount::from_sat(1000));
         let res = api.deposit_events().await.expect("Deposit events");
         assert_eq!(res.events.len(), 1);
         let event = &res.events[0];
-        if let DepositEvent::Update(DepositTxUpdate {txid, address, confirmations, ..}) = event {
+        if let DepositEvent::Update(DepositTxUpdate {
+            txid,
+            address,
+            confirmations,
+            ..
+        }) = event
+        {
             assert_eq!(txid.0, dep_txid);
             assert_eq!(address.0, deposit_address);
             assert_eq!(*confirmations, 0);
         } else {
-            assert!(false, "Wrong type of event {:?}, expected deposit with txid {:?}", event, dep_txid);
+            assert!(
+                false,
+                "Wrong type of event {:?}, expected deposit with txid {:?}",
+                event, dep_txid
+            );
         }
+    })
+    .await;
+}
+
+// Deposit confirmation transation
+#[tokio::test]
+async fn deposit_confirmed_test() {
+    run_test(|btc, api| async move {
+        println!("Running deposit confirmation test");
+        fund_wallet(&btc);
+        let deposit_address = new_address(&btc);
+        let dep_txid = send_funds(&btc, &deposit_address, Amount::from_sat(1000));
+        mine_blocks(&btc, 1);
+        let res = api.deposit_events().await.expect("Deposit events");
+        assert_eq!(res.events.len(), 1);
+        let event = &res.events[0];
+        if let DepositEvent::Update(DepositTxUpdate {
+            txid,
+            address,
+            confirmations,
+            ..
+        }) = event
+        {
+            assert_eq!(txid.0, dep_txid);
+            assert_eq!(address.0, deposit_address);
+            assert_eq!(*confirmations, 1);
+        } else {
+            assert!(
+                false,
+                "Wrong type of event {:?}, expected deposit with txid {:?}",
+                event, dep_txid
+            );
+        }
+    })
+    .await;
+}
+
+// Deposit transation and wait for next block after confirmation
+#[tokio::test]
+async fn deposit_confirmed_several_test() {
+    run_test(|btc, api| async move {
+        println!("Running simple deposit test");
+        fund_wallet(&btc);
+        let deposit_address = new_address(&btc);
+        let _ = send_funds(&btc, &deposit_address, Amount::from_sat(1000));
+        let height = btc.get_block_count().expect("block count");
+        mine_blocks(&btc, 1);
+        let res = api.deposit_events().await.expect("Deposit events");
+        assert_eq!(res.events.len(), 1);
+        mine_blocks(&btc, 1);
+        let res = api.deposit_events().await.expect("Deposit events");
+        assert_eq!(res.events.len(), 0);
+        assert_eq!(res.height, height+2);
     })
     .await;
 }

@@ -1,5 +1,5 @@
-use hexstody_btc_api::deposit::*;
 use crate::state::ScanState;
+use hexstody_btc_api::deposit::*;
 use log::*;
 use rocket::fairing::AdHoc;
 use rocket::figment::{providers::Env, Figment};
@@ -36,6 +36,8 @@ async fn deposit_events(
     }
     let mut state_rw = state.lock().await;
     let result = Json(DepositEvents {
+        hash: state_rw.last_block.into(),
+        height: state_rw.last_height,
         events: state_rw.deposit_events.clone(),
     });
     state_rw.deposit_events = vec![];

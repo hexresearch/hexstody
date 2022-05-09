@@ -17,12 +17,19 @@ pub async fn node_worker(
     loop {
         {
             let mut state_rw = state.lock().await;
-            match scan_from(client, state_rw.last_block).await {
+            let old_block = state_rw.last_block;
+            match scan_from(client, old_block).await {
                 Ok((mut events, next_hash)) => {
-                    state_rw.last_block = next_hash;
-                    if !events.is_empty() {
-                        info!("New events {}", events.len());
-                        state_rw.deposit_events.append(&mut events);
+                    if !events.is_empty() || old_block != next_hash {
+                        let height = client
+                            .get_block_count()
+                            .unwrap_or_else(|_| state_rw.last_height);
+                        state_rw.last_height = height;
+                        state_rw.last_block = next_hash;
+                        if !events.is_empty() {
+                            info!("New events {}", events.len());
+                            state_rw.deposit_events.append(&mut events);
+                        }
                         state_notify.notify_one();
                     }
                 }

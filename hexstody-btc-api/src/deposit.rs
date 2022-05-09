@@ -1,10 +1,15 @@
+use super::bitcoin::*;
 use rocket_okapi::okapi::schemars;
 use rocket_okapi::okapi::schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use super::bitcoin::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DepositEvents {
+    /// New block height
+    pub height: u64,
+    /// Hash of block
+    pub hash: BtcBlockHash,
+    /// New updates on transactions in that block
     pub events: Vec<DepositEvent>,
 }
 

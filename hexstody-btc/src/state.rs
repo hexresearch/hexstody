@@ -5,6 +5,7 @@ use hexstody_btc_api::deposit::*;
 
 pub struct ScanState {
     pub last_block: BlockHash,
+    pub last_height: u64,
     pub network: Network,
     pub deposit_events: Vec<DepositEvent>,
 }
@@ -19,6 +20,7 @@ impl ScanState {
     pub fn new(network: Network) -> Self {
         ScanState {
             last_block: genesis_block(network).block_hash(),
+            last_height: 0,
             network,
             deposit_events: vec![],
         }
