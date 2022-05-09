@@ -31,8 +31,9 @@ tokio = { version = "1", features = ["full"] }
 uuid = { version = "0.8.2", features = ["v4"]}
 
 [dev-dependencies]
-maplit = "1.0.2"
 inventory = "0.2.3"
+maplit = "1.0.2"
 nix = "0.24.1"
-tempdir = "0.3.7"
+port-selector = "0.1.4"
 rand = "0.8.5"
+tempdir = "0.3.7"

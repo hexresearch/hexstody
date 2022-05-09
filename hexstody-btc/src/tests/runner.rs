@@ -8,7 +8,6 @@ use hexstody_btc_client::client::BtcClient;
 use log::*;
 use nix::sys::signal::{self, Signal};
 use nix::unistd::Pid;
-use rand::{thread_rng, Rng};
 use std::future::Future;
 use std::net::{IpAddr, Ipv4Addr};
 use std::panic::AssertUnwindSafe;
@@ -17,12 +16,12 @@ use std::sync::Arc;
 use std::time::Duration;
 use tempdir::TempDir;
 use tokio::sync::{Mutex, Notify};
+use port_selector::random_free_tcp_port;
 
 fn setup_node() -> (Child, u16, TempDir) {
     println!("Starting regtest node");
     let tmp_dir = TempDir::new("regtest-data").expect("temporary data dir crated");
-    let mut rng = thread_rng();
-    let rpc_port: u16 = rng.gen_range(10000..u16::MAX);
+    let rpc_port: u16 = random_free_tcp_port().expect("available port");
 
     let node_handle = Command::new("bitcoind")
         .arg("-regtest")
@@ -60,8 +59,7 @@ async fn wait_for_node(client: &Client) -> () {
 }
 
 async fn setup_api(rpc_port: u16) -> u16 {
-    let mut rng = thread_rng();
-    let port: u16 = rng.gen_range(10000..u16::MAX);
+    let port: u16 = random_free_tcp_port().expect("available port");
     let address = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
     let start_notify = Arc::new(Notify::new());
     let state_notify = Arc::new(Notify::new());
