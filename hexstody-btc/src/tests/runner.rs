@@ -1,6 +1,7 @@
 use crate::api::public::serve_public_api;
 use crate::state::ScanState;
 use crate::worker::node_worker;
+use bitcoin::network::constants::Network;
 use bitcoincore_rpc::{Auth, Client, RpcApi};
 use futures::FutureExt;
 use hexstody_btc_client::client::BtcClient;
@@ -13,6 +14,7 @@ use std::net::{IpAddr, Ipv4Addr};
 use std::panic::AssertUnwindSafe;
 use std::process::{Child, Command, Stdio};
 use std::sync::Arc;
+use std::time::Duration;
 use tempdir::TempDir;
 use tokio::sync::{Mutex, Notify};
 
@@ -28,6 +30,7 @@ fn setup_node() -> (Child, u16, TempDir) {
         .arg("-listen=0")
         .arg("-rpcuser=regtest")
         .arg("-rpcpassword=regtest")
+        .arg("-fallbackfee=0.000002")
         .arg(format!("-rpcport={}", rpc_port))
         .arg(format!("-datadir={}", tmp_dir.path().to_str().unwrap()))
         .stdout(Stdio::null())
@@ -62,16 +65,24 @@ async fn setup_api(rpc_port: u16) -> u16 {
     let address = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
     let start_notify = Arc::new(Notify::new());
     let state_notify = Arc::new(Notify::new());
-    let state = Arc::new(Mutex::new(ScanState::default()));
+    let state = Arc::new(Mutex::new(ScanState::new(Network::Regtest)));
 
     tokio::spawn({
         let start_notify = start_notify.clone();
         let state_notify = state_notify.clone();
         let state = state.clone();
+        let polling_duration = Duration::from_secs(1);
         async move {
-            serve_public_api(address, port, start_notify, state, state_notify)
-                .await
-                .expect("start api");
+            serve_public_api(
+                address,
+                port,
+                start_notify,
+                state,
+                state_notify,
+                polling_duration,
+            )
+            .await
+            .expect("start api");
         }
     });
     tokio::spawn({
@@ -81,8 +92,10 @@ async fn setup_api(rpc_port: u16) -> u16 {
             Auth::UserPass("regtest".to_owned(), "regtest".to_owned()),
         )
         .expect("Node client");
+
+        let polling_duration = Duration::from_millis(100);
         async move {
-            node_worker(&client, state, state_notify).await;
+            node_worker(&client, state, state_notify, polling_duration).await;
         }
     });
 
@@ -105,6 +118,9 @@ where
     )
     .expect("Node client");
     wait_for_node(&client).await;
+    client
+        .create_wallet("", None, None, None, None)
+        .expect("create default wallet");
 
     let api_port = setup_api(rpc_port).await;
     info!("Running API server on {api_port}");

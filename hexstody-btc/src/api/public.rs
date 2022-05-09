@@ -21,11 +21,12 @@ fn ping() -> Json<()> {
 #[openapi(tag = "events")]
 #[post("/events/deposit")]
 async fn deposit_events(
+    polling_timeout: &State<Duration>,
     state: &State<Arc<Mutex<ScanState>>>,
     state_notify: &State<Arc<Notify>>,
 ) -> Json<DepositEvents> {
     info!("Awaiting state events");
-    match timeout(Duration::from_secs(30), state_notify.notified()).await {
+    match timeout(*polling_timeout.inner(), state_notify.notified()).await {
         Ok(_) => {
             info!("Got new events for deposit");
         }
@@ -47,6 +48,7 @@ pub async fn serve_public_api(
     start_notify: Arc<Notify>,
     state: Arc<Mutex<ScanState>>,
     state_notify: Arc<Notify>,
+    polling_duration: Duration,
 ) -> Result<(), rocket::Error> {
     let figment = Figment::from(Config {
         address,
@@ -85,6 +87,7 @@ pub async fn serve_public_api(
                 ..Default::default()
             }),
         )
+        .manage(polling_duration)
         .manage(state)
         .manage(state_notify)
         .attach(on_ready)
@@ -125,6 +128,7 @@ mod tests {
                     start_notify,
                     state,
                     state_notify,
+                    Duration::from_secs(1),
                 );
                 futures::pin_mut!(serve_task);
                 futures::future::select(serve_task, receiver.map_err(drop)).await;

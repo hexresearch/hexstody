@@ -5,12 +5,14 @@ use bitcoincore_rpc_json::{GetTransactionResultDetailCategory, ListTransactionRe
 use hexstody_btc_api::deposit::*;
 use log::*;
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::sync::{Mutex, Notify};
 
 pub async fn node_worker(
     client: &Client,
     state: Arc<Mutex<ScanState>>,
     state_notify: Arc<Notify>,
+    polling_sleep: Duration,
 ) -> () {
     loop {
         {
@@ -18,15 +20,18 @@ pub async fn node_worker(
             match scan_from(client, state_rw.last_block).await {
                 Ok((mut events, next_hash)) => {
                     state_rw.last_block = next_hash;
-                    state_rw.deposit_events.append(&mut events);
-                    state_notify.notify_one();
+                    if !events.is_empty() {
+                        info!("New events {}", events.len());
+                        state_rw.deposit_events.append(&mut events);
+                        state_notify.notify_one();
+                    }
                 }
                 Err(e) => {
                     error!("Failed to query node: {e}");
                 }
             }
         }
-        tokio::time::sleep(std::time::Duration::from_secs(30)).await;
+        tokio::time::sleep(polling_sleep).await;
     }
 }
 
@@ -61,7 +66,7 @@ fn to_deposit_update_event(tx: ListTransactionResult) -> Option<DepositEvent> {
     }
 
     let address = if let Some(address) = tx.detail.address {
-        address.to_string()
+        address.into()
     } else {
         warn!("Transaction {:?} doesn't have address", tx.info.txid);
         return None;
@@ -83,7 +88,7 @@ fn to_deposit_update_event(tx: ListTransactionResult) -> Option<DepositEvent> {
     }
 
     Some(DepositEvent::Update(DepositTxUpdate {
-        txid: tx.info.txid.to_string(),
+        txid: tx.info.txid.into(),
         vout: tx.detail.vout,
         address,
         amount: tx.detail.amount.as_sat() as u64,

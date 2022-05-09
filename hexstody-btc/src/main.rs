@@ -1,9 +1,10 @@
 mod api;
 mod state;
-mod worker;
 #[cfg(test)]
 mod tests;
+mod worker;
 
+use bitcoin::network::constants::Network;
 use bitcoincore_rpc::{Auth, Client};
 use clap::Parser;
 use futures::future::try_join;
@@ -16,7 +17,6 @@ use std::time::Duration;
 use thiserror::Error;
 use tokio::sync::{Mutex, Notify};
 use tokio::time::sleep;
-use bitcoin::network::constants::Network;
 
 use api::public::*;
 use state::ScanState;
@@ -50,17 +50,9 @@ enum SubCommand {
         node_url: String,
         #[clap(long, default_value = "user", env = "HEXSTODY_BTC_NODE_USER")]
         node_user: String,
-        #[clap(
-            long,
-            env = "HEXSTODY_BTC_NODE_PASSWORD",
-            hide_env_values = true
-        )]
+        #[clap(long, env = "HEXSTODY_BTC_NODE_PASSWORD", hide_env_values = true)]
         node_password: String,
-        #[clap(
-            long,
-            default_value = "bitcoin",
-            env = "HEXSTODY_BTC_NODE_NETWORK"
-        )]
+        #[clap(long, default_value = "bitcoin", env = "HEXSTODY_BTC_NODE_NETWORK")]
         network: Network,
     },
 }
@@ -93,11 +85,22 @@ async fn main() -> Result<(), Box<dyn Error>> {
             })
             .expect("Error setting Ctrl-C handler");
 
-            let client = Client::new(&node_url, Auth::UserPass(node_user.clone(), node_password.clone())).expect("Node client");
+            let client = Client::new(
+                &node_url,
+                Auth::UserPass(node_user.clone(), node_password.clone()),
+            )
+            .expect("Node client");
             let state = Arc::new(Mutex::new(ScanState::new(network)));
             let state_notify = Arc::new(Notify::new());
+            let polling_duration = Duration::from_secs(30);
             let worker_fut = async {
-                let res = node_worker(&client, state.clone(), state_notify.clone()).await;
+                let res = node_worker(
+                    &client,
+                    state.clone(),
+                    state_notify.clone(),
+                    polling_duration,
+                )
+                .await;
                 Ok(res)
             };
 
@@ -109,6 +112,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     start_notify,
                     state.clone(),
                     state_notify.clone(),
+                    polling_duration,
                 )
                 .await;
                 res.map_err(|err| LogicError::from(err))

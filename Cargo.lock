@@ -1115,6 +1115,9 @@ dependencies = [
 name = "hexstody-btc-api"
 version = "0.1.0"
 dependencies = [
+ "bitcoin",
+ "bitcoin_hashes",
+ "rocket",
  "rocket_okapi",
  "serde",
  "serde_json",

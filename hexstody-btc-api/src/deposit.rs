@@ -1,6 +1,7 @@
 use rocket_okapi::okapi::schemars;
 use rocket_okapi::okapi::schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use super::bitcoin::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DepositEvents {
@@ -16,11 +17,11 @@ pub enum DepositEvent {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DepositTxUpdate {
     /// Transaction ID (txid)
-    pub txid: String,
+    pub txid: BtcTxid,
     /// Which output of the transaction
     pub vout: u32,
     /// Address that tx tops up
-    pub address: String,
+    pub address: BtcAddress,
     /// Sats amount
     pub amount: u64,
     /// 0 means unconfirmed
