@@ -1104,6 +1104,7 @@ dependencies = [
  "rand 0.8.5",
  "rocket",
  "rocket_okapi",
+ "schemars",
  "serde",
  "serde_json",
  "tempdir",
@@ -1128,6 +1129,7 @@ dependencies = [
 name = "hexstody-btc-client"
 version = "0.1.0"
 dependencies = [
+ "bitcoin",
  "hexstody-btc-api",
  "log",
  "reqwest",

@@ -1,4 +1,7 @@
 use crate::state::ScanState;
+use bitcoincore_rpc::{Client, RpcApi};
+use bitcoincore_rpc_json::AddressType;
+use hexstody_btc_api::bitcoin::*;
 use hexstody_btc_api::deposit::*;
 use log::*;
 use rocket::fairing::AdHoc;
@@ -12,14 +15,16 @@ use std::time::Duration;
 use tokio::sync::{Mutex, Notify};
 use tokio::time::timeout;
 
+use super::error;
+
 #[openapi(tag = "misc")]
 #[get("/ping")]
 fn ping() -> Json<()> {
     Json(())
 }
 
-#[openapi(tag = "events")]
-#[post("/events/deposit")]
+#[openapi(tag = "deposit")]
+#[post("/deposit/events")]
 async fn deposit_events(
     polling_timeout: &State<Duration>,
     state: &State<Arc<Mutex<ScanState>>>,
@@ -44,7 +49,17 @@ async fn deposit_events(
     result
 }
 
+#[openapi(tag = "deposit")]
+#[post("/deposit/address")]
+async fn get_deposit_address(client: &State<Client>) -> error::Result<BtcAddress> {
+    let address = client
+        .get_new_address(None, Some(AddressType::Bech32))
+        .map_err(|e| error::Error::from(e))?;
+    Ok(Json(address.into()))
+}
+
 pub async fn serve_public_api(
+    btc: Client,
     address: IpAddr,
     port: u16,
     start_notify: Arc<Notify>,
@@ -66,7 +81,10 @@ pub async fn serve_public_api(
     });
 
     rocket::custom(figment)
-        .mount("/", openapi_get_routes![ping, deposit_events])
+        .mount(
+            "/",
+            openapi_get_routes![ping, deposit_events, get_deposit_address],
+        )
         .mount(
             "/swagger/",
             make_swagger_ui(&SwaggerUIConfig {
@@ -92,6 +110,7 @@ pub async fn serve_public_api(
         .manage(polling_duration)
         .manage(state)
         .manage(state_notify)
+        .manage(btc)
         .attach(on_ready)
         .launch()
         .await?;
@@ -100,58 +119,20 @@ pub async fn serve_public_api(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use futures::Future;
-    use futures::FutureExt;
-    use futures_util::future::TryFutureExt;
-    use hexstody_btc_client::client::BtcClient;
-    use std::panic::AssertUnwindSafe;
-
-    const SERVICE_TEST_PORT: u16 = 8289;
-    const SERVICE_TEST_HOST: &str = "127.0.0.1";
-
-    async fn run_api_test<F, Fut>(test_body: F)
-    where
-        F: FnOnce() -> Fut,
-        Fut: Future<Output = ()>,
-    {
-        let _ = env_logger::builder().is_test(true).try_init();
-        let start_notify = Arc::new(Notify::new());
-
-        let (sender, receiver) = tokio::sync::oneshot::channel();
-        tokio::spawn({
-            let start_notify = start_notify.clone();
-            let state = Arc::new(Mutex::new(ScanState::default()));
-            let state_notify = Arc::new(Notify::new());
-            async move {
-                let serve_task = serve_public_api(
-                    SERVICE_TEST_HOST.parse().unwrap(),
-                    SERVICE_TEST_PORT,
-                    start_notify,
-                    state,
-                    state_notify,
-                    Duration::from_secs(1),
-                );
-                futures::pin_mut!(serve_task);
-                futures::future::select(serve_task, receiver.map_err(drop)).await;
-            }
-        });
-        start_notify.notified().await;
-        let res = AssertUnwindSafe(test_body()).catch_unwind().await;
-
-        sender.send(()).unwrap();
-
-        assert!(res.is_ok());
-    }
+    use crate::tests::runner::*;
 
     #[tokio::test]
     async fn test_public_api_ping() {
-        run_api_test(|| async {
-            let client = BtcClient::new(&format!(
-                "http://{}:{}",
-                SERVICE_TEST_HOST, SERVICE_TEST_PORT
-            ));
-            client.ping().await.unwrap();
+        run_test(|_, api| async move {
+            api.ping().await.unwrap();
+        })
+        .await;
+    }
+
+    #[tokio::test]
+    async fn test_public_api_address() {
+        run_test(|_, api| async move {
+            assert!(api.deposit_address().await.is_ok());
         })
         .await;
     }

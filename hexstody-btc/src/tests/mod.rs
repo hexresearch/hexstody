@@ -1,5 +1,5 @@
-mod helpers;
-mod runner;
+pub mod helpers;
+pub mod runner;
 
 use bitcoin::Amount;
 use bitcoincore_rpc::RpcApi;

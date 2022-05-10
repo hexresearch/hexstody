@@ -65,13 +65,24 @@ async fn setup_api(rpc_port: u16) -> u16 {
     let state_notify = Arc::new(Notify::new());
     let state = Arc::new(Mutex::new(ScanState::new(Network::Regtest)));
 
+    let make_client = || {
+        let rpc_url = format!("http://127.0.0.1:{rpc_port}");
+        Client::new(
+            &rpc_url,
+            Auth::UserPass("regtest".to_owned(), "regtest".to_owned()),
+        )
+        .expect("Node client")
+    };
+
     tokio::spawn({
         let start_notify = start_notify.clone();
         let state_notify = state_notify.clone();
         let state = state.clone();
         let polling_duration = Duration::from_secs(1);
+        let client = make_client();
         async move {
             serve_public_api(
+                client,
                 address,
                 port,
                 start_notify,
@@ -84,13 +95,7 @@ async fn setup_api(rpc_port: u16) -> u16 {
         }
     });
     tokio::spawn({
-        let rpc_url = format!("http://127.0.0.1:{rpc_port}");
-        let client = Client::new(
-            &rpc_url,
-            Auth::UserPass("regtest".to_owned(), "regtest".to_owned()),
-        )
-        .expect("Node client");
-
+        let client = make_client();
         let polling_duration = Duration::from_millis(100);
         async move {
             node_worker(&client, state, state_notify, polling_duration).await;

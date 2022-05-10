@@ -85,15 +85,18 @@ async fn main() -> Result<(), Box<dyn Error>> {
             })
             .expect("Error setting Ctrl-C handler");
 
-            let client = Client::new(
-                &node_url,
-                Auth::UserPass(node_user.clone(), node_password.clone()),
-            )
-            .expect("Node client");
+            let make_client = || {
+                Client::new(
+                    &node_url,
+                    Auth::UserPass(node_user.clone(), node_password.clone()),
+                )
+                .expect("Node client")
+            };
             let state = Arc::new(Mutex::new(ScanState::new(network)));
             let state_notify = Arc::new(Notify::new());
             let polling_duration = Duration::from_secs(30);
             let worker_fut = async {
+                let client = make_client();
                 let res = node_worker(
                     &client,
                     state.clone(),
@@ -106,7 +109,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
             let start_notify = Arc::new(Notify::new());
             let public_api_fut = async {
+                let client = make_client();
                 let res = serve_public_api(
+                    client,
                     address,
                     port,
                     start_notify,
