@@ -11,7 +11,7 @@ use rocket_okapi::okapi::schemars::{
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct BtcBlockHash(pub BlockHash);
 
 impl From<BlockHash> for BtcBlockHash {

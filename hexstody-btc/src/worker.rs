@@ -48,13 +48,13 @@ pub async fn scan_from(
 ) -> bitcoincore_rpc::Result<(Vec<DepositEvent>, BlockHash)> {
     let result = client.list_since_block(Some(&blockhash), None, Some(false), Some(true))?;
     let mut events = vec![];
-    for tx in result.transactions {
-        if let Some(e) = to_deposit_update_event(tx) {
+    for tx in result.removed {
+        if let Some(e) = to_deposit_remove_event(tx) {
             events.push(e);
         }
     }
-    for tx in result.removed {
-        if let Some(e) = to_deposit_remove_event(tx) {
+    for tx in result.transactions {
+        if let Some(e) = to_deposit_update_event(tx) {
             events.push(e);
         }
     }
@@ -64,6 +64,8 @@ pub async fn scan_from(
 fn to_deposit_update_event(tx: ListTransactionResult) -> Option<DepositEvent> {
     if let GetTransactionResultDetailCategory::Receive = tx.detail.category {
         info!("Found new incoming transaction {:?}", tx.info.txid);
+        debug!("Info: {:?}", tx.info);
+        debug!("Details: {:?}", tx.detail);
     } else {
         info!(
             "The tx {:?} has wrong type {:?}",
@@ -101,6 +103,12 @@ fn to_deposit_update_event(tx: ListTransactionResult) -> Option<DepositEvent> {
         amount: tx.detail.amount.as_sat() as u64,
         confirmations: tx.info.confirmations as u64,
         timestamp: tx.info.timereceived,
+        conflicts: tx
+            .info
+            .wallet_conflicts
+            .into_iter()
+            .map(|v| v.into())
+            .collect(),
     }))
 }
 
@@ -116,7 +124,7 @@ fn to_deposit_remove_event(tx: ListTransactionResult) -> Option<DepositEvent> {
     }
 
     let address = if let Some(address) = tx.detail.address {
-        address.to_string()
+        address.into()
     } else {
         warn!("Transaction {:?} doesn't have address", tx.info.txid);
         return None;
@@ -131,10 +139,16 @@ fn to_deposit_remove_event(tx: ListTransactionResult) -> Option<DepositEvent> {
     }
 
     Some(DepositEvent::Cancel(DepositTxCancel {
-        txid: tx.info.txid.to_string(),
+        txid: tx.info.txid.into(),
         vout: tx.detail.vout,
         address,
         amount: tx.detail.amount.as_sat() as u64,
         timestamp: tx.info.timereceived,
+        conflicts: tx
+            .info
+            .wallet_conflicts
+            .into_iter()
+            .map(|v| v.into())
+            .collect(),
     }))
 }

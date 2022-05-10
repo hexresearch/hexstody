@@ -33,19 +33,27 @@ pub struct DepositTxUpdate {
     pub confirmations: u64,
     /// UNIX timestamp when the event occured
     pub timestamp: u64,
+    /// Other transaction that are in conflict with the tx
+    /// That means that they are RBF transactions and one 
+    /// eventually will replace the others.
+    pub conflicts: Vec<BtcTxid>,
 }
 
 /// Unconfirmed tx cancel or even reorg cancel
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct DepositTxCancel {
     /// Transaction ID (txid)
-    pub txid: String,
+    pub txid: BtcTxid,
     /// Which output of the transaction
     pub vout: u32,
     /// Address that tx tops up
-    pub address: String,
+    pub address: BtcAddress,
     /// Sats amount
     pub amount: u64,
     /// UNIX timestamp when the event occured
     pub timestamp: u64,
+    /// Other transaction that are in conflict with the tx
+    /// That means that they are RBF transactions and one 
+    /// eventually will replace the others.
+    pub conflicts: Vec<BtcTxid>,
 }

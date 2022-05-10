@@ -1,36 +1,13 @@
+mod helpers;
 mod runner;
 
-use bitcoin::{Address, Amount, Txid};
-use bitcoincore_rpc::{Client, RpcApi};
+use bitcoin::Amount;
+use bitcoincore_rpc::RpcApi;
 use hexstody_btc_api::deposit::*;
+use hexstody_btc_api::bitcoin::*;
 
+use helpers::*;
 use runner::*;
-
-// Get 50 BTC to the node wallet
-fn fund_wallet(client: &Client) {
-    let mature_blocks = 100;
-    mine_blocks(client, mature_blocks + 1);
-}
-
-// Mine some blocks to self wallet
-fn mine_blocks(client: &Client, amount: u64) {
-    let address = new_address(client);
-    client
-        .generate_to_address(amount, &address)
-        .expect("mined blocks");
-}
-
-// Get a fresh address from the node
-fn new_address(client: &Client) -> Address {
-    client.get_new_address(None, None).expect("new address")
-}
-
-// Send mined btc to given address
-fn send_funds(client: &Client, address: &Address, amount: Amount) -> Txid {
-    client
-        .send_to_address(address, amount, None, None, None, Some(true), None, None)
-        .expect("funds sent")
-}
 
 // Check that we have node and API operational
 #[tokio::test]
@@ -136,7 +113,108 @@ async fn deposit_confirmed_several_test() {
         mine_blocks(&btc, 1);
         let res = api.deposit_events().await.expect("Deposit events");
         assert_eq!(res.events.len(), 0);
-        assert_eq!(res.height, height+2);
+        assert_eq!(res.height, height + 2);
+    })
+    .await;
+}
+
+// Deposit unconfirmed transation and cancel it
+#[tokio::test]
+async fn cancel_unconfirmed_test() {
+    run_test(|btc, api| async move {
+        println!("Cancel unconfirmed transaction test");
+        fund_wallet(&btc);
+        let deposit_address = new_address(&btc);
+        let dep_txid = send_funds(&btc, &deposit_address, Amount::from_sat(1000));
+        let res = api.deposit_events().await.expect("Deposit events");
+        assert_eq!(res.events.len(), 1);
+
+        let bumped_res = bumpfee(&btc, &dep_txid, None, None, None, None).expect("bump fee");
+        let res = api.deposit_events().await.expect("Deposit events");
+        assert_eq!(res.events.len(), 2, "Unexpected events: {:?}", res.events);
+
+        mine_blocks(&btc, 1);
+        let res = api.deposit_events().await.expect("Deposit events");
+        assert_eq!(res.events.len(), 1, "Unexpected events: {:?}", res.events);
+
+        let event = &res.events[0];
+        if let DepositEvent::Update(DepositTxUpdate {
+            txid,
+            address,
+            confirmations,
+            conflicts,
+            ..
+        }) = event
+        {
+            assert_eq!(txid.0, bumped_res.txid);
+            assert_eq!(conflicts, &vec![BtcTxid(dep_txid)]);
+            assert_eq!(address.0, deposit_address);
+            assert_eq!(*confirmations, 1);
+        } else {
+            assert!(
+                false,
+                "Wrong type of event {:?}, expected deposit with txid {:?}",
+                event, dep_txid
+            );
+        }
+    })
+    .await;
+}
+
+// Deposit confirmed transation and cancel it
+#[tokio::test]
+async fn cancel_confirmed_test() {
+    run_test(|btc, api| async move {
+        println!("Cancel confirmed transaction test");
+        fund_wallet(&btc);
+        let deposit_address = new_address(&btc);
+        let dep_txid = send_funds(&btc, &deposit_address, Amount::from_sat(1000));
+
+        mine_blocks(&btc, 1);
+        let res = api.deposit_events().await.expect("Deposit events");
+        assert_eq!(res.events.len(), 1);
+
+        let last_block = btc.get_best_block_hash().expect("best block");
+        btc.invalidate_block(&last_block).expect("forget block");
+        
+        let res = api.deposit_events().await.expect("Deposit events");
+        assert_eq!(res.events.len(), 2, "Unexpected events: {:?}", res.events);
+
+        let event = &res.events[0];
+        if let DepositEvent::Cancel(DepositTxCancel {
+            txid,
+            address,
+            ..
+        }) = event
+        {
+            assert_eq!(txid.0, dep_txid);
+            assert_eq!(address.0, deposit_address);
+        } else {
+            assert!(
+                false,
+                "Wrong type of event {:?}, expected deposit with txid {:?}",
+                event, dep_txid
+            );
+        }
+
+        let event = &res.events[1];
+        if let DepositEvent::Update(DepositTxUpdate {
+            txid,
+            address,
+            confirmations,
+            ..
+        }) = event
+        {
+            assert_eq!(txid.0, dep_txid);
+            assert_eq!(address.0, deposit_address);
+            assert_eq!(*confirmations, 0, "Expected confirmation counter is 0 after cancel")
+        } else {
+            assert!(
+                false,
+                "Wrong type of event {:?}, expected deposit with txid {:?}",
+                event, dep_txid
+            );
+        }
     })
     .await;
 }
