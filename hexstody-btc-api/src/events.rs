@@ -4,23 +4,31 @@ use rocket_okapi::okapi::schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct DepositEvents {
+pub struct BtcEvents {
     /// New block height
     pub height: u64,
     /// Hash of block
     pub hash: BtcBlockHash,
     /// New updates on transactions in that block
-    pub events: Vec<DepositEvent>,
+    pub events: Vec<BtcEvent>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub enum DepositEvent {
-    Update(DepositTxUpdate),
-    Cancel(DepositTxCancel),
+pub enum BtcEvent {
+    Update(TxUpdate),
+    Cancel(TxCancel),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct DepositTxUpdate {
+pub enum TxDirection {
+    Deposit, 
+    Withdraw,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct TxUpdate {
+    /// Direction of tx (in or out)
+    pub direction: TxDirection,
     /// Transaction ID (txid)
     pub txid: BtcTxid,
     /// Which output of the transaction
@@ -41,7 +49,9 @@ pub struct DepositTxUpdate {
 
 /// Unconfirmed tx cancel or even reorg cancel
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub struct DepositTxCancel {
+pub struct TxCancel {
+    /// Direction of tx (in or out)
+    pub direction: TxDirection,
     /// Transaction ID (txid)
     pub txid: BtcTxid,
     /// Which output of the transaction

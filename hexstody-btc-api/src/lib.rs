@@ -1,2 +1,2 @@
 pub mod bitcoin;
-pub mod deposit;
+pub mod events;

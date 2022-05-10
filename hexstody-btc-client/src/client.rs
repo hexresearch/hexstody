@@ -1,5 +1,4 @@
-use hexstody_btc_api::bitcoin::*;
-use hexstody_btc_api::deposit::*;
+use hexstody_btc_api::events::*;
 use log::*;
 use thiserror::Error;
 use bitcoin::Address;
@@ -43,8 +42,8 @@ impl BtcClient {
         Ok(())
     }
 
-    pub async fn deposit_events(&self) -> Result<DepositEvents> {
-        let path = "/deposit/events";
+    pub async fn poll_events(&self) -> Result<BtcEvents> {
+        let path = "/events";
         let endpoint = format!("{}{}", self.server, path);
         let request = self.client.post(endpoint).build()?;
         let response = self

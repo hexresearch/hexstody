@@ -3,7 +3,7 @@ pub mod runner;
 
 use bitcoin::Amount;
 use bitcoincore_rpc::RpcApi;
-use hexstody_btc_api::deposit::*;
+use hexstody_btc_api::events::*;
 use hexstody_btc_api::bitcoin::*;
 
 use helpers::*;
@@ -41,10 +41,10 @@ async fn deposit_unconfirmed_test() {
         fund_wallet(&btc);
         let deposit_address = new_address(&btc);
         let dep_txid = send_funds(&btc, &deposit_address, Amount::from_sat(1000));
-        let res = api.deposit_events().await.expect("Deposit events");
+        let res = api.poll_events().await.expect("Deposit events");
         assert_eq!(res.events.len(), 1);
         let event = &res.events[0];
-        if let DepositEvent::Update(DepositTxUpdate {
+        if let BtcEvent::Update(TxUpdate {
             txid,
             address,
             confirmations,
@@ -74,10 +74,10 @@ async fn deposit_confirmed_test() {
         let deposit_address = new_address(&btc);
         let dep_txid = send_funds(&btc, &deposit_address, Amount::from_sat(1000));
         mine_blocks(&btc, 1);
-        let res = api.deposit_events().await.expect("Deposit events");
+        let res = api.poll_events().await.expect("Deposit events");
         assert_eq!(res.events.len(), 1);
         let event = &res.events[0];
-        if let DepositEvent::Update(DepositTxUpdate {
+        if let BtcEvent::Update(TxUpdate {
             txid,
             address,
             confirmations,
@@ -108,10 +108,10 @@ async fn deposit_confirmed_several_test() {
         let _ = send_funds(&btc, &deposit_address, Amount::from_sat(1000));
         let height = btc.get_block_count().expect("block count");
         mine_blocks(&btc, 1);
-        let res = api.deposit_events().await.expect("Deposit events");
+        let res = api.poll_events().await.expect("Deposit events");
         assert_eq!(res.events.len(), 1);
         mine_blocks(&btc, 1);
-        let res = api.deposit_events().await.expect("Deposit events");
+        let res = api.poll_events().await.expect("Deposit events");
         assert_eq!(res.events.len(), 0);
         assert_eq!(res.height, height + 2);
     })
@@ -126,19 +126,19 @@ async fn cancel_unconfirmed_test() {
         fund_wallet(&btc);
         let deposit_address = new_address(&btc);
         let dep_txid = send_funds(&btc, &deposit_address, Amount::from_sat(1000));
-        let res = api.deposit_events().await.expect("Deposit events");
+        let res = api.poll_events().await.expect("Deposit events");
         assert_eq!(res.events.len(), 1);
 
         let bumped_res = bumpfee(&btc, &dep_txid, None, None, None, None).expect("bump fee");
-        let res = api.deposit_events().await.expect("Deposit events");
+        let res = api.poll_events().await.expect("Deposit events");
         assert_eq!(res.events.len(), 2, "Unexpected events: {:?}", res.events);
 
         mine_blocks(&btc, 1);
-        let res = api.deposit_events().await.expect("Deposit events");
+        let res = api.poll_events().await.expect("Deposit events");
         assert_eq!(res.events.len(), 1, "Unexpected events: {:?}", res.events);
 
         let event = &res.events[0];
-        if let DepositEvent::Update(DepositTxUpdate {
+        if let BtcEvent::Update(TxUpdate {
             txid,
             address,
             confirmations,
@@ -171,17 +171,17 @@ async fn cancel_confirmed_test() {
         let dep_txid = send_funds(&btc, &deposit_address, Amount::from_sat(1000));
 
         mine_blocks(&btc, 1);
-        let res = api.deposit_events().await.expect("Deposit events");
+        let res = api.poll_events().await.expect("Deposit events");
         assert_eq!(res.events.len(), 1);
 
         let last_block = btc.get_best_block_hash().expect("best block");
         btc.invalidate_block(&last_block).expect("forget block");
         
-        let res = api.deposit_events().await.expect("Deposit events");
+        let res = api.poll_events().await.expect("Deposit events");
         assert_eq!(res.events.len(), 2, "Unexpected events: {:?}", res.events);
 
         let event = &res.events[0];
-        if let DepositEvent::Cancel(DepositTxCancel {
+        if let BtcEvent::Cancel(TxCancel {
             txid,
             address,
             ..
@@ -198,7 +198,7 @@ async fn cancel_confirmed_test() {
         }
 
         let event = &res.events[1];
-        if let DepositEvent::Update(DepositTxUpdate {
+        if let BtcEvent::Update(TxUpdate {
             txid,
             address,
             confirmations,

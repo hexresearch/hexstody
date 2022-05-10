@@ -1,13 +1,13 @@
 use bitcoin::blockdata::constants::genesis_block;
 use bitcoin::hash_types::BlockHash;
 use bitcoin::network::constants::Network;
-use hexstody_btc_api::deposit::*;
+use hexstody_btc_api::events::*;
 
 pub struct ScanState {
     pub last_block: BlockHash,
     pub last_height: u64,
     pub network: Network,
-    pub deposit_events: Vec<DepositEvent>,
+    pub events: Vec<BtcEvent>,
 }
 
 impl Default for ScanState {
@@ -22,7 +22,7 @@ impl ScanState {
             last_block: genesis_block(network).block_hash(),
             last_height: 0,
             network,
-            deposit_events: vec![],
+            events: vec![],
         }
     }
 }

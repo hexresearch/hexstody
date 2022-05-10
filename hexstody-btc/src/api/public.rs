@@ -2,7 +2,7 @@ use crate::state::ScanState;
 use bitcoincore_rpc::{Client, RpcApi};
 use bitcoincore_rpc_json::AddressType;
 use hexstody_btc_api::bitcoin::*;
-use hexstody_btc_api::deposit::*;
+use hexstody_btc_api::events::*;
 use log::*;
 use rocket::fairing::AdHoc;
 use rocket::figment::{providers::Env, Figment};
@@ -23,13 +23,13 @@ fn ping() -> Json<()> {
     Json(())
 }
 
-#[openapi(tag = "deposit")]
-#[post("/deposit/events")]
-async fn deposit_events(
+#[openapi(tag = "events")]
+#[post("/events")]
+async fn poll_events(
     polling_timeout: &State<Duration>,
     state: &State<Arc<Mutex<ScanState>>>,
     state_notify: &State<Arc<Notify>>,
-) -> Json<DepositEvents> {
+) -> Json<BtcEvents> {
     info!("Awaiting state events");
     match timeout(*polling_timeout.inner(), state_notify.notified()).await {
         Ok(_) => {
@@ -40,12 +40,12 @@ async fn deposit_events(
         }
     }
     let mut state_rw = state.lock().await;
-    let result = Json(DepositEvents {
+    let result = Json(BtcEvents {
         hash: state_rw.last_block.into(),
         height: state_rw.last_height,
-        events: state_rw.deposit_events.clone(),
+        events: state_rw.events.clone(),
     });
-    state_rw.deposit_events = vec![];
+    state_rw.events = vec![];
     result
 }
 
@@ -83,7 +83,7 @@ pub async fn serve_public_api(
     rocket::custom(figment)
         .mount(
             "/",
-            openapi_get_routes![ping, deposit_events, get_deposit_address],
+            openapi_get_routes![ping, poll_events, get_deposit_address],
         )
         .mount(
             "/swagger/",
