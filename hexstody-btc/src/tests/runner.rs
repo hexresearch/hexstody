@@ -45,6 +45,23 @@ fn teardown_node(mut node_handle: Child) {
     node_handle.wait().expect("Node terminated");
 }
 
+async fn setup_node_ready() -> (Child, Client, u16) {
+    let _ = env_logger::builder().is_test(true).try_init();
+    let (node_handle, rpc_port, _temp_dir) = setup_node();
+    info!("Running first bitcoin node on {rpc_port}");
+    let rpc_url = format!("http://127.0.0.1:{rpc_port}");
+    let client = Client::new(
+        &rpc_url,
+        Auth::UserPass("regtest".to_owned(), "regtest".to_owned()),
+    )
+    .expect("Node client");
+    wait_for_node(&client).await;
+    client
+        .create_wallet("", None, None, None, None)
+        .expect("create default wallet");
+    (node_handle, client, rpc_port)
+}
+
 async fn wait_for_node(client: &Client) -> () {
     for _ in 0..100 {
         let res = client.get_blockchain_info();
@@ -112,18 +129,7 @@ where
     Fut: Future<Output = ()>,
 {
     let _ = env_logger::builder().is_test(true).try_init();
-    let (node_handle, rpc_port, _temp_dir) = setup_node();
-    info!("Running bitcoin node on {rpc_port}");
-    let rpc_url = format!("http://127.0.0.1:{rpc_port}");
-    let client = Client::new(
-        &rpc_url,
-        Auth::UserPass("regtest".to_owned(), "regtest".to_owned()),
-    )
-    .expect("Node client");
-    wait_for_node(&client).await;
-    client
-        .create_wallet("", None, None, None, None)
-        .expect("create default wallet");
+    let (node_handle, client, rpc_port) = setup_node_ready().await;
 
     let api_port = setup_api(rpc_port).await;
     info!("Running API server on {api_port}");
@@ -134,5 +140,27 @@ where
         .catch_unwind()
         .await;
     teardown_node(node_handle);
+    assert!(res.is_ok());
+}
+
+pub async fn run_two_nodes_test<F, Fut>(test_body: F)
+where
+    F: FnOnce(Client, Client, BtcClient) -> Fut,
+    Fut: Future<Output = ()>,
+{
+    let _ = env_logger::builder().is_test(true).try_init();
+    let (node1_handle, client1, rpc_port) = setup_node_ready().await;
+    let (node2_handle, client2, _) = setup_node_ready().await;
+
+    let api_port = setup_api(rpc_port).await;
+    info!("Running API server on {api_port}");
+
+    let api_client = BtcClient::new(&format!("http://127.0.0.1:{api_port}"));
+
+    let res = AssertUnwindSafe(test_body(client1, client2, api_client))
+        .catch_unwind()
+        .await;
+    teardown_node(node1_handle);
+    teardown_node(node2_handle);
     assert!(res.is_ok());
 }
