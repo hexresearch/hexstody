@@ -1,0 +1,13 @@
+{{#each history_items}}
+<div class="row card">
+   <div class="col">
+      {{#if (isDeposit this)}}+{{else}}-{{/if}}
+   </div>
+   <div class="col">
+      {{this.currency}}
+   </div>
+   <div class="col">
+      {{formatCurrencyValue}}
+   </div>
+</div>
+{{/each}}

@@ -174,7 +174,9 @@ async fn serve_apis(
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
-    env_logger::init();
+    env_logger::init_from_env(
+        env_logger::Env::default().filter_or(env_logger::DEFAULT_FILTER_ENV, "info"),
+    );
     match args.subcmd.clone() {
         SubCommand::Serve => loop {
             let api_config = parse_api_config();

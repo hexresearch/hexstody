@@ -1,1 +1,14 @@
-<h1><p>{{firstname}} {{lastname}}</p></h1>
+<div class="row is-center">
+    {{#each balances}}
+    <div class="col-6 card">
+        <div class="row">
+            <div class="col">
+                {{this.currency}}
+            </div>
+            <div class="col">
+                {{formatCurrencyValue}}
+            </div>
+        </div>
+    </div>
+    {{/each}}
+</div>
