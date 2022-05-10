@@ -99,13 +99,6 @@ fn to_update_event(tx: ListTransactionResult) -> Option<BtcEvent> {
         return None;
     };
 
-    if tx.detail.amount.as_sat() < 0 {
-        warn!(
-            "Transaction {:?} has negative amount of sats {:?}",
-            tx.info.txid, tx.detail.amount
-        );
-        return None;
-    }
     if tx.info.confirmations < 0 {
         warn!(
             "Transaction {:?} has negative amount of confirmations {:?}",
@@ -119,7 +112,7 @@ fn to_update_event(tx: ListTransactionResult) -> Option<BtcEvent> {
         txid: tx.info.txid.into(),
         vout: tx.detail.vout,
         address,
-        amount: tx.detail.amount.as_sat() as u64,
+        amount: tx.detail.amount.as_sat().abs() as u64,
         confirmations: tx.info.confirmations as u64,
         timestamp: tx.info.timereceived,
         conflicts: tx
@@ -158,7 +151,7 @@ fn to_remove_event(tx: ListTransactionResult) -> Option<BtcEvent> {
         txid: tx.info.txid.into(),
         vout: tx.detail.vout,
         address,
-        amount: tx.detail.amount.as_sat() as u64,
+        amount: tx.detail.amount.as_sat().abs() as u64,
         timestamp: tx.info.timereceived,
         conflicts: tx
             .info

@@ -19,7 +19,7 @@ pub enum BtcEvent {
     Cancel(TxCancel),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum TxDirection {
     Deposit, 
     Withdraw,

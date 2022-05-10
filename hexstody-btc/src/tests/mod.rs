@@ -42,15 +42,17 @@ async fn deposit_unconfirmed_test() {
         let deposit_address = new_address(&btc);
         let dep_txid = send_funds(&btc, &deposit_address, Amount::from_sat(1000));
         let res = api.poll_events().await.expect("Deposit events");
-        assert_eq!(res.events.len(), 1);
-        let event = &res.events[0];
+        assert_eq!(res.events.len(), 2);
+        let event = &res.events[1];
         if let BtcEvent::Update(TxUpdate {
+            direction,
             txid,
             address,
             confirmations,
             ..
         }) = event
         {
+            assert_eq!(*direction, TxDirection::Deposit);
             assert_eq!(txid.0, dep_txid);
             assert_eq!(address.0, deposit_address);
             assert_eq!(*confirmations, 0);
@@ -75,15 +77,17 @@ async fn deposit_confirmed_test() {
         let dep_txid = send_funds(&btc, &deposit_address, Amount::from_sat(1000));
         mine_blocks(&btc, 1);
         let res = api.poll_events().await.expect("Deposit events");
-        assert_eq!(res.events.len(), 1);
-        let event = &res.events[0];
+        assert_eq!(res.events.len(), 2);
+        let event = &res.events[1];
         if let BtcEvent::Update(TxUpdate {
+            direction,
             txid,
             address,
             confirmations,
             ..
         }) = event
         {
+            assert_eq!(*direction, TxDirection::Deposit);
             assert_eq!(txid.0, dep_txid);
             assert_eq!(address.0, deposit_address);
             assert_eq!(*confirmations, 1);
@@ -109,7 +113,7 @@ async fn deposit_confirmed_several_test() {
         let height = btc.get_block_count().expect("block count");
         mine_blocks(&btc, 1);
         let res = api.poll_events().await.expect("Deposit events");
-        assert_eq!(res.events.len(), 1);
+        assert_eq!(res.events.len(), 2);
         mine_blocks(&btc, 1);
         let res = api.poll_events().await.expect("Deposit events");
         assert_eq!(res.events.len(), 0);
@@ -127,18 +131,19 @@ async fn cancel_unconfirmed_test() {
         let deposit_address = new_address(&btc);
         let dep_txid = send_funds(&btc, &deposit_address, Amount::from_sat(1000));
         let res = api.poll_events().await.expect("Deposit events");
-        assert_eq!(res.events.len(), 1);
+        assert_eq!(res.events.len(), 2);
 
         let bumped_res = bumpfee(&btc, &dep_txid, None, None, None, None).expect("bump fee");
         let res = api.poll_events().await.expect("Deposit events");
-        assert_eq!(res.events.len(), 2, "Unexpected events: {:?}", res.events);
+        assert_eq!(res.events.len(), 4, "Unexpected events: {:?}", res.events);
 
         mine_blocks(&btc, 1);
         let res = api.poll_events().await.expect("Deposit events");
-        assert_eq!(res.events.len(), 1, "Unexpected events: {:?}", res.events);
+        assert_eq!(res.events.len(), 2, "Unexpected events: {:?}", res.events);
 
         let event = &res.events[0];
         if let BtcEvent::Update(TxUpdate {
+            direction,
             txid,
             address,
             confirmations,
@@ -146,6 +151,30 @@ async fn cancel_unconfirmed_test() {
             ..
         }) = event
         {
+            assert_eq!(*direction, TxDirection::Withdraw);
+            assert_eq!(txid.0, bumped_res.txid);
+            assert_eq!(conflicts, &vec![BtcTxid(dep_txid)]);
+            assert_eq!(address.0, deposit_address);
+            assert_eq!(*confirmations, 1);
+        } else {
+            assert!(
+                false,
+                "Wrong type of event {:?}, expected deposit with txid {:?}",
+                event, dep_txid
+            );
+        }
+
+        let event = &res.events[1];
+        if let BtcEvent::Update(TxUpdate {
+            direction,
+            txid,
+            address,
+            confirmations,
+            conflicts,
+            ..
+        }) = event
+        {
+            assert_eq!(*direction, TxDirection::Deposit);
             assert_eq!(txid.0, bumped_res.txid);
             assert_eq!(conflicts, &vec![BtcTxid(dep_txid)]);
             assert_eq!(address.0, deposit_address);
@@ -172,21 +201,23 @@ async fn cancel_confirmed_test() {
 
         mine_blocks(&btc, 1);
         let res = api.poll_events().await.expect("Deposit events");
-        assert_eq!(res.events.len(), 1);
+        assert_eq!(res.events.len(), 2);
 
         let last_block = btc.get_best_block_hash().expect("best block");
         btc.invalidate_block(&last_block).expect("forget block");
         
         let res = api.poll_events().await.expect("Deposit events");
-        assert_eq!(res.events.len(), 2, "Unexpected events: {:?}", res.events);
+        assert_eq!(res.events.len(), 3, "Unexpected events: {:?}", res.events);
 
         let event = &res.events[0];
         if let BtcEvent::Cancel(TxCancel {
+            direction,
             txid,
             address,
             ..
         }) = event
         {
+            assert_eq!(*direction, TxDirection::Deposit);
             assert_eq!(txid.0, dep_txid);
             assert_eq!(address.0, deposit_address);
         } else {
@@ -199,15 +230,72 @@ async fn cancel_confirmed_test() {
 
         let event = &res.events[1];
         if let BtcEvent::Update(TxUpdate {
+            direction,
             txid,
             address,
             confirmations,
             ..
         }) = event
         {
+            assert_eq!(*direction, TxDirection::Withdraw);
             assert_eq!(txid.0, dep_txid);
             assert_eq!(address.0, deposit_address);
             assert_eq!(*confirmations, 0, "Expected confirmation counter is 0 after cancel")
+        } else {
+            assert!(
+                false,
+                "Wrong type of event {:?}, expected deposit with txid {:?}",
+                event, dep_txid
+            );
+        }
+
+        let event = &res.events[2];
+        if let BtcEvent::Update(TxUpdate {
+            direction,
+            txid,
+            address,
+            confirmations,
+            ..
+        }) = event
+        {
+            assert_eq!(*direction, TxDirection::Deposit);
+            assert_eq!(txid.0, dep_txid);
+            assert_eq!(address.0, deposit_address);
+            assert_eq!(*confirmations, 0, "Expected confirmation counter is 0 after cancel")
+        } else {
+            assert!(
+                false,
+                "Wrong type of event {:?}, expected deposit with txid {:?}",
+                event, dep_txid
+            );
+        }
+    })
+    .await;
+}
+
+// Withdraw unconfirmed transation
+#[tokio::test]
+async fn withdraw_unconfirmed_test() {
+    run_test(|btc, api| async move {
+        println!("Running withdraw test");
+        fund_wallet(&btc);
+        let deposit_address = new_address(&btc);
+        let dep_txid = send_funds(&btc, &deposit_address, Amount::from_sat(1000));
+        let res = api.poll_events().await.expect("poll events");
+        assert_eq!(res.events.len(), 2);
+        let event = &res.events[0];
+        if let BtcEvent::Update(TxUpdate {
+            direction,
+            txid,
+            address,
+            confirmations,
+            ..
+        }) = event
+        {
+            assert_eq!(*direction, TxDirection::Withdraw);
+            assert_eq!(txid.0, dep_txid);
+            assert_eq!(address.0, deposit_address);
+            assert_eq!(*confirmations, 0);
         } else {
             assert!(
                 false,
