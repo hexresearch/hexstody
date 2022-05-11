@@ -1,0 +1,29 @@
+{{#*inline "page"}}
+
+<script src="/js/operator/script.js"></script>
+
+<h3>Withdrawal requests</h3>
+<table>
+    <thead>
+        <tr>
+            <th><b>Request ID</b></th>
+            <th><b>User ID</b></th>
+            <th><b>Address</b></th>
+            <th><b>Created at</b></th>
+            <th><b>Amount</b></th>
+            <th><b>Status</b></th>
+            <th><b>Actions</b></th>
+        </tr>
+    </thead>
+    <tbody>
+        {{#each withdrawal_requests}}
+        <tr>
+            {{print_withdrawal_request}}
+            <td><b>+</b></td>
+        </tr>
+        {{/each}}
+    </tbody>
+</table>
+
+{{/inline}}
+{{> base}}
