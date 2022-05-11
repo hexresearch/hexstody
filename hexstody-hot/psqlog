@@ -1,0 +1,21 @@
+2022-05-11 05:17:12.334 CEST [1512624] LOG:  could not bind IPv6 address "::1": Address already in use
+2022-05-11 05:17:12.334 CEST [1512624] HINT:  Is another postmaster already running on port 5432? If not, wait a few seconds and retry.
+2022-05-11 05:17:12.334 CEST [1512624] LOG:  could not bind IPv4 address "127.0.0.1": Address already in use
+2022-05-11 05:17:12.334 CEST [1512624] HINT:  Is another postmaster already running on port 5432? If not, wait a few seconds and retry.
+2022-05-11 05:17:12.334 CEST [1512624] WARNING:  could not create listen socket for "localhost"
+2022-05-11 05:17:12.334 CEST [1512624] FATAL:  could not create any TCP/IP sockets
+2022-05-11 05:17:12.334 CEST [1512624] LOG:  database system is shut down
+2022-05-11 05:18:05.392 CEST [1513167] LOG:  listening on IPv6 address "::1", port 45501
+2022-05-11 05:18:05.392 CEST [1513167] LOG:  listening on IPv4 address "127.0.0.1", port 45501
+2022-05-11 05:18:05.392 CEST [1513167] LOG:  listening on Unix socket "/run/user/1000/pg-data.31p2ArmeBpex/.s.PGSQL.45501"
+2022-05-11 05:18:05.397 CEST [1513168] LOG:  database system was shut down at 2022-05-11 05:18:05 CEST
+2022-05-11 05:18:05.398 CEST [1513167] LOG:  database system is ready to accept connections
+2022-05-11 05:18:05.799 CEST [1513171] PANIC:  could not create file "pg_wal/xlogtemp.1513171": No such file or directory
+2022-05-11 05:18:06.010 CEST [1513167] LOG:  WAL writer process (PID 1513171) was terminated by signal 6: Aborted
+2022-05-11 05:18:06.010 CEST [1513167] LOG:  terminating any other active server processes
+2022-05-11 05:18:06.010 CEST [1513172] WARNING:  terminating connection because of crash of another server process
+2022-05-11 05:18:06.010 CEST [1513172] DETAIL:  The postmaster has commanded this server process to roll back the current transaction and exit, because another server process exited abnormally and possibly corrupted shared memory.
+2022-05-11 05:18:06.010 CEST [1513172] HINT:  In a moment you should be able to reconnect to the database and repeat your command.
+2022-05-11 05:18:06.010 CEST [1513173] LOG:  could not open temporary statistics file "pg_stat/global.tmp": No such file or directory
+2022-05-11 05:18:06.013 CEST [1513167] LOG:  all server processes terminated; reinitializing
+2022-05-11 05:18:06.023 CEST [1513167] PANIC:  could not open control file "global/pg_control": No such file or directory

@@ -1,18 +1,17 @@
-use std::collections::HashMap;
-use std::sync::Arc;
-use tokio::sync::{Mutex, Notify};
-use rocket::serde::json::Json;
-
-use rocket::fs::{relative, FileServer};
-use rocket::response::content;
-use rocket::{get, routes};
-use rocket_dyn_templates::Template;
-use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
-
 use super::types::*;
 use hexstody_db::domain::currency::Currency;
 use hexstody_db::state::State;
 use hexstody_db::Pool;
+use rocket::fairing::AdHoc;
+use rocket::fs::{relative, FileServer};
+use rocket::response::content;
+use rocket::serde::json::Json;
+use rocket::{get, routes};
+use rocket_dyn_templates::Template;
+use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
+use std::collections::HashMap;
+use std::sync::Arc;
+use tokio::sync::{Mutex, Notify};
 
 #[openapi(tag = "ping")]
 #[get("/ping")]
@@ -24,14 +23,16 @@ fn ping() -> content::Json<()> {
 #[get("/get_balance")]
 fn get_balance() -> Json<Balance> {
     let x = Balance {
-        balances: vec![BalanceItem {
-            currency: Currency::BTC,
-            value: u64::MAX,
-        }, 
-        BalanceItem {
-            currency: Currency::ETH,
-            value: u64::MAX,
-        }],
+        balances: vec![
+            BalanceItem {
+                currency: Currency::BTC,
+                value: u64::MAX,
+            },
+            BalanceItem {
+                currency: Currency::ETH,
+                value: u64::MAX,
+            },
+        ],
     };
 
     Json(x)
@@ -74,9 +75,16 @@ pub async fn serve_public_api(
     pool: Pool,
     state: Arc<Mutex<State>>,
     state_notify: Arc<Notify>,
+    start_notify: Arc<Notify>,
     port: u16,
 ) -> Result<(), rocket::Error> {
     let figment = rocket::Config::figment().merge(("port", port));
+    let on_ready = AdHoc::on_liftoff("API Start!", |_| {
+        Box::pin(async move {
+            start_notify.notify_one();
+        })
+    });
+
     rocket::custom(figment)
         .mount("/static", FileServer::from(relative!("static/")))
         .mount("/", openapi_get_routes![ping, get_balance, get_history])
@@ -89,6 +97,7 @@ pub async fn serve_public_api(
             }),
         )
         .attach(Template::fairing())
+        .attach(on_ready)
         .launch()
         .await?;
     Ok(())
@@ -115,18 +124,21 @@ mod tests {
 
         let state_mx = Arc::new(Mutex::new(State::default()));
         let state_notify = Arc::new(Notify::new());
+        let start_notify = Arc::new(Notify::new());
 
         let (sender, receiver) = tokio::sync::oneshot::channel();
         tokio::spawn({
             let state = state_mx.clone();
             let state_notify = state_notify.clone();
+            let start_notify = start_notify.clone();
             async move {
-                let serve_task = serve_public_api(pool, state, state_notify, SERVICE_TEST_PORT);
+                let serve_task = serve_public_api(pool, state, state_notify, start_notify, SERVICE_TEST_PORT);
                 futures::pin_mut!(serve_task);
                 futures::future::select(serve_task, receiver.map_err(drop)).await;
             }
         });
-
+        start_notify.notified().await;
+        
         let res = AssertUnwindSafe(test_body()).catch_unwind().await;
 
         sender.send(()).unwrap();

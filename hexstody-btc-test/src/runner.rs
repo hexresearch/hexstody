@@ -19,7 +19,7 @@ use tokio::sync::{Mutex, Notify};
 use port_selector::random_free_tcp_port;
 
 fn setup_node() -> (Child, u16, TempDir) {
-    println!("Starting regtest node");
+    info!("Starting regtest node");
     let tmp_dir = TempDir::new("regtest-data").expect("temporary data dir crated");
     let rpc_port: u16 = random_free_tcp_port().expect("available port");
 
@@ -40,7 +40,7 @@ fn setup_node() -> (Child, u16, TempDir) {
 }
 
 fn teardown_node(mut node_handle: Child) {
-    println!("Teardown regtest node");
+    info!("Teardown regtest node");
     signal::kill(Pid::from_raw(node_handle.id() as i32), Signal::SIGTERM).unwrap();
     node_handle.wait().expect("Node terminated");
 }

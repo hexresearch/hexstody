@@ -627,6 +627,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "77c90badedccf4105eca100756a0b1289e191f6fcbdadd3cee1d2f614f97da8f"
 
 [[package]]
+name = "dunce"
+version = "1.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "453440c271cf5577fd2a40e4942540cb7d0d2f85e27c8d07dd0023c925a67541"
+
+[[package]]
 name = "dyn-clone"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -791,6 +797,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f41b048a94555da0f42f1d632e2e19510084fb8e303b0daa2816e733fb3644a0"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "fsio"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "09e87827efaf94c7a44b562ff57de06930712fe21b530c3797cdede26e6377eb"
+dependencies = [
+ "dunce",
+ "rand 0.8.5",
+ "users",
 ]
 
 [[package]]
@@ -1177,6 +1194,10 @@ name = "hexstody-hot"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bitcoin",
+ "bitcoin_hashes",
+ "bitcoincore-rpc",
+ "bitcoincore-rpc-json",
  "chrono",
  "clap",
  "dotenv",
@@ -1184,21 +1205,28 @@ dependencies = [
  "futures",
  "futures-channel",
  "futures-util",
+ "hexstody-btc-api",
+ "hexstody-btc-client",
+ "hexstody-btc-test",
  "hexstody-client",
  "hexstody-db",
  "log",
  "maplit",
+ "nix",
  "p256",
  "pkcs8",
+ "port-selector",
  "rand_core 0.6.3",
  "rocket",
  "rocket_dyn_templates",
  "rocket_okapi",
  "rpassword",
+ "run_script",
  "serde",
  "serde_json",
  "sqlx",
  "sqlx-database-tester",
+ "tempdir",
  "thiserror",
  "tokio",
  "uuid",
@@ -2444,6 +2472,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "run_script"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5dd85213e37f76b40186ee781cf3a689b05c518c3102c987acf679c573d8e4ef"
+dependencies = [
+ "fsio",
+]
+
+[[package]]
 name = "rustc_version"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3446,6 +3483,16 @@ dependencies = [
  "idna",
  "matches",
  "percent-encoding",
+]
+
+[[package]]
+name = "users"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "24cc0f6d6f267b73e5a2cadf007ba8f9bc39c6a6f9666f8cf25ea809a153b032"
+dependencies = [
+ "libc",
+ "log",
 ]
 
 [[package]]
