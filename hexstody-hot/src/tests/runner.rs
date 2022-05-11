@@ -5,13 +5,10 @@ use hexstody_btc_client::client::BtcClient;
 use hexstody_btc_test::runner as btc_runner;
 use hexstody_client::client::HexstodyClient;
 use log::*;
-use nix::sys::signal::{self, Signal};
-use nix::unistd::Pid;
 use port_selector::random_free_tcp_port;
 use run_script::ScriptOptions;
 use std::future::Future;
 use std::panic::AssertUnwindSafe;
-use std::process::Child;
 use std::sync::Arc;
 use std::time::Duration;
 use tempdir::TempDir;
@@ -101,7 +98,7 @@ fn setup_postgres() -> (u16, TempDir) {
         info!("Output: {}", output);
         info!("Error: {}", error);
     }
-    
+
     (db_port, tmp_dir)
 }
 
@@ -115,9 +112,13 @@ fn teardown_postgres(tmp_dir: &TempDir, db_port: u16) {
          export PGPORT=$2
          pg_ctl stop -D$PGDATA
         "#,
-        &vec![tmp_dir.path().to_str().unwrap().to_owned(), format!("{db_port}")],
+        &vec![
+            tmp_dir.path().to_str().unwrap().to_owned(),
+            format!("{db_port}")
+        ],
         &options
-    ).unwrap();
+    )
+    .unwrap();
 
     info!("Exit Code: {}", code);
     if code != 0 {

@@ -93,7 +93,13 @@ async fn serve_api(
     match api_type {
         ApiType::Public => {
             serve_abortable(api_type, abort_reg, || {
-                serve_public_api(pool.clone(), state_mx.clone(), state_notify.clone(), start_notify.clone(), port)
+                serve_public_api(
+                    pool.clone(),
+                    state_mx.clone(),
+                    state_notify.clone(),
+                    start_notify.clone(),
+                    port,
+                )
             })
             .await;
         }
@@ -159,7 +165,11 @@ pub enum Error {
     Aborted,
 }
 
-pub async fn run_hot_wallet(api_config: ApiConfig, db_connect: &str, start_notify: Arc<Notify>) -> Result<(), Error> {
+pub async fn run_hot_wallet(
+    api_config: ApiConfig,
+    db_connect: &str,
+    start_notify: Arc<Notify>,
+) -> Result<(), Error> {
     info!("Connecting to database");
     let pool = create_db_pool(db_connect).await?;
     info!("Reconstructing state from database");
@@ -167,7 +177,15 @@ pub async fn run_hot_wallet(api_config: ApiConfig, db_connect: &str, start_notif
     let state_mx = Arc::new(Mutex::new(state));
     let state_notify = Arc::new(Notify::new());
     let (_api_abort_handle, api_abort_reg) = AbortHandle::new_pair();
-    if let Err(Aborted) = serve_apis(pool, state_mx, state_notify, start_notify, api_config, api_abort_reg).await
+    if let Err(Aborted) = serve_apis(
+        pool,
+        state_mx,
+        state_notify,
+        start_notify,
+        api_config,
+        api_abort_reg,
+    )
+    .await
     {
         info!("Logic aborted, exiting...");
         Err(Error::Aborted)

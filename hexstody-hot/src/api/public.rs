@@ -132,13 +132,14 @@ mod tests {
             let state_notify = state_notify.clone();
             let start_notify = start_notify.clone();
             async move {
-                let serve_task = serve_public_api(pool, state, state_notify, start_notify, SERVICE_TEST_PORT);
+                let serve_task =
+                    serve_public_api(pool, state, state_notify, start_notify, SERVICE_TEST_PORT);
                 futures::pin_mut!(serve_task);
                 futures::future::select(serve_task, receiver.map_err(drop)).await;
             }
         });
         start_notify.notified().await;
-        
+
         let res = AssertUnwindSafe(test_body()).catch_unwind().await;
 
         sender.send(()).unwrap();
