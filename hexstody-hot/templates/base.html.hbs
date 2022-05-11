@@ -2,17 +2,20 @@
 <html lang="en">
 
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" type="text/css" href="static/css/chota.min.css" />
-  <link rel="stylesheet" type="text/css" href="static/css/style.css" />
-  <title>{{title}}</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="/css/chota.min.css" />
+    <link rel="stylesheet" type="text/css" href="/css/style.css" />
+    <script src="/js/handlebars.min-v4.7.7.js"></script>
+    <title>{{title}}</title>
 </head>
 
 <body>
-  {{> nav}}
-  {{~> page}}
-  {{> footer}}
+    <div class="container">
+        {{> nav}}
+        {{~> page}}
+        {{> footer}}
+    </div>
 </body>
 
 </html>
