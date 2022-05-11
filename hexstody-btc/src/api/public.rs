@@ -119,7 +119,7 @@ pub async fn serve_public_api(
 
 #[cfg(test)]
 mod tests {
-    use crate::tests::runner::*;
+    use hexstody_btc_test::runner::*;
 
     #[tokio::test]
     async fn test_public_api_ping() {

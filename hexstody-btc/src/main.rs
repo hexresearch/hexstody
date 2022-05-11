@@ -1,7 +1,5 @@
 mod api;
 mod state;
-#[cfg(test)]
-mod tests;
 mod worker;
 
 use bitcoin::network::constants::Network;

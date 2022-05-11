@@ -1,4 +1,6 @@
 mod api;
+#[cfg(test)]
+mod tests;
 
 use clap::Parser;
 use futures::future::{join_all, AbortHandle, AbortRegistration, Abortable, Aborted};

@@ -5,6 +5,14 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[lib]
+name = "hexstody_btc"
+path = "src/lib.rs"
+
+[[bin]]
+name = "hexstody-btc"
+path = "src/main.rs"
+
 [dependencies]
 bitcoin = "0.28.1"
 bitcoin_hashes = "0.10.0"
@@ -32,9 +40,7 @@ tokio = { version = "1", features = ["full"] }
 uuid = { version = "0.8.2", features = ["v4"]}
 
 [dev-dependencies]
-inventory = "0.2.3"
-maplit = "1.0.2"
+hexstody-btc-test = { path = "../hexstody-btc-test" }
 nix = "0.24.1"
 port-selector = "0.1.4"
-rand = "0.8.5"
 tempdir = "0.3.7"

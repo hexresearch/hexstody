@@ -478,16 +478,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ctor"
-version = "0.1.22"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f877be4f7c9f246b183111634f75baa039715e3f46ce860677d3b19a69fb229c"
-dependencies = [
- "quote",
- "syn",
-]
-
-[[package]]
 name = "ctrlc"
 version = "3.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -969,17 +959,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ghost"
-version = "0.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "76c813ffb63e8fd3df6f1ac3cc1ea392c7612ac2de4d0b44dcbfe03e5c4bf94a"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "glob"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1095,13 +1074,11 @@ dependencies = [
  "futures-util",
  "hexstody-btc-api",
  "hexstody-btc-client",
+ "hexstody-btc-test",
  "hexstody-db",
- "inventory",
  "log",
- "maplit",
  "nix",
  "port-selector",
- "rand 0.8.5",
  "rocket",
  "rocket_okapi",
  "schemars",
@@ -1136,6 +1113,29 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
+]
+
+[[package]]
+name = "hexstody-btc-test"
+version = "0.1.0"
+dependencies = [
+ "bitcoin",
+ "bitcoin_hashes",
+ "bitcoincore-rpc",
+ "bitcoincore-rpc-json",
+ "env_logger",
+ "futures",
+ "hexstody-btc",
+ "hexstody-btc-api",
+ "hexstody-btc-client",
+ "log",
+ "nix",
+ "port-selector",
+ "serde",
+ "serde_json",
+ "tempdir",
+ "thiserror",
+ "tokio",
 ]
 
 [[package]]
@@ -1361,16 +1361,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a5bbe824c507c5da5956355e86a746d82e0e1464f65d862cc5e71da70e94b2c"
 dependencies = [
  "cfg-if 1.0.0",
-]
-
-[[package]]
-name = "inventory"
-version = "0.2.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "84344c6e0b90a9e2b6f3f9abe5cc74402684e348df7b32adca28747e0cef091a"
-dependencies = [
- "ctor",
- "ghost",
 ]
 
 [[package]]

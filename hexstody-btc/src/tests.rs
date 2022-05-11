@@ -1,13 +1,9 @@
-pub mod helpers;
-pub mod runner;
-
 use bitcoin::Amount;
 use bitcoincore_rpc::RpcApi;
 use hexstody_btc_api::events::*;
 use hexstody_btc_api::bitcoin::*;
-
-use helpers::*;
-use runner::*;
+use hexstody_btc_test::runner::*;
+use hexstody_btc_test::helpers::*;
 
 // Check that we have node and API operational
 #[tokio::test]
