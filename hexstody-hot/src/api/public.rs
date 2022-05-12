@@ -12,6 +12,7 @@ use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{Mutex, Notify};
+use chrono::prelude::*;
 
 #[openapi(tag = "ping")]
 #[get("/ping")]
@@ -45,10 +46,12 @@ fn get_history() -> Json<History> {
         history_items: vec![
             HistoryItem::Deposit(DepositHistoryItem {
                 currency: Currency::BTC,
+                date: Utc::now().naive_utc(),
                 value: u64::MAX,
             }),
             HistoryItem::Withdrawal(WithdrawalHistoryItem {
                 currency: Currency::ETH,
+                date: Utc::now().naive_utc(),
                 value: u64::MAX,
             }),
         ],

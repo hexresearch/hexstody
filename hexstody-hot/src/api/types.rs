@@ -2,6 +2,7 @@ use rocket::serde::json::Json;
 use rocket_okapi::okapi::schemars;
 use rocket_okapi::okapi::schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use chrono::{NaiveDateTime};
 
 use hexstody_db::domain::currency::Currency;
 
@@ -14,12 +15,14 @@ pub struct BalanceItem {
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct DepositHistoryItem {
     pub currency: Currency,
+    pub date: NaiveDateTime,
     pub value: u64,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct WithdrawalHistoryItem {
     pub currency: Currency,
+    pub date: NaiveDateTime,
     pub value: u64,
 }
 
