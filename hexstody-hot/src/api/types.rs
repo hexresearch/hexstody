@@ -7,6 +7,14 @@ use serde::{Deserialize, Serialize};
 use hexstody_db::domain::currency::Currency;
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub enum WithdrawalRequestStatus {
+    UnderReview,
+    InProgress,
+    AwaitsApproval,
+    Completed
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct BalanceItem {
     pub currency: Currency,
     pub value: u64,
@@ -25,6 +33,7 @@ pub struct WithdrawalHistoryItem {
     pub currency: Currency,
     pub date: NaiveDateTime,
     pub value: u64,
+    pub status: WithdrawalRequestStatus
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]

@@ -1,6 +1,6 @@
 use super::types::*;
 use hexstody_db::domain::currency::Currency;
-use hexstody_db::state::State;
+use hexstody_db::state::{State};
 use hexstody_db::Pool;
 use rocket::fairing::AdHoc;
 use rocket::fs::{relative, FileServer};
@@ -49,12 +49,13 @@ fn get_history() -> Json<History> {
                 currency: Currency::BTC,
                 date: Utc::now().naive_utc(),
                 value: u64::MAX,
-                number_of_confirmations: 3
+                number_of_confirmations: 3,
             }),
             HistoryItem::Withdrawal(WithdrawalHistoryItem {
                 currency: Currency::ETH,
                 date: Utc::now().naive_utc(),
                 value: u64::MAX,
+                status : WithdrawalRequestStatus::InProgress
             }),
         ],
     };
