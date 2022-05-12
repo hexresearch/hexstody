@@ -1,5 +1,6 @@
 use log::*;
 use thiserror::Error;
+use hexstody_api::types::*;
 
 #[derive(Error, Debug)]
 pub enum Error {
@@ -36,7 +37,37 @@ impl HexstodyClient {
             .error_for_status()?
             .text()
             .await?;
-        debug!("Response ping: {}", response);
+        debug!("Response {path}: {}", response);
+        Ok(())
+    }
+
+    pub async fn signup_email(&self, data: SignupEmail) -> Result<()> {
+        let path = "/signup/email";
+        let endpoint = format!("{}{}", self.server, path);
+        let request = self.client.post(endpoint).json(&data).build()?;
+        let response = self
+            .client
+            .execute(request)
+            .await?
+            .error_for_status()?
+            .text()
+            .await?;
+        debug!("Response {path}: {}", response);
+        Ok(())
+    }
+
+    pub async fn signin_email(&self, data: SigninEmail) -> Result<()> {
+        let path = "/signin/email";
+        let endpoint = format!("{}{}", self.server, path);
+        let request = self.client.post(endpoint).json(&data).build()?;
+        let response = self
+            .client
+            .execute(request)
+            .await?
+            .error_for_status()?
+            .text()
+            .await?;
+        debug!("Response {path}: {}", response);
         Ok(())
     }
 }

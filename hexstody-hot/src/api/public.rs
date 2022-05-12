@@ -1,12 +1,13 @@
-use super::types::*;
-use hexstody_db::domain::currency::Currency;
+use hexstody_api::domain::currency::Currency;
+use hexstody_api::error;
+use hexstody_api::types::*;
 use hexstody_db::state::State;
 use hexstody_db::Pool;
 use rocket::fairing::AdHoc;
 use rocket::fs::{relative, FileServer};
 use rocket::response::content;
 use rocket::serde::json::Json;
-use rocket::{get, routes};
+use rocket::{get, post, routes};
 use rocket_dyn_templates::Template;
 use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
 use std::collections::HashMap;
@@ -71,6 +72,18 @@ fn overview() -> Template {
     Template::render("overview", context)
 }
 
+#[openapi(tag = "auth")]
+#[post("/signup/email", data = "<data>")]
+fn signup_email(data: Json<SignupEmail>) -> error::Result<()> {
+    Ok(Json(()))
+}
+
+#[openapi(tag = "auth")]
+#[post("/signin/email", data = "<data>")]
+fn signin_email(data: Json<SigninEmail>) -> error::Result<()> {
+    Ok(Json(()))
+}
+
 pub async fn serve_public_api(
     pool: Pool,
     state: Arc<Mutex<State>>,
@@ -87,7 +100,10 @@ pub async fn serve_public_api(
 
     rocket::custom(figment)
         .mount("/static", FileServer::from(relative!("static/")))
-        .mount("/", openapi_get_routes![ping, get_balance, get_history])
+        .mount(
+            "/",
+            openapi_get_routes![ping, get_balance, get_history, signup_email, signin_email],
+        )
         .mount("/", routes![index, overview])
         .mount(
             "/swagger/",
