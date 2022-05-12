@@ -5,7 +5,7 @@
       {{#if (isDeposit this)}}+{{else}}-{{/if}} &nbsp; {{formatCurrencyValue}}
    </div>
    <div class="col-1">
-      {{this.currency}}
+      {{currency}}
    </div>
    <div class="col-3">
       {{formattedElapsedTime}}
@@ -17,7 +17,7 @@
    {{/if}}
    {{#if (isDeposit this)}}
    <div class="col-1">
-      6 of 6
+      {{number_of_confirmations}} of {{../target_number_of_confirmations}}
    </div>
    {{/if}}
 </div>
