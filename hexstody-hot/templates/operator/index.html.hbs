@@ -1,7 +1,5 @@
 {{#*inline "page"}}
 
-<script src="/js/operator/script.js"></script>
-
 <h3>Withdrawal requests</h3>
 <table>
     <thead>
@@ -17,10 +15,24 @@
     </thead>
     <tbody>
         {{#each withdrawal_requests}}
-        <tr>
-            {{print_withdrawal_request}}
-            <td><b>+</b></td>
-        </tr>
+            <tr>
+                <td>{{this.id}}</td>
+                <td>{{this.user}}</td>
+                <td>{{this.address}}</td>
+                <td>{{this.created_at}}</td>
+                <td>{{this.amount}}</td>
+                <td>{{this.confrimtaion_status}}</td>
+                <td>
+                    <div class="row">
+                        <div class="col">
+                            <button type="button" class="button primary icon">Confirm</button>
+                        </div>
+                        <div class="col">
+                            <button type="button" class="button error icon">Reject</button>
+                        </div>
+                    </div>
+                </td>
+            </tr>
         {{/each}}
     </tbody>
 </table>

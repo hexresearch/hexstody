@@ -1071,6 +1071,7 @@ dependencies = [
  "rocket_dyn_templates",
  "rocket_okapi",
  "rpassword",
+ "schemars",
  "serde",
  "serde_json",
  "sqlx",
@@ -2138,6 +2139,7 @@ dependencies = [
  "tokio-stream",
  "tokio-util 0.6.9",
  "ubyte",
+ "uuid",
  "version_check",
  "yansi",
 ]
@@ -2199,6 +2201,7 @@ dependencies = [
  "time 0.2.27",
  "tokio",
  "uncased",
+ "uuid",
 ]
 
 [[package]]
@@ -2308,11 +2311,13 @@ version = "0.8.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c6b5a3c80cea1ab61f4260238409510e814e38b4b563c06044edf91e7dc070e3"
 dependencies = [
+ "chrono",
  "dyn-clone",
  "indexmap",
  "schemars_derive",
  "serde",
  "serde_json",
+ "uuid",
 ]
 
 [[package]]
