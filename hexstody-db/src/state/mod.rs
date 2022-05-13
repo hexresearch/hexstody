@@ -1,15 +1,20 @@
+pub mod transaction;
+pub mod user;
+pub mod withdraw;
+
 use chrono::prelude::*;
-use ecdsa::{Signature, VerifyingKey};
-use p256::NistP256;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use thiserror::Error;
+pub use transaction::*;
+pub use user::*;
 use uuid::Uuid;
+pub use withdraw::*;
 
-use super::update::signup::{SignupAuth, SignupInfo, UserId};
+use super::update::signup::{SignupInfo, UserId};
 use super::update::withdrawal::WithdrawalRequestInfo;
 use super::update::{StateUpdate, UpdateBody};
-use hexstody_api::domain::{Currency, CurrencyAddress};
+use hexstody_api::domain::Currency;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct State {
@@ -17,79 +22,18 @@ pub struct State {
     /// TODO: There is possible DDoS attack on signup of million of users.
     ///     We need to implement rate limits for it and auto cleanup of unused empty accounts.
     pub users: HashMap<UserId, UserInfo>,
-    /// Users can create withdrawal requests that in some cases require manual confirmation from operators
-    pub withdrawal_requests: HashMap<WithdrawalRequestId, WithdrawalRequest>,
     /// Tracks when the state was last updated
     pub last_changed: NaiveDateTime,
-}
-
-#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
-pub struct UserInfo {
-    /// It is unique user ID whithin the system. It is either email address or hex encoded LNAuth public key.
-    pub username: UserId,
-    /// Contains additional info that required to authentificated user in future.
-    pub auth: SignupAuth,
-    /// When the user was created
-    pub created_at: NaiveDateTime,
-    /// Required information for making deposit for the user in different currencies.
-    pub deposit_info: HashMap<Currency, Vec<CurrencyAddress>>,
-}
-
-impl From<(NaiveDateTime, SignupInfo)> for UserInfo {
-    fn from(value: (NaiveDateTime, SignupInfo)) -> Self {
-        UserInfo {
-            username: value.1.username,
-            auth: value.1.auth,
-            created_at: value.0,
-            deposit_info: HashMap::new(),
-        }
-    }
-}
-
-/// It is unique withdrawal request ID whithin the system.
-pub type WithdrawalRequestId = Uuid;
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub struct WithdrawalRequest {
-    /// Request ID
-    pub id: WithdrawalRequestId,
-    /// User which initiated request
-    pub user: UserId,
-    /// Receiving address
-    pub address: CurrencyAddress,
-    /// When the request was created
-    pub created_at: NaiveDateTime,
-    /// Amount of tokens to transfer
-    pub amount: u64,
-    /// Some request require manual confirmation
-    pub confrimtaion_status: WithdrawalRequestStatus,
-}
-
-impl From<(NaiveDateTime, WithdrawalRequestId, WithdrawalRequestInfo)> for WithdrawalRequest {
-    fn from(value: (NaiveDateTime, WithdrawalRequestId, WithdrawalRequestInfo)) -> Self {
-        WithdrawalRequest {
-            id: value.1,
-            user: value.2.user,
-            address: value.2.address,
-            created_at: value.0,
-            amount: value.2.amount,
-            confrimtaion_status: WithdrawalRequestStatus::Confirmations(Vec::new()),
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub enum WithdrawalRequestStatus {
-    /// This request doesn't require manual confirmation
-    NoConfirmationRequired,
-    /// Vector of confirmations received from operators
-    Confirmations(Vec<(VerifyingKey<NistP256>, Signature<NistP256>)>),
 }
 
 #[derive(Error, Debug, PartialEq)]
 pub enum StateUpdateErr {
     #[error("User with ID {0} is already signed up")]
-    UserAlreadyExists(String),
+    UserAlreadyExists(UserId),
+    #[error("User with ID {0} is not known")]
+    CannotFoundUser(UserId),
+    #[error("User {0} doesn't have currency {1}")]
+    UserMissingCurrency(UserId, Currency),
 }
 
 impl State {
@@ -97,7 +41,6 @@ impl State {
         State {
             users: HashMap::new(),
             last_changed: Utc::now().naive_utc(),
-            withdrawal_requests: HashMap::new(),
         }
     }
 
@@ -147,10 +90,23 @@ impl State {
         let request_id = Uuid::new_v4();
         let withdrawal_request: WithdrawalRequest =
             (timestamp, request_id, withdrawal_request_info).into();
-        self.withdrawal_requests
-            .insert(request_id, withdrawal_request);
-
-        Ok(())
+        let user_id = &withdrawal_request.user;
+        if let Some(user) = self.users.get_mut(user_id) {
+            let currency = withdrawal_request.address.currency();
+            if let Some(cur_info) = user.currencies.get_mut(&currency) {
+                cur_info
+                    .withdrawal_requests
+                    .insert(request_id, withdrawal_request);
+                Ok(())
+            } else {
+                Err(StateUpdateErr::UserMissingCurrency(
+                    user_id.clone(),
+                    currency,
+                ))
+            }
+        } else {
+            Err(StateUpdateErr::CannotFoundUser(user_id.clone()))
+        }
     }
 
     /// Take ordered chain of updates and collect the accumulated state.
@@ -165,6 +121,19 @@ impl State {
         }
         Ok(state)
     }
+
+    /// Extract all pending withdrawal requests
+    pub fn withdrawal_requests(&self) -> HashMap<WithdrawalRequestId, WithdrawalRequest> {
+        let mut result = HashMap::new();
+        for (_, user) in self.users.iter() {
+            for (_, info) in user.currencies.iter() {
+                for (req_id, req) in info.withdrawal_requests.iter() {
+                    result.insert(req_id.clone(), req.clone());
+                }
+            }
+        }
+        result
+    }
 }
 
 impl Default for State {
@@ -177,7 +146,7 @@ impl Default for State {
 mod tests {
     use super::*;
     use crate::queries::*;
-    use crate::update::signup::SignupInfo;
+    use crate::update::signup::{SignupAuth, SignupInfo};
     use crate::update::StateUpdate;
     use hexstody_api::domain::{BtcAddress, CurrencyAddress};
 
@@ -196,12 +165,7 @@ mod tests {
         state0.apply_update(upd).unwrap();
 
         let state = query_state(&pool).await.unwrap();
-        let expected_user = UserInfo {
-            username: username.clone(),
-            auth: SignupAuth::Lightning,
-            deposit_info: HashMap::new(),
-            created_at,
-        };
+        let expected_user = UserInfo::new(&username, SignupAuth::Lightning, created_at);
         let extracted_user = state.users.get(&username).cloned().map(|mut u| {
             u.created_at = created_at;
             u
@@ -217,6 +181,13 @@ mod tests {
         let address = CurrencyAddress::BTC(BtcAddress(
             "bc1qpv8tczdsft9lmlz4nhz8058jdyl96velqqlwgj".to_owned(),
         ));
+        let signup_upd = StateUpdate::new(UpdateBody::Signup(SignupInfo {
+            username: username.clone(),
+            auth: SignupAuth::Lightning,
+        }));
+        insert_update(&pool, signup_upd.body.clone(), Some(signup_upd.created))
+            .await
+            .unwrap();
         let upd = StateUpdate::new(UpdateBody::NewWithdrawalRequest(WithdrawalRequestInfo {
             user: username.clone(),
             address: address.clone(),
@@ -225,9 +196,21 @@ mod tests {
         insert_update(&pool, upd.body.clone(), Some(upd.created))
             .await
             .unwrap();
+        state0.apply_update(signup_upd).unwrap();
         state0.apply_update(upd).unwrap();
         let state = query_state(&pool).await.unwrap();
-        let extracted_withdrawal_request = state.withdrawal_requests.iter().next().unwrap().1;
+        let extracted_withdrawal_request = state
+            .users
+            .get(&username)
+            .unwrap()
+            .currencies
+            .get(&Currency::BTC)
+            .unwrap()
+            .withdrawal_requests
+            .iter()
+            .next()
+            .unwrap()
+            .1;
         assert_eq!(extracted_withdrawal_request.user, username);
         assert_eq!(extracted_withdrawal_request.address, address);
         assert_eq!(extracted_withdrawal_request.amount, amount);

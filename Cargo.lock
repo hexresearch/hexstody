@@ -1374,6 +1374,8 @@ dependencies = [
 name = "hexstody-db"
 version = "0.1.0"
 dependencies = [
+ "bitcoin",
+ "bitcoin_hashes",
  "chrono",
  "clap",
  "dotenv",
