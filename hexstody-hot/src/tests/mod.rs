@@ -12,7 +12,7 @@ async fn test_simple() {
 }
 
 #[tokio::test]
-async fn test_signup_email() {
+async fn test_auth_email() {
     run_test(|env| async move {
         let user = "aboba@mail.com".to_owned();
         let password = "123456".to_owned();
@@ -33,6 +33,9 @@ async fn test_signup_email() {
             })
             .await
             .expect("Signup");
+
+        let res = env.hot_client.logout().await;
+        assert!(!res.is_ok(), "Logout before signing");
 
         let res = env
             .hot_client
