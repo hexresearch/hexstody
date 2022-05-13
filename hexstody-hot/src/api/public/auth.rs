@@ -5,10 +5,11 @@ use hexstody_db::update::signup::*;
 use hexstody_db::update::*;
 use pwhash::bcrypt;
 use rocket::http::{Cookie, CookieJar};
+use rocket::post;
 use rocket::serde::json::Json;
 use rocket::State as RState;
-use rocket::{post};
 use rocket_okapi::openapi;
+use std::future::Future;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio::sync::Mutex;
@@ -92,12 +93,22 @@ pub async fn signin_email(
 
 #[openapi(tag = "auth")]
 #[post("/logout")]
-pub async fn logout(
-    cookies: &CookieJar<'_>,
-) -> error::Result<()> {
-    if let Some(cookie) = cookies.get_private(AUTH_COOKIE) {
+pub async fn logout(cookies: &CookieJar<'_>) -> error::Result<()> {
+    require_auth(cookies, |cookie| async move {
         cookies.remove(cookie);
         Ok(Json(()))
+    })
+    .await
+}
+
+/// Helper for implementing endpoints that require authentification
+pub async fn require_auth<F, Fut, R>(cookies: &CookieJar<'_>, future: F) -> error::Result<R>
+where
+    F: FnOnce(Cookie<'static>) -> Fut,
+    Fut: Future<Output = error::Result<R>>,
+{
+    if let Some(cookie) = cookies.get_private(AUTH_COOKIE) {
+        future(cookie).await
     } else {
         Err(error::Error::AuthRequired.into())
     }

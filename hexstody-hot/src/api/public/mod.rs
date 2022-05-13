@@ -1,4 +1,5 @@
 pub mod auth;
+pub mod wallet;
 
 use auth::*;
 use chrono::prelude::*;
@@ -18,30 +19,12 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio::sync::{Mutex, Notify};
+use wallet::*;
 
 #[openapi(tag = "ping")]
 #[get("/ping")]
 fn ping() -> content::Json<()> {
     content::Json(())
-}
-
-#[openapi(tag = "get_balance")]
-#[get("/get_balance")]
-fn get_balance() -> Json<api::Balance> {
-    let x = api::Balance {
-        balances: vec![
-            api::BalanceItem {
-                currency: Currency::BTC,
-                value: u64::MAX,
-            },
-            api::BalanceItem {
-                currency: Currency::ETH,
-                value: u64::MAX,
-            },
-        ],
-    };
-
-    Json(x)
 }
 
 #[openapi(tag = "get_history")]
@@ -187,7 +170,8 @@ mod tests {
             let client = HexstodyClient::new(&format!(
                 "http://{}:{}",
                 SERVICE_TEST_HOST, SERVICE_TEST_PORT
-            )).expect("cleint created");
+            ))
+            .expect("cleint created");
             client.ping().await.unwrap();
         })
         .await;
