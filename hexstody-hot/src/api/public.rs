@@ -2,6 +2,7 @@ use hexstody_api::domain::currency::Currency;
 use hexstody_api::error;
 use hexstody_api::types::*;
 use hexstody_db::state::State;
+use hexstody_db::update::StateUpdate;
 use hexstody_db::Pool;
 use rocket::fairing::AdHoc;
 use rocket::fs::{relative, FileServer};
@@ -13,6 +14,7 @@ use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{Mutex, Notify};
+use tokio::sync::mpsc;
 
 #[openapi(tag = "ping")]
 #[get("/ping")]
@@ -90,6 +92,7 @@ pub async fn serve_public_api(
     state_notify: Arc<Notify>,
     start_notify: Arc<Notify>,
     port: u16,
+    update_sender: mpsc::Sender<StateUpdate>,
 ) -> Result<(), rocket::Error> {
     let figment = rocket::Config::figment().merge(("port", port));
     let on_ready = AdHoc::on_liftoff("API Start!", |_| {
@@ -143,13 +146,14 @@ mod tests {
         let start_notify = Arc::new(Notify::new());
 
         let (sender, receiver) = tokio::sync::oneshot::channel();
+        let (update_sender, _) = tokio::sync::mpsc::channel(1000);
         tokio::spawn({
             let state = state_mx.clone();
             let state_notify = state_notify.clone();
             let start_notify = start_notify.clone();
             async move {
                 let serve_task =
-                    serve_public_api(pool, state, state_notify, start_notify, SERVICE_TEST_PORT);
+                    serve_public_api(pool, state, state_notify, start_notify, SERVICE_TEST_PORT, update_sender);
                 futures::pin_mut!(serve_task);
                 futures::future::select(serve_task, receiver.map_err(drop)).await;
             }

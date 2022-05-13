@@ -4,9 +4,9 @@ use rocket_dyn_templates::Template;
 use rocket_okapi::{openapi, swagger_ui::*};
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::{Mutex, Notify};
+use tokio::sync::{mpsc, Mutex, Notify};
 
-use hexstody_db::state::State;
+use hexstody_db::{state::State, update::StateUpdate};
 use hexstody_db::Pool;
 
 #[openapi(skip)]
@@ -21,6 +21,7 @@ pub async fn serve_operator_api(
     state: Arc<Mutex<State>>,
     state_notify: Arc<Notify>,
     port: u16,
+    update_sender: mpsc::Sender<StateUpdate>,
 ) -> Result<(), rocket::Error> {
     let figment = rocket::Config::figment().merge(("port", port));
     rocket::custom(figment)

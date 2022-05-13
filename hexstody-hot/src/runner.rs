@@ -5,11 +5,12 @@ use serde::Deserialize;
 use std::fmt;
 use std::sync::Arc;
 use thiserror::Error;
+use tokio::sync::mpsc;
 use tokio::sync::{Mutex, Notify};
 
-use hexstody_db::create_db_pool;
 use hexstody_db::queries::query_state;
-use hexstody_db::{state::State, Pool};
+use hexstody_db::*;
+use hexstody_db::{state::State, update::StateUpdate, Pool};
 
 use super::api::operator::*;
 use super::api::public::*;
@@ -84,6 +85,7 @@ async fn serve_api(
     api_enabled: bool,
     port: u16,
     abort_reg: AbortRegistration,
+    update_sender: mpsc::Sender<StateUpdate>,
 ) -> () {
     if !api_enabled {
         info!("{api_type} API disabled");
@@ -99,13 +101,14 @@ async fn serve_api(
                     state_notify.clone(),
                     start_notify.clone(),
                     port,
+                    update_sender.clone(),
                 )
             })
             .await;
         }
         ApiType::Operator => {
             serve_abortable(api_type, abort_reg, || {
-                serve_operator_api(pool.clone(), state_mx.clone(), state_notify.clone(), port)
+                serve_operator_api(pool.clone(), state_mx.clone(), state_notify.clone(), port, update_sender.clone())
             })
             .await;
         }
@@ -119,6 +122,7 @@ pub async fn serve_apis(
     start_notify: Arc<Notify>,
     api_config: ApiConfig,
     api_abort: AbortRegistration,
+    update_sender: mpsc::Sender<StateUpdate>,
 ) -> Result<(), Aborted> {
     let (public_handle, public_abort) = AbortHandle::new_pair();
     let public_api_fut = serve_api(
@@ -130,6 +134,7 @@ pub async fn serve_apis(
         api_config.public_api_enabled,
         api_config.public_api_port,
         public_abort,
+        update_sender.clone(),
     );
     let (operator_handle, operator_abort) = AbortHandle::new_pair();
     let operator_api_fut = serve_api(
@@ -141,6 +146,7 @@ pub async fn serve_apis(
         api_config.operator_api_enabled,
         api_config.operator_api_port,
         operator_abort,
+        update_sender.clone(),
     );
 
     let abortable_apis =
@@ -176,6 +182,17 @@ pub async fn run_hot_wallet(
     let state = query_state(&pool).await?;
     let state_mx = Arc::new(Mutex::new(state));
     let state_notify = Arc::new(Notify::new());
+    let (update_sender, update_receiver) = mpsc::channel(1000);
+
+    let update_worker_hndl = tokio::spawn({
+        let pool = pool.clone();
+        let state_mx = state_mx.clone();
+        let state_notify = state_notify.clone();
+        async move {
+            update_worker(pool, state_mx, state_notify, update_receiver).await;
+        }
+    });
+
     let (_api_abort_handle, api_abort_reg) = AbortHandle::new_pair();
     if let Err(Aborted) = serve_apis(
         pool,
@@ -184,10 +201,12 @@ pub async fn run_hot_wallet(
         start_notify,
         api_config,
         api_abort_reg,
+        update_sender,
     )
     .await
     {
         info!("Logic aborted, exiting...");
+        update_worker_hndl.abort();
         Err(Error::Aborted)
     } else {
         Ok(())
