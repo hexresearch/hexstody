@@ -1,4 +1,4 @@
-import { loadTemplate, formattedCurrencyValue } from "./common.js";
+import { loadTemplate, formattedCurrencyValue, formattedElapsedTime } from "./common.js";
 
 let balanceTemplate = null;
 let historyTemplate = null;
@@ -21,8 +21,12 @@ async function initTemplates() {
     historyTemplate = historyTemp.value;
 
     Handlebars.registerHelper('isDeposit', (historyItem) => historyItem.type === "deposit");
-    Handlebars.registerHelper('formatCurrencyValue', function() {
+    Handlebars.registerHelper('isWithdrawal', (historyItem) => historyItem.type === "withdrawal");
+    Handlebars.registerHelper('formatCurrencyValue', function () {
         return formattedCurrencyValue(this.currency, this.value);
+    });
+    Handlebars.registerHelper('formattedElapsedTime', function () {
+        return formattedElapsedTime(this.date);
     });
 }
 

@@ -15,6 +15,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{Mutex, Notify};
 use tokio::sync::mpsc;
+use chrono::prelude::*;
 
 #[openapi(tag = "ping")]
 #[get("/ping")]
@@ -45,14 +46,19 @@ fn get_balance() -> Json<Balance> {
 #[get("/get_history")]
 fn get_history() -> Json<History> {
     let x = History {
+        target_number_of_confirmations: 6,
         history_items: vec![
             HistoryItem::Deposit(DepositHistoryItem {
                 currency: Currency::BTC,
+                date: Utc::now().naive_utc(),
                 value: u64::MAX,
+                number_of_confirmations: 3,
             }),
             HistoryItem::Withdrawal(WithdrawalHistoryItem {
                 currency: Currency::ETH,
+                date: Utc::now().naive_utc(),
                 value: u64::MAX,
+                status : WithdrawalRequestStatus::InProgress
             }),
         ],
     };

@@ -1077,6 +1077,7 @@ checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 name = "hexstody-api"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "rocket",
  "rocket_okapi",
  "schemars",
@@ -2564,6 +2565,7 @@ version = "0.8.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c6b5a3c80cea1ab61f4260238409510e814e38b4b563c06044edf91e7dc070e3"
 dependencies = [
+ "chrono",
  "dyn-clone",
  "indexmap",
  "schemars_derive",
