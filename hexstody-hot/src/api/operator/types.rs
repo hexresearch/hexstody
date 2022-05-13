@@ -2,9 +2,10 @@ use rocket::serde::uuid::Uuid;
 use rocket_okapi::okapi::schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use hexstody_db::domain::{BtcAddress, CurrencyAddress, EthAccount};
 use hexstody_db::state::{WithdrawalRequest as WithdrawalRequestDb, WithdrawalRequestStatus};
 use hexstody_db::update::withdrawal::WithdrawalRequestInfo as WithdrawalRequestInfoDb;
+
+use hexstody_api::domain::currency::{BtcAddress, CurrencyAddress, EthAccount};
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct WithdrawalRequestInfo {

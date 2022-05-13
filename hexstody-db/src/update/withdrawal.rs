@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use crate::domain::CurrencyAddress;
 use crate::update::signup::UserId;
+use hexstody_api::domain::CurrencyAddress;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct WithdrawalRequestInfo {

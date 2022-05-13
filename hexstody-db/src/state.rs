@@ -9,7 +9,7 @@ use uuid::Uuid;
 use super::update::signup::{SignupAuth, SignupInfo, UserId};
 use super::update::withdrawal::WithdrawalRequestInfo;
 use super::update::{StateUpdate, UpdateBody};
-use crate::domain::{Currency, CurrencyAddress};
+use hexstody_api::domain::{Currency, CurrencyAddress};
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct State {
@@ -176,10 +176,10 @@ impl Default for State {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::{BtcAddress, CurrencyAddress};
     use crate::queries::*;
     use crate::update::signup::SignupInfo;
     use crate::update::StateUpdate;
+    use hexstody_api::domain::{BtcAddress, CurrencyAddress};
 
     #[sqlx_database_tester::test(pool(variable = "pool", migrations = "./migrations"))]
     async fn test_signup_update() {

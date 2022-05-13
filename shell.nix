@@ -14,6 +14,7 @@ in stdenv.mkDerivation rec {
     sqlx-cli
     #podman-compose
     docker-compose
+    bitcoin
   ];
   shellHook = ''
   export LIBCLANG_PATH="${llvmPackages.libclang}/lib"

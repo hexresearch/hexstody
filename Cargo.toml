@@ -1,7 +1,10 @@
 [workspace]
 
 members = [
+    "hexstody-api",
+    "hexstody-btc-api",
     "hexstody-btc-client",
+    "hexstody-btc-test",
     "hexstody-btc",
     "hexstody-client",
     "hexstody-db",

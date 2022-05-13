@@ -9,7 +9,7 @@ use rocket::{get, post, routes};
 use rocket_dyn_templates::Template;
 use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
 use std::sync::Arc;
-use tokio::sync::{Mutex, Notify};
+use tokio::sync::{mpsc, Mutex, Notify};
 
 use hexstody_db::queries::insert_update;
 use hexstody_db::state::State as HexstodyState;
@@ -70,7 +70,9 @@ pub async fn serve_operator_api(
     pool: Pool,
     state: Arc<Mutex<HexstodyState>>,
     state_notify: Arc<Notify>,
+    start_notify: Arc<Notify>,
     port: u16,
+    update_sender: mpsc::Sender<StateUpdate>,
 ) -> Result<(), rocket::Error> {
     let figment = rocket::Config::figment().merge(("port", port));
     rocket::custom(figment)

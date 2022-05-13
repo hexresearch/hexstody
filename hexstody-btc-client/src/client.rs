@@ -1,5 +1,7 @@
+use hexstody_btc_api::events::*;
 use log::*;
 use thiserror::Error;
+use bitcoin::Address;
 
 #[derive(Error, Debug)]
 pub enum Error {
@@ -36,7 +38,37 @@ impl BtcClient {
             .error_for_status()?
             .text()
             .await?;
-        debug!("Response ping: {}", response);
+        debug!("Response {path}: {}", response);
         Ok(())
+    }
+
+    pub async fn poll_events(&self) -> Result<BtcEvents> {
+        let path = "/events";
+        let endpoint = format!("{}{}", self.server, path);
+        let request = self.client.post(endpoint).build()?;
+        let response = self
+            .client
+            .execute(request)
+            .await?
+            .error_for_status()?
+            .text()
+            .await?;
+        debug!("Response {path}: {}", response);
+        Ok(serde_json::from_str(&response)?)
+    }
+
+    pub async fn deposit_address(&self) -> Result<Address> {
+        let path = "/deposit/address";
+        let endpoint = format!("{}{}", self.server, path);
+        let request = self.client.post(endpoint).build()?;
+        let response = self
+            .client
+            .execute(request)
+            .await?
+            .error_for_status()?
+            .text()
+            .await?;
+        debug!("Response {path}: {}", response);
+        Ok(serde_json::from_str(&response)?)
     }
 }
