@@ -1,6 +1,7 @@
+use chrono::prelude::*;
 use hexstody_api::domain::currency::Currency;
 use hexstody_api::error;
-use hexstody_api::types::*;
+use hexstody_api::types as api;
 use hexstody_db::state::*;
 use hexstody_db::update::signup::*;
 use hexstody_db::update::*;
@@ -27,14 +28,14 @@ fn ping() -> content::Json<()> {
 
 #[openapi(tag = "get_balance")]
 #[get("/get_balance")]
-fn get_balance() -> Json<Balance> {
-    let x = Balance {
+fn get_balance() -> Json<api::Balance> {
+    let x = api::Balance {
         balances: vec![
-            BalanceItem {
+            api::BalanceItem {
                 currency: Currency::BTC,
                 value: u64::MAX,
             },
-            BalanceItem {
+            api::BalanceItem {
                 currency: Currency::ETH,
                 value: u64::MAX,
             },
@@ -46,16 +47,21 @@ fn get_balance() -> Json<Balance> {
 
 #[openapi(tag = "get_history")]
 #[get("/get_history")]
-fn get_history() -> Json<History> {
-    let x = History {
+fn get_history() -> Json<api::History> {
+    let x = api::History {
+        target_number_of_confirmations: 6,
         history_items: vec![
-            HistoryItem::Deposit(DepositHistoryItem {
+            api::HistoryItem::Deposit(api::DepositHistoryItem {
                 currency: Currency::BTC,
+                date: Utc::now().naive_utc(),
                 value: u64::MAX,
+                number_of_confirmations: 3,
             }),
-            HistoryItem::Withdrawal(WithdrawalHistoryItem {
+            api::HistoryItem::Withdrawal(api::WithdrawalHistoryItem {
                 currency: Currency::ETH,
+                date: Utc::now().naive_utc(),
                 value: u64::MAX,
+                status: api::WithdrawalRequestStatus::InProgress,
             }),
         ],
     };
@@ -82,7 +88,7 @@ fn overview() -> Template {
 async fn signup_email(
     state: &RState<Arc<Mutex<State>>>,
     updater: &RState<mpsc::Sender<StateUpdate>>,
-    data: Json<SignupEmail>,
+    data: Json<api::SignupEmail>,
 ) -> error::Result<()> {
     if data.user.len() < error::MIN_USER_NAME_LEN {
         return Err(error::Error::UserNameTooShort.into());
@@ -117,7 +123,7 @@ async fn signup_email(
 #[post("/signin/email", data = "<data>")]
 async fn signin_email(
     state: &RState<Arc<Mutex<State>>>,
-    data: Json<SigninEmail>,
+    data: Json<api::SigninEmail>,
 ) -> error::Result<()> {
     if data.user.len() < error::MIN_USER_NAME_LEN {
         return Err(error::Error::UserNameTooShort.into());
