@@ -41,6 +41,15 @@ async fn test_signup_email() {
             })
             .await
             .expect("Signin");
+
+        let res = env
+            .hot_client
+            .signin_email(SigninEmail {
+                user: user.clone(),
+                password: "wrong".to_owned(),
+            })
+            .await;
+        assert!(!res.is_ok(), "Wrong password passes");
     })
     .await;
 }

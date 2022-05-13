@@ -21,6 +21,10 @@ pub enum Error {
     UserPasswordTooShort,
     #[error("Failed to signup user. The user password is too long. Need <= {MAX_USER_PASSWORD_LEN} symbols")]
     UserPasswordTooLong,
+    #[error("Password hash failed: {0}")]
+    Pwhash(#[from] pwhash::error::Error),
+    #[error("Username of password is invalid")]
+    SigninFailed,
 }
 
 impl Error {
@@ -31,16 +35,20 @@ impl Error {
             Error::UserNameTooLong => 2,
             Error::UserPasswordTooShort => 3,
             Error::UserPasswordTooLong => 4,
+            Error::Pwhash(_) => 5,
+            Error::SigninFailed => 6,
         }
     }
 
     pub fn status(&self) -> Status {
         match self {
-            Error::SignupExistedUser => Status::from_code(401).unwrap(),
-            Error::UserNameTooShort => Status::from_code(401).unwrap(),
-            Error::UserNameTooLong => Status::from_code(401).unwrap(),
-            Error::UserPasswordTooShort => Status::from_code(401).unwrap(),
-            Error::UserPasswordTooLong => Status::from_code(401).unwrap(),
+            Error::SignupExistedUser => Status::from_code(400).unwrap(),
+            Error::UserNameTooShort => Status::from_code(400).unwrap(),
+            Error::UserNameTooLong => Status::from_code(400).unwrap(),
+            Error::UserPasswordTooShort => Status::from_code(400).unwrap(),
+            Error::UserPasswordTooLong => Status::from_code(400).unwrap(),
+            Error::Pwhash(_) => Status::from_code(500).unwrap(),
+            Error::SigninFailed => Status::from_code(401).unwrap(),
         }
     }
 }
