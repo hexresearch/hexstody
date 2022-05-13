@@ -1,20 +1,23 @@
 use hexstody_api::domain::currency::Currency;
 use hexstody_api::error;
 use hexstody_api::types::*;
-use hexstody_db::state::State;
-use hexstody_db::update::StateUpdate;
+use hexstody_db::state::*;
+use hexstody_db::update::signup::*;
+use hexstody_db::update::*;
 use hexstody_db::Pool;
+use pwhash::bcrypt;
 use rocket::fairing::AdHoc;
 use rocket::fs::{relative, FileServer};
 use rocket::response::content;
 use rocket::serde::json::Json;
+use rocket::State as RState;
 use rocket::{get, post, routes};
 use rocket_dyn_templates::Template;
 use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::{Mutex, Notify};
 use tokio::sync::mpsc;
+use tokio::sync::{Mutex, Notify};
 
 #[openapi(tag = "ping")]
 #[get("/ping")]
@@ -76,7 +79,11 @@ fn overview() -> Template {
 
 #[openapi(tag = "auth")]
 #[post("/signup/email", data = "<data>")]
-fn signup_email(data: Json<SignupEmail>) -> error::Result<()> {
+async fn signup_email(
+    state: &RState<Arc<Mutex<State>>>,
+    updater: &RState<mpsc::Sender<StateUpdate>>,
+    data: Json<SignupEmail>,
+) -> error::Result<()> {
     if data.user.len() < error::MIN_USER_NAME_LEN {
         return Err(error::Error::UserNameTooShort.into());
     }
@@ -90,12 +97,28 @@ fn signup_email(data: Json<SignupEmail>) -> error::Result<()> {
         return Err(error::Error::UserPasswordTooLong.into());
     }
 
+    {
+        let mstate = state.lock().await;
+        if let Some(_) = mstate.users.get(&data.user) {
+            return Err(error::Error::SignupExistedUser.into());
+        } else {
+            let pass_hash = bcrypt::hash(&data.password).map_err(|e| error::Error::from(e))?;
+            let upd = StateUpdate::new(UpdateBody::Signup(SignupInfo {
+                username: data.user.clone(),
+                auth: SignupAuth::Password(pass_hash),
+            }));
+            updater.send(upd).await.unwrap();
+        }
+    }
     Ok(Json(()))
 }
 
 #[openapi(tag = "auth")]
 #[post("/signin/email", data = "<data>")]
-fn signin_email(data: Json<SigninEmail>) -> error::Result<()> {
+async fn signin_email(
+    state: &RState<Arc<Mutex<State>>>,
+    data: Json<SigninEmail>,
+) -> error::Result<()> {
     if data.user.len() < error::MIN_USER_NAME_LEN {
         return Err(error::Error::UserNameTooShort.into());
     }
@@ -108,8 +131,23 @@ fn signin_email(data: Json<SigninEmail>) -> error::Result<()> {
     if data.password.len() > error::MAX_USER_PASSWORD_LEN {
         return Err(error::Error::UserPasswordTooLong.into());
     }
-    
-    Ok(Json(()))
+
+    {
+        let mstate = state.lock().await;
+        if let Some(UserInfo {
+            auth: SignupAuth::Password(pass_hash),
+            ..
+        }) = mstate.users.get(&data.user)
+        {
+            if bcrypt::verify(&data.password, pass_hash) {
+                Ok(Json(()))
+            } else {
+                Err(error::Error::SigninFailed.into())
+            }
+        } else {
+            Err(error::Error::SigninFailed.into())
+        }
+    }
 }
 
 pub async fn serve_public_api(
@@ -141,6 +179,8 @@ pub async fn serve_public_api(
                 ..Default::default()
             }),
         )
+        .manage(state)
+        .manage(update_sender)
         .attach(Template::fairing())
         .attach(on_ready)
         .launch()
@@ -178,8 +218,14 @@ mod tests {
             let state_notify = state_notify.clone();
             let start_notify = start_notify.clone();
             async move {
-                let serve_task =
-                    serve_public_api(pool, state, state_notify, start_notify, SERVICE_TEST_PORT, update_sender);
+                let serve_task = serve_public_api(
+                    pool,
+                    state,
+                    state_notify,
+                    start_notify,
+                    SERVICE_TEST_PORT,
+                    update_sender,
+                );
                 futures::pin_mut!(serve_task);
                 futures::future::select(serve_task, receiver.map_err(drop)).await;
             }
