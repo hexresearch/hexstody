@@ -1,18 +1,17 @@
+pub mod auth;
+
+use auth::*;
 use chrono::prelude::*;
 use hexstody_api::domain::currency::Currency;
-use hexstody_api::error;
 use hexstody_api::types as api;
 use hexstody_db::state::*;
-use hexstody_db::update::signup::*;
 use hexstody_db::update::*;
 use hexstody_db::Pool;
-use pwhash::bcrypt;
 use rocket::fairing::AdHoc;
 use rocket::fs::{relative, FileServer};
 use rocket::response::content;
 use rocket::serde::json::Json;
-use rocket::State as RState;
-use rocket::{get, post, routes};
+use rocket::{get, routes};
 use rocket_dyn_templates::Template;
 use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
 use std::collections::HashMap;
@@ -83,79 +82,6 @@ fn overview() -> Template {
     Template::render("overview", context)
 }
 
-#[openapi(tag = "auth")]
-#[post("/signup/email", data = "<data>")]
-async fn signup_email(
-    state: &RState<Arc<Mutex<State>>>,
-    updater: &RState<mpsc::Sender<StateUpdate>>,
-    data: Json<api::SignupEmail>,
-) -> error::Result<()> {
-    if data.user.len() < error::MIN_USER_NAME_LEN {
-        return Err(error::Error::UserNameTooShort.into());
-    }
-    if data.user.len() > error::MAX_USER_NAME_LEN {
-        return Err(error::Error::UserNameTooLong.into());
-    }
-    if data.password.len() < error::MIN_USER_PASSWORD_LEN {
-        return Err(error::Error::UserPasswordTooShort.into());
-    }
-    if data.password.len() > error::MAX_USER_PASSWORD_LEN {
-        return Err(error::Error::UserPasswordTooLong.into());
-    }
-
-    {
-        let mstate = state.lock().await;
-        if let Some(_) = mstate.users.get(&data.user) {
-            return Err(error::Error::SignupExistedUser.into());
-        } else {
-            let pass_hash = bcrypt::hash(&data.password).map_err(|e| error::Error::from(e))?;
-            let upd = StateUpdate::new(UpdateBody::Signup(SignupInfo {
-                username: data.user.clone(),
-                auth: SignupAuth::Password(pass_hash),
-            }));
-            updater.send(upd).await.unwrap();
-        }
-    }
-    Ok(Json(()))
-}
-
-#[openapi(tag = "auth")]
-#[post("/signin/email", data = "<data>")]
-async fn signin_email(
-    state: &RState<Arc<Mutex<State>>>,
-    data: Json<api::SigninEmail>,
-) -> error::Result<()> {
-    if data.user.len() < error::MIN_USER_NAME_LEN {
-        return Err(error::Error::UserNameTooShort.into());
-    }
-    if data.user.len() > error::MAX_USER_NAME_LEN {
-        return Err(error::Error::UserNameTooLong.into());
-    }
-    if data.password.len() < error::MIN_USER_PASSWORD_LEN {
-        return Err(error::Error::UserPasswordTooShort.into());
-    }
-    if data.password.len() > error::MAX_USER_PASSWORD_LEN {
-        return Err(error::Error::UserPasswordTooLong.into());
-    }
-
-    {
-        let mstate = state.lock().await;
-        if let Some(UserInfo {
-            auth: SignupAuth::Password(pass_hash),
-            ..
-        }) = mstate.users.get(&data.user)
-        {
-            if bcrypt::verify(&data.password, pass_hash) {
-                Ok(Json(()))
-            } else {
-                Err(error::Error::SigninFailed.into())
-            }
-        } else {
-            Err(error::Error::SigninFailed.into())
-        }
-    }
-}
-
 pub async fn serve_public_api(
     pool: Pool,
     state: Arc<Mutex<State>>,
@@ -175,7 +101,14 @@ pub async fn serve_public_api(
         .mount("/static", FileServer::from(relative!("static/")))
         .mount(
             "/",
-            openapi_get_routes![ping, get_balance, get_history, signup_email, signin_email],
+            openapi_get_routes![
+                ping,
+                get_balance,
+                get_history,
+                signup_email,
+                signin_email,
+                logout
+            ],
         )
         .mount("/", routes![index, overview])
         .mount(
@@ -254,7 +187,7 @@ mod tests {
             let client = HexstodyClient::new(&format!(
                 "http://{}:{}",
                 SERVICE_TEST_HOST, SERVICE_TEST_PORT
-            ));
+            )).expect("cleint created");
             client.ping().await.unwrap();
         })
         .await;

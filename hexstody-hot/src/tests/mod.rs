@@ -34,14 +34,6 @@ async fn test_signup_email() {
             .await
             .expect("Signup");
 
-        env.hot_client
-            .signin_email(SigninEmail {
-                user: user.clone(),
-                password: password.clone(),
-            })
-            .await
-            .expect("Signin");
-
         let res = env
             .hot_client
             .signin_email(SigninEmail {
@@ -50,6 +42,19 @@ async fn test_signup_email() {
             })
             .await;
         assert!(!res.is_ok(), "Wrong password passes");
+
+        env.hot_client
+            .signin_email(SigninEmail {
+                user: user.clone(),
+                password: password.clone(),
+            })
+            .await
+            .expect("Signin");
+
+        env.hot_client.logout().await.expect("Logout");
+
+        let res = env.hot_client.logout().await;
+        assert!(!res.is_ok(), "Double logout");
     })
     .await;
 }
