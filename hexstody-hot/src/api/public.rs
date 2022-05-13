@@ -43,8 +43,8 @@ fn get_balance() -> Json<Balance> {
 }
 
 #[openapi(tag = "get_history")]
-#[get("/get_history")]
-fn get_history() -> Json<History> {
+#[get("/get_history/<skip>/<take>")]
+fn get_history(skip: u32, take: u32) -> Json<History> {
     let x = History {
         target_number_of_confirmations: 6,
         history_items: vec![
