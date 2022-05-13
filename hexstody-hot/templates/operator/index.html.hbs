@@ -1,11 +1,14 @@
 {{#*inline "page"}}
 
+<script src="/scripts/operator/handlebars-helpers.js"></script>
+
 <h3>Withdrawal requests</h3>
 <table>
     <thead>
         <tr>
             <th><b>Request ID</b></th>
             <th><b>User ID</b></th>
+            <th><b>Currency</b></th>
             <th><b>Address</b></th>
             <th><b>Created at</b></th>
             <th><b>Amount</b></th>
@@ -14,14 +17,15 @@
         </tr>
     </thead>
     <tbody>
-        {{#each withdrawal_requests}}
+        {{#each withdrawal_requests as |withdrawal_request|}}
             <tr>
-                <td>{{this.id}}</td>
-                <td>{{this.user}}</td>
-                <td>{{this.address}}</td>
-                <td>{{this.created_at}}</td>
-                <td>{{this.amount}}</td>
-                <td>{{this.confrimtaion_status}}</td>
+                <td>{{id}}</td>
+                <td>{{user}}</td>
+                <td>{{render_currency address}}</td>
+                <td>{{render_address address}}</td>
+                <td>{{created_at}}</td>
+                <td>{{amount}}</td>
+                <td>{{confrimtaion_status}}</td>
                 <td>
                     <div class="row">
                         <div class="col">

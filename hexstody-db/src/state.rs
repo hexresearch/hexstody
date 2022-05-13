@@ -10,6 +10,7 @@ use super::update::signup::{SignupAuth, SignupInfo, UserId};
 use super::update::withdrawal::WithdrawalRequestInfo;
 use super::update::{StateUpdate, UpdateBody};
 use hexstody_api::domain::{Currency, CurrencyAddress};
+use hexstody_api::types::WithdrawalRequest as WithdrawalRequestApi;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct State {
@@ -74,6 +75,27 @@ impl From<(NaiveDateTime, WithdrawalRequestId, WithdrawalRequestInfo)> for Withd
             created_at: value.0,
             amount: value.2.amount,
             confrimtaion_status: WithdrawalRequestStatus::Confirmations(Vec::new()),
+        }
+    }
+}
+
+impl Into<WithdrawalRequestApi> for WithdrawalRequest {
+    fn into(self) -> WithdrawalRequestApi {
+        let confrimtaion_status = match self.confrimtaion_status {
+            WithdrawalRequestStatus::NoConfirmationRequired => {
+                "No confirmation required".to_owned()
+            }
+            WithdrawalRequestStatus::Confirmations(confirmations) => {
+                format!("{} confirmations", confirmations.len())
+            }
+        };
+        WithdrawalRequestApi {
+            id: self.id,
+            user: self.user,
+            address: self.address,
+            created_at: self.created_at.format("%Y-%m-%d %H:%M:%S").to_string(),
+            amount: self.amount,
+            confrimtaion_status: confrimtaion_status,
         }
     }
 }

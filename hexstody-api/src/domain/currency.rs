@@ -21,7 +21,7 @@ pub struct Erc20Token {
 }
 
 /// Address that can be used for receiving currency
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum CurrencyAddress {
     BTC(BtcAddress),
     ETH(EthAccount),
@@ -29,11 +29,11 @@ pub enum CurrencyAddress {
 }
 
 /// Validated bitcoin address
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct BtcAddress(pub String);
 
 /// Validated ethereum account address
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct EthAccount(pub String);
 
 impl Currency {

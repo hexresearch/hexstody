@@ -1,5 +1,4 @@
-mod types;
-
+use handlebars::handlebars_helper;
 use rocket::fs::{relative, FileServer};
 use rocket::http::Status;
 use rocket::response::status::Created;
@@ -11,13 +10,12 @@ use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
 use std::sync::Arc;
 use tokio::sync::{mpsc, Mutex, Notify};
 
-use hexstody_db::queries::insert_update;
+use hexstody_api::types::{IndexHandlerContext, WithdrawalRequest, WithdrawalRequestInfo};
 use hexstody_db::state::State as HexstodyState;
 use hexstody_db::update::{
     withdrawal::WithdrawalRequestInfo as WithdrawalRequestInfoDb, StateUpdate, UpdateBody,
 };
 use hexstody_db::Pool;
-use types::{IndexHandlerContext, WithdrawalRequest, WithdrawalRequestInfo};
 
 #[openapi(skip)]
 #[get("/")]
@@ -55,22 +53,27 @@ async fn list(state: &RocketState<Arc<Mutex<HexstodyState>>>) -> Json<Vec<Withdr
 #[openapi(tag = "request")]
 #[post("/request", format = "json", data = "<withdrawal_request_info>")]
 async fn create(
-    pool: &RocketState<Pool>,
+    update_sender: &RocketState<mpsc::Sender<StateUpdate>>,
     withdrawal_request_info: Json<WithdrawalRequestInfo>,
 ) -> Result<Created<Json<WithdrawalRequest>>, Status> {
     let info: WithdrawalRequestInfoDb = withdrawal_request_info.into_inner().into();
     let state_update = StateUpdate::new(UpdateBody::NewWithdrawalRequest(info));
-    insert_update(&pool, state_update.body.clone(), Some(state_update.created))
+    update_sender
+        .send(state_update)
         .await
         .map_err(|_| Status::InternalServerError)?;
     Ok(Created::new("/request"))
 }
 
+handlebars_helper!(render_currency: |currencyAddress: Json| {});
+
+handlebars_helper!(render_address: |currencyAddress: Json| {});
+
 pub async fn serve_operator_api(
     pool: Pool,
     state: Arc<Mutex<HexstodyState>>,
-    state_notify: Arc<Notify>,
-    start_notify: Arc<Notify>,
+    _state_notify: Arc<Notify>,
+    _start_notify: Arc<Notify>,
     port: u16,
     update_sender: mpsc::Sender<StateUpdate>,
 ) -> Result<(), rocket::Error> {
@@ -86,9 +89,17 @@ pub async fn serve_operator_api(
                 ..Default::default()
             }),
         )
-        .attach(Template::fairing())
+        .attach(Template::custom(|engines| {
+            engines
+                .handlebars
+                .register_helper("render_currency", Box::new(render_currency));
+            engines
+                .handlebars
+                .register_helper("render_address", Box::new(render_address));
+        }))
         .manage(state)
         .manage(pool)
+        .manage(update_sender)
         .launch()
         .await?;
     Ok(())
