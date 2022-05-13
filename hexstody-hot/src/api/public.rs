@@ -77,12 +77,38 @@ fn overview() -> Template {
 #[openapi(tag = "auth")]
 #[post("/signup/email", data = "<data>")]
 fn signup_email(data: Json<SignupEmail>) -> error::Result<()> {
+    if data.user.len() < error::MIN_USER_NAME_LEN {
+        return Err(error::Error::UserNameTooShort.into());
+    }
+    if data.user.len() > error::MAX_USER_NAME_LEN {
+        return Err(error::Error::UserNameTooLong.into());
+    }
+    if data.password.len() < error::MIN_USER_PASSWORD_LEN {
+        return Err(error::Error::UserPasswordTooShort.into());
+    }
+    if data.password.len() > error::MAX_USER_PASSWORD_LEN {
+        return Err(error::Error::UserPasswordTooLong.into());
+    }
+
     Ok(Json(()))
 }
 
 #[openapi(tag = "auth")]
 #[post("/signin/email", data = "<data>")]
 fn signin_email(data: Json<SigninEmail>) -> error::Result<()> {
+    if data.user.len() < error::MIN_USER_NAME_LEN {
+        return Err(error::Error::UserNameTooShort.into());
+    }
+    if data.user.len() > error::MAX_USER_NAME_LEN {
+        return Err(error::Error::UserNameTooLong.into());
+    }
+    if data.password.len() < error::MIN_USER_PASSWORD_LEN {
+        return Err(error::Error::UserPasswordTooShort.into());
+    }
+    if data.password.len() > error::MAX_USER_PASSWORD_LEN {
+        return Err(error::Error::UserPasswordTooLong.into());
+    }
+    
     Ok(Json(()))
 }
 
