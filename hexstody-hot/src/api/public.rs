@@ -1,7 +1,9 @@
+use chrono::prelude::*;
+use std::collections::HashMap;
+use std::sync::Arc;
 use super::types::*;
-use hexstody_db::domain::currency::Currency;
-use hexstody_db::state::{State};
-use hexstody_db::Pool;
+use tokio::sync::{Mutex, Notify};
+
 use rocket::fairing::AdHoc;
 use rocket::fs::{relative, FileServer};
 use rocket::response::content;
@@ -9,10 +11,10 @@ use rocket::serde::json::Json;
 use rocket::{get, routes};
 use rocket_dyn_templates::Template;
 use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
-use std::collections::HashMap;
-use std::sync::Arc;
-use tokio::sync::{Mutex, Notify};
-use chrono::prelude::*;
+
+use hexstody_db::Pool;
+use hexstody_db::domain::currency::Currency;
+use hexstody_db::state::State;
 
 #[openapi(tag = "ping")]
 #[get("/ping")]
