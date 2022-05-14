@@ -2,13 +2,17 @@ import { loadTemplate, formattedCurrencyValue, formattedElapsedTime } from "./co
 
 let balanceTemplate = null;
 let historyTemplate = null;
+const refreshInterval = 3000;
+const historyPageSize = 50;
+let historyPagesToLoad = 1;
+
 
 async function getBalances() {
     return await fetch("/get_balance").then(r => r.json());
 };
 
-async function getHistory(start, amount) {
-    return fetch("/get_history").then(r => r.json());
+async function getHistory(skip, take) {
+    return fetch(`/get_history/${skip}/${take}`).then(r => r.json());
 }
 
 async function initTemplates() {
@@ -30,26 +34,43 @@ async function initTemplates() {
     });
 }
 
-async function updateLoop() {
-    const [balance, history] = await Promise.allSettled([
-        getBalances(),
-        getHistory(0, 100)
-    ]);
-    const balanceDrawUpdate = balanceTemplate(balance.value);
+async function loadBalance() {
+    const balances = await getBalances();
+    const balanceDrawUpdate = balanceTemplate(balances);
     const balanceElem = document.getElementById("balance");
     balanceElem.innerHTML = balanceDrawUpdate;
+}
 
-    const historyDrawUpdate = historyTemplate(history.value);
+async function loadHistory() {
+    const history = await getHistory(0, historyPagesToLoad * historyPageSize - 1);
+    const historyDrawUpdate = historyTemplate(history);
     const historyElem = document.getElementById("history");
     historyElem.innerHTML = historyDrawUpdate;
+}
 
-    await new Promise((resolve) => setTimeout(resolve, 3000));
+async function loadMoreHistory() {
+    const history = await getHistory(
+        historyPagesToLoad * historyPageSize - 1,
+        historyPageSize - 1
+    );
+    const historyDrawUpdate = historyTemplate(history);
+    const historyElem = document.getElementById("history");
 
+    historyElem.insertAdjacentHTML('beforeend', historyDrawUpdate);
+
+    historyPagesToLoad += 1;
+}
+
+async function updateLoop() {
+    await Promise.allSettled([loadBalance(), loadHistory()]);
+    await new Promise((resolve) => setTimeout(resolve, refreshInterval));
     updateLoop();
 }
 
 async function init() {
     await initTemplates();
+    const loadMoreButton = document.getElementById("loadMore");
+    loadMoreButton.onclick = loadMoreHistory;
     updateLoop();
 };
 

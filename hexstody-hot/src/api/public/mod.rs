@@ -8,6 +8,7 @@ use hexstody_api::types as api;
 use hexstody_db::state::*;
 use hexstody_db::update::*;
 use hexstody_db::Pool;
+use hexstody_api::types::History;
 use rocket::fairing::AdHoc;
 use rocket::fs::{relative, FileServer};
 use rocket::response::content;
@@ -28,9 +29,9 @@ fn ping() -> content::Json<()> {
 }
 
 #[openapi(tag = "get_history")]
-#[get("/get_history")]
-fn get_history() -> Json<api::History> {
-    let x = api::History {
+#[get("/get_history/<skip>/<take>")]
+fn get_history(skip: u32, take: u32) -> Json<History> {
+    let x = History {
         target_number_of_confirmations: 6,
         history_items: vec![
             api::HistoryItem::Deposit(api::DepositHistoryItem {
