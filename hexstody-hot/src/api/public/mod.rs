@@ -8,6 +8,7 @@ use hexstody_api::types as api;
 use hexstody_db::state::*;
 use hexstody_db::update::*;
 use hexstody_db::Pool;
+use hexstody_api::types::History;
 use rocket::fairing::AdHoc;
 use rocket::fs::{relative, FileServer};
 use rocket::response::content;
