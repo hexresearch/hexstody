@@ -51,7 +51,7 @@ where
             }
         });
 
-        let hot_client = HexstodyClient::new(&format!("http://localhost:{public_api_port}"));
+        let hot_client = HexstodyClient::new(&format!("http://localhost:{public_api_port}")).expect("cleint created");
         let env = TestEnv {
             btc_node,
             other_btc_node,

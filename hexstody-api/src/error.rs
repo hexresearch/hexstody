@@ -25,6 +25,8 @@ pub enum Error {
     Pwhash(#[from] pwhash::error::Error),
     #[error("Username of password is invalid")]
     SigninFailed,
+    #[error("Action requires authentification")]
+    AuthRequired,
 }
 
 impl Error {
@@ -37,6 +39,7 @@ impl Error {
             Error::UserPasswordTooLong => 4,
             Error::Pwhash(_) => 5,
             Error::SigninFailed => 6,
+            Error::AuthRequired => 7, 
         }
     }
 
@@ -49,6 +52,7 @@ impl Error {
             Error::UserPasswordTooLong => Status::from_code(400).unwrap(),
             Error::Pwhash(_) => Status::from_code(500).unwrap(),
             Error::SigninFailed => Status::from_code(401).unwrap(),
+            Error::AuthRequired => Status::from_code(401).unwrap(),
         }
     }
 }
