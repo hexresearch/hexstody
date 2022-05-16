@@ -47,6 +47,7 @@ pub struct UserCurrencyInfo {
     /// Currency the info about
     pub currency: Currency,
     /// Required information for making deposit for the user in the specific currency.
+    /// Oldest addresses goes last.
     pub deposit_info: Vec<CurrencyAddress>,
     /// Known set of transactions for the user, oldest transactions first.
     pub transactions: Vec<Transaction>,

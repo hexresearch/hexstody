@@ -5,10 +5,10 @@ use auth::*;
 use chrono::prelude::*;
 use hexstody_api::domain::currency::Currency;
 use hexstody_api::types as api;
+use hexstody_api::types::History;
 use hexstody_db::state::*;
 use hexstody_db::update::*;
 use hexstody_db::Pool;
-use hexstody_api::types::History;
 use rocket::fairing::AdHoc;
 use rocket::fs::{relative, FileServer};
 use rocket::response::content;
@@ -88,6 +88,7 @@ pub async fn serve_public_api(
             openapi_get_routes![
                 ping,
                 get_balance,
+                get_deposit,
                 get_history,
                 signup_email,
                 signin_email,

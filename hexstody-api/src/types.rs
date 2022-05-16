@@ -66,3 +66,8 @@ pub struct SigninEmail {
     pub user: String, 
     pub password: String,
 }
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct DepositInfo {
+    pub address: String,
+}

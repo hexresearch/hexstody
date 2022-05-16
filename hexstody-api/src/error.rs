@@ -1,3 +1,4 @@
+use crate::domain::currency::Currency;
 use rocket::http::Status;
 use rocket::serde::json::Json;
 use rocket_okapi::okapi::schemars::JsonSchema;
@@ -13,9 +14,13 @@ pub const MAX_USER_PASSWORD_LEN: usize = 1024;
 pub enum Error {
     #[error("Failed to sign up new user. The user already exists.")]
     SignupExistedUser,
-    #[error("Failed to signup user. The user name is too short. Need >= {MIN_USER_NAME_LEN} symbols")]
+    #[error(
+        "Failed to signup user. The user name is too short. Need >= {MIN_USER_NAME_LEN} symbols"
+    )]
     UserNameTooShort,
-    #[error("Failed to signup user. The user name is too long. Need <= {MAX_USER_NAME_LEN} symbols")]
+    #[error(
+        "Failed to signup user. The user name is too long. Need <= {MAX_USER_NAME_LEN} symbols"
+    )]
     UserNameTooLong,
     #[error("Failed to signup user. The user password is too short. Need >= {MIN_USER_PASSWORD_LEN} symbols")]
     UserPasswordTooShort,
@@ -27,6 +32,10 @@ pub enum Error {
     SigninFailed,
     #[error("Action requires authentification")]
     AuthRequired,
+    #[error("Authed user is not found in state!")]
+    NoUserFound,
+    #[error("Authed user doesn't have required currency {0}!")]
+    NoUserCurrency(Currency),
 }
 
 impl Error {
@@ -39,7 +48,9 @@ impl Error {
             Error::UserPasswordTooLong => 4,
             Error::Pwhash(_) => 5,
             Error::SigninFailed => 6,
-            Error::AuthRequired => 7, 
+            Error::AuthRequired => 7,
+            Error::NoUserFound => 8,
+            Error::NoUserCurrency(_) => 9,
         }
     }
 
@@ -53,6 +64,8 @@ impl Error {
             Error::Pwhash(_) => Status::from_code(500).unwrap(),
             Error::SigninFailed => Status::from_code(401).unwrap(),
             Error::AuthRequired => Status::from_code(401).unwrap(),
+            Error::NoUserFound => Status::from_code(500).unwrap(),
+            Error::NoUserCurrency(_) => Status::from_code(500).unwrap(),
         }
     }
 }
