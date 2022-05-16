@@ -1,6 +1,6 @@
 use super::auth::require_auth;
 use hexstody_api::domain::{BtcAddress, Currency, CurrencyAddress};
-use hexstody_api::error::{self, ErrorMessage};
+use hexstody_api::error;
 use hexstody_api::types as api;
 use hexstody_btc_client::client::BtcClient;
 use hexstody_db::state::State as DbState;
@@ -9,7 +9,6 @@ use hexstody_db::update::{StateUpdate, UpdateBody};
 
 use log::*;
 use rocket::http::CookieJar;
-use rocket::http::Status;
 use rocket::serde::json::Json;
 use rocket::{get, post, State};
 use rocket_okapi::openapi;

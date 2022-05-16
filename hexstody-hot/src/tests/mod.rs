@@ -1,7 +1,7 @@
 mod runner;
 
-use hexstody_api::types::*;
-use runner::run_test;
+use hexstody_api::{domain::*, types::*};
+use runner::*;
 
 #[tokio::test]
 async fn test_simple() {
@@ -58,6 +58,17 @@ async fn test_auth_email() {
 
         let res = env.hot_client.logout().await;
         assert!(!res.is_ok(), "Double logout");
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_btc_deposit() {
+    run_with_user(|env| async move {
+        let dep_info = env.hot_client
+            .get_deposit(Currency::BTC)
+            .await
+            .expect("Deposit address");
     })
     .await;
 }

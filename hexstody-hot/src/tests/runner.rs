@@ -1,9 +1,11 @@
 use crate::runner::{run_hot_wallet, ApiConfig};
 use bitcoincore_rpc::Client;
 use futures::FutureExt;
+use hexstody_api::types::{SignupEmail, SigninEmail};
 use hexstody_btc_client::client::BtcClient;
 use hexstody_btc_test::runner as btc_runner;
 use hexstody_client::client::HexstodyClient;
+use hexstody_db::update::signup::UserId;
 use log::*;
 use port_selector::random_free_tcp_port;
 use run_script::ScriptOptions;
@@ -52,7 +54,8 @@ where
             }
         });
 
-        let hot_client = HexstodyClient::new(&format!("http://localhost:{public_api_port}")).expect("cleint created");
+        let hot_client = HexstodyClient::new(&format!("http://localhost:{public_api_port}"))
+            .expect("cleint created");
         let env = TestEnv {
             btc_node,
             other_btc_node,
@@ -126,4 +129,51 @@ fn teardown_postgres(tmp_dir: &TempDir, db_port: u16) {
         info!("Output: {}", output);
         info!("Error: {}", error);
     }
+}
+
+pub struct LoggedTestEnv {
+    pub btc_node: Client,
+    pub other_btc_node: Client,
+    pub btc_adapter: BtcClient,
+    pub hot_client: HexstodyClient,
+    pub user_id: UserId,
+}
+
+pub async fn run_with_user<F, Fut>(test_body: F)
+where
+    F: FnOnce(LoggedTestEnv) -> Fut,
+    Fut: Future<Output = ()>,
+{
+    run_test(|env| async move {
+        let user = "aboba@mail.com".to_owned();
+        let password = "123456".to_owned();
+
+        env.hot_client
+            .signup_email(SignupEmail {
+                user: user.clone(),
+                password: password.clone(),
+            })
+            .await
+            .expect("Signup");
+        
+        env.hot_client
+            .signin_email(SigninEmail {
+                user: user.clone(),
+                password: password.clone(),
+            })
+            .await
+            .expect("Signin");
+
+        let logged_env = LoggedTestEnv {
+            btc_node: env.btc_node,
+            other_btc_node: env.other_btc_node,
+            btc_adapter: env.btc_adapter,
+            hot_client: env.hot_client.clone(),
+            user_id: user.clone(),
+        };
+        test_body(logged_env).await;
+
+        env.hot_client.logout().await.expect("Logout");
+    })
+    .await;
 }

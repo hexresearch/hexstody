@@ -178,7 +178,7 @@ mod tests {
                 "http://{}:{}",
                 SERVICE_TEST_HOST, SERVICE_TEST_PORT
             ))
-            .expect("cleint created");
+            .expect("client created");
             client.ping().await.unwrap();
         })
         .await;
