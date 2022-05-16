@@ -1,7 +1,10 @@
 mod runner;
 
+use bitcoin::{Address, Amount};
 use hexstody_api::{domain::*, types::*};
+use hexstody_btc_test::helpers::*;
 use runner::*;
+use std::str::FromStr;
 
 #[tokio::test]
 async fn test_simple() {
@@ -65,10 +68,25 @@ async fn test_auth_email() {
 #[tokio::test]
 async fn test_btc_deposit() {
     run_with_user(|env| async move {
-        let dep_info = env.hot_client
+        fund_wallet(&env.btc_node);
+
+        let dep_info = env
+            .hot_client
             .get_deposit(Currency::BTC)
             .await
             .expect("Deposit address");
+
+        let dep_address = Address::from_str(&dep_info.address).expect("Bitcoin address");
+        let amount = Amount::from_sat(10_000);
+        send_funds(&env.btc_node, &dep_address, amount);
+        mine_blocks(&env.btc_node, 1);
+        let balances = env.hot_client.get_balance().await.expect("Balances");
+        assert_eq!(
+            Some(amount),
+            balances
+                .by_currency(&Currency::BTC)
+                .map(|i| Amount::from_sat(i.value))
+        );
     })
     .await;
 }

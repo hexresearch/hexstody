@@ -48,6 +48,12 @@ pub struct Balance {
     pub balances: Vec<BalanceItem>,
 }
 
+impl Balance {
+    pub fn by_currency(&self, curr: &Currency) -> Option<&BalanceItem> {
+        self.balances.iter().find(|i| i.currency == *curr)
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct History {
     pub target_number_of_confirmations: u64,

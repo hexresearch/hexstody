@@ -91,7 +91,7 @@ impl HexstodyClient {
     pub async fn get_balance(&self) -> Result<Balance> {
         let path = "/balance";
         let endpoint = format!("{}{}", self.server, path);
-        let request = self.client.post(endpoint).build()?;
+        let request = self.client.get(endpoint).build()?;
         let response = self
             .client
             .execute(request)
