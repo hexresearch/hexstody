@@ -39,4 +39,9 @@ naersk.buildPackage {
     export DATABASE_URL=postgres://hexstody:hexstody@localhost/hexstody
     echo "Local database accessible by $DATABASE_URL"
   '';
+  postInstall = ''
+    mkdir -p $out/share
+    cp -r ${./hexstody-hot/static} $out/share/static
+    cp -r ${./hexstody-hot/templates} $out/share/templates
+  '';
 }
