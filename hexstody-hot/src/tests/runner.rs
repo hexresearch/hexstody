@@ -36,11 +36,12 @@ where
         let start_notify = Arc::new(Notify::new());
         let api_handle = tokio::spawn({
             let start_notify = start_notify.clone();
+            let btc_adapter = btc_adapter.clone();
             async move {
                 let mut api_config = ApiConfig::parse_figment();
                 api_config.public_api_port = public_api_port;
                 api_config.operator_api_port = operator_api_port;
-                match run_hot_wallet(api_config, &dbconnect, start_notify).await {
+                match run_hot_wallet(api_config, &dbconnect, start_notify, btc_adapter).await {
                     Err(e) => {
                         error!("Hot wallet error: {e}");
                     }

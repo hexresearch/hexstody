@@ -1,3 +1,4 @@
+pub mod deposit;
 pub mod signup;
 pub mod withdrawal;
 
@@ -7,6 +8,7 @@ use std::fmt;
 use std::str::FromStr;
 use thiserror::Error;
 
+use self::deposit::DepositAddress;
 use self::signup::SignupInfo;
 use self::withdrawal::WithdrawalRequestInfo;
 use super::state::State;
@@ -37,6 +39,8 @@ pub enum UpdateBody {
     Snapshot(State),
     /// Create new withdrawal request
     NewWithdrawalRequest(WithdrawalRequestInfo),
+    /// Register new deposit address for user
+    DepositAddress(DepositAddress),
 }
 
 impl UpdateBody {
@@ -45,6 +49,7 @@ impl UpdateBody {
             UpdateBody::Signup(_) => UpdateTag::Signup,
             UpdateBody::Snapshot(_) => UpdateTag::Snapshot,
             UpdateBody::NewWithdrawalRequest(_) => UpdateTag::NewWithdrawalRequest,
+            UpdateBody::DepositAddress(_) => UpdateTag::DepositAddress,
         }
     }
 
@@ -53,6 +58,7 @@ impl UpdateBody {
             UpdateBody::Signup(v) => serde_json::to_value(v),
             UpdateBody::Snapshot(v) => serde_json::to_value(v),
             UpdateBody::NewWithdrawalRequest(v) => serde_json::to_value(v),
+            UpdateBody::DepositAddress(v) => serde_json::to_value(v),
         }
     }
 }
@@ -62,6 +68,7 @@ pub enum UpdateTag {
     Signup,
     Snapshot,
     NewWithdrawalRequest,
+    DepositAddress,
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -85,6 +92,7 @@ impl fmt::Display for UpdateTag {
             UpdateTag::Signup => write!(f, "signup"),
             UpdateTag::Snapshot => write!(f, "snapshot"),
             UpdateTag::NewWithdrawalRequest => write!(f, "withdrawal request"),
+            UpdateTag::DepositAddress => write!(f, "deposit address"),
         }
     }
 }
@@ -135,6 +143,9 @@ impl UpdateTag {
             UpdateTag::NewWithdrawalRequest => Ok(UpdateBody::NewWithdrawalRequest(
                 serde_json::from_value(value)?,
             )),
+            UpdateTag::DepositAddress => {
+                Ok(UpdateBody::DepositAddress(serde_json::from_value(value)?))
+            }
         }
     }
 }

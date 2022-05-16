@@ -11,6 +11,7 @@ use tokio::sync::{Mutex, Notify};
 use hexstody_db::queries::query_state;
 use hexstody_db::*;
 use hexstody_db::{state::State, update::StateUpdate, Pool};
+use hexstody_btc_client::client::BtcClient;
 
 use super::api::operator::*;
 use super::api::public::*;
@@ -86,6 +87,7 @@ async fn serve_api(
     port: u16,
     abort_reg: AbortRegistration,
     update_sender: mpsc::Sender<StateUpdate>,
+    btc_client: BtcClient,
 ) -> () {
     if !api_enabled {
         info!("{api_type} API disabled");
@@ -102,6 +104,7 @@ async fn serve_api(
                     start_notify.clone(),
                     port,
                     update_sender.clone(),
+                    btc_client,
                 )
             })
             .await;
@@ -123,6 +126,7 @@ pub async fn serve_apis(
     api_config: ApiConfig,
     api_abort: AbortRegistration,
     update_sender: mpsc::Sender<StateUpdate>,
+    btc_client: BtcClient,
 ) -> Result<(), Aborted> {
     let (public_handle, public_abort) = AbortHandle::new_pair();
     let public_api_fut = serve_api(
@@ -135,6 +139,7 @@ pub async fn serve_apis(
         api_config.public_api_port,
         public_abort,
         update_sender.clone(),
+        btc_client.clone(),
     );
     let (operator_handle, operator_abort) = AbortHandle::new_pair();
     let operator_api_fut = serve_api(
@@ -147,6 +152,7 @@ pub async fn serve_apis(
         api_config.operator_api_port,
         operator_abort,
         update_sender.clone(),
+        btc_client,
     );
 
     let abortable_apis =
@@ -175,6 +181,7 @@ pub async fn run_hot_wallet(
     api_config: ApiConfig,
     db_connect: &str,
     start_notify: Arc<Notify>,
+    btc_client: BtcClient,
 ) -> Result<(), Error> {
     info!("Connecting to database");
     let pool = create_db_pool(db_connect).await?;
@@ -202,6 +209,7 @@ pub async fn run_hot_wallet(
         api_config,
         api_abort_reg,
         update_sender,
+        btc_client,
     )
     .await
     {

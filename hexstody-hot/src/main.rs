@@ -4,6 +4,7 @@ mod runner;
 mod tests;
 
 use clap::Parser;
+use hexstody_btc_client::client::BtcClient;
 use log::*;
 use std::error::Error;
 use std::sync::Arc;
@@ -26,6 +27,13 @@ struct Args {
         env = "DATABASE_URL"
     )]
     dbconnect: String,
+    #[clap(
+        long,
+        short,
+        default_value = "http://127.0.0.1:8180",
+        env = "BTC_MODULE_URL"
+    )]
+    btc_module: String,
     #[clap(subcommand)]
     subcmd: SubCommand,
 }
@@ -46,7 +54,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
         SubCommand::Serve => loop {
             let api_config = ApiConfig::parse_figment();
             let start_notify = Arc::new(Notify::new());
-            match run_hot_wallet(api_config, &args.dbconnect, start_notify).await {
+            let btc_client = BtcClient::new(&args.btc_module);
+            match run_hot_wallet(api_config, &args.dbconnect, start_notify, btc_client).await {
                 Err(e) => {
                     error!("Hot wallet error: {e}");
                 }

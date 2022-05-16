@@ -14,6 +14,7 @@ pub enum Error {
 /// Alias for a `Result` with the error type `self::Error`.
 pub type Result<T> = std::result::Result<T, Error>;
 
+#[derive(Clone)]
 pub struct BtcClient {
     pub client: reqwest::Client,
     pub server: String,

@@ -21,6 +21,7 @@ use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio::sync::{Mutex, Notify};
 use wallet::*;
+use hexstody_btc_client::client::BtcClient;
 
 #[openapi(tag = "ping")]
 #[get("/ping")]
@@ -73,6 +74,7 @@ pub async fn serve_public_api(
     start_notify: Arc<Notify>,
     port: u16,
     update_sender: mpsc::Sender<StateUpdate>,
+    btc_client: BtcClient,
 ) -> Result<(), rocket::Error> {
     let figment = rocket::Config::figment().merge(("port", port));
     let on_ready = AdHoc::on_liftoff("API Start!", |_| {
@@ -105,6 +107,7 @@ pub async fn serve_public_api(
         )
         .manage(state)
         .manage(update_sender)
+        .manage(btc_client)
         .attach(Template::fairing())
         .attach(on_ready)
         .launch()
@@ -137,6 +140,7 @@ mod tests {
 
         let (sender, receiver) = tokio::sync::oneshot::channel();
         let (update_sender, _) = tokio::sync::mpsc::channel(1000);
+        let btc_client = BtcClient::new("127.0.0.1");
         tokio::spawn({
             let state = state_mx.clone();
             let state_notify = state_notify.clone();
@@ -149,6 +153,7 @@ mod tests {
                     start_notify,
                     SERVICE_TEST_PORT,
                     update_sender,
+                    btc_client,
                 );
                 futures::pin_mut!(serve_task);
                 futures::future::select(serve_task, receiver.map_err(drop)).await;

@@ -36,6 +36,8 @@ pub enum Error {
     NoUserFound,
     #[error("Authed user doesn't have required currency {0}!")]
     NoUserCurrency(Currency),
+    #[error("Failed to generate new deposit address for currency {0}")]
+    FailedGenAddress(Currency),
 }
 
 impl Error {
@@ -51,6 +53,7 @@ impl Error {
             Error::AuthRequired => 7,
             Error::NoUserFound => 8,
             Error::NoUserCurrency(_) => 9,
+            Error::FailedGenAddress(_) => 10,
         }
     }
 
@@ -66,6 +69,7 @@ impl Error {
             Error::AuthRequired => Status::from_code(401).unwrap(),
             Error::NoUserFound => Status::from_code(500).unwrap(),
             Error::NoUserCurrency(_) => Status::from_code(500).unwrap(),
+            Error::FailedGenAddress(_) => Status::from_code(500).unwrap(),
         }
     }
 }
