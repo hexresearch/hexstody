@@ -50,10 +50,12 @@ pub async fn process_btc_events(
         for event in events.events {
             match event {
                 BtcEvent::Update(upd) => {
-                    update_sender
-                        .send(StateUpdate::new(UpdateBody::UpdateBtcTx(upd.into())))
-                        .await
-                        .unwrap();
+                    if upd.direction == TxDirection::Deposit {
+                        update_sender
+                            .send(StateUpdate::new(UpdateBody::UpdateBtcTx(upd.into())))
+                            .await
+                            .unwrap();
+                    }
                 }
                 BtcEvent::Cancel(cnl) => {
                     update_sender
