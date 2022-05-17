@@ -81,6 +81,13 @@ fn signin() -> Template {
     Template::render("signin", context)
 }
 
+#[openapi(skip)]
+#[get("/deposit")]
+fn deposit() -> Template {
+    let context = HashMap::from([("title", "Deposit"), ("parent", "base")]);
+    Template::render("deposit", context)
+}
+
 pub async fn serve_public_api(
     pool: Pool,
     state: Arc<Mutex<State>>,
@@ -111,7 +118,7 @@ pub async fn serve_public_api(
                 logout
             ],
         )
-        .mount("/", routes![index, overview, signup, signin])
+        .mount("/", routes![index, overview, signup, signin, deposit])
         .mount(
             "/swagger/",
             make_swagger_ui(&SwaggerUIConfig {
