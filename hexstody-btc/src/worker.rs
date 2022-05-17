@@ -35,6 +35,7 @@ pub async fn node_worker(
                 }
                 Err(e) => {
                     error!("Failed to query node: {e}");
+                    tokio::time::sleep(Duration::from_secs(5)).await;
                 }
             }
         }

@@ -45,9 +45,9 @@ fn teardown_node(mut node_handle: Child) {
     node_handle.wait().expect("Node terminated");
 }
 
-async fn setup_node_ready() -> (Child, Client, u16) {
+async fn setup_node_ready() -> (Child, Client, u16, TempDir) {
     let _ = env_logger::builder().is_test(true).try_init();
-    let (node_handle, rpc_port, _temp_dir) = setup_node();
+    let (node_handle, rpc_port, temp_dir) = setup_node();
     info!("Running first bitcoin node on {rpc_port}");
     let rpc_url = format!("http://127.0.0.1:{rpc_port}");
     let client = Client::new(
@@ -59,7 +59,7 @@ async fn setup_node_ready() -> (Child, Client, u16) {
     client
         .create_wallet("", None, None, None, None)
         .expect("create default wallet");
-    (node_handle, client, rpc_port)
+    (node_handle, client, rpc_port, temp_dir)
 }
 
 async fn wait_for_node(client: &Client) -> () {
@@ -129,7 +129,7 @@ where
     Fut: Future<Output = ()>,
 {
     let _ = env_logger::builder().is_test(true).try_init();
-    let (node_handle, client, rpc_port) = setup_node_ready().await;
+    let (node_handle, client, rpc_port, _tmp_dir) = setup_node_ready().await;
 
     let api_port = setup_api(rpc_port).await;
     info!("Running API server on {api_port}");
@@ -149,8 +149,8 @@ where
     Fut: Future<Output = ()>,
 {
     let _ = env_logger::builder().is_test(true).try_init();
-    let (node1_handle, client1, rpc_port) = setup_node_ready().await;
-    let (node2_handle, client2, _) = setup_node_ready().await;
+    let (node1_handle, client1, rpc_port, _tmp1) = setup_node_ready().await;
+    let (node2_handle, client2, _, _tmp2) = setup_node_ready().await;
 
     let api_port = setup_api(rpc_port).await;
     info!("Running API server on {api_port}");

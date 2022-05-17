@@ -46,13 +46,14 @@ rocket_dyn_templates = { version = "0.1.0-rc.1", features = ["handlebars"] }
 schemars = "0.8.8"
 pwhash = "1.0.0"
 rpassword = "6.0.1"
+hexstody-btc-test = { path = "../hexstody-btc-test" }
+ctrlc = "3.2.2"
 
 [dev-dependencies]
 bitcoin = "0.28.1"
 bitcoin_hashes = "0.10.0"
 bitcoincore-rpc = "0.15.0"
 bitcoincore-rpc-json = "0.15.0"
-hexstody-btc-test = { path = "../hexstody-btc-test" }
 maplit = "1.0.2"
 nix = "0.24.1"
 port-selector = "0.1.4"
