@@ -1,5 +1,5 @@
-async function postSignUp(email, password) {
-    return await fetch("/signup/email",
+async function postSignIn(email, password) {
+    return await fetch("/signin/email",
         {
             method: "POST",
             body: JSON.stringify({ user: email, password: password })
@@ -7,15 +7,15 @@ async function postSignUp(email, password) {
 };
 
 async function trySubmit() {
-    const email = document.getElementById("signupEmail").value;
-    const password = document.getElementById("signupPassword").value;
-    const signUpResult = await postSignUp(email, password);
-    if (signUpResult.ok) {
-      window.location.href = "/signin";
+    const email = document.getElementById("signinEmail").value;
+    const password = document.getElementById("signinPassword").value;
+    const signInResult = await postSignIn(email, password);
+    if (signInResult.ok) {
+        window.location.href = "/overview";
 
     } else {
         const validationDisplay = document.getElementById("validationError");
-        validationDisplay.textContent = (await signUpResult.json()).message;
+        validationDisplay.textContent = (await signInResult.json()).message;
         validationDisplay.hidden = false;
     };
 }

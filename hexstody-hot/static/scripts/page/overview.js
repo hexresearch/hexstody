@@ -8,7 +8,7 @@ let historyPagesToLoad = 1;
 
 
 async function getBalances() {
-    return await fetch("/get_balance").then(r => r.json());
+    return await fetch("/balance").then(r => r.json());
 };
 
 async function getHistory(skip, take) {
