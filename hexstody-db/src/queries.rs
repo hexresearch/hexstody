@@ -77,9 +77,9 @@ pub async fn insert_update(
 }
 
 /// Reconstruct state from chain of updates and snapshots in the database
-pub async fn query_state(pool: &Pool) -> Result<State> {
+pub async fn query_state(network: Network, pool: &Pool) -> Result<State> {
     let updates = query_updates(pool).await?;
-    Ok(State::collect(updates.into_iter().rev())?)
+    Ok(State::collect(network, updates.into_iter().rev())?)
 }
 
 #[cfg(test)]

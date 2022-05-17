@@ -11,10 +11,11 @@ use tokio::sync::{Mutex, Notify};
 use hexstody_btc_client::client::BtcClient;
 use hexstody_db::queries::query_state;
 use hexstody_db::*;
-use hexstody_db::{state::State, update::StateUpdate, Pool};
+use hexstody_db::{state::{State, Network}, update::StateUpdate, Pool};
 
 use super::api::operator::*;
 use super::api::public::*;
+use super::worker::*;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ApiType {
@@ -184,6 +185,7 @@ pub enum Error {
 }
 
 pub async fn run_hot_wallet(
+    network: Network,
     api_config: ApiConfig,
     db_connect: &str,
     start_notify: Arc<Notify>,
@@ -192,7 +194,7 @@ pub async fn run_hot_wallet(
     info!("Connecting to database");
     let pool = create_db_pool(db_connect).await?;
     info!("Reconstructing state from database");
-    let state = query_state(&pool).await?;
+    let state = query_state(network, &pool).await?;
     let state_mx = Arc::new(Mutex::new(state));
     let state_notify = Arc::new(Notify::new());
     let (update_sender, update_receiver) = mpsc::channel(1000);
@@ -203,6 +205,15 @@ pub async fn run_hot_wallet(
         let state_notify = state_notify.clone();
         async move {
             update_worker(pool, state_mx, state_notify, update_receiver).await;
+        }
+    });
+    let btc_worker_hndl = tokio::spawn({
+        let pool = pool.clone();
+        let state_mx = state_mx.clone(); 
+        let state_notify = state_notify.clone();
+        let btc_client = btc_client.clone();
+        async move {
+
         }
     });
 

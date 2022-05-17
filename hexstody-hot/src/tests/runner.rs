@@ -5,6 +5,7 @@ use hexstody_api::types::{SigninEmail, SignupEmail};
 use hexstody_btc_client::client::BtcClient;
 use hexstody_btc_test::runner as btc_runner;
 use hexstody_client::client::HexstodyClient;
+use hexstody_db::state::Network;
 use hexstody_db::update::signup::UserId;
 use log::*;
 use port_selector::random_free_tcp_port;
@@ -43,7 +44,15 @@ where
                 let mut api_config = ApiConfig::parse_figment();
                 api_config.public_api_port = public_api_port;
                 api_config.operator_api_port = operator_api_port;
-                match run_hot_wallet(api_config, &dbconnect, start_notify, btc_adapter).await {
+                match run_hot_wallet(
+                    Network::Regtest,
+                    api_config,
+                    &dbconnect,
+                    start_notify,
+                    btc_adapter,
+                )
+                .await
+                {
                     Err(e) => {
                         error!("Hot wallet error: {e}");
                     }

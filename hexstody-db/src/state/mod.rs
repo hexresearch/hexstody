@@ -1,7 +1,11 @@
+pub mod btc;
 pub mod transaction;
 pub mod user;
 pub mod withdraw;
+pub mod network;
 
+pub use btc::*;
+pub use network::*;
 use chrono::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -25,6 +29,8 @@ pub struct State {
     pub users: HashMap<UserId, UserInfo>,
     /// Tracks when the state was last updated
     pub last_changed: NaiveDateTime,
+    /// Tacks state of BTC chain
+    pub btc_state: BtcState,
 }
 
 #[derive(Error, Debug, PartialEq)]
@@ -38,10 +44,11 @@ pub enum StateUpdateErr {
 }
 
 impl State {
-    pub fn new() -> Self {
+    pub fn new(network: Network) -> Self {
         State {
             users: HashMap::new(),
             last_changed: Utc::now().naive_utc(),
+            btc_state: BtcState::new(network.btc()),
         }
     }
 
@@ -136,11 +143,11 @@ impl State {
 
     /// Take ordered chain of updates and collect the accumulated state.
     /// Order should be from the earliest to the latest.
-    pub fn collect<I>(updates: I) -> Result<Self, StateUpdateErr>
+    pub fn collect<I>(network: Network, updates: I) -> Result<Self, StateUpdateErr>
     where
         I: IntoIterator<Item = StateUpdate>,
     {
-        let mut state = State::new();
+        let mut state = State::new(network);
         for upd in updates.into_iter() {
             state.apply_update(upd)?;
         }
@@ -163,7 +170,7 @@ impl State {
 
 impl Default for State {
     fn default() -> Self {
-        State::new()
+        State::new(Network::Mainnet)
     }
 }
 
@@ -189,7 +196,7 @@ mod tests {
         let created_at = upd.created;
         state0.apply_update(upd).unwrap();
 
-        let state = query_state(&pool).await.unwrap();
+        let state = query_state(Network::Regtest, &pool).await.unwrap();
         let expected_user = UserInfo::new(&username, SignupAuth::Lightning, created_at);
         let extracted_user = state.users.get(&username).cloned().map(|mut u| {
             u.created_at = created_at;
@@ -223,7 +230,7 @@ mod tests {
             .unwrap();
         state0.apply_update(signup_upd).unwrap();
         state0.apply_update(upd).unwrap();
-        let state = query_state(&pool).await.unwrap();
+        let state = query_state(Network::Regtest, &pool).await.unwrap();
         let extracted_withdrawal_request = state
             .users
             .get(&username)
