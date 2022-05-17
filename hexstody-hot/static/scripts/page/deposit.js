@@ -1,3 +1,6 @@
+import { loadTemplate} from "./common.js";
+let depositTemplate = null;
+
 async function getFor(currency) {
     return await fetch("/deposit",
     {
@@ -7,8 +10,13 @@ async function getFor(currency) {
 };
 
 async function init() {
-    const submitButton = document.getElementById("withdrawal");
+    depositTemplate = await loadTemplate("/static/templates/deposit.html.hbs");
     const result = await getFor("BTC");
+    const params = {addresses : [{currency: "BTC", address: result.address}]};
+    const depositDrawUpdate = depositTemplate(params);
+    const depositElem = document.getElementById("deposit");
+    depositElem.insertAdjacentHTML('beforeend', depositDrawUpdate);
+
     //submitButton.historyElem.insertAdjacentHTML('beforeend', historyDrawUpdate); 
 }
 
