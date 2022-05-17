@@ -19,7 +19,7 @@ pub async fn btc_worker(
     loop {
         match btc_client.poll_events().await {
             Ok(events) => {
-                process_btc_events(&btc_client, state_mx.clone(), &update_sender, events).await;
+                process_btc_events(state_mx.clone(), &update_sender, events).await;
             }
             Err(e) => {
                 error!("BTC module error: {e}");
@@ -30,7 +30,6 @@ pub async fn btc_worker(
 }
 
 pub async fn process_btc_events(
-    btc_client: &BtcClient,
     state_mx: Arc<Mutex<State>>,
     update_sender: &mpsc::Sender<StateUpdate>,
     events: BtcEvents,

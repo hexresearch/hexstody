@@ -11,7 +11,11 @@ use tokio::sync::{Mutex, Notify};
 use hexstody_btc_client::client::BtcClient;
 use hexstody_db::queries::query_state;
 use hexstody_db::*;
-use hexstody_db::{state::{State, Network}, update::StateUpdate, Pool};
+use hexstody_db::{
+    state::{Network, State},
+    update::StateUpdate,
+    Pool,
+};
 
 use super::api::operator::*;
 use super::api::public::*;
@@ -209,7 +213,7 @@ pub async fn run_hot_wallet(
         }
     });
     let btc_worker_hndl = tokio::spawn({
-        let state_mx = state_mx.clone(); 
+        let state_mx = state_mx.clone();
         let btc_client = btc_client.clone();
         let update_sender = update_sender.clone();
         async move {
