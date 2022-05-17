@@ -216,7 +216,11 @@ pub async fn run_hot_wallet(
         }
     });
 
-    let (_api_abort_handle, api_abort_reg) = AbortHandle::new_pair();
+    let (api_abort_handle, api_abort_reg) = AbortHandle::new_pair();
+    ctrlc::set_handler(move || {
+        api_abort_handle.abort();
+    }).expect("Error setting Ctrl-C handler");
+    
     if let Err(Aborted) = serve_apis(
         pool,
         state_mx,

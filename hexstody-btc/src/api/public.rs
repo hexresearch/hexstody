@@ -30,13 +30,13 @@ async fn poll_events(
     state: &State<Arc<Mutex<ScanState>>>,
     state_notify: &State<Arc<Notify>>,
 ) -> Json<BtcEvents> {
-    info!("Awaiting state events");
+    trace!("Awaiting state events");
     match timeout(*polling_timeout.inner(), state_notify.notified()).await {
         Ok(_) => {
             info!("Got new events for deposit");
         }
         Err(_) => {
-            info!("No new events but releasing long poll");
+            trace!("No new events but releasing long poll");
         }
     }
     let mut state_rw = state.lock().await;

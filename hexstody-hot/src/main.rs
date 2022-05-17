@@ -14,6 +14,7 @@ use std::time::Duration;
 use tokio::sync::Notify;
 use tokio::time::sleep;
 
+use hexstody_btc_test::runner::run_test as run_btc_regtest;
 use runner::{run_hot_wallet, ApiConfig};
 
 #[derive(Parser, Debug, Clone)]
@@ -38,6 +39,8 @@ struct Args {
     btc_module: String,
     #[clap(long, default_value = "mainnet", env = "HEXSTODY_NETWORK")]
     network: Network,
+    #[clap(long, env = "HEXSTODY_START_REGTEST")]
+    start_regtest: bool,
     #[clap(subcommand)]
     subcmd: SubCommand,
 }
@@ -55,22 +58,46 @@ async fn main() -> Result<(), Box<dyn Error>> {
         env_logger::Env::default().filter_or(env_logger::DEFAULT_FILTER_ENV, "info"),
     );
     match args.subcmd.clone() {
-        SubCommand::Serve => loop {
-            let api_config = ApiConfig::parse_figment();
-            let start_notify = Arc::new(Notify::new());
-            let btc_client = BtcClient::new(&args.btc_module);
-            match run_hot_wallet(args.network, api_config, &args.dbconnect, start_notify, btc_client).await {
-                Err(e) => {
-                    error!("Hot wallet error: {e}");
-                }
-                _ => {
-                    info!("Terminated gracefully!");
-                    return Ok(());
-                }
+        SubCommand::Serve => {
+            if args.start_regtest {
+                run_btc_regtest(|_, btc_client| {
+                    let args = args.clone();
+                    async move { run(btc_client, &args).await }
+                })
+                .await
+            } else {
+                let btc_client = BtcClient::new(&args.btc_module);
+                run(btc_client, &args).await
             }
-            let restart_dt = Duration::from_secs(5);
-            info!("Adding {:?} delay before restarting logic", restart_dt);
-            sleep(restart_dt).await;
-        },
+        }
+    }
+    Ok(())
+}
+
+async fn run(btc_client: BtcClient, args: &Args) {
+    loop {
+        let api_config = ApiConfig::parse_figment();
+        let start_notify = Arc::new(Notify::new());
+
+        match run_hot_wallet(
+            args.network,
+            api_config,
+            &args.dbconnect,
+            start_notify,
+            btc_client.clone(),
+        )
+        .await
+        {
+            Err(e) => {
+                error!("Hot wallet error: {e}");
+            }
+            _ => {
+                info!("Terminated gracefully!");
+                return ();
+            }
+        }
+        let restart_dt = Duration::from_secs(5);
+        info!("Adding {:?} delay before restarting logic", restart_dt);
+        sleep(restart_dt).await;
     }
 }
