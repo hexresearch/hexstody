@@ -62,7 +62,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
         SubCommand::Serve => {
             if args.start_regtest {
                 run_btc_regtest(|_, btc_client| {
-                    let args = args.clone();
+                    let mut args = args.clone();
+                    args.network = Network::Regtest;
                     async move { run(btc_client, &args).await }
                 })
                 .await
