@@ -1,12 +1,13 @@
 pub mod btc;
+pub mod network;
 pub mod transaction;
 pub mod user;
 pub mod withdraw;
-pub mod network;
 
 pub use btc::*;
-pub use network::*;
 use chrono::prelude::*;
+use log::*;
+pub use network::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use thiserror::Error;
@@ -15,11 +16,12 @@ pub use user::*;
 use uuid::Uuid;
 pub use withdraw::*;
 
+use super::update::btc::BtcTxCancel;
 use super::update::deposit::DepositAddress;
 use super::update::signup::{SignupInfo, UserId};
 use super::update::withdrawal::WithdrawalRequestInfo;
 use super::update::{StateUpdate, UpdateBody};
-use hexstody_api::domain::Currency;
+use hexstody_api::domain::*;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct State {
@@ -52,6 +54,14 @@ impl State {
         }
     }
 
+    /// Find user by attached deposit address
+    pub fn find_user_address(&self, address: &CurrencyAddress) -> Option<UserId> {
+        self.users
+            .iter()
+            .find(|(_, user)| user.has_address(address))
+            .map(|(uid, _)| uid.clone())
+    }
+
     /// Apply an update event from persistent store
     pub fn apply_update(&mut self, update: StateUpdate) -> Result<(), StateUpdateErr> {
         match update.body {
@@ -72,6 +82,24 @@ impl State {
             }
             UpdateBody::DepositAddress(dep_address) => {
                 self.with_deposit_address(dep_address)?;
+                self.last_changed = update.created;
+                Ok(())
+            }
+            UpdateBody::BestBtcBlock(btc) => {
+                self.btc_state = BtcState {
+                    height: btc.height,
+                    block_hash: btc.block_hash,
+                };
+                self.last_changed = update.created;
+                Ok(())
+            }
+            UpdateBody::UpdateBtcTx(tx) => {
+                self.with_btc_tx_update(tx)?;
+                self.last_changed = update.created;
+                Ok(())
+            }
+            UpdateBody::CancelBtcTx(tx) => {
+                self.with_btc_tx_cancel(tx)?;
                 self.last_changed = update.created;
                 Ok(())
             }
@@ -138,6 +166,52 @@ impl State {
             }
         } else {
             Err(StateUpdateErr::CannotFoundUser(user_id.clone()))
+        }
+    }
+
+    /// Apply update of BTC transaction
+    fn with_btc_tx_update(&mut self, tx: BtcTransaction) -> Result<(), StateUpdateErr> {
+        let address = CurrencyAddress::BTC(BtcAddress(tx.address.to_string()));
+        if let Some(user_id) = self.find_user_address(&address) {
+            if let Some(user) = self.users.get_mut(&user_id) {
+                if let Some(curr_info) = user.currencies.get_mut(&Currency::BTC) {
+                    curr_info.update_btc_tx(&tx);
+                    Ok(())
+                } else {
+                    Err(StateUpdateErr::UserMissingCurrency(
+                        user_id.clone(),
+                        Currency::BTC,
+                    ))
+                }
+            } else {
+                Err(StateUpdateErr::CannotFoundUser(user_id.clone()))
+            }
+        } else {
+            warn!("Unknown deposit address: {address}");
+            Ok(())
+        }
+    }
+
+    /// Apply cancel of BTC transaction
+    fn with_btc_tx_cancel(&mut self, tx: BtcTxCancel) -> Result<(), StateUpdateErr> {
+        let address = CurrencyAddress::BTC(BtcAddress(tx.address.to_string()));
+        if let Some(user_id) = self.find_user_address(&address) {
+            if let Some(user) = self.users.get_mut(&user_id) {
+                if let Some(curr_info) = user.currencies.get_mut(&Currency::BTC) {
+                    curr_info.cancel_btc_tx(&tx);
+                    Ok(())
+                } else {
+                    Err(StateUpdateErr::UserMissingCurrency(
+                        user_id.clone(),
+                        Currency::BTC,
+                    ))
+                }
+            } else {
+                Err(StateUpdateErr::CannotFoundUser(user_id.clone()))
+            }
+        } else {
+            warn!("Unknown deposit address: {address}");
+            Ok(())
         }
     }
 

@@ -1,6 +1,8 @@
 use bitcoin::{Address, Txid};
 use chrono::prelude::*;
 use serde::{Deserialize, Serialize};
+use crate::update::btc::BtcTxCancel;
+use hexstody_btc_api::events::{TxUpdate, TxDirection};
 
 /// User data for specific currency
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
@@ -49,4 +51,38 @@ pub struct BtcTransaction {
     pub timestamp: NaiveDateTime,
     /// Conflicts with other transactions
     pub conflicts: Vec<Txid>,
+}
+
+pub trait SameBtcTx<T> {
+    /// Check that the tx is describes the same record in the blockchain
+    fn is_same_btc_tx(&self, other: &T) -> bool;
+}
+
+impl SameBtcTx<BtcTransaction> for BtcTransaction {
+    fn is_same_btc_tx(&self, other: &BtcTransaction) -> bool {
+        self.txid == other.txid && self.vout == other.vout
+    } 
+}
+
+impl SameBtcTx<BtcTxCancel> for BtcTransaction {
+    fn is_same_btc_tx(&self, other: &BtcTxCancel) -> bool {
+        self.txid.to_string() == other.txid && self.vout == other.vout
+    } 
+}
+
+impl From<TxUpdate> for BtcTransaction {
+    fn from(val: TxUpdate) -> BtcTransaction {
+        BtcTransaction {
+            txid: val.txid.0,
+            vout: val.vout,
+            address: val.address.0,
+            confirmations: val.confirmations,
+            amount: match val.direction {
+                TxDirection::Deposit => val.amount as i64,
+                TxDirection::Withdraw => - (val.amount as i64),
+            },
+            timestamp: NaiveDateTime::from_timestamp(val.timestamp as i64, 0),
+            conflicts: val.conflicts.iter().map(|tx| tx.0).collect(),
+        }
+    }
 }

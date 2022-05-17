@@ -1383,6 +1383,7 @@ dependencies = [
  "env_logger",
  "futures",
  "hexstody-api",
+ "hexstody-btc-api",
  "log 0.4.16",
  "maplit",
  "p256",

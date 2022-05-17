@@ -1,5 +1,6 @@
 use super::transaction::*;
 use super::withdraw::*;
+use crate::update::btc::BtcTxCancel;
 use crate::update::signup::{SignupAuth, SignupInfo, UserId};
 use chrono::prelude::*;
 use hexstody_api::domain::{Currency, CurrencyAddress};
@@ -34,7 +35,17 @@ impl UserInfo {
                 .collect(),
         }
     }
+
+    /// Return true if the user has given address as deposit address
+    pub fn has_address(&self, address: &CurrencyAddress) -> bool {
+        if let Some(cur_info) = self.currencies.get(&address.currency()) {
+            cur_info.has_address(address)
+        } else {
+            false
+        }
+    }
 }
+
 impl From<(NaiveDateTime, SignupInfo)> for UserInfo {
     fn from(value: (NaiveDateTime, SignupInfo)) -> Self {
         UserInfo::new(&value.1.username, value.1.auth, value.0)
@@ -89,5 +100,38 @@ impl UserCurrencyInfo {
         let pending_withdrawals: u64 = self.withdrawal_requests.iter().map(|(_, w)| w.amount).sum();
 
         tx_sum - (pending_withdrawals as i64)
+    }
+
+    pub fn has_address(&self, address: &CurrencyAddress) -> bool {
+        self.deposit_info.iter().find(|a| *a == address).is_some()
+    }
+
+    pub fn update_btc_tx(&mut self, upd_tx: &BtcTransaction) {
+        for tx in self.transactions.iter_mut() {
+            match tx {
+                Transaction::Btc(btc_tx) if btc_tx.is_same_btc_tx(upd_tx) => {
+                    *btc_tx = upd_tx.clone();
+                    return;
+                }
+                _ => (),
+            }
+        }
+        self.transactions.push(Transaction::Btc(upd_tx.clone()));
+    }
+
+    pub fn cancel_btc_tx(&mut self, upd_tx: &BtcTxCancel) {
+        let mut remove_i = None;
+        for (i, tx) in self.transactions.iter().enumerate() {
+            match tx {
+                Transaction::Btc(btc_tx) if btc_tx.is_same_btc_tx(upd_tx) => {
+                    remove_i = Some(i);
+                    break;
+                }
+                _ => (),
+            }
+        }
+        if let Some(i) = remove_i {
+            self.transactions.remove(i);
+        }
     }
 }

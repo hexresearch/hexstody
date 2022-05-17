@@ -5,6 +5,8 @@ use hexstody_api::{domain::*, types::*};
 use hexstody_btc_test::helpers::*;
 use runner::*;
 use std::str::FromStr;
+use std::time::Duration;
+use tokio::time::sleep;
 
 #[tokio::test]
 async fn test_simple() {
@@ -80,6 +82,8 @@ async fn test_btc_deposit() {
         let amount = Amount::from_sat(10_000);
         send_funds(&env.btc_node, &dep_address, amount);
         mine_blocks(&env.btc_node, 1);
+        sleep(Duration::from_millis(500)).await;
+
         let balances = env.hot_client.get_balance().await.expect("Balances");
         assert_eq!(
             Some(amount),

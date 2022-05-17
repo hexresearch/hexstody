@@ -208,12 +208,11 @@ pub async fn run_hot_wallet(
         }
     });
     let btc_worker_hndl = tokio::spawn({
-        let pool = pool.clone();
         let state_mx = state_mx.clone(); 
-        let state_notify = state_notify.clone();
         let btc_client = btc_client.clone();
+        let update_sender = update_sender.clone();
         async move {
-
+            btc_worker(btc_client, state_mx, update_sender).await;
         }
     });
 
@@ -232,6 +231,7 @@ pub async fn run_hot_wallet(
     {
         info!("Logic aborted, exiting...");
         update_worker_hndl.abort();
+        btc_worker_hndl.abort();
         Err(Error::Aborted)
     } else {
         Ok(())
