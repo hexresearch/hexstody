@@ -1,4 +1,3 @@
-use handlebars::handlebars_helper;
 use rocket::fs::{relative, FileServer};
 use rocket::http::Status;
 use rocket::response::status::Created;
@@ -65,10 +64,6 @@ async fn create(
     Ok(Created::new("/request"))
 }
 
-handlebars_helper!(render_currency: |currencyAddress: Json| {});
-
-handlebars_helper!(render_address: |currencyAddress: Json| {});
-
 pub async fn serve_operator_api(
     pool: Pool,
     state: Arc<Mutex<HexstodyState>>,
@@ -89,17 +84,10 @@ pub async fn serve_operator_api(
                 ..Default::default()
             }),
         )
-        .attach(Template::custom(|engines| {
-            engines
-                .handlebars
-                .register_helper("render_currency", Box::new(render_currency));
-            engines
-                .handlebars
-                .register_helper("render_address", Box::new(render_address));
-        }))
         .manage(state)
         .manage(pool)
         .manage(update_sender)
+        .attach(Template::fairing())
         .launch()
         .await?;
     Ok(())

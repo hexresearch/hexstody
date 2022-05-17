@@ -1,6 +1,15 @@
 {{#*inline "page"}}
 
-<script src="/scripts/operator/handlebars-helpers.js"></script>
+<link rel="stylesheet" type="text/css" href="/css/operator/style.css" />
+<script src="/scripts/operator/jscu.bundle.js"></script>
+<script src="/scripts/operator/jscec.bundle.js"></script>
+<script src="/scripts/operator/page/index.js"></script>
+
+<h3>Select the private key file</h3>
+<div class="file-selector-wrapper">
+    <input type="file" id="file-selector" accept=".pem" />
+    <span id="file-selector-status"></span>
+</div>
 
 <h3>Withdrawal requests</h3>
 <table>
@@ -17,26 +26,31 @@
         </tr>
     </thead>
     <tbody>
-        {{#each withdrawal_requests as |withdrawal_request|}}
-            <tr>
-                <td>{{id}}</td>
-                <td>{{user}}</td>
-                <td>{{render_currency address}}</td>
-                <td>{{render_address address}}</td>
-                <td>{{created_at}}</td>
-                <td>{{amount}}</td>
-                <td>{{confrimtaion_status}}</td>
-                <td>
-                    <div class="row">
-                        <div class="col">
-                            <button type="button" class="button primary icon">Confirm</button>
-                        </div>
-                        <div class="col">
-                            <button type="button" class="button error icon">Reject</button>
-                        </div>
+        {{#each withdrawal_requests as |request|}}
+        <tr>
+            <td>{{id}}</td>
+            <td>{{user}}</td>
+            {{#each address}}
+            {{#if @first}}
+            <td>{{@key}}</td>
+            <td>{{this}}</td>
+            {{/if}}
+            {{/each}}
+
+            <td>{{created_at}}</td>
+            <td>{{amount}}</td>
+            <td>{{confrimtaion_status}}</td>
+            <td>
+                <div class="row">
+                    <div class="col">
+                        <button type="button" class="button primary icon" disabled>Confirm</button>
                     </div>
-                </td>
-            </tr>
+                    <div class="col">
+                        <button type="button" class="button error icon" disabled>Reject</button>
+                    </div>
+                </div>
+            </td>
+        </tr>
         {{/each}}
     </tbody>
 </table>
