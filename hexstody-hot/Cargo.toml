@@ -37,27 +37,23 @@ tokio = { version = "1", features = ["full"] }
 anyhow = "1.0"
 p256 = { version = "0.10.1", features = ["pem"] }
 pkcs8 = { version = "0.8.0", features = ["pem", "encryption", "std", "pkcs5"] }
-rand_core = "0.6.3"
-rocket = { version = "0.5.0-rc.1", default-features = false, features = [
-  "json",
-  "uuid",
-] }
-rocket_okapi = { git = "https://github.com/GREsau/okapi", branch = "master", features = [
-  "swagger",
-  "uuid",
-] }
-schemars = { version = "0.8.8", features = ["chrono", "uuid"] }
-rpassword = "6.0"
+rand_core = { version = "0.6.3", features = ["std"] }
+rocket = { version = "0.5.0-rc.1", default-features = false, features = [ "json", "secrets" ] }
+rocket_okapi = { git = "https://github.com/GREsau/okapi", branch = "master", features = [ "swagger" ] }
+rocket_session = "0.2.2"
 uuid = { version = "0.8.2", features = ["v4"] }
 rocket_dyn_templates = { version = "0.1.0-rc.1", features = ["handlebars"] }
-handlebars = "4.2.2"
+schemars = "0.8.8"
+pwhash = "1.0.0"
+rpassword = "6.0.1"
+hexstody-btc-test = { path = "../hexstody-btc-test" }
+ctrlc = "3.2.2"
 
 [dev-dependencies]
 bitcoin = "0.28.1"
 bitcoin_hashes = "0.10.0"
 bitcoincore-rpc = "0.15.0"
 bitcoincore-rpc-json = "0.15.0"
-hexstody-btc-test = { path = "../hexstody-btc-test" }
 maplit = "1.0.2"
 nix = "0.24.1"
 port-selector = "0.1.4"

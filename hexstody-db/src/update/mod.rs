@@ -1,3 +1,5 @@
+pub mod btc;
+pub mod deposit;
 pub mod signup;
 pub mod withdrawal;
 
@@ -7,8 +9,11 @@ use std::fmt;
 use std::str::FromStr;
 use thiserror::Error;
 
+use self::btc::{BestBtcBlock, BtcTxCancel};
+use self::deposit::DepositAddress;
 use self::signup::SignupInfo;
 use self::withdrawal::WithdrawalRequestInfo;
+use super::state::transaction::BtcTransaction;
 use super::state::State;
 
 /// All database updates are collected to a single table that
@@ -37,6 +42,14 @@ pub enum UpdateBody {
     Snapshot(State),
     /// Create new withdrawal request
     NewWithdrawalRequest(WithdrawalRequestInfo),
+    /// Register new deposit address for user
+    DepositAddress(DepositAddress),
+    /// New best block for BTC
+    BestBtcBlock(BestBtcBlock),
+    /// Update state of BTC transaction
+    UpdateBtcTx(BtcTransaction),
+    /// Cancel BTC transaction
+    CancelBtcTx(BtcTxCancel),
 }
 
 impl UpdateBody {
@@ -45,6 +58,10 @@ impl UpdateBody {
             UpdateBody::Signup(_) => UpdateTag::Signup,
             UpdateBody::Snapshot(_) => UpdateTag::Snapshot,
             UpdateBody::NewWithdrawalRequest(_) => UpdateTag::NewWithdrawalRequest,
+            UpdateBody::DepositAddress(_) => UpdateTag::DepositAddress,
+            UpdateBody::BestBtcBlock(_) => UpdateTag::BestBtcBlock,
+            UpdateBody::UpdateBtcTx(_) => UpdateTag::UpdateBtcTx,
+            UpdateBody::CancelBtcTx(_) => UpdateTag::CancelBtcTx,
         }
     }
 
@@ -53,6 +70,10 @@ impl UpdateBody {
             UpdateBody::Signup(v) => serde_json::to_value(v),
             UpdateBody::Snapshot(v) => serde_json::to_value(v),
             UpdateBody::NewWithdrawalRequest(v) => serde_json::to_value(v),
+            UpdateBody::DepositAddress(v) => serde_json::to_value(v),
+            UpdateBody::BestBtcBlock(v) => serde_json::to_value(v),
+            UpdateBody::UpdateBtcTx(v) => serde_json::to_value(v),
+            UpdateBody::CancelBtcTx(v) => serde_json::to_value(v),
         }
     }
 }
@@ -62,6 +83,10 @@ pub enum UpdateTag {
     Signup,
     Snapshot,
     NewWithdrawalRequest,
+    DepositAddress,
+    BestBtcBlock,
+    UpdateBtcTx,
+    CancelBtcTx,
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -71,11 +96,7 @@ impl std::error::Error for UnknownUpdateTag {}
 
 impl fmt::Display for UnknownUpdateTag {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "Given UpdateTag '{}' is unknown, valid are: Htlc, Snapshot",
-            self.0
-        )
+        write!(f, "Given UpdateTag '{}' is unknown", self.0)
     }
 }
 
@@ -85,6 +106,10 @@ impl fmt::Display for UpdateTag {
             UpdateTag::Signup => write!(f, "signup"),
             UpdateTag::Snapshot => write!(f, "snapshot"),
             UpdateTag::NewWithdrawalRequest => write!(f, "withdrawal request"),
+            UpdateTag::DepositAddress => write!(f, "deposit address"),
+            UpdateTag::BestBtcBlock => write!(f, "best btc block"),
+            UpdateTag::UpdateBtcTx => write!(f, "update btc tx"),
+            UpdateTag::CancelBtcTx => write!(f, "cancel btc tx"),
         }
     }
 }
@@ -97,6 +122,10 @@ impl FromStr for UpdateTag {
             "signup" => Ok(UpdateTag::Signup),
             "snapshot" => Ok(UpdateTag::Snapshot),
             "withdrawal request" => Ok(UpdateTag::NewWithdrawalRequest),
+            "deposit address" => Ok(UpdateTag::DepositAddress),
+            "best btc block" => Ok(UpdateTag::BestBtcBlock),
+            "update btc tx" => Ok(UpdateTag::UpdateBtcTx),
+            "cancel btc tx" => Ok(UpdateTag::CancelBtcTx),
             _ => Err(UnknownUpdateTag(s.to_owned())),
         }
     }
@@ -135,6 +164,12 @@ impl UpdateTag {
             UpdateTag::NewWithdrawalRequest => Ok(UpdateBody::NewWithdrawalRequest(
                 serde_json::from_value(value)?,
             )),
+            UpdateTag::DepositAddress => {
+                Ok(UpdateBody::DepositAddress(serde_json::from_value(value)?))
+            }
+            UpdateTag::BestBtcBlock => Ok(UpdateBody::BestBtcBlock(serde_json::from_value(value)?)),
+            UpdateTag::UpdateBtcTx => Ok(UpdateBody::UpdateBtcTx(serde_json::from_value(value)?)),
+            UpdateTag::CancelBtcTx => Ok(UpdateBody::CancelBtcTx(serde_json::from_value(value)?)),
         }
     }
 }

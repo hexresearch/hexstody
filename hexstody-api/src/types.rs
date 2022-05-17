@@ -17,7 +17,7 @@ pub enum WithdrawalRequestStatus {
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct BalanceItem {
     pub currency: Currency,
-    pub value: u64,
+    pub value: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
@@ -46,6 +46,12 @@ pub enum HistoryItem {
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct Balance {
     pub balances: Vec<BalanceItem>,
+}
+
+impl Balance {
+    pub fn by_currency(&self, curr: &Currency) -> Option<&BalanceItem> {
+        self.balances.iter().find(|i| i.currency == *curr)
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
@@ -129,4 +135,9 @@ pub struct IndexHandlerContext {
     pub title: String,
     pub parent: String,
     pub withdrawal_requests: Vec<WithdrawalRequest>,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct DepositInfo {
+    pub address: String,
 }

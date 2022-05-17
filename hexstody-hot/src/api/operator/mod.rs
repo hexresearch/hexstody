@@ -22,7 +22,7 @@ async fn index(state: &RocketState<Arc<Mutex<HexstodyState>>>) -> Template {
     let hexstody_state = state.lock().await;
     let withdrawal_requests = Vec::from_iter(
         hexstody_state
-            .withdrawal_requests
+            .withdrawal_requests()
             .values()
             .cloned()
             .map(|x| x.into()),
@@ -41,7 +41,7 @@ async fn list(state: &RocketState<Arc<Mutex<HexstodyState>>>) -> Json<Vec<Withdr
     let hexstody_state = state.lock().await;
     let withdrawal_requests = Vec::from_iter(
         hexstody_state
-            .withdrawal_requests
+            .withdrawal_requests()
             .values()
             .cloned()
             .map(|x| x.into()),

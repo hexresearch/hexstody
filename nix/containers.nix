@@ -31,8 +31,12 @@ let
   };
 
   hexstody-container = mkDockerImage "hexstody" [
-    (takeOnly "hexstody" "${hexstody}/bin/hexstody")
+    (takeOnly "hexstody-hot" "${hexstody}/bin/hexstody-hot")
+    (takeOnly "hexstody-btc" "${hexstody}/bin/hexstody-btc")
+    (takeOnly "operator-keygen" "${hexstody}/bin/operator-keygen")
     (takeOnly "wait-for-it.sh" "${hexstody.src}/docker/wait-for-it.sh")
+    (takeFolder "static" "${hexstody}/share/static" "/static")
+    (takeFolder "templates" "${hexstody}/share/templates" "/templates")
   ];
 in { inherit
   hexstody-container

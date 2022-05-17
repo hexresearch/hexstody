@@ -19,9 +19,11 @@ pub enum BtcEvent {
     Cancel(TxCancel),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(
+    Debug, Clone, Serialize, Deserialize, JsonSchema, Eq, PartialEq, Ord, PartialOrd, Hash,
+)]
 pub enum TxDirection {
-    Deposit, 
+    Deposit,
     Withdraw,
 }
 
@@ -42,7 +44,7 @@ pub struct TxUpdate {
     /// UNIX timestamp when the event occured
     pub timestamp: u64,
     /// Other transaction that are in conflict with the tx
-    /// That means that they are RBF transactions and one 
+    /// That means that they are RBF transactions and one
     /// eventually will replace the others.
     pub conflicts: Vec<BtcTxid>,
 }
@@ -63,7 +65,7 @@ pub struct TxCancel {
     /// UNIX timestamp when the event occured
     pub timestamp: u64,
     /// Other transaction that are in conflict with the tx
-    /// That means that they are RBF transactions and one 
+    /// That means that they are RBF transactions and one
     /// eventually will replace the others.
     pub conflicts: Vec<BtcTxid>,
 }

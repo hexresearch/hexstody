@@ -1,6 +1,7 @@
+use hexstody_api::domain::*;
+use hexstody_api::types::*;
 use log::*;
 use thiserror::Error;
-use hexstody_api::types::*;
 
 #[derive(Error, Debug)]
 pub enum Error {
@@ -13,17 +14,18 @@ pub enum Error {
 /// Alias for a `Result` with the error type `self::Error`.
 pub type Result<T> = std::result::Result<T, Error>;
 
+#[derive(Clone)]
 pub struct HexstodyClient {
     pub client: reqwest::Client,
     pub server: String,
 }
 
 impl HexstodyClient {
-    pub fn new(url: &str) -> Self {
-        HexstodyClient {
-            client: reqwest::Client::new(),
+    pub fn new(url: &str) -> reqwest::Result<Self> {
+        Ok(HexstodyClient {
+            client: reqwest::ClientBuilder::new().cookie_store(true).build()?,
             server: url.to_owned(),
-        }
+        })
     }
 
     pub async fn ping(&self) -> Result<()> {
@@ -69,5 +71,50 @@ impl HexstodyClient {
             .await?;
         debug!("Response {path}: {}", response);
         Ok(())
+    }
+
+    pub async fn logout(&self) -> Result<()> {
+        let path = "/logout";
+        let endpoint = format!("{}{}", self.server, path);
+        let request = self.client.post(endpoint).build()?;
+        let response = self
+            .client
+            .execute(request)
+            .await?
+            .error_for_status()?
+            .text()
+            .await?;
+        debug!("Response {path}: {}", response);
+        Ok(())
+    }
+
+    pub async fn get_balance(&self) -> Result<Balance> {
+        let path = "/balance";
+        let endpoint = format!("{}{}", self.server, path);
+        let request = self.client.get(endpoint).build()?;
+        let response = self
+            .client
+            .execute(request)
+            .await?
+            .error_for_status()?
+            .text()
+            .await?;
+        debug!("Response {path}: {}", response);
+        Ok(serde_json::from_str(&response)?)
+    }
+
+    pub async fn get_deposit(&self, currency: Currency) -> Result<DepositInfo> {
+        let path = "/deposit";
+        let endpoint = format!("{}{}", self.server, path);
+        let request = self.client.post(endpoint).json(&currency).build()?;
+        let response = self
+            .client
+            .execute(request)
+            .await?
+            .error_for_status()?
+            .text()
+            .await?;
+        debug!("Response {path}: {}", response);
+        Ok(serde_json::from_str(&response)?)
     }
 }

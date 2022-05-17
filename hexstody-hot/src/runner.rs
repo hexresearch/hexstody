@@ -8,12 +8,18 @@ use thiserror::Error;
 use tokio::sync::mpsc;
 use tokio::sync::{Mutex, Notify};
 
+use hexstody_btc_client::client::BtcClient;
 use hexstody_db::queries::query_state;
 use hexstody_db::*;
-use hexstody_db::{state::State, update::StateUpdate, Pool};
+use hexstody_db::{
+    state::{Network, State},
+    update::StateUpdate,
+    Pool,
+};
 
 use super::api::operator::*;
 use super::api::public::*;
+use super::worker::*;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ApiType {
@@ -86,6 +92,7 @@ async fn serve_api(
     port: u16,
     abort_reg: AbortRegistration,
     update_sender: mpsc::Sender<StateUpdate>,
+    btc_client: BtcClient,
 ) -> () {
     if !api_enabled {
         info!("{api_type} API disabled");
@@ -102,6 +109,7 @@ async fn serve_api(
                     start_notify.clone(),
                     port,
                     update_sender.clone(),
+                    btc_client,
                 )
             })
             .await;
@@ -130,6 +138,7 @@ pub async fn serve_apis(
     api_config: ApiConfig,
     api_abort: AbortRegistration,
     update_sender: mpsc::Sender<StateUpdate>,
+    btc_client: BtcClient,
 ) -> Result<(), Aborted> {
     let (public_handle, public_abort) = AbortHandle::new_pair();
     let public_api_fut = serve_api(
@@ -142,6 +151,7 @@ pub async fn serve_apis(
         api_config.public_api_port,
         public_abort,
         update_sender.clone(),
+        btc_client.clone(),
     );
     let (operator_handle, operator_abort) = AbortHandle::new_pair();
     let operator_api_fut = serve_api(
@@ -154,6 +164,7 @@ pub async fn serve_apis(
         api_config.operator_api_port,
         operator_abort,
         update_sender.clone(),
+        btc_client,
     );
 
     let abortable_apis =
@@ -179,14 +190,17 @@ pub enum Error {
 }
 
 pub async fn run_hot_wallet(
+    network: Network,
     api_config: ApiConfig,
     db_connect: &str,
     start_notify: Arc<Notify>,
+    btc_client: BtcClient,
+    api_abort_reg: AbortRegistration,
 ) -> Result<(), Error> {
     info!("Connecting to database");
     let pool = create_db_pool(db_connect).await?;
     info!("Reconstructing state from database");
-    let state = query_state(&pool).await?;
+    let state = query_state(network, &pool).await?;
     let state_mx = Arc::new(Mutex::new(state));
     let state_notify = Arc::new(Notify::new());
     let (update_sender, update_receiver) = mpsc::channel(1000);
@@ -199,8 +213,15 @@ pub async fn run_hot_wallet(
             update_worker(pool, state_mx, state_notify, update_receiver).await;
         }
     });
+    let btc_worker_hndl = tokio::spawn({
+        let state_mx = state_mx.clone();
+        let btc_client = btc_client.clone();
+        let update_sender = update_sender.clone();
+        async move {
+            btc_worker(btc_client, state_mx, update_sender).await;
+        }
+    });
 
-    let (_api_abort_handle, api_abort_reg) = AbortHandle::new_pair();
     if let Err(Aborted) = serve_apis(
         pool,
         state_mx,
@@ -209,11 +230,13 @@ pub async fn run_hot_wallet(
         api_config,
         api_abort_reg,
         update_sender,
+        btc_client,
     )
     .await
     {
         info!("Logic aborted, exiting...");
         update_worker_hndl.abort();
+        btc_worker_hndl.abort();
         Err(Error::Aborted)
     } else {
         Ok(())

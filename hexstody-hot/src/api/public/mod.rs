@@ -1,21 +1,28 @@
+pub mod auth;
+pub mod wallet;
+
+use auth::*;
+use chrono::prelude::*;
 use hexstody_api::domain::currency::Currency;
-use hexstody_api::error;
-use hexstody_api::types::*;
-use hexstody_db::state::State;
-use hexstody_db::update::StateUpdate;
+use hexstody_api::types as api;
+use hexstody_api::types::History;
+use hexstody_btc_client::client::BtcClient;
+use hexstody_db::state::*;
+use hexstody_db::update::*;
 use hexstody_db::Pool;
 use rocket::fairing::AdHoc;
 use rocket::fs::{relative, FileServer};
-use rocket::response::content;
+use rocket::response::{content, Redirect};
+use rocket::uri;
 use rocket::serde::json::Json;
-use rocket::{get, post, routes};
+use rocket::{get, routes};
 use rocket_dyn_templates::Template;
 use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::{Mutex, Notify};
 use tokio::sync::mpsc;
-use chrono::prelude::*;
+use tokio::sync::{Mutex, Notify};
+use wallet::*;
 
 #[openapi(tag = "ping")]
 #[get("/ping")]
@@ -23,42 +30,23 @@ fn ping() -> content::Json<()> {
     content::Json(())
 }
 
-#[openapi(tag = "get_balance")]
-#[get("/get_balance")]
-fn get_balance() -> Json<Balance> {
-    let x = Balance {
-        balances: vec![
-            BalanceItem {
-                currency: Currency::BTC,
-                value: u64::MAX,
-            },
-            BalanceItem {
-                currency: Currency::ETH,
-                value: u64::MAX,
-            },
-        ],
-    };
-
-    Json(x)
-}
-
 #[openapi(tag = "get_history")]
-#[get("/get_history")]
-fn get_history() -> Json<History> {
+#[get("/get_history/<skip>/<take>")]
+fn get_history(skip: u32, take: u32) -> Json<History> {
     let x = History {
         target_number_of_confirmations: 6,
         history_items: vec![
-            HistoryItem::Deposit(DepositHistoryItem {
+            api::HistoryItem::Deposit(api::DepositHistoryItem {
                 currency: Currency::BTC,
                 date: Utc::now().naive_utc(),
                 value: u64::MAX,
                 number_of_confirmations: 3,
             }),
-            HistoryItem::Withdrawal(WithdrawalHistoryItem {
+            api::HistoryItem::Withdrawal(api::WithdrawalHistoryItem {
                 currency: Currency::ETH,
                 date: Utc::now().naive_utc(),
                 value: u64::MAX,
-                status : WithdrawalRequestStatus::InProgress
+                status: api::WithdrawalRequestStatus::InProgress,
             }),
         ],
     };
@@ -68,9 +56,8 @@ fn get_history() -> Json<History> {
 
 #[openapi(skip)]
 #[get("/")]
-fn index() -> Template {
-    let context = HashMap::from([("title", "Index"), ("parent", "base")]);
-    Template::render("index", context)
+fn index() -> Redirect {
+    Redirect::to(uri!(signin))
 }
 
 #[openapi(skip)]
@@ -80,42 +67,25 @@ fn overview() -> Template {
     Template::render("overview", context)
 }
 
-#[openapi(tag = "auth")]
-#[post("/signup/email", data = "<data>")]
-fn signup_email(data: Json<SignupEmail>) -> error::Result<()> {
-    if data.user.len() < error::MIN_USER_NAME_LEN {
-        return Err(error::Error::UserNameTooShort.into());
-    }
-    if data.user.len() > error::MAX_USER_NAME_LEN {
-        return Err(error::Error::UserNameTooLong.into());
-    }
-    if data.password.len() < error::MIN_USER_PASSWORD_LEN {
-        return Err(error::Error::UserPasswordTooShort.into());
-    }
-    if data.password.len() > error::MAX_USER_PASSWORD_LEN {
-        return Err(error::Error::UserPasswordTooLong.into());
-    }
-
-    Ok(Json(()))
+#[openapi(skip)]
+#[get("/signup")]
+fn signup() -> Template {
+    let context = HashMap::from([("title", "Sign Up"), ("parent", "base")]);
+    Template::render("signup", context)
 }
 
-#[openapi(tag = "auth")]
-#[post("/signin/email", data = "<data>")]
-fn signin_email(data: Json<SigninEmail>) -> error::Result<()> {
-    if data.user.len() < error::MIN_USER_NAME_LEN {
-        return Err(error::Error::UserNameTooShort.into());
-    }
-    if data.user.len() > error::MAX_USER_NAME_LEN {
-        return Err(error::Error::UserNameTooLong.into());
-    }
-    if data.password.len() < error::MIN_USER_PASSWORD_LEN {
-        return Err(error::Error::UserPasswordTooShort.into());
-    }
-    if data.password.len() > error::MAX_USER_PASSWORD_LEN {
-        return Err(error::Error::UserPasswordTooLong.into());
-    }
-    
-    Ok(Json(()))
+#[openapi(skip)]
+#[get("/signin")]
+fn signin() -> Template {
+    let context = HashMap::from([("title", "Sign In"), ("parent", "base")]);
+    Template::render("signin", context)
+}
+
+#[openapi(skip)]
+#[get("/deposit")]
+fn deposit() -> Template {
+    let context = HashMap::from([("title", "Deposit"), ("parent", "base")]);
+    Template::render("deposit", context)
 }
 
 pub async fn serve_public_api(
@@ -125,6 +95,7 @@ pub async fn serve_public_api(
     start_notify: Arc<Notify>,
     port: u16,
     update_sender: mpsc::Sender<StateUpdate>,
+    btc_client: BtcClient,
 ) -> Result<(), rocket::Error> {
     let figment = rocket::Config::figment().merge(("port", port));
     let on_ready = AdHoc::on_liftoff("API Start!", |_| {
@@ -137,9 +108,17 @@ pub async fn serve_public_api(
         .mount("/", FileServer::from(relative!("static/")))
         .mount(
             "/",
-            openapi_get_routes![ping, get_balance, get_history, signup_email, signin_email],
+            openapi_get_routes![
+                ping,
+                get_balance,
+                get_deposit,
+                get_history,
+                signup_email,
+                signin_email,
+                logout
+            ],
         )
-        .mount("/", routes![index, overview])
+        .mount("/", routes![index, overview, signup, signin, deposit])
         .mount(
             "/swagger/",
             make_swagger_ui(&SwaggerUIConfig {
@@ -147,6 +126,9 @@ pub async fn serve_public_api(
                 ..Default::default()
             }),
         )
+        .manage(state)
+        .manage(update_sender)
+        .manage(btc_client)
         .attach(Template::fairing())
         .attach(on_ready)
         .launch()
@@ -179,13 +161,21 @@ mod tests {
 
         let (sender, receiver) = tokio::sync::oneshot::channel();
         let (update_sender, _) = tokio::sync::mpsc::channel(1000);
+        let btc_client = BtcClient::new("127.0.0.1");
         tokio::spawn({
             let state = state_mx.clone();
             let state_notify = state_notify.clone();
             let start_notify = start_notify.clone();
             async move {
-                let serve_task =
-                    serve_public_api(pool, state, state_notify, start_notify, SERVICE_TEST_PORT, update_sender);
+                let serve_task = serve_public_api(
+                    pool,
+                    state,
+                    state_notify,
+                    start_notify,
+                    SERVICE_TEST_PORT,
+                    update_sender,
+                    btc_client,
+                );
                 futures::pin_mut!(serve_task);
                 futures::future::select(serve_task, receiver.map_err(drop)).await;
             }
@@ -208,7 +198,8 @@ mod tests {
             let client = HexstodyClient::new(&format!(
                 "http://{}:{}",
                 SERVICE_TEST_HOST, SERVICE_TEST_PORT
-            ));
+            ))
+            .expect("client created");
             client.ping().await.unwrap();
         })
         .await;

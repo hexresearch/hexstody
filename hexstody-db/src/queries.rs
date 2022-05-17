@@ -1,8 +1,8 @@
+use super::state::*;
+use super::update::*;
 use super::Pool;
 use chrono::prelude::*;
 use futures::StreamExt;
-use super::state::*;
-use super::update::*;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -55,7 +55,11 @@ pub async fn query_updates(pool: &Pool) -> Result<Vec<StateUpdate>> {
 }
 
 /// Insert new update in the chain of updates in database
-pub async fn insert_update(pool: &Pool, update: UpdateBody, timestamp: Option<NaiveDateTime>) -> Result<()> {
+pub async fn insert_update(
+    pool: &Pool,
+    update: UpdateBody,
+    timestamp: Option<NaiveDateTime>,
+) -> Result<()> {
     let now = timestamp.unwrap_or_else(|| Utc::now().naive_utc());
     let tag = format!("{}", update.tag());
     let body = update.json()?;
@@ -73,18 +77,15 @@ pub async fn insert_update(pool: &Pool, update: UpdateBody, timestamp: Option<Na
 }
 
 /// Reconstruct state from chain of updates and snapshots in the database
-pub async fn query_state(pool: &Pool) -> Result<State> {
+pub async fn query_state(network: Network, pool: &Pool) -> Result<State> {
     let updates = query_updates(pool).await?;
-    Ok(State::collect(updates.into_iter().rev())?)
+    Ok(State::collect(network, updates.into_iter().rev())?)
 }
 
 #[cfg(test)]
 mod tests {
     #[sqlx_database_tester::test(
-        pool(
-            variable = "migrated_pool",
-            migrations = "./migrations"
-        ),
+        pool(variable = "migrated_pool", migrations = "./migrations"),
         pool(
             variable = "empty_db_pool",
             transaction_variable = "empty_db_transaction",
