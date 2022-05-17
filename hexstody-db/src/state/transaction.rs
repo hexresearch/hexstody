@@ -32,6 +32,13 @@ impl Transaction {
             Transaction::Eth() => todo!("Eth is withdraw"),
         }
     }
+
+    pub fn is_conflicted(&self) -> bool {
+        match self {
+            Transaction::Btc(tx) => !tx.conflicts.is_empty(),
+            Transaction::Eth() => todo!("Eth is conflicted"),
+        }
+    }
 }
 
 /// Bitcoin transaction metainformation

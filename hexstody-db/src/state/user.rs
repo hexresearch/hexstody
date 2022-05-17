@@ -78,7 +78,17 @@ impl UserCurrencyInfo {
 
     /// Includes unconfirmed transactions
     pub fn balance(&self) -> i64 {
-        let tx_sum: i64 = self.transactions.iter().map(|t| t.amount()).sum();
+        let tx_sum: i64 = self
+            .transactions
+            .iter()
+            .filter_map(|t| {
+                if t.is_conflicted() {
+                    None
+                } else {
+                    Some(t.amount())
+                }
+            })
+            .sum();
         let pending_withdrawals: u64 = self.withdrawal_requests.iter().map(|(_, w)| w.amount).sum();
 
         tx_sum - (pending_withdrawals as i64)

@@ -122,3 +122,35 @@ async fn test_btc_unconfirmed_deposit() {
     })
     .await;
 }
+
+#[tokio::test]
+async fn test_btc_rbf_deposit() {
+    run_with_user(|env| async move {
+        fund_wallet(&env.btc_node);
+
+        let dep_info = env
+            .hot_client
+            .get_deposit(Currency::BTC)
+            .await
+            .expect("Deposit address");
+
+        let dep_address = Address::from_str(&dep_info.address).expect("Bitcoin address");
+        let amount = Amount::from_sat(10_000);
+        let dep_txid = send_funds(&env.btc_node, &dep_address, amount);
+        
+        sleep(Duration::from_millis(1000)).await;
+
+        let _ = bumpfee(&env.btc_node, &dep_txid, None, None, None, None).expect("bump fee");
+
+        sleep(Duration::from_millis(1000)).await;
+
+        let balances = env.hot_client.get_balance().await.expect("Balances");
+        assert_eq!(
+            Some(Amount::from_sat(0)),
+            balances
+                .by_currency(&Currency::BTC)
+                .map(|i| Amount::from_sat(i.value.try_into().expect("Positive balance")))
+        );
+    })
+    .await;
+}
