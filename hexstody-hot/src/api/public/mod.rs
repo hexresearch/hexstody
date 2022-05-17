@@ -6,6 +6,7 @@ use chrono::prelude::*;
 use hexstody_api::domain::currency::Currency;
 use hexstody_api::types as api;
 use hexstody_api::types::History;
+use hexstody_btc_client::client::BtcClient;
 use hexstody_db::state::*;
 use hexstody_db::update::*;
 use hexstody_db::Pool;
@@ -21,7 +22,6 @@ use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio::sync::{Mutex, Notify};
 use wallet::*;
-use hexstody_btc_client::client::BtcClient;
 
 #[openapi(tag = "ping")]
 #[get("/ping")]

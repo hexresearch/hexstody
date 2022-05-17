@@ -36,11 +36,7 @@ impl<'r> FromFormField<'r> for BtcAddress {
 
     async fn from_data(field: DataField<'r, '_>) -> form::Result<'r, Self> {
         // Retrieve the configured data limit or use `256KiB` as default.
-        let limit = field
-            .request
-            .limits()
-            .get("address")
-            .unwrap_or(64.bytes());
+        let limit = field.request.limits().get("address").unwrap_or(64.bytes());
 
         // Read the capped data stream, returning a limit error as needed.
         let bytes = field.data.open(limit).into_bytes().await?;

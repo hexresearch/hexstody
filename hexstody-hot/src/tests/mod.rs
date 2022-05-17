@@ -85,7 +85,7 @@ async fn test_btc_deposit() {
             Some(amount),
             balances
                 .by_currency(&Currency::BTC)
-                .map(|i| Amount::from_sat(i.value))
+                .map(|i| Amount::from_sat(i.value.try_into().expect("Positive balance")))
         );
     })
     .await;

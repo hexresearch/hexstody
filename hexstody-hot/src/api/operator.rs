@@ -6,8 +6,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{mpsc, Mutex, Notify};
 
-use hexstody_db::{state::State, update::StateUpdate};
 use hexstody_db::Pool;
+use hexstody_db::{state::State, update::StateUpdate};
 
 #[openapi(skip)]
 #[get("/")]

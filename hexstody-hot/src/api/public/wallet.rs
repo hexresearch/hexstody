@@ -17,21 +17,28 @@ use tokio::sync::{mpsc, Mutex};
 
 #[openapi(tag = "wallet")]
 #[get("/balance")]
-pub async fn get_balance(cookies: &CookieJar<'_>) -> error::Result<api::Balance> {
-    require_auth(cookies, |_| async move {
-        let x = api::Balance {
-            balances: vec![
-                api::BalanceItem {
-                    currency: Currency::BTC,
-                    value: u64::MAX,
-                },
-                api::BalanceItem {
-                    currency: Currency::ETH,
-                    value: u64::MAX,
-                },
-            ],
-        };
-        Ok(Json(x))
+pub async fn get_balance(
+    cookies: &CookieJar<'_>,
+    state: &State<Arc<Mutex<DbState>>>,
+) -> error::Result<api::Balance> {
+    require_auth(cookies, |cookie| async move {
+        let user_id = cookie.value();
+        {
+            let state = state.lock().await;
+            if let Some(user) = state.users.get(user_id) {
+                let balances: Vec<api::BalanceItem> = user
+                    .currencies
+                    .iter()
+                    .map(|(cur, info)| api::BalanceItem {
+                        currency: cur.clone(),
+                        value: info.balance(),
+                    })
+                    .collect();
+                Ok(Json(api::Balance { balances }))
+            } else {
+                Err(error::Error::NoUserFound.into())
+            }
+        }
     })
     .await
 }

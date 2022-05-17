@@ -1,7 +1,7 @@
+use bitcoin::Address;
 use hexstody_btc_api::events::*;
 use log::*;
 use thiserror::Error;
-use bitcoin::Address;
 
 #[derive(Error, Debug)]
 pub enum Error {

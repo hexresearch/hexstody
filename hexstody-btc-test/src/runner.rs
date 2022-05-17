@@ -1,13 +1,14 @@
-use hexstody_btc::api::public::serve_public_api;
-use hexstody_btc::state::ScanState;
-use hexstody_btc::worker::node_worker;
 use bitcoin::network::constants::Network;
 use bitcoincore_rpc::{Auth, Client, RpcApi};
 use futures::FutureExt;
+use hexstody_btc::api::public::serve_public_api;
+use hexstody_btc::state::ScanState;
+use hexstody_btc::worker::node_worker;
 use hexstody_btc_client::client::BtcClient;
 use log::*;
 use nix::sys::signal::{self, Signal};
 use nix::unistd::Pid;
+use port_selector::random_free_tcp_port;
 use std::future::Future;
 use std::net::{IpAddr, Ipv4Addr};
 use std::panic::AssertUnwindSafe;
@@ -16,7 +17,6 @@ use std::sync::Arc;
 use std::time::Duration;
 use tempdir::TempDir;
 use tokio::sync::{Mutex, Notify};
-use port_selector::random_free_tcp_port;
 
 fn setup_node() -> (Child, u16, TempDir) {
     info!("Starting regtest node");

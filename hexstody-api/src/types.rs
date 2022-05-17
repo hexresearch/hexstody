@@ -11,13 +11,13 @@ pub enum WithdrawalRequestStatus {
     UnderReview,
     InProgress,
     AwaitsApproval,
-    Completed
+    Completed,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct BalanceItem {
     pub currency: Currency,
-    pub value: u64,
+    pub value: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
@@ -33,7 +33,7 @@ pub struct WithdrawalHistoryItem {
     pub currency: Currency,
     pub date: NaiveDateTime,
     pub value: u64,
-    pub status: WithdrawalRequestStatus
+    pub status: WithdrawalRequestStatus,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
@@ -57,19 +57,19 @@ impl Balance {
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct History {
     pub target_number_of_confirmations: u64,
-    pub history_items: Vec<HistoryItem>
+    pub history_items: Vec<HistoryItem>,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct SignupEmail {
     /// Unique email
-    pub user: String, 
+    pub user: String,
     pub password: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct SigninEmail {
-    pub user: String, 
+    pub user: String,
     pub password: String,
 }
 

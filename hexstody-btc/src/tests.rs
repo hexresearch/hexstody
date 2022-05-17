@@ -1,9 +1,9 @@
 use bitcoin::Amount;
 use bitcoincore_rpc::RpcApi;
-use hexstody_btc_api::events::*;
 use hexstody_btc_api::bitcoin::*;
-use hexstody_btc_test::runner::*;
+use hexstody_btc_api::events::*;
 use hexstody_btc_test::helpers::*;
+use hexstody_btc_test::runner::*;
 
 // Check that we have node and API operational
 #[tokio::test]
@@ -201,7 +201,7 @@ async fn cancel_confirmed_test() {
 
         let last_block = btc.get_best_block_hash().expect("best block");
         btc.invalidate_block(&last_block).expect("forget block");
-        
+
         let res = api.poll_events().await.expect("Poll events");
         assert_eq!(res.events.len(), 3, "Unexpected events: {:?}", res.events);
 
@@ -236,7 +236,10 @@ async fn cancel_confirmed_test() {
             assert_eq!(*direction, TxDirection::Withdraw);
             assert_eq!(txid.0, dep_txid);
             assert_eq!(address.0, deposit_address);
-            assert_eq!(*confirmations, 0, "Expected confirmation counter is 0 after cancel")
+            assert_eq!(
+                *confirmations, 0,
+                "Expected confirmation counter is 0 after cancel"
+            )
         } else {
             assert!(
                 false,
@@ -257,7 +260,10 @@ async fn cancel_confirmed_test() {
             assert_eq!(*direction, TxDirection::Deposit);
             assert_eq!(txid.0, dep_txid);
             assert_eq!(address.0, deposit_address);
-            assert_eq!(*confirmations, 0, "Expected confirmation counter is 0 after cancel")
+            assert_eq!(
+                *confirmations, 0,
+                "Expected confirmation counter is 0 after cancel"
+            )
         } else {
             assert!(
                 false,
@@ -336,7 +342,7 @@ async fn withdraw_confirmed_test() {
     .await;
 }
 
-// Test whether the confirmation of withdrawal is detected 
+// Test whether the confirmation of withdrawal is detected
 #[tokio::test]
 async fn withdraw_slow_confirmed_test() {
     run_test(|btc, api| async move {
@@ -382,7 +388,7 @@ async fn withdraw_many_confirmed_test() {
         let _ = send_funds(&btc, &deposit_address, Amount::from_sat(1000));
         let res = api.poll_events().await.expect("poll events");
         assert_eq!(res.events.len(), 2);
-        
+
         mine_blocks(&btc, 1);
         let res = api.poll_events().await.expect("poll events");
         assert_eq!(res.events.len(), 2);
@@ -391,7 +397,7 @@ async fn withdraw_many_confirmed_test() {
         mine_blocks(&btc, 1);
         let res = api.poll_events().await.expect("poll events");
         assert_eq!(res.events.len(), 0);
-        assert_eq!(res.height, height+1);
+        assert_eq!(res.height, height + 1);
     })
     .await;
 }
@@ -490,7 +496,10 @@ async fn cancel_confirmed_withdraw_test() {
             assert_eq!(*direction, TxDirection::Withdraw);
             assert_eq!(txid.0, dep_txid);
             assert_eq!(address.0, withdraw_address);
-            assert_eq!(*confirmations, 0, "Expected confirmation counter is 0 after cancel")
+            assert_eq!(
+                *confirmations, 0,
+                "Expected confirmation counter is 0 after cancel"
+            )
         } else {
             assert!(
                 false,
@@ -498,7 +507,6 @@ async fn cancel_confirmed_withdraw_test() {
                 event, dep_txid
             );
         }
-
     })
     .await;
 }

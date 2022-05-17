@@ -8,10 +8,10 @@ use thiserror::Error;
 use tokio::sync::mpsc;
 use tokio::sync::{Mutex, Notify};
 
+use hexstody_btc_client::client::BtcClient;
 use hexstody_db::queries::query_state;
 use hexstody_db::*;
 use hexstody_db::{state::State, update::StateUpdate, Pool};
-use hexstody_btc_client::client::BtcClient;
 
 use super::api::operator::*;
 use super::api::public::*;
@@ -111,7 +111,13 @@ async fn serve_api(
         }
         ApiType::Operator => {
             serve_abortable(api_type, abort_reg, || {
-                serve_operator_api(pool.clone(), state_mx.clone(), state_notify.clone(), port, update_sender.clone())
+                serve_operator_api(
+                    pool.clone(),
+                    state_mx.clone(),
+                    state_notify.clone(),
+                    port,
+                    update_sender.clone(),
+                )
             })
             .await;
         }

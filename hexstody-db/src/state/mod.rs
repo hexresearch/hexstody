@@ -11,10 +11,10 @@ pub use user::*;
 use uuid::Uuid;
 pub use withdraw::*;
 
+use super::update::deposit::DepositAddress;
 use super::update::signup::{SignupInfo, UserId};
 use super::update::withdrawal::WithdrawalRequestInfo;
-use super::update::deposit::DepositAddress;
-use super::update::{StateUpdate, UpdateBody,};
+use super::update::{StateUpdate, UpdateBody};
 use hexstody_api::domain::Currency;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
@@ -116,10 +116,7 @@ impl State {
     }
 
     /// Apply new withdrawal request update
-    fn with_deposit_address(
-        &mut self,
-        dep_address: DepositAddress,
-    ) -> Result<(), StateUpdateErr> {
+    fn with_deposit_address(&mut self, dep_address: DepositAddress) -> Result<(), StateUpdateErr> {
         let user_id = &dep_address.user_id;
         if let Some(user) = self.users.get_mut(user_id) {
             let currency = dep_address.address.currency();
@@ -127,7 +124,10 @@ impl State {
                 info.deposit_info.push(dep_address.address);
                 Ok(())
             } else {
-                Err(StateUpdateErr::UserMissingCurrency(user_id.clone(), currency))
+                Err(StateUpdateErr::UserMissingCurrency(
+                    user_id.clone(),
+                    currency,
+                ))
             }
         } else {
             Err(StateUpdateErr::CannotFoundUser(user_id.clone()))

@@ -1,7 +1,7 @@
 use crate::runner::{run_hot_wallet, ApiConfig};
 use bitcoincore_rpc::Client;
 use futures::FutureExt;
-use hexstody_api::types::{SignupEmail, SigninEmail};
+use hexstody_api::types::{SigninEmail, SignupEmail};
 use hexstody_btc_client::client::BtcClient;
 use hexstody_btc_test::runner as btc_runner;
 use hexstody_client::client::HexstodyClient;
@@ -155,7 +155,7 @@ where
             })
             .await
             .expect("Signup");
-        
+
         env.hot_client
             .signin_email(SigninEmail {
                 user: user.clone(),
