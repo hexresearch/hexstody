@@ -12,7 +12,8 @@ use hexstody_db::update::*;
 use hexstody_db::Pool;
 use rocket::fairing::AdHoc;
 use rocket::fs::{relative, FileServer};
-use rocket::response::content;
+use rocket::response::{content, Redirect};
+use rocket::uri;
 use rocket::serde::json::Json;
 use rocket::{get, routes};
 use rocket_dyn_templates::Template;
@@ -55,9 +56,8 @@ fn get_history(skip: u32, take: u32) -> Json<History> {
 
 #[openapi(skip)]
 #[get("/")]
-fn index() -> Template {
-    let context = HashMap::from([("title", "Index"), ("parent", "base")]);
-    Template::render("index", context)
+fn index() -> Redirect {
+    Redirect::to(uri!(signin))
 }
 
 #[openapi(skip)]
@@ -79,6 +79,13 @@ fn signup() -> Template {
 fn signin() -> Template {
     let context = HashMap::from([("title", "Sign In"), ("parent", "base")]);
     Template::render("signin", context)
+}
+
+#[openapi(skip)]
+#[get("/deposit")]
+fn deposit() -> Template {
+    let context = HashMap::from([("title", "Deposit"), ("parent", "base")]);
+    Template::render("deposit", context)
 }
 
 pub async fn serve_public_api(
@@ -111,7 +118,7 @@ pub async fn serve_public_api(
                 logout
             ],
         )
-        .mount("/", routes![index, overview, signup, signin])
+        .mount("/", routes![index, overview, signup, signin, deposit])
         .mount(
             "/swagger/",
             make_swagger_ui(&SwaggerUIConfig {
