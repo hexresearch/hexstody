@@ -1,6 +1,6 @@
 use crate::runner::{run_hot_wallet, ApiConfig};
 use bitcoincore_rpc::Client;
-use futures::FutureExt;
+use futures::{FutureExt, future::AbortHandle};
 use hexstody_api::types::{SigninEmail, SignupEmail};
 use hexstody_btc_client::client::BtcClient;
 use hexstody_btc_test::runner as btc_runner;
@@ -44,12 +44,15 @@ where
                 let mut api_config = ApiConfig::parse_figment();
                 api_config.public_api_port = public_api_port;
                 api_config.operator_api_port = operator_api_port;
+                
+                let (_, abort_reg) = AbortHandle::new_pair();
                 match run_hot_wallet(
                     Network::Regtest,
                     api_config,
                     &dbconnect,
                     start_notify,
                     btc_adapter,
+                    abort_reg,
                 )
                 .await
                 {

@@ -190,6 +190,7 @@ pub async fn run_hot_wallet(
     db_connect: &str,
     start_notify: Arc<Notify>,
     btc_client: BtcClient,
+    api_abort_reg: AbortRegistration,
 ) -> Result<(), Error> {
     info!("Connecting to database");
     let pool = create_db_pool(db_connect).await?;
@@ -216,11 +217,6 @@ pub async fn run_hot_wallet(
         }
     });
 
-    let (api_abort_handle, api_abort_reg) = AbortHandle::new_pair();
-    ctrlc::set_handler(move || {
-        api_abort_handle.abort();
-    }).expect("Error setting Ctrl-C handler");
-    
     if let Err(Aborted) = serve_apis(
         pool,
         state_mx,

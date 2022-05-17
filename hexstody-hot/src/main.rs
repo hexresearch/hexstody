@@ -5,6 +5,7 @@ mod tests;
 mod worker;
 
 use clap::Parser;
+use futures::future::AbortHandle;
 use hexstody_btc_client::client::BtcClient;
 use hexstody_db::state::Network;
 use log::*;
@@ -79,12 +80,18 @@ async fn run(btc_client: BtcClient, args: &Args) {
         let api_config = ApiConfig::parse_figment();
         let start_notify = Arc::new(Notify::new());
 
+        let (api_abort_handle, api_abort_reg) = AbortHandle::new_pair();
+        ctrlc::set_handler(move || {
+            api_abort_handle.abort();
+        })
+        .expect("Error setting Ctrl-C handler");
         match run_hot_wallet(
             args.network,
             api_config,
             &args.dbconnect,
             start_notify,
             btc_client.clone(),
+            api_abort_reg,
         )
         .await
         {
