@@ -48,11 +48,11 @@ impl ApiConfig {
     pub fn parse_figment() -> Self {
         let figment = rocket::Config::figment();
         let public_api_enabled = figment.extract_inner("public_api_enabled").unwrap_or(true);
-        let public_api_port = figment.extract_inner("public_api_port").unwrap_or(8000);
+        let public_api_port = figment.extract_inner("public_api_port").unwrap_or(9800);
         let operator_api_enabled = figment
             .extract_inner("operator_api_enabled")
             .unwrap_or(true);
-        let operator_api_port = figment.extract_inner("operator_api_port").unwrap_or(8001);
+        let operator_api_port = figment.extract_inner("operator_api_port").unwrap_or(9801);
         ApiConfig {
             public_api_enabled,
             public_api_port,
@@ -93,6 +93,8 @@ async fn serve_api(
     abort_reg: AbortRegistration,
     update_sender: mpsc::Sender<StateUpdate>,
     btc_client: BtcClient,
+    secret_key: String,
+    static_path: String,
 ) -> () {
     if !api_enabled {
         info!("{api_type} API disabled");
@@ -110,6 +112,8 @@ async fn serve_api(
                     port,
                     update_sender.clone(),
                     btc_client,
+                    secret_key,
+                    static_path,
                 )
             })
             .await;
@@ -123,6 +127,8 @@ async fn serve_api(
                     start_notify.clone(),
                     port,
                     update_sender.clone(),
+                    secret_key,
+                    static_path,
                 )
             })
             .await;
@@ -139,6 +145,8 @@ pub async fn serve_apis(
     api_abort: AbortRegistration,
     update_sender: mpsc::Sender<StateUpdate>,
     btc_client: BtcClient,
+    secret_key: &str,
+    static_path: &str,
 ) -> Result<(), Aborted> {
     let (public_handle, public_abort) = AbortHandle::new_pair();
     let public_api_fut = serve_api(
@@ -152,6 +160,8 @@ pub async fn serve_apis(
         public_abort,
         update_sender.clone(),
         btc_client.clone(),
+        secret_key.to_owned(),
+        static_path.to_owned(),
     );
     let (operator_handle, operator_abort) = AbortHandle::new_pair();
     let operator_api_fut = serve_api(
@@ -165,6 +175,8 @@ pub async fn serve_apis(
         operator_abort,
         update_sender.clone(),
         btc_client,
+        secret_key.to_owned(),
+        static_path.to_owned(),
     );
 
     let abortable_apis =
@@ -196,6 +208,8 @@ pub async fn run_hot_wallet(
     start_notify: Arc<Notify>,
     btc_client: BtcClient,
     api_abort_reg: AbortRegistration,
+    secret_key: &str,
+    static_path: &str,
 ) -> Result<(), Error> {
     info!("Connecting to database");
     let pool = create_db_pool(db_connect).await?;
@@ -231,6 +245,8 @@ pub async fn run_hot_wallet(
         api_abort_reg,
         update_sender,
         btc_client,
+        secret_key,
+        static_path,
     )
     .await
     {

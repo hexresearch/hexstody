@@ -1,4 +1,4 @@
 self: super:
 rec {
-  eclair-tortoise = import ../default.nix;
+  hexstody = import ../default.nix;
 }

@@ -66,12 +66,14 @@ pub async fn serve_public_api(
     state: Arc<Mutex<ScanState>>,
     state_notify: Arc<Notify>,
     polling_duration: Duration,
+    secret_key: &str,
 ) -> Result<(), rocket::Error> {
     let figment = Figment::from(Config {
         address,
         port,
         ..Config::default()
     })
+    .merge(("secret_key", secret_key))
     .merge(Env::prefixed("HEXSTODY_BTC_").global());
 
     let on_ready = AdHoc::on_liftoff("API Start!", |_| {

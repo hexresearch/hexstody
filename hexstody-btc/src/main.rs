@@ -52,6 +52,12 @@ enum SubCommand {
         node_password: String,
         #[clap(long, default_value = "bitcoin", env = "HEXSTODY_BTC_NODE_NETWORK")]
         network: Network,
+        #[clap(
+            long,
+            env = "HEXSTODY_BTC_SECRET_KEY",
+            hide_env_values = true,
+        )]
+        secret_key: String,
     },
 }
 
@@ -76,6 +82,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             node_user,
             node_password,
             network,
+            secret_key,
         } => loop {
             let (abort_handle, abort_reg) = AbortHandle::new_pair();
             ctrlc::set_handler(move || {
@@ -116,6 +123,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     state.clone(),
                     state_notify.clone(),
                     polling_duration,
+                    &secret_key,
                 )
                 .await;
                 res.map_err(|err| LogicError::from(err))

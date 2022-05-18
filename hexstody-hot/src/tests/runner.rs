@@ -44,7 +44,9 @@ where
                 let mut api_config = ApiConfig::parse_figment();
                 api_config.public_api_port = public_api_port;
                 api_config.operator_api_port = operator_api_port;
-
+                // 64 0es encoded to base64
+                let secret_key = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==";
+                let static_path = rocket::fs::relative!("static/");
                 let (_, abort_reg) = AbortHandle::new_pair();
                 match run_hot_wallet(
                     Network::Regtest,
@@ -53,6 +55,8 @@ where
                     start_notify,
                     btc_adapter,
                     abort_reg,
+                    secret_key,
+                    static_path,
                 )
                 .await
                 {

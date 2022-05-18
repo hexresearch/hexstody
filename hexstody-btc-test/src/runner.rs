@@ -97,6 +97,8 @@ async fn setup_api(rpc_port: u16) -> u16 {
         let state = state.clone();
         let polling_duration = Duration::from_secs(1);
         let client = make_client();
+        // 64 0es encoded to base64
+        let secret_key = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==";
         async move {
             serve_public_api(
                 client,
@@ -106,6 +108,7 @@ async fn setup_api(rpc_port: u16) -> u16 {
                 state,
                 state_notify,
                 polling_duration,
+                secret_key,
             )
             .await
             .expect("start api");

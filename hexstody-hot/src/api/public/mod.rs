@@ -13,8 +13,8 @@ use hexstody_db::Pool;
 use rocket::fairing::AdHoc;
 use rocket::fs::{relative, FileServer};
 use rocket::response::{content, Redirect};
-use rocket::uri;
 use rocket::serde::json::Json;
+use rocket::uri;
 use rocket::{get, routes};
 use rocket_dyn_templates::Template;
 use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
@@ -96,8 +96,12 @@ pub async fn serve_public_api(
     port: u16,
     update_sender: mpsc::Sender<StateUpdate>,
     btc_client: BtcClient,
+    secret_key: String,
+    static_path: String,
 ) -> Result<(), rocket::Error> {
-    let figment = rocket::Config::figment().merge(("port", port));
+    let figment = rocket::Config::figment()
+        .merge(("secret_key", secret_key))
+        .merge(("port", port));
     let on_ready = AdHoc::on_liftoff("API Start!", |_| {
         Box::pin(async move {
             start_notify.notify_one();
@@ -105,7 +109,7 @@ pub async fn serve_public_api(
     });
 
     rocket::custom(figment)
-        .mount("/", FileServer::from(relative!("static/")))
+        .mount("/", FileServer::from(static_path))
         .mount(
             "/",
             openapi_get_routes![
@@ -166,6 +170,9 @@ mod tests {
             let state = state_mx.clone();
             let state_notify = state_notify.clone();
             let start_notify = start_notify.clone();
+            // 64 0es encoded to base64
+            let secret_key = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==".to_owned();
+            let static_path = relative!("static/");
             async move {
                 let serve_task = serve_public_api(
                     pool,
@@ -175,6 +182,8 @@ mod tests {
                     SERVICE_TEST_PORT,
                     update_sender,
                     btc_client,
+                    secret_key,
+                    static_path.to_owned(),
                 );
                 futures::pin_mut!(serve_task);
                 futures::future::select(serve_task, receiver.map_err(drop)).await;

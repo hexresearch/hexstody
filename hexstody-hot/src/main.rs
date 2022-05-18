@@ -40,6 +40,18 @@ struct Args {
     network: Network,
     #[clap(long, env = "HEXSTODY_START_REGTEST")]
     start_regtest: bool,
+    #[clap(
+        long,
+        env = "HEXSTODY_SECRET_KEY",
+        hide_env_values = true,
+    )]
+    secret_key: String,
+    /// Path to HTML static files to serve
+    #[clap(
+        long,
+        env = "HEXSTODY_STATIC_PATH",
+    )]
+    static_path: Option<String>,
     #[clap(subcommand)]
     subcmd: SubCommand,
 }
@@ -84,6 +96,9 @@ async fn run(btc_client: BtcClient, args: &Args) {
             api_abort_handle.abort();
         })
         .expect("Error setting Ctrl-C handler");
+        let relative = rocket::fs::relative!("static/").to_owned();
+        let static_path = args.static_path.as_ref().unwrap_or(&relative);
+
         match run_hot_wallet(
             args.network,
             api_config,
@@ -91,6 +106,8 @@ async fn run(btc_client: BtcClient, args: &Args) {
             start_notify,
             btc_client.clone(),
             api_abort_reg,
+            &args.secret_key,
+            static_path,
         )
         .await
         {
