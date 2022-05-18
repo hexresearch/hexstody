@@ -130,13 +130,6 @@ fn example_confrimtaion_status() -> &'static str {
     "1 of 3"
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct IndexHandlerContext {
-    pub title: String,
-    pub parent: String,
-    pub withdrawal_requests: Vec<WithdrawalRequest>,
-}
-
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct DepositInfo {
     pub address: String,

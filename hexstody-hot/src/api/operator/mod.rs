@@ -6,15 +6,23 @@ use rocket::State as RocketState;
 use rocket::{get, post, routes};
 use rocket_dyn_templates::Template;
 use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::{mpsc, Mutex, Notify};
 
-use hexstody_api::types::{IndexHandlerContext, WithdrawalRequest, WithdrawalRequestInfo};
+use hexstody_api::types::{WithdrawalRequest, WithdrawalRequestInfo};
 use hexstody_db::state::State as HexstodyState;
 use hexstody_db::update::{
     withdrawal::WithdrawalRequestInfo as WithdrawalRequestInfoDb, StateUpdate, UpdateBody,
 };
 use hexstody_db::Pool;
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct IndexHandlerContext {
+    pub title: String,
+    pub parent: String,
+    pub withdrawal_requests: Vec<WithdrawalRequest>,
+}
 
 #[openapi(skip)]
 #[get("/")]
@@ -29,7 +37,7 @@ async fn index(state: &RocketState<Arc<Mutex<HexstodyState>>>) -> Template {
     );
     let context = IndexHandlerContext {
         title: "Withdrawal requests".to_owned(),
-        parent: "base".to_owned(),
+        parent: "operator/base".to_owned(),
         withdrawal_requests: withdrawal_requests,
     };
     Template::render("operator/index", context)
@@ -57,6 +65,7 @@ async fn create(
 ) -> Result<Created<Json<WithdrawalRequest>>, Status> {
     let info: WithdrawalRequestInfoDb = withdrawal_request_info.into_inner().into();
     let state_update = StateUpdate::new(UpdateBody::NewWithdrawalRequest(info));
+    // TODO: check that state update was correctly processed
     update_sender
         .send(state_update)
         .await
