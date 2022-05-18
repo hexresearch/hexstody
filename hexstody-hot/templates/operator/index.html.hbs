@@ -1,16 +1,19 @@
-{{#*inline "page"}}
-
+{{#*inline "css"}}
 <link rel="stylesheet" type="text/css" href="/css/operator/style.css" />
+{{/inline}}
+
+{{#*inline "scripts"}}
 <script src="/scripts/operator/jscu.bundle.js"></script>
 <script src="/scripts/operator/jscec.bundle.js"></script>
 <script src="/scripts/operator/page/index.js"></script>
+{{/inline}}
 
+{{#*inline "page"}}
 <h3>Select the private key file</h3>
 <div class="file-selector-wrapper">
     <input type="file" id="file-selector" accept=".pem" />
     <span id="file-selector-status"></span>
 </div>
-
 <h3>Withdrawal requests</h3>
 <table>
     <thead>
@@ -36,7 +39,6 @@
             <td>{{this}}</td>
             {{/if}}
             {{/each}}
-
             <td>{{created_at}}</td>
             <td>{{amount}}</td>
             <td>{{confrimtaion_status}}</td>
@@ -54,6 +56,6 @@
         {{/each}}
     </tbody>
 </table>
-
 {{/inline}}
-{{> base}}
+
+{{> operator/base}}
