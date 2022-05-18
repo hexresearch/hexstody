@@ -105,7 +105,7 @@ pub async fn serve_public_api(
     });
 
     rocket::custom(figment)
-        .mount("/static", FileServer::from(relative!("static/")))
+        .mount("/", FileServer::from(relative!("static/")))
         .mount(
             "/",
             openapi_get_routes![

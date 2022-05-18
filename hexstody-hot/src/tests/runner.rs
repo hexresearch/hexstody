@@ -100,7 +100,7 @@ fn setup_postgres() -> (u16, TempDir) {
          export PGPORT=$2
          initdb $PGDATA --auth=trust
          echo "unix_socket_directories = '$PGDATA'" >> $PGDATA/postgresql.conf
-         pg_ctl start -D$PGDATA -l $PGDATA/psqlog
+         pg_ctl start -D$PGDATA -l $PGDATA/postgresql.log
          psql --host=$PGDATA -d postgres -c "create role \"hexstody\" with login password 'hexstody';"
          psql --host=$PGDATA -d postgres -c "create database \"hexstody\" owner \"hexstody\";"
          "#,

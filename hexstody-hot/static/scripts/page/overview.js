@@ -17,8 +17,8 @@ async function getHistory(skip, take) {
 
 async function initTemplates() {
     const [balanceTemp, historyTemp] = await Promise.allSettled([
-        await loadTemplate("/static/templates/balance.html.hbs"),
-        await loadTemplate("/static/templates/history.html.hbs")
+        await loadTemplate("/templates/balance.html.hbs"),
+        await loadTemplate("/templates/history.html.hbs")
     ]);
 
     balanceTemplate = balanceTemp.value;

@@ -120,6 +120,7 @@ async fn serve_api(
                     pool.clone(),
                     state_mx.clone(),
                     state_notify.clone(),
+                    start_notify.clone(),
                     port,
                     update_sender.clone(),
                 )

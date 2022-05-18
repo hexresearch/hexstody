@@ -56,7 +56,7 @@ fn main() -> Result<()> {
 
     // Write secret key to file
     let mut prv_key_path = args.output.clone();
-    prv_key_path.set_extension("prv");
+    prv_key_path.set_extension("prv.pem");
     let path = prv_key_path.clone();
     let mut prv_key_file = OpenOptions::new()
         .write(true)
@@ -71,7 +71,7 @@ fn main() -> Result<()> {
 
     // Write public key to file
     let mut pub_key_path = args.output.clone();
-    pub_key_path.set_extension("pub");
+    pub_key_path.set_extension("pub.pem");
     let path = pub_key_path.clone();
     let mut pub_key_file = OpenOptions::new()
         .write(true)

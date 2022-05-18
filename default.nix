@@ -27,7 +27,7 @@ naersk.buildPackage {
     echo "Deploying local PostgreSQL"
     initdb ./pgsql-data --auth=trust
     echo "unix_socket_directories = '$PWD'" >> ./pgsql-data/postgresql.conf
-    pg_ctl start -D./pgsql-data -l psqlog
+    pg_ctl start -D./pgsql-data -l postgresql.log
     psql --host=$PWD -d postgres -c "create role \"hexstody\" with login password 'hexstody';"
     psql --host=$PWD -d postgres -c "create database \"hexstody\" owner \"hexstody\";"
     cp -r ${./hexstody-db/migrations} ./hexstody-db/migrations

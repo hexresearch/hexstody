@@ -10,7 +10,7 @@ async function getFor(currency) {
 };
 
 async function init() {
-    depositTemplate = await loadTemplate("/static/templates/deposit.html.hbs");
+    depositTemplate = await loadTemplate("/templates/deposit.html.hbs");
     const result = await getFor("BTC");
     const params = {addresses : [{currency: "BTC", address: result.address}]};
     const depositDrawUpdate = depositTemplate(params);
