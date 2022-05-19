@@ -88,23 +88,21 @@ fn deposit() -> Template {
     Template::render("deposit", context)
 }
 
-pub async fn serve_public_api(
+pub async fn serve_api(
     pool: Pool,
     state: Arc<Mutex<State>>,
     state_notify: Arc<Notify>,
     start_notify: Arc<Notify>,
-    port: u16,
     update_sender: mpsc::Sender<StateUpdate>,
     btc_client: BtcClient,
 ) -> Result<(), rocket::Error> {
-    let figment = rocket::Config::figment().merge(("port", port));
     let on_ready = AdHoc::on_liftoff("API Start!", |_| {
         Box::pin(async move {
             start_notify.notify_one();
         })
     });
 
-    rocket::custom(figment)
+    rocket::build()
         .mount("/", FileServer::from(relative!("static/")))
         .mount(
             "/",
@@ -167,12 +165,11 @@ mod tests {
             let state_notify = state_notify.clone();
             let start_notify = start_notify.clone();
             async move {
-                let serve_task = serve_public_api(
+                let serve_task = serve_api(
                     pool,
                     state,
                     state_notify,
                     start_notify,
-                    SERVICE_TEST_PORT,
                     update_sender,
                     btc_client,
                 );

@@ -1,12 +1,8 @@
 mod api;
 mod runner;
-#[cfg(test)]
-mod tests;
-mod worker;
 
 use clap::Parser;
 use futures::future::AbortHandle;
-use hexstody_btc_client::client::BtcClient;
 use hexstody_db::state::Network;
 use log::*;
 use std::error::Error;
@@ -15,8 +11,7 @@ use std::time::Duration;
 use tokio::sync::Notify;
 use tokio::time::sleep;
 
-use hexstody_btc_test::runner::run_test as run_btc_regtest;
-use runner::{run_hot_wallet, ApiConfig};
+use runner::run_api;
 
 #[derive(Parser, Debug, Clone)]
 #[clap(about, version, author)]
@@ -31,13 +26,6 @@ struct Args {
         env = "DATABASE_URL"
     )]
     dbconnect: String,
-    #[clap(
-        long,
-        short,
-        default_value = "http://127.0.0.1:8180",
-        env = "BTC_MODULE_URL"
-    )]
-    btc_module: String,
     #[clap(long, default_value = "mainnet", env = "HEXSTODY_NETWORK")]
     network: Network,
     #[clap(long, env = "HEXSTODY_START_REGTEST")]
@@ -59,26 +47,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
         env_logger::Env::default().filter_or(env_logger::DEFAULT_FILTER_ENV, "info"),
     );
     match args.subcmd.clone() {
-        SubCommand::Serve => {
-            if args.start_regtest {
-                run_btc_regtest(|_, btc_client| {
-                    let mut args = args.clone();
-                    args.network = Network::Regtest;
-                    async move { run(btc_client, &args).await }
-                })
-                .await
-            } else {
-                let btc_client = BtcClient::new(&args.btc_module);
-                run(btc_client, &args).await
-            }
-        }
+        SubCommand::Serve => run(&args).await,
     }
     Ok(())
 }
 
-async fn run(btc_client: BtcClient, args: &Args) {
+async fn run(args: &Args) {
     loop {
-        let api_config = ApiConfig::parse_figment();
         let start_notify = Arc::new(Notify::new());
 
         let (api_abort_handle, api_abort_reg) = AbortHandle::new_pair();
@@ -86,18 +61,9 @@ async fn run(btc_client: BtcClient, args: &Args) {
             api_abort_handle.abort();
         })
         .expect("Error setting Ctrl-C handler");
-        match run_hot_wallet(
-            args.network,
-            api_config,
-            &args.dbconnect,
-            start_notify,
-            btc_client.clone(),
-            api_abort_reg,
-        )
-        .await
-        {
+        match run_api(args.network, &args.dbconnect, start_notify, api_abort_reg).await {
             Err(e) => {
-                error!("Hot wallet error: {e}");
+                error!("API error: {e}");
             }
             _ => {
                 info!("Terminated gracefully!");

@@ -37,10 +37,10 @@ async fn index(state: &RocketState<Arc<Mutex<HexstodyState>>>) -> Template {
     );
     let context = IndexHandlerContext {
         title: "Withdrawal requests".to_owned(),
-        parent: "operator/base".to_owned(),
+        parent: "base".to_owned(),
         withdrawal_requests: withdrawal_requests,
     };
-    Template::render("operator/index", context)
+    Template::render("index", context)
 }
 
 #[openapi(tag = "request")]
@@ -73,16 +73,14 @@ async fn create(
     Ok(Created::new("/request"))
 }
 
-pub async fn serve_operator_api(
+pub async fn serve_api(
     pool: Pool,
     state: Arc<Mutex<HexstodyState>>,
     _state_notify: Arc<Notify>,
     _start_notify: Arc<Notify>,
-    port: u16,
     update_sender: mpsc::Sender<StateUpdate>,
 ) -> Result<(), rocket::Error> {
-    let figment = rocket::Config::figment().merge(("port", port));
-    rocket::custom(figment)
+    rocket::build()
         .mount("/", FileServer::from(relative!("static/")))
         .mount("/", routes![index])
         .mount("/", openapi_get_routes![list, create])

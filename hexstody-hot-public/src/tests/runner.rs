@@ -1,4 +1,4 @@
-use crate::runner::{run_hot_wallet, ApiConfig};
+use crate::runner::{run_api};
 use bitcoincore_rpc::Client;
 use futures::{future::AbortHandle, FutureExt};
 use hexstody_api::types::{SigninEmail, SignupEmail};
@@ -34,21 +34,16 @@ where
         let dbconnect = format!("postgres://hexstody:hexstody@localhost:{db_port}/hexstody");
         info!("Connection to database: {dbconnect}");
         let public_api_port: u16 = random_free_tcp_port().expect("available port");
-        let operator_api_port: u16 = random_free_tcp_port().expect("available port");
 
         let start_notify = Arc::new(Notify::new());
         let api_handle = tokio::spawn({
             let start_notify = start_notify.clone();
             let btc_adapter = btc_adapter.clone();
             async move {
-                let mut api_config = ApiConfig::parse_figment();
-                api_config.public_api_port = public_api_port;
-                api_config.operator_api_port = operator_api_port;
 
                 let (_, abort_reg) = AbortHandle::new_pair();
-                match run_hot_wallet(
+                match run_api(
                     Network::Regtest,
-                    api_config,
                     &dbconnect,
                     start_notify,
                     btc_adapter,
@@ -57,7 +52,7 @@ where
                 .await
                 {
                     Err(e) => {
-                        error!("Hot wallet error: {e}");
+                        error!("API error: {e}");
                     }
                     _ => {
                         info!("Terminated gracefully!");

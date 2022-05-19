@@ -12,8 +12,17 @@ export DATABASE_URL=postgresql://hexstody:hexstody@localhost:5432/hexstody
 ```
 
 How to build and run:
+
+Public API
 ```
 cargo test
-cd hexstody-hot
-cargo run --bin hexstody-hot -- serve
+cd hexstody-hot-public
+cargo run --bin hexstody-hot-public -- serve
+```
+
+Operator API
+```
+cargo test
+cd hexstody-hot-operator
+cargo run --bin hexstody-hot-operator -- serve
 ```
