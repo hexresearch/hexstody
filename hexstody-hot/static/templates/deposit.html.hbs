@@ -1,14 +1,14 @@
-<div class="row is-center">
-    {{#each addresses}}
+<script src="/scripts/qrcode.min.js"></script>
+
+{{#each addresses}}
+<div class="row is-center text-center ">
     <div class="col-6 card">
-        <div class="row">
-            <div class="col">
-                {{currency}}
-            </div>
-            <div class="col">
-                {{address}}
-            </div>
+        <div id="qrcode" class="is-center"></div>
+        <div>
+            {{currency}} {{address}}
         </div>
     </div>
-    {{/each}}
 </div>
+
+
+    {{/each}}
