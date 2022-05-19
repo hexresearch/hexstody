@@ -68,6 +68,8 @@ pub async fn serve_public_api(
     polling_duration: Duration,
     secret_key: Option<&str>,
 ) -> Result<(), rocket::Error> {
+    let zero_key = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==";
+    let secret_key = secret_key.unwrap_or(zero_key);
     let figment = Figment::from(Config {
         address,
         port,

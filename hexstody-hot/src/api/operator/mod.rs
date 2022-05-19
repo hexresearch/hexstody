@@ -83,6 +83,9 @@ pub async fn serve_operator_api(
     secret_key: Option<String>,
     static_path: String,
 ) -> Result<(), rocket::Error> {
+    let zero_key = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==";
+    let secret_key = secret_key.unwrap_or_else(|| zero_key.to_owned());
+
     let figment = rocket::Config::figment()
         .merge(("secret_key", secret_key))
         .merge(("port", port));
