@@ -40,12 +40,13 @@ struct Args {
     network: Network,
     #[clap(long, env = "HEXSTODY_START_REGTEST")]
     start_regtest: bool,
+    /// Base64 encoded 64 byte secret key for encoding cookies. Required in release profile.
     #[clap(
         long,
         env = "HEXSTODY_SECRET_KEY",
         hide_env_values = true,
     )]
-    secret_key: String,
+    secret_key: Option<String>,
     /// Path to HTML static files to serve
     #[clap(
         long,
@@ -106,7 +107,7 @@ async fn run(btc_client: BtcClient, args: &Args) {
             start_notify,
             btc_client.clone(),
             api_abort_reg,
-            &args.secret_key,
+            args.secret_key.as_deref(),
             static_path,
         )
         .await

@@ -96,7 +96,7 @@ pub async fn serve_public_api(
     port: u16,
     update_sender: mpsc::Sender<StateUpdate>,
     btc_client: BtcClient,
-    secret_key: String,
+    secret_key: Option<String>,
     static_path: String,
 ) -> Result<(), rocket::Error> {
     let figment = rocket::Config::figment()
@@ -170,8 +170,6 @@ mod tests {
             let state = state_mx.clone();
             let state_notify = state_notify.clone();
             let start_notify = start_notify.clone();
-            // 64 0es encoded to base64
-            let secret_key = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==".to_owned();
             let static_path = relative!("static/");
             async move {
                 let serve_task = serve_public_api(
@@ -182,7 +180,7 @@ mod tests {
                     SERVICE_TEST_PORT,
                     update_sender,
                     btc_client,
-                    secret_key,
+                    None,
                     static_path.to_owned(),
                 );
                 futures::pin_mut!(serve_task);

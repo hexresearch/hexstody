@@ -52,12 +52,13 @@ enum SubCommand {
         node_password: String,
         #[clap(long, default_value = "bitcoin", env = "HEXSTODY_BTC_NODE_NETWORK")]
         network: Network,
+        /// Base64 encoded 64 bytes for encoding cookies. Required in release profile.
         #[clap(
             long,
             env = "HEXSTODY_BTC_SECRET_KEY",
             hide_env_values = true,
         )]
-        secret_key: String,
+        secret_key: Option<String>,
     },
 }
 
@@ -123,7 +124,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     state.clone(),
                     state_notify.clone(),
                     polling_duration,
-                    &secret_key,
+                    secret_key.as_deref(),
                 )
                 .await;
                 res.map_err(|err| LogicError::from(err))

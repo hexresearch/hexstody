@@ -93,7 +93,7 @@ async fn serve_api(
     abort_reg: AbortRegistration,
     update_sender: mpsc::Sender<StateUpdate>,
     btc_client: BtcClient,
-    secret_key: String,
+    secret_key: Option<String>,
     static_path: String,
 ) -> () {
     if !api_enabled {
@@ -145,7 +145,7 @@ pub async fn serve_apis(
     api_abort: AbortRegistration,
     update_sender: mpsc::Sender<StateUpdate>,
     btc_client: BtcClient,
-    secret_key: &str,
+    secret_key: Option<&str>,
     static_path: &str,
 ) -> Result<(), Aborted> {
     let (public_handle, public_abort) = AbortHandle::new_pair();
@@ -160,7 +160,7 @@ pub async fn serve_apis(
         public_abort,
         update_sender.clone(),
         btc_client.clone(),
-        secret_key.to_owned(),
+        secret_key.map(|s| s.to_owned()),
         static_path.to_owned(),
     );
     let (operator_handle, operator_abort) = AbortHandle::new_pair();
@@ -175,7 +175,7 @@ pub async fn serve_apis(
         operator_abort,
         update_sender.clone(),
         btc_client,
-        secret_key.to_owned(),
+        secret_key.map(|s| s.to_owned()),
         static_path.to_owned(),
     );
 
@@ -208,7 +208,7 @@ pub async fn run_hot_wallet(
     start_notify: Arc<Notify>,
     btc_client: BtcClient,
     api_abort_reg: AbortRegistration,
-    secret_key: &str,
+    secret_key: Option<&str>,
     static_path: &str,
 ) -> Result<(), Error> {
     info!("Connecting to database");

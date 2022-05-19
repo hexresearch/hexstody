@@ -80,7 +80,7 @@ pub async fn serve_operator_api(
     _start_notify: Arc<Notify>,
     port: u16,
     update_sender: mpsc::Sender<StateUpdate>,
-    secret_key: String,
+    secret_key: Option<String>,
     static_path: String,
 ) -> Result<(), rocket::Error> {
     let figment = rocket::Config::figment()

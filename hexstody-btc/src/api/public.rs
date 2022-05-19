@@ -66,7 +66,7 @@ pub async fn serve_public_api(
     state: Arc<Mutex<ScanState>>,
     state_notify: Arc<Notify>,
     polling_duration: Duration,
-    secret_key: &str,
+    secret_key: Option<&str>,
 ) -> Result<(), rocket::Error> {
     let figment = Figment::from(Config {
         address,
