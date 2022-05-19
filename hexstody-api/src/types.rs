@@ -1,6 +1,6 @@
 use chrono::NaiveDateTime;
 
-use rocket::serde::uuid::Uuid;
+use uuid::Uuid;
 use rocket_okapi::okapi::schemars::{self, JsonSchema};
 use serde::{Deserialize, Serialize};
 

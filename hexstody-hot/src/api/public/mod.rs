@@ -11,8 +11,8 @@ use hexstody_db::state::*;
 use hexstody_db::update::*;
 use hexstody_db::Pool;
 use rocket::fairing::AdHoc;
-use rocket::fs::{relative, FileServer};
-use rocket::response::{content, Redirect};
+use rocket::fs::FileServer;
+use rocket::response::Redirect;
 use rocket::serde::json::Json;
 use rocket::uri;
 use rocket::{get, routes};
@@ -26,8 +26,8 @@ use wallet::*;
 
 #[openapi(tag = "ping")]
 #[get("/ping")]
-fn ping() -> content::Json<()> {
-    content::Json(())
+fn ping() -> Json<()> {
+    Json(())
 }
 
 #[openapi(tag = "get_history")]
@@ -99,7 +99,8 @@ pub async fn serve_public_api(
     secret_key: Option<String>,
     static_path: String,
 ) -> Result<(), rocket::Error> {
-    let zero_key = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==";
+    let zero_key =
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==";
     let secret_key = secret_key.unwrap_or_else(|| zero_key.to_owned());
 
     let figment = rocket::Config::figment()
@@ -111,7 +112,7 @@ pub async fn serve_public_api(
         })
     });
 
-    rocket::custom(figment)
+    let _ = rocket::custom(figment)
         .mount("/", FileServer::from(static_path))
         .mount(
             "/",
@@ -150,6 +151,7 @@ mod tests {
     use futures::FutureExt;
     use futures_util::future::TryFutureExt;
     use hexstody_client::client::HexstodyClient;
+    use rocket::fs::relative;
     use std::panic::AssertUnwindSafe;
 
     const SERVICE_TEST_PORT: u16 = 8000;

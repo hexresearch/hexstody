@@ -30,8 +30,8 @@ hexstody-btc-api = { path = "../hexstody-btc-api" }
 hexstody-btc-client = { path = "../hexstody-btc-client" }
 hexstody-db = { path = "../hexstody-db" }
 log = "0.4.14"
-rocket = { version = "=0.5.0-rc.1", default-features = false, features = ["json"] }
-rocket_okapi = { git = "https://github.com/GREsau/okapi", branch = "master", features = ["swagger", "rapidoc"]}
+rocket = { version = "=0.5.0-rc.2", default-features = false, features = ["json"] }
+rocket_okapi = { git = "https://github.com/ThouCheese/okapi", branch = "feat/rocket0.5-rc.2", features = ["rapidoc", "swagger"] }
 schemars = "0.8.8"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

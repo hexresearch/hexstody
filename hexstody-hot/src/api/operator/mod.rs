@@ -1,4 +1,4 @@
-use rocket::fs::{relative, FileServer};
+use rocket::fs::FileServer;
 use rocket::http::Status;
 use rocket::response::status::Created;
 use rocket::serde::json::Json;
@@ -83,13 +83,14 @@ pub async fn serve_operator_api(
     secret_key: Option<String>,
     static_path: String,
 ) -> Result<(), rocket::Error> {
-    let zero_key = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==";
+    let zero_key =
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==";
     let secret_key = secret_key.unwrap_or_else(|| zero_key.to_owned());
 
     let figment = rocket::Config::figment()
         .merge(("secret_key", secret_key))
         .merge(("port", port));
-    rocket::custom(figment)
+    let _ = rocket::custom(figment)
         .mount("/", FileServer::from(static_path))
         .mount("/", routes![index])
         .mount("/", openapi_get_routes![list, create])

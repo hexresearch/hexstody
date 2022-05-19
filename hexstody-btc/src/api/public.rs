@@ -68,7 +68,8 @@ pub async fn serve_public_api(
     polling_duration: Duration,
     secret_key: Option<&str>,
 ) -> Result<(), rocket::Error> {
-    let zero_key = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==";
+    let zero_key =
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==";
     let secret_key = secret_key.unwrap_or(zero_key);
     let figment = Figment::from(Config {
         address,
@@ -84,7 +85,7 @@ pub async fn serve_public_api(
         })
     });
 
-    rocket::custom(figment)
+    let _ = rocket::custom(figment)
         .mount(
             "/",
             openapi_get_routes![ping, poll_events, get_deposit_address],
