@@ -2,7 +2,6 @@ mod api;
 mod runner;
 
 use clap::Parser;
-use futures::future::AbortHandle;
 use hexstody_db::state::Network;
 use log::*;
 use std::error::Error;
@@ -28,8 +27,6 @@ struct Args {
     dbconnect: String,
     #[clap(long, default_value = "mainnet", env = "HEXSTODY_NETWORK")]
     network: Network,
-    #[clap(long, env = "HEXSTODY_START_REGTEST")]
-    start_regtest: bool,
     #[clap(subcommand)]
     subcmd: SubCommand,
 }
@@ -55,13 +52,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 async fn run(args: &Args) {
     loop {
         let start_notify = Arc::new(Notify::new());
-
-        let (api_abort_handle, api_abort_reg) = AbortHandle::new_pair();
-        ctrlc::set_handler(move || {
-            api_abort_handle.abort();
-        })
-        .expect("Error setting Ctrl-C handler");
-        match run_api(args.network, &args.dbconnect, start_notify, api_abort_reg).await {
+        match run_api(args.network, &args.dbconnect, start_notify).await {
             Err(e) => {
                 error!("API error: {e}");
             }
