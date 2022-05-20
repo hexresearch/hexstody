@@ -1,14 +1,4 @@
-<!doctype html>
-<html lang="en">
-
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" type="text/css" href="/css/chota.min.css" />
-    <link rel="stylesheet" type="text/css" href="/css/style.css" />
-    <script src="/scripts/handlebars.min-v4.7.7.js"></script>
-    <script src="/scripts/qrcode.min.js"></script>
-</head>
+{{#*inline "page"}}
 
 <script type="module" src="/scripts/page/common.js"></script>
 <script type="module" src="/scripts/page/signup.js"></script>
@@ -35,3 +25,5 @@
         </div>
     </div>
 </div>
+{{/inline}}
+{{~> (parent)~}}
