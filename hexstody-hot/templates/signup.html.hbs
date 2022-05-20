@@ -1,19 +1,29 @@
-{{#*inline "page"}}
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="/css/chota.min.css" />
+    <link rel="stylesheet" type="text/css" href="/css/style.css" />
+    <script src="/scripts/handlebars.min-v4.7.7.js"></script>
+    <script src="/scripts/qrcode.min.js"></script>
+</head>
 
 <script type="module" src="/scripts/page/common.js"></script>
 <script type="module" src="/scripts/page/signup.js"></script>
 
 <div class="container">
-    <div class="row  is-center text-center">
+    <div class="row  is-center text-center is-full-screen">
         <div class="col-4 card">
             <p>
             <h1>Sign Up </h1>
             </p>
             <p>
-                <input id="signupEmail" type="email" placeholder="name@email.com">
+                <input id="signUpEmail" type="email" placeholder="name@email.com">
             </p>
             <p>
-                <input id="signupPassword" type="password" placeholder="Type your Password">
+                <input id="signUpPassword" type="password" placeholder="Type your Password">
             </p>
             <p>
                 <label id="validationError" hidden="hidden" class="text-error"></label>
@@ -25,6 +35,3 @@
         </div>
     </div>
 </div>
-
-{{/inline}}
-{{~> (parent)~}}

@@ -1,3 +1,6 @@
+var emailEl = null;
+var passwordEl = null;
+
 async function postSignUp(email, password) {
     return await fetch("/signup/email",
         {
@@ -7,8 +10,8 @@ async function postSignUp(email, password) {
 };
 
 async function trySubmit() {
-    const email = document.getElementById("signupEmail").value;
-    const password = document.getElementById("signupPassword").value;
+    const email = emailEl.value;
+    const password = passwordEl.value;
     const signUpResult = await postSignUp(email, password);
     if (signUpResult.ok) {
       window.location.href = "/signin";
@@ -21,8 +24,19 @@ async function trySubmit() {
 }
 
 async function init() {
+    function trySubmitOnEnter(e){
+        if (e.key === "Enter") {
+            e.preventDefault();
+            trySubmit();
+        }
+    }
     const submitButton = document.getElementById("submit");
+    emailEl = document.getElementById("signUpEmail");
+    passwordEl = document.getElementById("signUpPassword");
+
     submitButton.onclick = trySubmit;
+    emailEl.addEventListener("keyup",trySubmitOnEnter);
+    passwordEl.addEventListener("keyup", trySubmitOnEnter);
 }
 
 document.addEventListener("DOMContentLoaded", init);
