@@ -1,19 +1,22 @@
-use super::auth::require_auth;
-use hexstody_api::domain::{BtcAddress, Currency, CurrencyAddress};
-use hexstody_api::error;
-use hexstody_api::types as api;
-use hexstody_btc_client::client::BtcClient;
-use hexstody_db::state::State as DbState;
-use hexstody_db::update::deposit::DepositAddress;
-use hexstody_db::update::{StateUpdate, UpdateBody};
-
+use chrono::prelude::*;
 use log::*;
+use std::sync::Arc;
+use tokio::sync::{mpsc, Mutex};
+
 use rocket::http::CookieJar;
 use rocket::serde::json::Json;
 use rocket::{get, post, State};
 use rocket_okapi::openapi;
-use std::sync::Arc;
-use tokio::sync::{mpsc, Mutex};
+
+use super::auth::require_auth;
+use hexstody_api::domain::{BtcAddress, Currency, CurrencyAddress};
+use hexstody_api::error;
+use hexstody_api::types as api;
+use hexstody_api::types::History;
+use hexstody_btc_client::client::BtcClient;
+use hexstody_db::state::State as DbState;
+use hexstody_db::update::deposit::DepositAddress;
+use hexstody_db::update::{StateUpdate, UpdateBody};
 
 #[openapi(tag = "wallet")]
 #[get("/balance")]
@@ -41,6 +44,21 @@ pub async fn get_balance(
         }
     })
     .await
+}
+
+#[openapi(tag = "history")]
+#[get("/history/<skip>/<take>")]
+pub async fn get_history(
+    cookies: &CookieJar<'_>,
+    state: &State<Arc<Mutex<DbState>>>,
+    skip: u32,
+    take: u32,
+) -> error::Result<api::Balance> {
+    require_auth(cookies, |cookie| async move {
+        Err(error::Error::AuthRequired.into())
+    }).await
+
+    
 }
 
 #[openapi(tag = "wallet")]

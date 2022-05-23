@@ -2,10 +2,9 @@ pub mod auth;
 pub mod wallet;
 
 use auth::*;
-use chrono::prelude::*;
 use hexstody_api::domain::currency::Currency;
 use hexstody_api::types as api;
-use hexstody_api::types::History;
+
 use hexstody_btc_client::client::BtcClient;
 use hexstody_db::state::*;
 use hexstody_db::update::*;
@@ -28,30 +27,6 @@ use wallet::*;
 #[get("/ping")]
 fn ping() -> Json<()> {
     Json(())
-}
-
-#[openapi(tag = "get_history")]
-#[get("/get_history/<skip>/<take>")]
-fn get_history(skip: u32, take: u32) -> Json<History> {
-    let x = History {
-        target_number_of_confirmations: 6,
-        history_items: vec![
-            api::HistoryItem::Deposit(api::DepositHistoryItem {
-                currency: Currency::BTC,
-                date: Utc::now().naive_utc(),
-                value: u64::MAX,
-                number_of_confirmations: 3,
-            }),
-            api::HistoryItem::Withdrawal(api::WithdrawalHistoryItem {
-                currency: Currency::ETH,
-                date: Utc::now().naive_utc(),
-                value: u64::MAX,
-                status: api::WithdrawalRequestStatus::InProgress,
-            }),
-        ],
-    };
-
-    Json(x)
 }
 
 #[openapi(skip)]
