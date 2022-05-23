@@ -4,7 +4,11 @@
 
    </div>
    <div class="col-3">
-      {{#if (isDeposit this)}}+{{else}}-{{/if}} &nbsp; {{formatCurrencyValue}}
+      {{#if (isDeposit this)}}
+      <span class="text-success"> + &nbsp; {{formatCurrencyValue}}</span>
+      {{else}}
+      <span class="text-error">   - &nbsp; {{formatCurrencyValue}}</span>
+      {{/if}}
    </div>
    <div class="col-1">
       {{currency}}
