@@ -47,8 +47,6 @@ where
                     start_notify,
                     btc_adapter,
                     abort_reg,
-                    None,
-                    static_path,
                 )
                 .await
                 {
