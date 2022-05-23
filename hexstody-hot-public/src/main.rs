@@ -21,8 +21,6 @@ use runner::{run_api};
 #[derive(Parser, Debug, Clone)]
 #[clap(about, version, author)]
 struct Args {
-    // #[clap(long, env = "KOLLIDER_API_KEY", hide_env_values = true)]
-    // api_key: String,
     /// PostgreSQL connection string
     #[clap(
         long,
@@ -42,6 +40,19 @@ struct Args {
     network: Network,
     #[clap(long, env = "HEXSTODY_START_REGTEST")]
     start_regtest: bool,
+    /// Base64 encoded 64 byte secret key for encoding cookies. Required in release profile.
+    #[clap(
+        long,
+        env = "HEXSTODY_SECRET_KEY",
+        hide_env_values = true,
+    )]
+    secret_key: Option<String>,
+    /// Path to HTML static files to serve
+    #[clap(
+        long,
+        env = "HEXSTODY_STATIC_PATH",
+    )]
+    static_path: Option<String>,
     #[clap(subcommand)]
     subcmd: SubCommand,
 }

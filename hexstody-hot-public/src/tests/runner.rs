@@ -40,7 +40,6 @@ where
             let start_notify = start_notify.clone();
             let btc_adapter = btc_adapter.clone();
             async move {
-
                 let (_, abort_reg) = AbortHandle::new_pair();
                 match run_api(
                     Network::Regtest,
@@ -48,6 +47,8 @@ where
                     start_notify,
                     btc_adapter,
                     abort_reg,
+                    None,
+                    static_path,
                 )
                 .await
                 {

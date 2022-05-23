@@ -3,7 +3,7 @@ use rocket::http::Status;
 use rocket::response::status::Created;
 use rocket::serde::json::Json;
 use rocket::State as RocketState;
-use rocket::{get, post, routes};
+use rocket::{get, post, routes, Config};
 use rocket_dyn_templates::Template;
 use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
 use serde::{Deserialize, Serialize};
@@ -80,8 +80,12 @@ pub async fn serve_api(
     _start_notify: Arc<Notify>,
     update_sender: mpsc::Sender<StateUpdate>,
 ) -> Result<(), rocket::Error> {
-    rocket::build()
-        .mount("/", FileServer::from(relative!("static/")))
+    let figment = Config::figment();
+    let static_path = figment
+        .extract_inner("static_path")
+        .unwrap_or(relative!("static/").to_owned());
+    let _ = rocket::build()
+        .mount("/", FileServer::from(static_path))
         .mount("/", routes![index])
         .mount("/", openapi_get_routes![list, create])
         .mount(

@@ -13,16 +13,26 @@ export DATABASE_URL=postgresql://hexstody:hexstody@localhost:5432/hexstody
 
 How to build and run:
 
-Public API
+Tests
 ```
 cargo test
-cd hexstody-hot-public
+```
+
+Public API
+```
+export ROCKET_TEMPLATE_DIR=hexstody-hot-public/templates
+export ROCKET_SECRET_KEY="LOe6Tf3P5DU6u7TgiCy9dSzd/b/6qyPL0wdDPfy56Wo="
 cargo run --bin hexstody-hot-public -- serve
+```
+
+Operator key generation tool
+```
+cargo run --bin operator-keygen -- --password
 ```
 
 Operator API
 ```
-cargo test
-cd hexstody-hot-operator
+export ROCKET_TEMPLATE_DIR=hexstody-hot-operator/templates
+export ROCKET_SECRET_KEY="LOe6Tf3P5DU6u7TgiCy9dSzd/b/6qyPL0wdDPfy56Wo="
 cargo run --bin hexstody-hot-operator -- serve
 ```

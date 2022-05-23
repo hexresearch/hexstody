@@ -17,7 +17,7 @@ async function init() {
     const depositElem = document.getElementById("deposit");
     depositElem.insertAdjacentHTML('beforeend', depositDrawUpdate);
 
-    //submitButton.historyElem.insertAdjacentHTML('beforeend', historyDrawUpdate); 
+    new QRCode(document.getElementById("qrcode"), result.address);
 }
 
 document.addEventListener("DOMContentLoaded", init);

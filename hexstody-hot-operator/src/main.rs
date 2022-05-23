@@ -15,8 +15,6 @@ use runner::run_api;
 #[derive(Parser, Debug, Clone)]
 #[clap(about, version, author)]
 struct Args {
-    // #[clap(long, env = "KOLLIDER_API_KEY", hide_env_values = true)]
-    // api_key: String,
     /// PostgreSQL connection string
     #[clap(
         long,

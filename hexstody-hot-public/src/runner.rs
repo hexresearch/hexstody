@@ -1,8 +1,6 @@
-use futures::future::{join_all, AbortHandle, AbortRegistration, Abortable, Aborted};
+use futures::future::{AbortHandle, AbortRegistration, Abortable, Aborted};
 use futures::Future;
 use log::*;
-use serde::Deserialize;
-use std::fmt;
 use std::sync::Arc;
 use thiserror::Error;
 use tokio::sync::mpsc;
@@ -17,7 +15,7 @@ use hexstody_db::{
     Pool,
 };
 
-use super::api::public::*;
+use super::api::*;
 use super::worker::*;
 
 async fn serve_abortable<F, Fut, Out>(abort_reg: AbortRegistration, api_future: F)
