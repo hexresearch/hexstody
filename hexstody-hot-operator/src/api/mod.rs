@@ -1,9 +1,9 @@
-use rocket::fs::{relative, FileServer};
+use rocket::fs::FileServer;
 use rocket::http::Status;
 use rocket::response::status::Created;
 use rocket::serde::json::Json;
 use rocket::State as RocketState;
-use rocket::{get, post, routes, Config};
+use rocket::{get, post, routes};
 use rocket_dyn_templates::Template;
 use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
 use serde::{Deserialize, Serialize};
@@ -78,13 +78,19 @@ pub async fn serve_api(
     state: Arc<Mutex<HexstodyState>>,
     _state_notify: Arc<Notify>,
     _start_notify: Arc<Notify>,
+    port: Option<u16>,
     update_sender: mpsc::Sender<StateUpdate>,
+    secret_key: Option<String>,
+    static_path: String,
 ) -> Result<(), rocket::Error> {
-    let figment = Config::figment();
-    let static_path = figment
-        .extract_inner("static_path")
-        .unwrap_or(relative!("static/").to_owned());
-    let _ = rocket::build()
+    let mut figment = rocket::Config::figment();
+    if let Some(s) = secret_key {
+        figment = figment.merge(("secret_key", s));
+    }
+    if let Some(p) = port {
+        figment = figment.merge(("port", p));
+    }
+    let _ = rocket::custom(figment)
         .mount("/", FileServer::from(static_path))
         .mount("/", routes![index])
         .mount("/", openapi_get_routes![list, create])

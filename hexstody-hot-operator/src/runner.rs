@@ -24,8 +24,11 @@ pub enum Error {
 
 pub async fn run_api(
     network: Network,
+    api_port: Option<u16>,
     db_connect: &str,
     start_notify: Arc<Notify>,
+    secret_key: Option<&str>,
+    static_path: &str,
 ) -> Result<(), Error> {
     info!("Connecting to database");
     let pool = create_db_pool(db_connect).await?;
@@ -49,7 +52,10 @@ pub async fn run_api(
         state_mx,
         state_notify,
         start_notify,
+        api_port,
         update_sender,
+        secret_key.map(|x| x.to_owned()),
+        static_path.to_owned()
     ));
     // Update worker finishes automatically when api worker closes
     // as there is no more active channel senders.

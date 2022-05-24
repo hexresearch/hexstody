@@ -25,6 +25,14 @@ struct Args {
     dbconnect: String,
     #[clap(long, default_value = "mainnet", env = "HEXSTODY_NETWORK")]
     network: Network,
+    /// Base64 encoded 64 byte secret key for encoding cookies. Required in release profile.
+    #[clap(long, env = "HEXSTODY_SECRET_KEY", hide_env_values = true)]
+    secret_key: Option<String>,
+    /// Path to HTML static files to serve
+    #[clap(long, env = "HEXSTODY_STATIC_PATH")]
+    static_path: Option<String>,
+    #[clap(long, short, env = "HEXSTODY_PORT")]
+    port: Option<u16>,
     #[clap(subcommand)]
     subcmd: SubCommand,
 }
@@ -50,7 +58,18 @@ async fn main() -> Result<(), Box<dyn Error>> {
 async fn run(args: &Args) {
     loop {
         let start_notify = Arc::new(Notify::new());
-        match run_api(args.network, &args.dbconnect, start_notify).await {
+        let default_static_path = rocket::fs::relative!("static/").to_owned();
+        let static_path = args.static_path.as_ref().unwrap_or(&default_static_path);
+        match run_api(
+            args.network,
+            args.port,
+            &args.dbconnect,
+            start_notify,
+            args.secret_key.as_deref(),
+            static_path,
+        )
+        .await
+        {
             Err(e) => {
                 error!("API error: {e}");
             }

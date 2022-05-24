@@ -93,11 +93,10 @@ async fn run(btc_client: BtcClient, args: &Args) {
         .expect("Error setting Ctrl-C handler");
         let default_static_path = rocket::fs::relative!("static/").to_owned();
         let static_path = args.static_path.as_ref().unwrap_or(&default_static_path);
-        let port = args.port;
 
         match run_api(
             args.network,
-            port,
+            args.port,
             &args.dbconnect,
             start_notify,
             btc_client.clone(),
