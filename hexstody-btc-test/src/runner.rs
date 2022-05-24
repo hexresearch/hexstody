@@ -32,7 +32,7 @@ fn setup_node() -> (Child, u16, TempDir) {
         .arg("-fallbackfee=0.000002")
         .arg(format!("-rpcport={}", rpc_port))
         .arg(format!("-datadir={}", tmp_dir.path().to_str().unwrap()))
-        // .stdout(Stdio::null())
+        .stdout(Stdio::null())
         .spawn()
         .expect("bitcoin node starts");
 
