@@ -11,7 +11,7 @@ use hexstody_db::state::*;
 use hexstody_db::update::*;
 use hexstody_db::Pool;
 use rocket::fairing::AdHoc;
-use rocket::fs::{relative, FileServer};
+use rocket::fs::FileServer;
 use rocket::response::Redirect;
 use rocket::serde::json::Json;
 use rocket::uri;
@@ -93,17 +93,28 @@ pub async fn serve_api(
     state: Arc<Mutex<State>>,
     _state_notify: Arc<Notify>,
     start_notify: Arc<Notify>,
+    port: Option<u16>,
     update_sender: mpsc::Sender<StateUpdate>,
     btc_client: BtcClient,
+    secret_key: Option<String>,
+    static_path: String,
 ) -> Result<(), rocket::Error> {
+    let zero_key =
+        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==";
+    let secret_key = secret_key.unwrap_or_else(|| zero_key.to_owned());
+    let mut figment = rocket::Config::figment()
+        .merge(("secret_key", secret_key));
+    if let Some(p) = port {
+        figment = figment.merge(("port", p));
+    }
     let on_ready = AdHoc::on_liftoff("API Start!", |_| {
         Box::pin(async move {
             start_notify.notify_one();
         })
     });
 
-    let _ = rocket::build()
-        .mount("/", FileServer::from(relative!("static/")))
+    let _ = rocket::custom(figment)
+        .mount("/", FileServer::from(static_path))
         .mount(
             "/",
             openapi_get_routes![
@@ -172,8 +183,11 @@ mod tests {
                     state,
                     state_notify,
                     start_notify,
+                    Some(SERVICE_TEST_PORT),
                     update_sender,
-                    btc_client
+                    btc_client,
+                    None,
+                    static_path.to_owned()
                 );
                 futures::pin_mut!(serve_task);
                 futures::future::select(serve_task, receiver.map_err(drop)).await;

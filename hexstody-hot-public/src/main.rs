@@ -16,7 +16,7 @@ use tokio::sync::Notify;
 use tokio::time::sleep;
 
 use hexstody_btc_test::runner::run_test as run_btc_regtest;
-use runner::{run_api};
+use runner::run_api;
 
 #[derive(Parser, Debug, Clone)]
 #[clap(about, version, author)]
@@ -41,18 +41,13 @@ struct Args {
     #[clap(long, env = "HEXSTODY_START_REGTEST")]
     start_regtest: bool,
     /// Base64 encoded 64 byte secret key for encoding cookies. Required in release profile.
-    #[clap(
-        long,
-        env = "HEXSTODY_SECRET_KEY",
-        hide_env_values = true,
-    )]
+    #[clap(long, env = "HEXSTODY_SECRET_KEY", hide_env_values = true)]
     secret_key: Option<String>,
     /// Path to HTML static files to serve
-    #[clap(
-        long,
-        env = "HEXSTODY_STATIC_PATH",
-    )]
+    #[clap(long, env = "HEXSTODY_STATIC_PATH")]
     static_path: Option<String>,
+    #[clap(long, short, env = "HEXSTODY_PORT")]
+    port: Option<u16>,
     #[clap(subcommand)]
     subcmd: SubCommand,
 }
@@ -96,12 +91,19 @@ async fn run(btc_client: BtcClient, args: &Args) {
             api_abort_handle.abort();
         })
         .expect("Error setting Ctrl-C handler");
+        let default_static_path = rocket::fs::relative!("static/").to_owned();
+        let static_path = args.static_path.as_ref().unwrap_or(&default_static_path);
+        let port = args.port;
+
         match run_api(
             args.network,
+            port,
             &args.dbconnect,
             start_notify,
             btc_client.clone(),
             api_abort_reg,
+            args.secret_key.as_deref(),
+            static_path,
         )
         .await
         {

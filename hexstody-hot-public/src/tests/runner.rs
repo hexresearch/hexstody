@@ -1,4 +1,4 @@
-use crate::runner::{run_api};
+use crate::runner::run_api;
 use bitcoincore_rpc::Client;
 use futures::{future::AbortHandle, FutureExt};
 use hexstody_api::types::{SigninEmail, SignupEmail};
@@ -33,20 +33,24 @@ where
         let (db_port, db_dir) = setup_postgres();
         let dbconnect = format!("postgres://hexstody:hexstody@localhost:{db_port}/hexstody");
         info!("Connection to database: {dbconnect}");
-        let public_api_port: u16 = random_free_tcp_port().expect("available port");
+        let api_port: u16 = random_free_tcp_port().expect("available port");
 
         let start_notify = Arc::new(Notify::new());
         let api_handle = tokio::spawn({
             let start_notify = start_notify.clone();
             let btc_adapter = btc_adapter.clone();
             async move {
+                let static_path = rocket::fs::relative!("static/");
                 let (_, abort_reg) = AbortHandle::new_pair();
                 match run_api(
                     Network::Regtest,
+                    Some(api_port),
                     &dbconnect,
                     start_notify,
                     btc_adapter,
                     abort_reg,
+                    None,
+                    static_path,
                 )
                 .await
                 {
@@ -60,8 +64,8 @@ where
             }
         });
 
-        let hot_client = HexstodyClient::new(&format!("http://localhost:{public_api_port}"))
-            .expect("cleint created");
+        let hot_client =
+            HexstodyClient::new(&format!("http://localhost:{api_port}")).expect("cleint created");
         let env = TestEnv {
             btc_node,
             other_btc_node,

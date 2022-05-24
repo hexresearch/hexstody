@@ -40,9 +40,12 @@ pub async fn serve_apis(
     state_mx: Arc<Mutex<State>>,
     state_notify: Arc<Notify>,
     start_notify: Arc<Notify>,
+    api_port: Option<u16>,
     api_abort: AbortRegistration,
     update_sender: mpsc::Sender<StateUpdate>,
     btc_client: BtcClient,
+    secret_key: Option<&str>,
+    static_path: &str,
 ) -> Result<(), Aborted> {
     let (api_handle, abort_reg) = AbortHandle::new_pair();
     let api_fut = serve_abortable(abort_reg, || {
@@ -51,8 +54,11 @@ pub async fn serve_apis(
             state_mx.clone(),
             state_notify.clone(),
             start_notify.clone(),
+            api_port,
             update_sender.clone(),
             btc_client.clone(),
+            secret_key.map(|s| s.to_owned()),
+            static_path.to_owned(),
         )
     });
     let abortable_api = Abortable::new(api_fut, api_abort);
@@ -77,10 +83,13 @@ pub enum Error {
 
 pub async fn run_api(
     network: Network,
+    api_port: Option<u16>,
     db_connect: &str,
     start_notify: Arc<Notify>,
     btc_client: BtcClient,
     api_abort_reg: AbortRegistration,
+    secret_key: Option<&str>,
+    static_path: &str,
 ) -> Result<(), Error> {
     info!("Connecting to database");
     let pool = create_db_pool(db_connect).await?;
@@ -112,9 +121,12 @@ pub async fn run_api(
         state_mx,
         state_notify,
         start_notify,
+        api_port,
         api_abort_reg,
         update_sender,
         btc_client,
+        secret_key,
+        static_path,
     )
     .await
     {
