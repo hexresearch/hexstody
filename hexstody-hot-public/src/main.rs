@@ -85,15 +85,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
 async fn run(btc_client: BtcClient, args: &Args) {
     loop {
         let start_notify = Arc::new(Notify::new());
-
         let (api_abort_handle, api_abort_reg) = AbortHandle::new_pair();
-        ctrlc::set_handler(move || {
+        match ctrlc::set_handler(move || {
             api_abort_handle.abort();
-        })
-        .expect("Error setting Ctrl-C handler");
+        }) {
+            // TODO: avoid setting multiple Ctrl-C handlers in the loop
+            Ok(()) | Err(ctrlc::Error::MultipleHandlers) => {}
+            Err(e) => panic!("Error setting Ctrl-C handler: {e}")
+        }
         let default_static_path = rocket::fs::relative!("static/").to_owned();
         let static_path = args.static_path.as_ref().unwrap_or(&default_static_path);
-
         match run_api(
             args.network,
             args.port,
@@ -106,12 +107,12 @@ async fn run(btc_client: BtcClient, args: &Args) {
         )
         .await
         {
-            Err(e) => {
-                error!("API error: {e}");
-            }
-            _ => {
+            Ok(_) | Err(runner::Error::Aborted) => {
                 info!("Terminated gracefully!");
                 return ();
+            }
+            Err(e) => {
+                error!("API error: {e}");
             }
         }
         let restart_dt = Duration::from_secs(5);
