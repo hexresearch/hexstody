@@ -86,13 +86,10 @@ async fn run(btc_client: BtcClient, args: &Args) {
     loop {
         let start_notify = Arc::new(Notify::new());
         let (api_abort_handle, api_abort_reg) = AbortHandle::new_pair();
-        match ctrlc::set_handler(move || {
+        // TODO: On second loop iteration MultipleHandlers error occures
+        ctrlc::set_handler(move || {
             api_abort_handle.abort();
-        }) {
-            // TODO: avoid setting multiple Ctrl-C handlers in the loop
-            Ok(()) | Err(ctrlc::Error::MultipleHandlers) => {}
-            Err(e) => panic!("Error setting Ctrl-C handler: {e}")
-        }
+        }).expect("Error setting Ctrl-C handler: {e}");
         let default_static_path = rocket::fs::relative!("static/").to_owned();
         let static_path = args.static_path.as_ref().unwrap_or(&default_static_path);
         match run_api(
