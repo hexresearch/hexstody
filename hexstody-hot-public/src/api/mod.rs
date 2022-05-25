@@ -63,7 +63,7 @@ fn index() -> Redirect {
 #[openapi(skip)]
 #[get("/overview")]
 fn overview() -> Template {
-    let context = HashMap::from([("title", "Overview"), ("parent", "base")]);
+    let context = HashMap::from([("title", "Overview"), ("parent", "base_footer_header")]);
     Template::render("overview", context)
 }
 
@@ -84,7 +84,7 @@ fn signin() -> Template {
 #[openapi(skip)]
 #[get("/deposit")]
 fn deposit() -> Template {
-    let context = HashMap::from([("title", "Deposit"), ("parent", "base")]);
+    let context = HashMap::from([("title", "Deposit"), ("parent", "base_footer_header")]);
     Template::render("deposit", context)
 }
 
@@ -187,7 +187,7 @@ mod tests {
                     update_sender,
                     btc_client,
                     None,
-                    static_path.to_owned()
+                    static_path.to_owned(),
                 );
                 futures::pin_mut!(serve_task);
                 futures::future::select(serve_task, receiver.map_err(drop)).await;
