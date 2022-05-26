@@ -20,8 +20,7 @@ cargo test
 
 Public API
 ```
-export ROCKET_TEMPLATE_DIR=hexstody-hot-public/templates
-export ROCKET_SECRET_KEY="LOe6Tf3P5DU6u7TgiCy9dSzd/b/6qyPL0wdDPfy56Wo="
+cd hexstody-hot-public
 cargo run --bin hexstody-hot-public -- serve
 ```
 
@@ -32,7 +31,6 @@ cargo run --bin operator-keygen -- --password
 
 Operator API
 ```
-export ROCKET_TEMPLATE_DIR=hexstody-hot-operator/templates
-export ROCKET_SECRET_KEY="LOe6Tf3P5DU6u7TgiCy9dSzd/b/6qyPL0wdDPfy56Wo="
+cd hexstody-hot-operator
 cargo run --bin hexstody-hot-operator -- serve
 ```
