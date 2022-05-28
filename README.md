@@ -18,19 +18,12 @@ Tests
 cargo test
 ```
 
-Public API
+How wallet
 ```
-cd hexstody-hot-public
-cargo run --bin hexstody-hot-public -- serve
+cargo run --bin hexstody-hot -- serve
 ```
 
 Operator key generation tool
 ```
-cargo run --bin operator-keygen -- --password
-```
-
-Operator API
-```
-cd hexstody-hot-operator
-cargo run --bin hexstody-hot-operator -- serve
+cargo run --bin operator-keygen
 ```

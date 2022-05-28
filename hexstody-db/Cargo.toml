@@ -27,5 +27,4 @@ tokio = { version = "1", features = [ "full" ] }
 uuid = { version = "0.8", features = [ "serde", "v4" ] }
 
 [dev-dependencies]
-maplit = "1.0.2"
 sqlx-database-tester = { version = "0.2.0", features = [ "runtime-tokio" ] }
