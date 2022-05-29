@@ -74,7 +74,9 @@ pub async fn get_history(
         withdrawal: &WithdrawalRequest,
     ) -> api::HistoryItem {
         let withdrawal_status = match &withdrawal.confirmation_status {
-            Confirmations(confirmations) if confirmations.len() < 6 => {
+            Confirmations(confirmations)
+                if confirmations.len() < REQUIRED_NUMBER_OF_CONFIRMATIONS as usize =>
+            {
                 api::WithdrawalRequestStatus::InProgress
             }
             _ => api::WithdrawalRequestStatus::Completed,
