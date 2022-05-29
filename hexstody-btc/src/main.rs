@@ -53,11 +53,7 @@ enum SubCommand {
         #[clap(long, default_value = "bitcoin", env = "HEXSTODY_BTC_NODE_NETWORK")]
         network: Network,
         /// Base64 encoded 64 bytes for encoding cookies. Required in release profile.
-        #[clap(
-            long,
-            env = "HEXSTODY_BTC_SECRET_KEY",
-            hide_env_values = true,
-        )]
+        #[clap(long, env = "HEXSTODY_BTC_SECRET_KEY", hide_env_values = true)]
         secret_key: Option<String>,
     },
 }

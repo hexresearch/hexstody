@@ -2,8 +2,6 @@ pub mod auth;
 pub mod wallet;
 
 use auth::*;
-use hexstody_api::domain::currency::Currency;
-use hexstody_api::types as api;
 
 use hexstody_btc_client::client::BtcClient;
 use hexstody_db::state::*;

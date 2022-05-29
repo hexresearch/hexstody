@@ -9,6 +9,8 @@ use p256::NistP256;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+pub const REQUIRED_NUMBER_OF_CONFIRMATIONS : u64 = 3;
+
 /// It is unique withdrawal request ID whithin the system.
 pub type WithdrawalRequestId = Uuid;
 
@@ -25,7 +27,7 @@ pub struct WithdrawalRequest {
     /// Amount of tokens to transfer
     pub amount: u64,
     /// Some request require manual confirmation
-    pub confrimtaion_status: WithdrawalRequestStatus,
+    pub confirmation_status: WithdrawalRequestStatus,
 }
 
 impl From<(NaiveDateTime, WithdrawalRequestId, WithdrawalRequestInfo)> for WithdrawalRequest {
@@ -36,14 +38,14 @@ impl From<(NaiveDateTime, WithdrawalRequestId, WithdrawalRequestInfo)> for Withd
             address: value.2.address,
             created_at: value.0,
             amount: value.2.amount,
-            confrimtaion_status: WithdrawalRequestStatus::Confirmations(Vec::new()),
+            confirmation_status: WithdrawalRequestStatus::Confirmations(Vec::new()),
         }
     }
 }
 
 impl Into<WithdrawalRequestApi> for WithdrawalRequest {
     fn into(self) -> WithdrawalRequestApi {
-        let confrimtaion_status = match self.confrimtaion_status {
+        let confirmation_status = match self.confirmation_status {
             WithdrawalRequestStatus::NoConfirmationRequired => {
                 "No confirmation required".to_owned()
             }
@@ -57,7 +59,7 @@ impl Into<WithdrawalRequestApi> for WithdrawalRequest {
             address: self.address,
             created_at: self.created_at.format("%Y-%m-%d %H:%M:%S").to_string(),
             amount: self.amount,
-            confrimtaion_status: confrimtaion_status,
+            confirmation_status: confirmation_status,
         }
     }
 }

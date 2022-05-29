@@ -77,6 +77,28 @@ impl UserCurrencyInfo {
     }
 
     /// Includes unconfirmed transactions
+    pub fn withdrawal_requests(&self) -> Vec<&WithdrawalRequest> {
+        let tx_sum = self.withdrawal_requests.values().collect();
+        tx_sum
+    }
+
+    /// Includes unconfirmed transactions
+    pub fn unconfirmed_transactions(&self) -> Vec<Transaction> {
+        let tx_sum = self
+            .transactions
+            .iter()
+            .filter_map(|t| {
+                if t.is_conflicted() {
+                    None
+                } else {
+                    Some(t.clone())
+                }
+            })
+            .collect();
+        tx_sum
+    }
+
+    /// Includes unconfirmed transactions
     pub fn balance(&self) -> i64 {
         let tx_sum: i64 = self
             .transactions
