@@ -1,4 +1,3 @@
-mod api;
 mod runner;
 #[cfg(test)]
 mod tests;
@@ -10,17 +9,18 @@ use hexstody_btc_client::client::BtcClient;
 use hexstody_db::state::Network;
 use log::*;
 use std::error::Error;
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Notify;
 use tokio::time::sleep;
 
 use hexstody_btc_test::runner::run_test as run_btc_regtest;
-use runner::{run_hot_wallet, ApiConfig};
+use runner::run_hot_wallet;
 
 #[derive(Parser, Debug, Clone)]
 #[clap(about, version, author)]
-struct Args {
+pub struct Args {
     /// PostgreSQL connection string
     #[clap(
         long,
@@ -40,19 +40,28 @@ struct Args {
     network: Network,
     #[clap(long, env = "HEXSTODY_START_REGTEST")]
     start_regtest: bool,
+    #[clap(long, env = "HEXSTODY_PUBLIC_API_ENABLED")]
+    public_api_enabled: bool,
+    #[clap(long, env = "HEXSTODY_PUBLIC_API_PORT")]
+    public_api_port: Option<u16>,
+    #[clap(long, env = "HEXSTODY_PUBLIC_API_STATIC_PATH")]
+    public_api_static_path: Option<PathBuf>,
+    #[clap(long, env = "HEXSTODY_PUBLIC_API_TEMPLATE_PATH")]
+    public_api_template_path: Option<PathBuf>,
     /// Base64 encoded 64 byte secret key for encoding cookies. Required in release profile.
-    #[clap(
-        long,
-        env = "HEXSTODY_SECRET_KEY",
-        hide_env_values = true,
-    )]
-    secret_key: Option<String>,
-    /// Path to HTML static files to serve
-    #[clap(
-        long,
-        env = "HEXSTODY_STATIC_PATH",
-    )]
-    static_path: Option<String>,
+    #[clap(long, env = "HEXSTODY_PUBLIC_API_SECRET_KEY", hide_env_values = true)]
+    public_api_secret_key: Option<String>,
+    #[clap(long, env = "HEXSTODY_OPERATOR_API_ENABLED")]
+    operator_api_enabled: bool,
+    #[clap(long, env = "HEXSTODY_OPERATOR_API_PORT")]
+    operator_api_port: Option<u16>,
+    #[clap(long, env = "HEXSTODY_OPERATOR_API_STATIC_PATH")]
+    operator_api_static_path: Option<PathBuf>,
+    #[clap(long, env = "HEXSTODY_OPERATOR_API_TEMPLATE_PATH")]
+    operator_api_template_path: Option<PathBuf>,
+    /// Base64 encoded 64 byte secret key for encoding cookies. Required in release profile.
+    #[clap(long, env = "HEXSTODY_OPERATOR_API_SECRET_KEY", hide_env_values = true)]
+    operator_api_secret_key: Option<String>,
     #[clap(subcommand)]
     subcmd: SubCommand,
 }
@@ -61,6 +70,30 @@ struct Args {
 enum SubCommand {
     /// Start listening incoming API requests
     Serve,
+}
+
+async fn run(btc_client: BtcClient, args: &Args) {
+    loop {
+        let start_notify = Arc::new(Notify::new());
+        let (api_abort_handle, api_abort_reg) = AbortHandle::new_pair();
+        // TODO: On second loop iteration `MultipleHandlers` error occures
+        ctrlc::set_handler(move || {
+            api_abort_handle.abort();
+        })
+        .expect("Error setting Ctrl-C handler: {e}");
+        match run_hot_wallet(args, start_notify, btc_client.clone(), api_abort_reg).await {
+            Ok(_) | Err(runner::Error::Aborted) => {
+                info!("Terminated gracefully!");
+                return ();
+            }
+            Err(e) => {
+                error!("API error: {e}");
+            }
+        }
+        let restart_dt = Duration::from_secs(5);
+        info!("Adding {:?} delay before restarting logic", restart_dt);
+        sleep(restart_dt).await;
+    }
 }
 
 #[tokio::main]
@@ -85,43 +118,4 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
     }
     Ok(())
-}
-
-async fn run(btc_client: BtcClient, args: &Args) {
-    loop {
-        let api_config = ApiConfig::parse_figment();
-        let start_notify = Arc::new(Notify::new());
-
-        let (api_abort_handle, api_abort_reg) = AbortHandle::new_pair();
-        ctrlc::set_handler(move || {
-            api_abort_handle.abort();
-        })
-        .expect("Error setting Ctrl-C handler");
-        let relative = rocket::fs::relative!("static/").to_owned();
-        let static_path = args.static_path.as_ref().unwrap_or(&relative);
-
-        match run_hot_wallet(
-            args.network,
-            api_config,
-            &args.dbconnect,
-            start_notify,
-            btc_client.clone(),
-            api_abort_reg,
-            args.secret_key.as_deref(),
-            static_path,
-        )
-        .await
-        {
-            Err(e) => {
-                error!("Hot wallet error: {e}");
-            }
-            _ => {
-                info!("Terminated gracefully!");
-                return ();
-            }
-        }
-        let restart_dt = Duration::from_secs(5);
-        info!("Adding {:?} delay before restarting logic", restart_dt);
-        sleep(restart_dt).await;
-    }
 }

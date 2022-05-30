@@ -4,6 +4,9 @@ use bitcoincore_rpc_json::EstimateMode;
 use serde::Deserialize;
 
 // Get 50 BTC to the node wallet
+// In Regtest Mode a block must have 100 confirmations before that reward can be spent,
+// so we generate 101 blocks to get access to the coinbase transaction from block #1.
+// https://developer.bitcoin.org/examples/testing.html#regtest-mode
 pub fn fund_wallet(client: &Client) {
     let mature_blocks = 100;
     mine_blocks(client, mature_blocks + 1);
@@ -12,9 +15,14 @@ pub fn fund_wallet(client: &Client) {
 // Mine some blocks to self wallet
 pub fn mine_blocks(client: &Client, amount: u64) {
     let address = new_address(client);
-    client
-        .generate_to_address(amount, &address)
-        .expect("mined blocks");
+    for _ in 0..amount {
+        client
+            .generate_to_address(1, &address)
+            .expect("mined blocks");
+    }
+    // client
+    //     .generate_to_address(amount, &address)
+    //     .expect("mined blocks");
 }
 
 // Get a fresh address from the node

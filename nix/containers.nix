@@ -35,8 +35,10 @@ let
     (takeOnly "hexstody-btc" "${hexstody}/bin/hexstody-btc")
     (takeOnly "operator-keygen" "${hexstody}/bin/operator-keygen")
     (takeOnly "wait-for-it.sh" "${hexstody.src}/docker/wait-for-it.sh")
-    (takeFolder "static" "${hexstody}/share/static" "/static")
-    (takeFolder "templates" "${hexstody}/share/templates" "/templates")
+    (takeFolder "operator-static" "${hexstody}/share/operator/static" "/operator/static")
+    (takeFolder "operator-templates" "${hexstody}/share/operator/templates" "/operator/templates")
+    (takeFolder "public-static" "${hexstody}/share/public/static" "/public/static")
+    (takeFolder "public-templates" "${hexstody}/share/public/templates" "/public/templates")
   ];
 in { inherit
   hexstody-container

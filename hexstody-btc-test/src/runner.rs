@@ -20,7 +20,7 @@ use tokio::sync::{Mutex, Notify};
 
 fn setup_node() -> (Child, u16, TempDir) {
     info!("Starting regtest node");
-    let tmp_dir = TempDir::new("regtest-data").expect("temporary data dir crated");
+    let tmp_dir = TempDir::new("regtest-data").expect("temporary data dir created");
     let rpc_port: u16 = random_free_tcp_port().expect("available port");
 
     let node_handle = Command::new("bitcoind")

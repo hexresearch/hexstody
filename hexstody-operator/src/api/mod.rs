@@ -1,3 +1,5 @@
+use figment::Figment;
+use rocket::fairing::AdHoc;
 use rocket::fs::FileServer;
 use rocket::http::Status;
 use rocket::response::status::Created;
@@ -7,10 +9,12 @@ use rocket::{get, post, routes};
 use rocket_dyn_templates::Template;
 use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::{mpsc, Mutex, Notify};
 
 use hexstody_api::types::{WithdrawalRequest, WithdrawalRequestInfo};
+use hexstody_btc_client::client::BtcClient;
 use hexstody_db::state::State as HexstodyState;
 use hexstody_db::update::{
     withdrawal::WithdrawalRequestInfo as WithdrawalRequestInfoDb, StateUpdate, UpdateBody,
@@ -37,10 +41,10 @@ async fn index(state: &RocketState<Arc<Mutex<HexstodyState>>>) -> Template {
     );
     let context = IndexHandlerContext {
         title: "Withdrawal requests".to_owned(),
-        parent: "operator/base".to_owned(),
+        parent: "base".to_owned(),
         withdrawal_requests: withdrawal_requests,
     };
-    Template::render("operator/index", context)
+    Template::render("index", context)
 }
 
 #[openapi(tag = "request")]
@@ -73,24 +77,22 @@ async fn create(
     Ok(Created::new("/request"))
 }
 
-pub async fn serve_operator_api(
+pub async fn serve_api(
     pool: Pool,
     state: Arc<Mutex<HexstodyState>>,
     _state_notify: Arc<Notify>,
-    _start_notify: Arc<Notify>,
-    port: u16,
+    start_notify: Arc<Notify>,
     update_sender: mpsc::Sender<StateUpdate>,
-    secret_key: Option<String>,
-    static_path: String,
+    btc_client: BtcClient,
+    api_config: Figment,
 ) -> Result<(), rocket::Error> {
-    let zero_key =
-        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==";
-    let secret_key = secret_key.unwrap_or_else(|| zero_key.to_owned());
-
-    let figment = rocket::Config::figment()
-        .merge(("secret_key", secret_key))
-        .merge(("port", port));
-    let _ = rocket::custom(figment)
+    let on_ready = AdHoc::on_liftoff("API Start!", |_| {
+        Box::pin(async move {
+            start_notify.notify_one();
+        })
+    });
+    let static_path: PathBuf = api_config.extract_inner("static_path").unwrap();
+    let _ = rocket::custom(api_config)
         .mount("/", FileServer::from(static_path))
         .mount("/", routes![index])
         .mount("/", openapi_get_routes![list, create])
@@ -104,7 +106,9 @@ pub async fn serve_operator_api(
         .manage(state)
         .manage(pool)
         .manage(update_sender)
+        .manage(btc_client)
         .attach(Template::fairing())
+        .attach(on_ready)
         .launch()
         .await?;
     Ok(())

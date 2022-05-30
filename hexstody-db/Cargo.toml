@@ -12,10 +12,7 @@ path = "src/lib.rs"
 bitcoin = "0.28.1"
 bitcoin_hashes = "0.10.0"
 chrono = { version = "0.4.19", features = [ "serde" ] }
-clap = { version = "3.0.0-rc.4", features = [ "derive", "env" ] }
-dotenv = "0.15.0"
 ecdsa = { version = "0.13.4", features = [ "serde", "pem" ] }
-env_logger = { version = "0.9.0" }
 futures = "0.3.19"
 hexstody-api = { path = "../hexstody-api" }
 hexstody-btc-api = { path = "../hexstody-btc-api" }
@@ -30,5 +27,4 @@ tokio = { version = "1", features = [ "full" ] }
 uuid = { version = "0.8", features = [ "serde", "v4" ] }
 
 [dev-dependencies]
-maplit = "1.0.2"
 sqlx-database-tester = { version = "0.2.0", features = [ "runtime-tokio" ] }

@@ -5,7 +5,7 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum Error {
-    #[error("Reqwesting server error: {0}")]
+    #[error("Requesting server error: {0}")]
     Reqwest(#[from] reqwest::Error),
     #[error("JSON encoding/decoding error: {0}")]
     Json(#[from] serde_json::Error),

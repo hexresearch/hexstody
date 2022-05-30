@@ -3,6 +3,7 @@ pub mod wallet;
 
 use auth::*;
 use chrono::prelude::*;
+use figment::Figment;
 use hexstody_api::domain::currency::Currency;
 use hexstody_api::types as api;
 use hexstody_api::types::History;
@@ -19,6 +20,7 @@ use rocket::{get, routes};
 use rocket_dyn_templates::Template;
 use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio::sync::{Mutex, Notify};
@@ -31,8 +33,8 @@ fn ping() -> Json<()> {
 }
 
 #[openapi(tag = "get_history")]
-#[get("/get_history/<skip>/<take>")]
-fn get_history(skip: u32, take: u32) -> Json<History> {
+#[get("/get_history/<_skip>/<_take>")]
+fn get_history(_skip: u32, _take: u32) -> Json<History> {
     let x = History {
         target_number_of_confirmations: 6,
         history_items: vec![
@@ -88,31 +90,22 @@ fn deposit() -> Template {
     Template::render("deposit", context)
 }
 
-pub async fn serve_public_api(
+pub async fn serve_api(
     pool: Pool,
     state: Arc<Mutex<State>>,
-    state_notify: Arc<Notify>,
+    _state_notify: Arc<Notify>,
     start_notify: Arc<Notify>,
-    port: u16,
     update_sender: mpsc::Sender<StateUpdate>,
     btc_client: BtcClient,
-    secret_key: Option<String>,
-    static_path: String,
+    api_config: Figment,
 ) -> Result<(), rocket::Error> {
-    let zero_key =
-        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==";
-    let secret_key = secret_key.unwrap_or_else(|| zero_key.to_owned());
-
-    let figment = rocket::Config::figment()
-        .merge(("secret_key", secret_key))
-        .merge(("port", port));
     let on_ready = AdHoc::on_liftoff("API Start!", |_| {
         Box::pin(async move {
             start_notify.notify_one();
         })
     });
-
-    let _ = rocket::custom(figment)
+    let static_path: PathBuf = api_config.extract_inner("static_path").unwrap();
+    let _ = rocket::custom(api_config)
         .mount("/", FileServer::from(static_path))
         .mount(
             "/",
@@ -135,6 +128,7 @@ pub async fn serve_public_api(
             }),
         )
         .manage(state)
+        .manage(pool)
         .manage(update_sender)
         .manage(btc_client)
         .attach(Template::fairing())
@@ -142,78 +136,4 @@ pub async fn serve_public_api(
         .launch()
         .await?;
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use futures::Future;
-    use futures::FutureExt;
-    use futures_util::future::TryFutureExt;
-    use hexstody_client::client::HexstodyClient;
-    use rocket::fs::relative;
-    use std::panic::AssertUnwindSafe;
-
-    const SERVICE_TEST_PORT: u16 = 8000;
-    const SERVICE_TEST_HOST: &str = "127.0.0.1";
-
-    async fn run_api_test<F, Fut>(pool: Pool, test_body: F)
-    where
-        F: FnOnce() -> Fut,
-        Fut: Future<Output = ()>,
-    {
-        let _ = env_logger::builder().is_test(true).try_init();
-
-        let state_mx = Arc::new(Mutex::new(State::default()));
-        let state_notify = Arc::new(Notify::new());
-        let start_notify = Arc::new(Notify::new());
-
-        let (sender, receiver) = tokio::sync::oneshot::channel();
-        let (update_sender, _) = tokio::sync::mpsc::channel(1000);
-        let btc_client = BtcClient::new("127.0.0.1");
-        tokio::spawn({
-            let state = state_mx.clone();
-            let state_notify = state_notify.clone();
-            let start_notify = start_notify.clone();
-            let static_path = relative!("static/");
-            async move {
-                let serve_task = serve_public_api(
-                    pool,
-                    state,
-                    state_notify,
-                    start_notify,
-                    SERVICE_TEST_PORT,
-                    update_sender,
-                    btc_client,
-                    None,
-                    static_path.to_owned(),
-                );
-                futures::pin_mut!(serve_task);
-                futures::future::select(serve_task, receiver.map_err(drop)).await;
-            }
-        });
-        start_notify.notified().await;
-
-        let res = AssertUnwindSafe(test_body()).catch_unwind().await;
-
-        sender.send(()).unwrap();
-
-        assert!(res.is_ok());
-    }
-
-    #[sqlx_database_tester::test(pool(
-        variable = "pool",
-        migrations = "../hexstody-db/migrations"
-    ))]
-    async fn test_public_api_ping() {
-        run_api_test(pool, || async {
-            let client = HexstodyClient::new(&format!(
-                "http://{}:{}",
-                SERVICE_TEST_HOST, SERVICE_TEST_PORT
-            ))
-            .expect("client created");
-            client.ping().await.unwrap();
-        })
-        .await;
-    }
 }

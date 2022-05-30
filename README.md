@@ -12,8 +12,18 @@ export DATABASE_URL=postgresql://hexstody:hexstody@localhost:5432/hexstody
 ```
 
 How to build and run:
+
+Tests
 ```
 cargo test
-cd hexstody-hot
+```
+
+How wallet
+```
 cargo run --bin hexstody-hot -- serve
+```
+
+Operator key generation tool
+```
+cargo run --bin operator-keygen
 ```

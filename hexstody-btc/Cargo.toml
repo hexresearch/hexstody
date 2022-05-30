@@ -21,14 +21,11 @@ bitcoincore-rpc-json = "0.15.0"
 chrono = { version = "0.4.19", features = [ "serde" ] }
 clap = { version = "3.0.0-rc.4", features = ["derive", "env"] }
 ctrlc = "3.2.2"
-dotenv = "0.15.0"
 env_logger = { version = "0.9.0" }
 futures = "0.3.19"
 futures-channel = "0.3"
 futures-util = "0.3.19"
 hexstody-btc-api = { path = "../hexstody-btc-api" }
-hexstody-btc-client = { path = "../hexstody-btc-client" }
-hexstody-db = { path = "../hexstody-db" }
 log = "0.4.14"
 rocket = { version = "=0.5.0-rc.2", default-features = false, features = ["json"] }
 rocket_okapi = { git = "https://github.com/ThouCheese/okapi", branch = "feat/rocket0.5-rc.2", features = ["rapidoc", "swagger"] }
