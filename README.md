@@ -11,14 +11,14 @@ create database hexstody owner hexstody;
 export DATABASE_URL=postgresql://hexstody:hexstody@localhost:5432/hexstody
 ```
 
-Hot to build and run:
+How to build and run:
 
 Tests
 ```
 cargo test
 ```
 
-How wallet
+Hot wallet
 ```
 cargo run --bin hexstody-hot -- serve
 ```
