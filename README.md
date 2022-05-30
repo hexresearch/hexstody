@@ -11,7 +11,7 @@ create database hexstody owner hexstody;
 export DATABASE_URL=postgresql://hexstody:hexstody@localhost:5432/hexstody
 ```
 
-How to build and run:
+Hot to build and run:
 
 Tests
 ```
