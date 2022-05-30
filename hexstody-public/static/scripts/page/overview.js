@@ -12,7 +12,7 @@ async function getBalances() {
 };
 
 async function getHistory(skip, take) {
-    return fetch(`/get_history/${skip}/${take}`).then(r => r.json());
+    return fetch(`/history/${skip}/${take}`).then(r => r.json());
 }
 
 async function initTemplates() {

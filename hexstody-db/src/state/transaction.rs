@@ -1,8 +1,8 @@
+use crate::update::btc::BtcTxCancel;
 use bitcoin::{Address, Txid};
 use chrono::prelude::*;
+use hexstody_btc_api::events::{TxDirection, TxUpdate};
 use serde::{Deserialize, Serialize};
-use crate::update::btc::BtcTxCancel;
-use hexstody_btc_api::events::{TxUpdate, TxDirection};
 
 /// User data for specific currency
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
@@ -68,13 +68,13 @@ pub trait SameBtcTx<T> {
 impl SameBtcTx<BtcTransaction> for BtcTransaction {
     fn is_same_btc_tx(&self, other: &BtcTransaction) -> bool {
         self.txid == other.txid && self.vout == other.vout
-    } 
+    }
 }
 
 impl SameBtcTx<BtcTxCancel> for BtcTransaction {
     fn is_same_btc_tx(&self, other: &BtcTxCancel) -> bool {
         self.txid.to_string() == other.txid && self.vout == other.vout
-    } 
+    }
 }
 
 impl From<TxUpdate> for BtcTransaction {
@@ -86,7 +86,7 @@ impl From<TxUpdate> for BtcTransaction {
             confirmations: val.confirmations,
             amount: match val.direction {
                 TxDirection::Deposit => val.amount as i64,
-                TxDirection::Withdraw => - (val.amount as i64),
+                TxDirection::Withdraw => -(val.amount as i64),
             },
             timestamp: NaiveDateTime::from_timestamp(val.timestamp as i64, 0),
             conflicts: val.conflicts.iter().map(|tx| tx.0).collect(),
