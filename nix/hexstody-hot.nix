@@ -116,11 +116,13 @@ in {
       script = ''
         export DB_PASSWORD=$(cat ${cfg.passwordFile} | xargs echo -n)
         export DATABASE_URL="postgresql://${cfg.databaseUser}:$DB_PASSWORD@${cfg.databaseHost}/${cfg.databaseName}"
-        export HEXSTODY_SECRET_KEY=$(cat ${cfg.secretKey} | xargs echo -n)
+        export HEXSTODY_OPERATOR_API_SECRET_KEY=$(cat ${cfg.secretKey} | xargs echo -n)
+        export HEXSTODY_PUBLIC_API_SECRET_KEY=$HEXSTODY_OPERATOR_API_SECRET_KEY
         cd ${cfg.package}/share
         ${cfg.package}/bin/hexstody-hot \
             --btc-module ${cfg.btcModule} \
-            --static-path ${cfg.package}/share/static \
+            --operator-api-static-path ${cfg.package}/share/operator/static \
+            --public-api-static-path ${cfg.package}/share/public/static \
             serve
       '';
       serviceConfig = {

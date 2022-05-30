@@ -40,8 +40,11 @@ naersk.buildPackage {
     echo "Local database accessible by $DATABASE_URL"
   '';
   postInstall = ''
-    mkdir -p $out/share
-    cp -r ${./hexstody-hot/static} $out/share/static
-    cp -r ${./hexstody-hot/templates} $out/share/templates
+    mkdir -p $out/share/operator
+    mkdir -p $out/share/public
+    cp -r ${./hexstody-operator/static} $out/share/operator/static
+    cp -r ${./hexstody-public/static} $out/share/public/static
+    cp -r ${./hexstody-operator/templates} $out/share/operator/templates
+    cp -r ${./hexstody-public/templates} $out/share/public/templates
   '';
 }
