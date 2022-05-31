@@ -1,5 +1,4 @@
 #[cfg(test)]
-
 use hexstody_btc_client::client::BtcClient;
 use hexstody_db::state::*;
 use hexstody_db::Pool;
@@ -48,7 +47,7 @@ where
                 start_notify,
                 update_sender,
                 btc_client,
-                api_config
+                api_config,
             );
             futures::pin_mut!(serve_task);
             futures::future::select(serve_task, receiver.map_err(drop)).await;
@@ -63,10 +62,7 @@ where
     assert!(res.is_ok());
 }
 
-#[sqlx_database_tester::test(pool(
-    variable = "pool",
-    migrations = "../hexstody-db/migrations"
-))]
+#[sqlx_database_tester::test(pool(variable = "pool", migrations = "../hexstody-db/migrations"))]
 async fn test_public_api_ping() {
     run_api_test(pool, || async {
         let client = HexstodyClient::new(&format!(

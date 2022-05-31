@@ -1,5 +1,5 @@
-use serde::{Serialize, Deserialize};
 use hexstody_btc_api::events::TxCancel;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct BestBtcBlock {
@@ -9,7 +9,7 @@ pub struct BestBtcBlock {
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct BtcTxCancel {
-    pub txid: String, 
+    pub txid: String,
     pub vout: u32,
     pub address: String,
 }
