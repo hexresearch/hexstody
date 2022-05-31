@@ -1,3 +1,7 @@
+# In order for this configuration file to have an effect,
+# you should run hexstody-hot from hexstody/hexstody-hot directory.
+# See https://rocket.rs/v0.5-rc/guide/configuration/#rockettoml
+
 [default]
 
 public_api_enabled = true
