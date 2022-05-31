@@ -32,6 +32,7 @@ async function initTemplates() {
     Handlebars.registerHelper('formattedElapsedTime', function () {
         return formattedElapsedTime(this.date);
     });
+    Handlebars.registerHelper('isInProgress', (req_confirmations, confirmations) => req_confirmations > confirmations);
 }
 
 async function loadBalance() {

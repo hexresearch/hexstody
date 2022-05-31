@@ -1,19 +1,16 @@
 {{#each history_items}}
 <div class="row card">
-   <div class="col-2">
-
-   </div>
-   <div class="col-3">
+   <div class="col">
       {{#if (isDeposit this)}}
       <span class="text-success"> + &nbsp; {{formatCurrencyValue}}</span>
       {{else}}
-      <span class="text-error">   - &nbsp; {{formatCurrencyValue}}</span>
+      <span class="text-error"> - &nbsp; {{formatCurrencyValue}}</span>
       {{/if}}
    </div>
-   <div class="col-1">
+   <div class="col">
       {{currency}}
    </div>
-   <div class="col-2">
+   <div class="col">
       {{formattedElapsedTime}}
    </div>
    {{#if (isWithdrawal this)}}
@@ -22,9 +19,16 @@
    </div>
    {{/if}}
    {{#if (isDeposit this)}}
+   {{#if (isInProgress ../target_number_of_confirmations number_of_confirmations )}}
    <div class="col">
       Confirmations: {{number_of_confirmations}} of {{../target_number_of_confirmations}}
    </div>
+   {{else}}
+   <div class="col">
+      Completed
+   </div>
+
+   {{/if}}
    {{/if}}
 </div>
 {{/each}}
