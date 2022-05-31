@@ -1,12 +1,12 @@
 use chrono::NaiveDateTime;
 
-use uuid::Uuid;
 use rocket_okapi::okapi::schemars::{self, JsonSchema};
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
-use super::domain::currency::{Currency, CurrencyAddress, BtcAddress};
+use super::domain::currency::{BtcAddress, Currency, CurrencyAddress};
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
 pub enum WithdrawalRequestStatus {
     UnderReview,
     InProgress,
@@ -20,15 +20,15 @@ pub struct BalanceItem {
     pub value: i64,
 }
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
 pub struct DepositHistoryItem {
     pub currency: Currency,
     pub date: NaiveDateTime,
-    pub value: u64,
+    pub value: i64,
     pub number_of_confirmations: u64,
 }
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
 pub struct WithdrawalHistoryItem {
     pub currency: Currency,
     pub date: NaiveDateTime,
@@ -36,13 +36,21 @@ pub struct WithdrawalHistoryItem {
     pub status: WithdrawalRequestStatus,
 }
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(tag = "type")]
 #[serde(rename_all = "camelCase")]
 pub enum HistoryItem {
     Deposit(DepositHistoryItem),
     Withdrawal(WithdrawalHistoryItem),
 }
+
+pub fn history_item_time(h: &HistoryItem) -> &NaiveDateTime {
+    match h {
+        HistoryItem::Deposit(d) => &d.date,
+        HistoryItem::Withdrawal(w) => &w.date,
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct Balance {
     pub balances: Vec<BalanceItem>,
@@ -102,8 +110,8 @@ pub struct WithdrawalRequest {
     #[schemars(example = "example_amount")]
     pub amount: u64,
     /// Some request require manual confirmation
-    #[schemars(example = "example_confrimtaion_status")]
-    pub confrimtaion_status: String,
+    #[schemars(example = "example_confirmation_status")]
+    pub confirmation_status: String,
 }
 
 fn example_uuid() -> &'static str {
@@ -126,7 +134,7 @@ fn example_amount() -> u64 {
     3
 }
 
-fn example_confrimtaion_status() -> &'static str {
+fn example_confirmation_status() -> &'static str {
     "1 of 3"
 }
 

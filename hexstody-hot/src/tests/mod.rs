@@ -137,7 +137,7 @@ async fn test_btc_rbf_deposit() {
         let dep_address = Address::from_str(&dep_info.address).expect("Bitcoin address");
         let amount = Amount::from_sat(10_000);
         let dep_txid = send_funds(&env.btc_node, &dep_address, amount);
-        
+
         sleep(Duration::from_millis(1000)).await;
 
         let _ = bumpfee(&env.btc_node, &dep_txid, None, None, None, None).expect("bump fee");

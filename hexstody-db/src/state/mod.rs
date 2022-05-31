@@ -321,7 +321,7 @@ mod tests {
         assert_eq!(extracted_withdrawal_request.address, address);
         assert_eq!(extracted_withdrawal_request.amount, amount);
         assert_eq!(
-            extracted_withdrawal_request.confrimtaion_status,
+            extracted_withdrawal_request.confirmation_status,
             WithdrawalRequestStatus::Confirmations(Vec::new())
         );
     }

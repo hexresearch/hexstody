@@ -77,6 +77,12 @@ impl UserCurrencyInfo {
     }
 
     /// Includes unconfirmed transactions
+    pub fn unconfirmed_transactions(&self) -> impl Iterator<Item = &Transaction> {
+        self.transactions
+            .iter()
+            .filter_map(|t| if t.is_conflicted() { None } else { Some(t) })
+    }
+    /// Includes unconfirmed transactions
     pub fn balance(&self) -> i64 {
         let tx_sum: i64 = self
             .transactions

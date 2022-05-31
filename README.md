@@ -18,7 +18,7 @@ Tests
 cargo test
 ```
 
-How wallet
+Hot wallet
 ```
 cargo run --bin hexstody-hot -- serve
 ```
