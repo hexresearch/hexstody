@@ -123,6 +123,8 @@ in {
             --btc-module ${cfg.btcModule} \
             --operator-api-static-path ${cfg.package}/share/operator/static \
             --public-api-static-path ${cfg.package}/share/public/static \
+            --operator-api-template-path ${cfg.package}/share/operator/templates \
+            --public-api-template-path ${cfg.package}/share/public/templates \
             serve
       '';
       serviceConfig = {
