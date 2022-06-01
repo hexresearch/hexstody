@@ -15,7 +15,7 @@
     <span id="file-selector-status"></span>
 </div>
 <h3>Withdrawal requests</h3>
-<table>
+<table id="withdrawal-requests-table">
     <thead>
         <tr>
             <th><b>Request ID</b></th>
@@ -28,33 +28,6 @@
             <th><b>Actions</b></th>
         </tr>
     </thead>
-    <tbody>
-        {{#each withdrawal_requests as |request|}}
-        <tr>
-            <td>{{id}}</td>
-            <td>{{user}}</td>
-            {{#each address}}
-            {{#if @first}}
-            <td>{{@key}}</td>
-            <td>{{this}}</td>
-            {{/if}}
-            {{/each}}
-            <td>{{created_at}}</td>
-            <td>{{amount}}</td>
-            <td>{{confirmation_status}}</td>
-            <td>
-                <div class="row">
-                    <div class="col">
-                        <button type="button" class="button primary icon" disabled>Confirm</button>
-                    </div>
-                    <div class="col">
-                        <button type="button" class="button error icon" disabled>Reject</button>
-                    </div>
-                </div>
-            </td>
-        </tr>
-        {{/each}}
-    </tbody>
 </table>
 {{/inline}}
 
