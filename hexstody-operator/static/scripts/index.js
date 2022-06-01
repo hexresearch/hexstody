@@ -126,7 +126,7 @@ async function updateWithdrawalRequests() {
         addCell(row, request["address"][currency]);
         addCell(row, request["created_at"]);
         addCell(row, request["amount"]);
-        addCell(row, request["confrimtaion_status"]);
+        addCell(row, request["confirmation_status"]);
         addActionBtns(row, request);
         tableBody.appendChild(row);
     }
