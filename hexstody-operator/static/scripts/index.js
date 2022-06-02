@@ -3,11 +3,32 @@ const fileSelectorStatus = document.getElementById("file-selector-status");
 const withdrawalRequestsTable = document.getElementById("withdrawal-requests-table");
 
 let privateKeyJwk;
+let publicKeyJwk;
+
+/*
+Convert a string into an ArrayBuffer
+from https://developers.google.com/web/updates/2012/06/How-to-convert-ArrayBuffer-to-and-from-String
+*/
+function str2ab(str) {
+    const buf = new ArrayBuffer(str.length);
+    const bufView = new Uint8Array(buf);
+    for (let i = 0, strLen = str.length; i < strLen; i++) {
+        bufView[i] = str.charCodeAt(i);
+    }
+    return buf;
+}
 
 function enableActionButtons() {
     let actionButtons = document.querySelectorAll("#withdrawal-requests-table button");
     for (let i = 0; i < actionButtons.length; i++) {
         actionButtons[i].disabled = false;
+    }
+}
+
+function disableActionButtons() {
+    let actionButtons = document.querySelectorAll("#withdrawal-requests-table button");
+    for (let i = 0; i < actionButtons.length; i++) {
+        actionButtons[i].disabled = true;
     }
 }
 
@@ -20,22 +41,26 @@ async function importKey(_event) {
         } catch (_error) {
             fileSelectorStatus.className = "text-error";
             fileSelectorStatus.innerText = "Wrong password";
+            disableActionButtons();
             return;
         };
     };
     if (!keyObj.isPrivate) {
         fileSelectorStatus.className = "text-error";
         fileSelectorStatus.innerText = "The selected key is not private!";
+        disableActionButtons();
         return;
     } else {
         try {
             privateKeyJwk = await keyObj.export('jwk');
+            publicKeyJwk = await keyObj.export('jwk', { outputPublic: true });
             fileSelectorStatus.className = "text-success";
             fileSelectorStatus.innerText = "Private key imported successfully!";
             enableActionButtons();
         } catch (error) {
             fileSelectorStatus.className = "text-error";
             fileSelectorStatus.innerText = error;
+            disableActionButtons();
             return;
         };
     };
@@ -54,20 +79,31 @@ async function loadKeyFile(event) {
     };
 }
 
-function confirmRequest(request) {
-    console.log("confirm:" + request.id);
-
-    // const msg = new Uint8Array(32);
-    // for (let i = 0; i < 32; i++) msg[i] = 0xFF & i;
-
-    // const sig = await window.jscec.sign(msg, privateKeyJwk, 'SHA-256').catch(error => {
-    //     fileSelectorStatus.className = "text-error";
-    //     fileSelectorStatus.innerText = error;
-    // });
-}
-
-function rejectRequest(request) {
-    console.log("reject:" + request.id);
+async function processRequest(request, isConfirmation) {
+    const url = (isConfirmation ? "/confirm/" : "/reject/") + request.id;
+    const requestBody = JSON.stringify(request);
+    const nonce = Date.now();
+    const publicKeyStr = JSON.stringify(publicKeyJwk);
+    const elements = [url, requestBody, nonce, publicKeyStr];
+    const msg = elements.join(':');
+    const binaryMsg = str2ab(msg);
+    const signature = await window.jscec.sign(binaryMsg, privateKeyJwk, 'SHA-256').catch(error => {
+        alert(error);
+    });
+    try {
+        await fetch(url, {
+            method: 'POST',
+            body: requestBody,
+            headers: {
+                'Content-Type': 'application/json',
+                'Signarute': btoa(signature),
+                'Signarute-Nonce': btoa(nonce),
+                'Signature-Public-Key': publicKeyStr
+            }
+        });
+    } catch (error) {
+        alert('Error:', error);
+    }
 }
 
 async function updateWithdrawalRequests() {
@@ -94,7 +130,7 @@ async function updateWithdrawalRequests() {
         let confirmBtnCol = document.createElement("div");
         confirmBtnCol.setAttribute("class", "col");
         let confirmBtn = document.createElement("button");
-        // confirmBtn.onclick = confirmRequest(request);
+        confirmBtn.addEventListener("click", () => processRequest(request, true));
         let confirmBtnText = document.createTextNode("Confirm")
         confirmBtn.appendChild(confirmBtnText);
         confirmBtn.setAttribute("class", "button primary");
@@ -105,7 +141,7 @@ async function updateWithdrawalRequests() {
         let rejectBtnCol = document.createElement("div");
         rejectBtnCol.setAttribute("class", "col");
         let rejectBtn = document.createElement("button");
-        // confirmBtn.onclick = rejectRequest(request);
+        rejectBtn.addEventListener("click", () => processRequest(request, false));
         let rejectBtnText = document.createTextNode("Reject")
         rejectBtn.appendChild(rejectBtnText);
         rejectBtn.setAttribute("class", "button error");
