@@ -41,14 +41,16 @@ rand_core = { version = "0.6.3", features = ["std"] }
 rocket = { version = "0.5.0-rc.2", default-features = false, features = [
   "json",
   "secrets",
+  "uuid",
 ] }
 rocket_okapi = { git = "https://github.com/ThouCheese/okapi", branch = "feat/rocket0.5-rc.2", features = [
   "rapidoc",
   "swagger",
+  "uuid",
 ] }
 uuid = { version = "0.8.2", features = ["v4"] }
 rocket_dyn_templates = { version = "0.1.0-rc.2", features = ["handlebars"] }
-schemars = "0.8.8"
+schemars = { version = "0.8.8", features = ["uuid"] }
 pwhash = "1.0.0"
 rpassword = "6.0.1"
 figment = { version = "0.10", features = ["toml", "env"] }

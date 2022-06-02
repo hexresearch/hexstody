@@ -1,9 +1,11 @@
 use figment::Figment;
+use p256::ecdsa::VerifyingKey;
+use std::str::FromStr;
 use rocket::fairing::AdHoc;
 use rocket::fs::FileServer;
 use rocket::http::Status;
 use rocket::response::status::Created;
-use rocket::serde::json::Json;
+use rocket::serde::{json::Json, uuid::Uuid};
 use rocket::State as RocketState;
 use rocket::{get, post, routes};
 use rocket_dyn_templates::Template;
@@ -12,6 +14,7 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::{mpsc, Mutex, Notify};
+use log::*;
 
 use hexstody_api::types::{WithdrawalRequest, WithdrawalRequestInfo};
 use hexstody_btc_client::client::BtcClient;
@@ -77,6 +80,40 @@ async fn create(
     Ok(Created::new("/request"))
 }
 
+#[openapi(tag = "confirm")]
+#[post("/confirm/<request_id>", format = "json", data = "<request>")]
+async fn confirm(
+    update_sender: &RocketState<mpsc::Sender<StateUpdate>>,
+    request_id: String,
+    // request_id: Uuid,
+    request: String,
+) -> Result<(), Status> {
+    info!("{:?}", request);
+    // let public_key = VerifyingKey::from_str(&confirmation.public_key).map_err(|_| Status::BadRequest)?;
+    // let signature = &confirmation.signature;
+    // public_key.verify(signature);
+    Ok(())
+    // let info: WithdrawalRequestInfoDb = withdrawal_request_info.into_inner().into();
+    // let state_update = StateUpdate::new(UpdateBody::NewWithdrawalRequest(info));
+    // // TODO: check that state update was correctly processed
+    // update_sender
+    //     .send(state_update)
+    //     .await
+    //     .map_err(|_| Status::InternalServerError)?;
+    // Ok(Created::new("/request"))
+}
+
+#[openapi(tag = "reject")]
+#[post("/reject/<request_id>", format = "json", data = "<request>")]
+async fn reject(
+    update_sender: &RocketState<mpsc::Sender<StateUpdate>>,
+    request_id: String,
+    // request_id: Uuid,
+    request: Json<WithdrawalRequest>,
+) -> Result<(), Status> {
+    Ok(())
+}
+
 pub async fn serve_api(
     pool: Pool,
     state: Arc<Mutex<HexstodyState>>,
@@ -95,7 +132,7 @@ pub async fn serve_api(
     let _ = rocket::custom(api_config)
         .mount("/", FileServer::from(static_path))
         .mount("/", routes![index])
-        .mount("/", openapi_get_routes![list, create])
+        .mount("/", openapi_get_routes![list, create, confirm, reject])
         .mount(
             "/swagger/",
             make_swagger_ui(&SwaggerUIConfig {
