@@ -22,6 +22,10 @@ Hot wallet
 ```
 cargo run --bin hexstody-hot -- serve
 ```
+Hot wallet with builtin regtest BTC node:
+```
+cargo run --bin hexstody-hot -- --start-regtest serve
+```
 
 Operator key generation tool
 ```
