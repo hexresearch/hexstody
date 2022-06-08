@@ -43,3 +43,19 @@ export function formattedElapsedTime(dateTimeString) {
         return new Date(localDate).toLocaleString();
     }
 }
+
+export function initTabs(tabIds) {
+    function tabClicked(clickedTabId) {
+        tabIds.forEach(tabId => {
+            const validationDisplay = document.getElementById(tabId + "-body");
+            if (tabId === clickedTabId) {
+                document.getElementById(tabId).classList.add("active");
+                validationDisplay.style.display = "block";
+            } else {
+                document.getElementById(tabId).classList.remove("active");
+                validationDisplay.style.display = "none";
+            }
+        });
+    }
+    tabIds.forEach(tab => document.getElementById(tab).onclick = () => tabClicked(tab));
+}
