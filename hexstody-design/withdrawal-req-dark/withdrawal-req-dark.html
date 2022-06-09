@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset='utf-8'>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="referrer" content="unsafe-url">
+    <title>Hexstody</title>
+    <link href='https://fonts.googleapis.com/css?family=Inter' rel='stylesheet'>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdn.materialdesignicons.com/5.4.55/css/materialdesignicons.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.3/css/bulma.min.css">
+    <link rel="stylesheet" href="css/bulmaswatch.min.css">
+    <style>
+      .page-content {
+        margin-left: 25px;
+        margin-right: 25px;
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 700;
+        color: #FFFFFF;
+      }
+      .nav-logo {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 700;
+        font-size: 24px;
+        line-height: 32px;
+        letter-spacing: 0.02em;
+        color: #FFFFFF;
+      }
+      .nav-lang{
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 500;
+        font-size: 14px;
+        line-height: 20px;
+        color: #FFFFFF;
+        }
+      .nav-account {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 500;
+        font-size: 16px;
+        line-height: 120%;
+        color: #FFFFFF;
+      }
+      .content-row {
+        margin-left: 40px;
+        margin-right: 40px;
+      }
+      .wd-icon-item {
+        color: #409EFF;
+      }
+      .sel-priv-key-label {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 600;
+        font-size: 20px;
+        line-height: 28px;
+        color: #FFFFFF;
+      }
+      .status-mes-label {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 500;
+        font-size: 14px;
+        line-height: 20px;
+        color: #EB5757;
+      }
+      .withdrawal-req-label {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 600;
+        font-size: 20px;
+        line-height: 28px;
+        color: #FFFFFF;
+      }
+      .req-table-head {
+      }
+      .req-table-head-item {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 500;
+        font-size: 14px;
+        line-height: 20px;
+        color: #797883;
+      }
+      .req-table-body-item {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 500;
+        font-size: 14px;
+        line-height: 20px;
+        color: #FFFFFF;
+      }
+      .req-table-status-completed {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 500;
+        font-size: 14px;
+        line-height: 20px;
+        color: #6FCF97;
+      }
+      .req-table-status-in-progress {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 500;
+        font-size: 14px;
+        line-height: 20px;
+        color: #409EFF;
+      }
+
+
+
+      .balance-val-gr {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 600;
+        font-size: 36px;
+        line-height: 48px;
+        letter-spacing: 0.02em;
+        color: #77778C;
+      }
+      .content-separator {
+        border: 1px solid #D5D7E7;
+        height: 1px;
+      }
+      .item-label {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 600;
+        font-size: 16px;
+        line-height: 24px;
+        color: #282143;
+      }
+      .item-val-bg {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 600;
+        font-size: 28px;
+        line-height: 36px;
+        color: #282143;
+      }
+      .item-val-gr {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 600;
+        font-size: 16px;
+        line-height: 24px;
+        color: #77778C;
+      }
+      .item-buttom-w {
+        float: right;
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 500;
+        color: #282143;
+      }
+      .item-buttom-d {
+        float: right;
+        background-color: #409EFF !Important;
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 500;
+        color: #FFFFFF;
+      }
+      .column-item-one{
+        padding: 12px;
+      }
+      .rt-item-one {
+        width: 40px;
+        height: 40px;
+        background-color: #ECEFF4;
+        border-radius: 20px;
+        padding-left: 8px;
+        padding-top: 8px;
+      }
+      .rt-item-icon-one {
+        color: #409EFF;
+      }
+      .rt-item-two-bg {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 600;
+        font-size: 16px;
+        line-height: 24px;
+        color: #282143;
+      }
+      .rt-item-two-gr {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 500;
+        font-size: 16px;
+        line-height: 24px;
+        color: #77778C;
+      }
+      .rt-item-three {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 500;
+        font-size: 16px;
+        line-height: 24px;
+        color: #77778C;
+      }
+      .rt-item-four {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 600;
+        font-size: 16px;
+        line-height: 24px;
+        color: #77778C;
+      }
+      .column-item-four{
+        text-align: right;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="full-height" style="background-color: #454545;">
+      <nav class="navbar" style="background-color: #454545;">
+        <div class="navbar-brand">
+          <a href="" class="navbar-item nav-logo">
+            <span>LOGO</span>
+          </a>
+        </div>
+        <div class="navbar-end">
+          <div class="navbar-item has-dropdown is-hoverable lang-dropdown has-text-weight-bold nav-account">
+            <a class="navbar-link is-arrowless has-text-black">
+              <span style="color: #FFFFFF;">account@gmail.com</span>
+              <span style="color: #FFFFFF;" class="icon"><span class="mdi mdi-menu-down mdi-16px"></span></span>
+            </a>
+            <div class="navbar-dropdown is-boxed is-right">
+              <a class="navbar-item has-text-black">
+                <span style="color: #FFFFFF;">Item 1</span></a>
+              <a class="navbar-item has-text-black">
+                <span style="color: #FFFFFF;">Item 2</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      <div class="container" style="padding-top: 25px; background-color: #454545;">
+
+        <div class="box page-content" style="box-shadow: none !Important; background-color: #1A1A1A;">
+          <div class="content-row">
+            <span class="icon wd-icon-item"><span class="mdi mdi-arrow-left mdi-24px"></span></span>
+            <span class="sel-priv-key-label">Select the private key</span>
+          </div>
+
+          <div class="content-row content-separator my-4" style="margin-left: -20px; margin-right: -20px;"></div>
+
+          <input class="input" type="file" placeholder="key file" style="width: 265px; background-color: #1A1A1A; color: #FFFFFF;">
+          <span class="status-mes-label">Status message</status>
+
+        </div>
+
+        <div class="box page-content" style="box-shadow: none !Important; background-color: #1A1A1A;">
+          <div class="content-row">
+            <span class="withdrawal-req-label">Withdraval request</span>
+          </div>
+
+          <div class="content-separator my-4"  style="margin-left: -20px; margin-right: -20px;"></div>
+
+          <table class="table" style=" background-color: #1A1A1A;">
+            <thead class="req-table-head">
+              <tr>
+                <th class="req-table-head-item py-4">Time</th>
+                <th class="req-table-head-item py-4">ID</th>
+                <th class="req-table-head-item py-4">User</th>
+                <th class="req-table-head-item py-4">Currency</th>
+                <th class="req-table-head-item py-4">Withdrawal Address</th>
+                <th class="req-table-head-item py-4">Amount</th>
+                <th class="req-table-head-item py-4">Status</th>
+                <th class="req-table-head-item py-4">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="req-table-body-item py-4">2022-05-31 14:37:15</td>
+                <td class="req-table-body-item py-4">123456001</td>
+                <td class="req-table-body-item py-4">eexample@mail.ru</td>
+                <td class="req-table-body-item py-4">BTC</td>
+                <td class="req-table-body-item py-4">
+                  b12sd23332sd534...
+                  <span class="icon"><span class="mdi mdi-content-copy mdi-16px"></span></span>
+                </td>
+                <td class="req-table-body-item py-4">0.000005</td>
+                <td class="req-table-body-item py-4"><span class="req-table-status-completed">Completed</span></td>
+                <td class="req-table-body-item py-4">
+                </td>
+              </tr>
+              <tr>
+                <td class="req-table-body-item py-4">2022-05-31 14:37:15</td>
+                <td class="req-table-body-item py-4">123456001</td>
+                <td class="req-table-body-item py-4">eexample@mail.ru</td>
+                <td class="req-table-body-item py-4">BTC</td>
+                <td class="req-table-body-item py-4">
+                  b12sd23332sd534...
+                  <span class="icon"><span class="mdi mdi-content-copy mdi-16px"></span></span>
+                </td>
+                <td class="req-table-body-item py-4">0.000005</td>
+                <td class="req-table-body-item py-4"><span class="req-table-status-in-progress">In progress</span></td>
+                <td class="req-table-body-item py-4">
+                  <button class="button is-small is-success">Confirm</button>
+                  <button class="button is-small is-danger">Reject</button>
+                </td>
+              </tr>
+              <tr>
+                <td class="req-table-body-item py-4">2022-05-31 14:37:15</td>
+                <td class="req-table-body-item py-4">123456001</td>
+                <td class="req-table-body-item py-4">eexample@mail.ru</td>
+                <td class="req-table-body-item py-4">BTC</td>
+                <td class="req-table-body-item py-4">
+                  b12sd23332sd534...
+                  <span class="icon"><span class="mdi mdi-content-copy mdi-16px"></span></span>
+                </td>
+                <td class="req-table-body-item py-4">0.000005</td>
+                <td class="req-table-body-item py-4"><span class="req-table-status-completed">Completed</span></td>
+                <td class="req-table-body-item py-4">
+                </td>
+              </tr>
+              <tr>
+                <td class="req-table-body-item py-4">2022-05-31 14:37:15</td>
+                <td class="req-table-body-item py-4">123456001</td>
+                <td class="req-table-body-item py-4">eexample@mail.ru</td>
+                <td class="req-table-body-item py-4">BTC</td>
+                <td class="req-table-body-item py-4">
+                  b12sd23332sd534...
+                  <span class="icon"><span class="mdi mdi-content-copy mdi-16px"></span></span>
+                </td>
+                <td class="req-table-body-item py-4">0.000005</td>
+                <td class="req-table-body-item py-4"><span class="req-table-status-completed">Completed</span></td>
+                <td class="req-table-body-item py-4">
+                </td>
+              </tr>
+              <tr>
+                <td class="req-table-body-item py-4">2022-05-31 14:37:15</td>
+                <td class="req-table-body-item py-4">123456001</td>
+                <td class="req-table-body-item py-4">eexample@mail.ru</td>
+                <td class="req-table-body-item py-4">BTC</td>
+                <td class="req-table-body-item py-4">
+                  b12sd23332sd534...
+                  <span class="icon"><span class="mdi mdi-content-copy mdi-16px"></span></span>
+                </td>
+                <td class="req-table-body-item py-4">0.000005</td>
+                <td class="req-table-body-item py-4"><span class="req-table-status-completed">Completed</span></td>
+                <td class="req-table-body-item py-4">
+                </td>
+              </tr>
+              <tr>
+                <td class="req-table-body-item py-4">2022-05-31 14:37:15</td>
+                <td class="req-table-body-item py-4">123456001</td>
+                <td class="req-table-body-item py-4">eexample@mail.ru</td>
+                <td class="req-table-body-item py-4">BTC</td>
+                <td class="req-table-body-item py-4">
+                  b12sd23332sd534...
+                  <span class="icon"><span class="mdi mdi-content-copy mdi-16px"></span></span>
+                </td>
+                <td class="req-table-body-item py-4">0.000005</td>
+                <td class="req-table-body-item py-4"><span class="req-table-status-in-progress">In progress</span></td>
+                <td class="req-table-body-item py-4">
+                  <button class="button is-small is-success">Confirm</button>
+                  <button class="button is-small is-danger">Reject</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+
+
+
+        </div>
+
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset='utf-8'>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="referrer" content="unsafe-url">
+    <title>Hexstody</title>
+    <link href='https://fonts.googleapis.com/css?family=Inter' rel='stylesheet'>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdn.materialdesignicons.com/5.4.55/css/materialdesignicons.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.3/css/bulma.min.css">
+    <link rel="stylesheet" href="css/bulmaswatch.min.css">
+    <style>
+      .page-content {
+        margin-left: 15%;
+        margin-right: 15%;
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 700;
+        color: #282143;
+      }
+      .nav-logo {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 700;
+        font-size: 24px;
+        line-height: 32px;
+        letter-spacing: 0.02em;
+        color: #FFFFFF;
+      }
+      .nav-lang{
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 500;
+        font-size: 14px;
+        line-height: 20px;
+        color: #FFFFFF;
+        }
+      .nav-account {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 500;
+        font-size: 16px;
+        line-height: 120%;
+        color: #FFFFFF;
+      }
+      .content-row {
+        margin-left: 40px;
+        margin-right: 40px;
+      }
+      .balance-label {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 600;
+        font-size: 20px;
+        line-height: 28px;
+        color: #FFFFFF;
+      }
+      .balance-val-bg {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 600;
+        font-size: 36px;
+        line-height: 48px;
+        letter-spacing: 0.02em;
+        color: #FFFFFF;
+      }
+      .balance-val-gr {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 600;
+        font-size: 36px;
+        line-height: 48px;
+        letter-spacing: 0.02em;
+        color: #797883;
+      }
+      .content-separator {
+        border: 1px solid #D5D7E7;
+        height: 1px;
+      }
+      .item-label {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 600;
+        font-size: 16px;
+        line-height: 24px;
+        color: #FFFFFF;
+      }
+      .item-val-bg {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 600;
+        font-size: 28px;
+        line-height: 36px;
+        color: #FFFFFF;
+      }
+      .item-val-gr {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 600;
+        font-size: 16px;
+        line-height: 24px;
+        color: #797883;
+      }
+      .item-buttom-w {
+        float: right;
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 500;
+        color: #FFFFFF;
+      }
+      .item-buttom-d {
+        float: right;
+        background-color: #409EFF !Important;
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 500;
+        color: #FFFFFF;
+      }
+      .column-item-one{
+        padding: 12px;
+      }
+      .rt-item-one {
+        width: 40px;
+        height: 40px;
+        background-color: #404040;
+        border-radius: 20px;
+        padding-left: 8px;
+        padding-top: 8px;
+      }
+      .rt-item-icon-one {
+        color: #FFFFFF;
+      }
+      .rt-item-two-bg {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 600;
+        font-size: 16px;
+        line-height: 24px;
+        color: #FFFFFF;
+      }
+      .rt-item-two-gr {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 500;
+        font-size: 16px;
+        line-height: 24px;
+        color: #797883;
+      }
+      .rt-item-three {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 500;
+        font-size: 16px;
+        line-height: 24px;
+        color: #797883;
+      }
+      .rt-item-four {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 600;
+        font-size: 16px;
+        line-height: 24px;
+        color: #797883;
+      }
+      .column-item-four{
+        text-align: right;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="full-height" style="background-color: #454545;">
+      <nav class="navbar" style="background-color: #454545;">
+        <div class="navbar-brand">
+          <a href="" class="navbar-item nav-logo">
+            <span>LOGO</span>
+          </a>
+        </div>
+        <div class="navbar-start">
+          <div class="navbar-item has-dropdown is-hoverable lang-dropdown has-text-weight-bold">
+            <a class="navbar-link is-arrowless has-text-black" style="color: #FFFFFF;">
+              <span style="color: #FFFFFF;">РУ</span>
+              <span class="icon" style="color: #FFFFFF;"><span class="mdi mdi-menu-down mdi-24px"></span></span>
+            </a>
+            <div class="navbar-dropdown is-boxed is-right">
+              <a class="navbar-item has-text-black">
+                <span style="color: #FFFFFF;">РУ</span></a>
+              <a class="navbar-item has-text-black">
+                <span style="color: #FFFFFF;">EN</span>
+              </a>
+            </div>
+          </div>
+        </div>
+        <div class="navbar-end">
+          <div class="navbar-item has-dropdown is-hoverable lang-dropdown has-text-weight-bold nav-account">
+            <a class="navbar-link is-arrowless has-text-black">
+              <span style="color: #FFFFFF;">account@gmail.com</span>
+              <span style="color: #FFFFFF;" class="icon"><span class="mdi mdi-menu-down mdi-16px"></span></span>
+            </a>
+            <div class="navbar-dropdown is-boxed is-right">
+              <a class="navbar-item has-text-black">
+                <span style="color: #FFFFFF;">Item 1</span></a>
+              <a class="navbar-item has-text-black">
+                <span style="color: #FFFFFF;">Item 2</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      <div class="container" style="padding-top: 25px; background-color: #454545;">
+
+        <div class="box page-content" style="box-shadow: none !Important; background-color: #1A1A1A;">
+          <div class="content-row">
+            <span class="balance-label">Total Balance</span>
+          </div>
+          <div class="content-row">
+            <span class="balance-val-bg">145 000 $</span>
+            <span class="balance-val-gr">(8 985 650 P)</span>
+          </div>
+
+          <div class="content-row content-separator my-4"></div>
+
+          <div class="content-row mt-5">
+            <div><span class="item-label">Bitcoin</span></div>
+            <div>
+              <span class="item-val-bg">B 2.145</span>
+              <span class="item-val-gr">(1 500 USD)</span>
+              <button class="button item-buttom-w">Withdrow</button>
+              <button class="button is-info mr-2 item-buttom-d">Deposit</button>
+            </div>
+          </div>
+
+          <div class="content-row mt-5">
+            <div><span class="item-label">Etherium (ETH)</span></div>
+            <div>
+              <span class="item-val-bg">E 15 000</span>
+              <span class="item-val-gr">(1 100 USD)</span>
+              <button class="button item-buttom-w">Withdrow</button>
+              <button class="button is-info mr-2 item-buttom-d">Deposit</button>
+            </div>
+          </div>
+
+          <div class="content-row mt-5">
+            <div><span class="item-label">EOS (EOS)</span></div>
+            <div>
+              <span class="item-val-bg">S 2.116</span>
+              <span class="item-val-gr">(1.500 USD)</span>
+              <button class="button item-buttom-w">Withdrow</button>
+              <button class="button is-info mr-2 item-buttom-d">Deposit</button>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="box page-content" style="box-shadow: none !Important; background-color: #1A1A1A;">
+          <div class="content-row">
+            <span class="balance-label">Resent transaction</span>
+          </div>
+
+          <div class="content-separator my-4"></div>
+
+          <div class="columns content-row">
+            <div class="column-item-one">
+              <div class="rt-item-one">
+                <span class="icon rt-item-icon-one"><span class="mdi mdi-arrow-collapse-up mdi-24px"></span></span>
+              </div>
+            </div>
+            <div class="column">
+              <span class="rt-item-two-bg">Withdrawal BTC</span>
+              <br>
+              <span class="rt-item-two-gr">2022-05-31 14:30</span>
+            </div>
+            <div class="column">
+              <span class="rt-item-three">as45sdff5d5f4df4df5d5f...</span>
+            </div>
+            <div class="column column-item-four">
+              <span class="rt-item-four">-0.311 BTC</span>
+            </div>
+          </div>
+
+          <div class="columns content-row">
+            <div class="column-item-one">
+              <div class="rt-item-one">
+                <span class="icon rt-item-icon-one"><span class="mdi mdi-arrow-up mdi-24px"></span></span>
+              </div>
+            </div>
+            <div class="column">
+              <span class="rt-item-two-bg">Withdrawal BTC</span>
+              <br>
+              <span class="rt-item-two-gr">2022-05-31 14:30</span>
+            </div>
+            <div class="column">
+              <span class="rt-item-three">as45sdff5d5f4df4df5d5f...</span>
+            </div>
+            <div class="column column-item-four">
+              <span class="rt-item-four">-0.311 BTC</span>
+            </div>
+          </div>
+
+          <div class="columns content-row">
+            <div class="column-item-one">
+              <div class="rt-item-one">
+                <span class="icon rt-item-icon-one"><span class="mdi mdi-arrow-collapse-down mdi-24px"></span></span>
+              </div>
+            </div>
+            <div class="column">
+              <span class="rt-item-two-bg">Withdrawal BTC</span>
+              <br>
+              <span class="rt-item-two-gr">2022-05-31 14:30</span>
+            </div>
+            <div class="column">
+              <span class="rt-item-three">as45sdff5d5f4df4df5d5f...</span>
+            </div>
+            <div class="column column-item-four">
+              <span class="rt-item-four">-0.311 BTC</span>
+            </div>
+          </div>
+
+          <div class="columns content-row">
+            <div class="column-item-one">
+              <div class="rt-item-one">
+                <span class="icon rt-item-icon-one"><span class="mdi mdi-arrow-down mdi-24px"></span></span>
+              </div>
+            </div>
+            <div class="column">
+              <span class="rt-item-two-bg">Withdrawal BTC</span>
+              <br>
+              <span class="rt-item-two-gr">2022-05-31 14:30</span>
+            </div>
+            <div class="column">
+              <span class="rt-item-three">as45sdff5d5f4df4df5d5f...</span>
+            </div>
+            <div class="column column-item-four">
+              <span class="rt-item-four">-0.311 BTC</span>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  </body>
+</html>
