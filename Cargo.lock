@@ -1186,7 +1186,7 @@ dependencies = [
  "chrono",
  "pwhash",
  "rocket",
- "rocket_okapi",
+ "rocket_okapi 0.8.0-rc.1",
  "schemars",
  "serde",
  "serde_json",
@@ -1215,7 +1215,7 @@ dependencies = [
  "nix",
  "port-selector",
  "rocket",
- "rocket_okapi",
+ "rocket_okapi 0.8.0-rc.1",
  "schemars",
  "serde",
  "serde_json",
@@ -1232,7 +1232,7 @@ dependencies = [
  "bitcoin",
  "bitcoin_hashes",
  "rocket",
- "rocket_okapi",
+ "rocket_okapi 0.8.0-rc.1",
  "serde",
  "serde_json",
 ]
@@ -1339,7 +1339,7 @@ dependencies = [
  "pwhash",
  "rocket",
  "rocket_dyn_templates",
- "rocket_okapi",
+ "rocket_okapi 0.8.0-rc.1",
  "run_script",
  "schemars",
  "serde",
@@ -1355,8 +1355,10 @@ name = "hexstody-operator"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "base64",
  "chrono",
  "clap",
+ "ecdsa",
  "figment",
  "futures",
  "futures-channel",
@@ -1366,13 +1368,14 @@ dependencies = [
  "hexstody-btc-client",
  "hexstody-db",
  "log",
+ "okapi 0.7.0-rc.1 (git+https://github.com/GREsau/okapi?rev=65244f0)",
  "p256",
  "pkcs8",
  "pwhash",
  "rand_core 0.6.3",
  "rocket",
  "rocket_dyn_templates",
- "rocket_okapi",
+ "rocket_okapi 0.8.0-rc.2",
  "rpassword",
  "schemars",
  "serde",
@@ -1402,7 +1405,7 @@ dependencies = [
  "pwhash",
  "rocket",
  "rocket_dyn_templates",
- "rocket_okapi",
+ "rocket_okapi 0.8.0-rc.1",
  "schemars",
  "serde",
  "serde_json",
@@ -1977,6 +1980,17 @@ dependencies = [
 name = "okapi"
 version = "0.7.0-rc.1"
 source = "git+https://github.com/ThouCheese/okapi?branch=feat/rocket0.5-rc.2#368044999cade2ce8aa13d830b4c9d42a471e153"
+dependencies = [
+ "log",
+ "schemars",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "okapi"
+version = "0.7.0-rc.1"
+source = "git+https://github.com/GREsau/okapi?rev=65244f0#65244f0037a4625f22a64cc45ef8179cdb984745"
 dependencies = [
  "log",
  "schemars",
@@ -2688,9 +2702,24 @@ source = "git+https://github.com/ThouCheese/okapi?branch=feat/rocket0.5-rc.2#368
 dependencies = [
  "either",
  "log",
- "okapi",
+ "okapi 0.7.0-rc.1 (git+https://github.com/ThouCheese/okapi?branch=feat/rocket0.5-rc.2)",
  "rocket",
- "rocket_okapi_codegen",
+ "rocket_okapi_codegen 0.8.0-rc.1",
+ "schemars",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "rocket_okapi"
+version = "0.8.0-rc.2"
+source = "git+https://github.com/GREsau/okapi?rev=65244f0#65244f0037a4625f22a64cc45ef8179cdb984745"
+dependencies = [
+ "either",
+ "log",
+ "okapi 0.7.0-rc.1 (git+https://github.com/GREsau/okapi?rev=65244f0)",
+ "rocket",
+ "rocket_okapi_codegen 0.8.0-rc.2",
  "schemars",
  "serde",
  "serde_json",
@@ -2700,6 +2729,18 @@ dependencies = [
 name = "rocket_okapi_codegen"
 version = "0.8.0-rc.1"
 source = "git+https://github.com/ThouCheese/okapi?branch=feat/rocket0.5-rc.2#368044999cade2ce8aa13d830b4c9d42a471e153"
+dependencies = [
+ "darling",
+ "proc-macro2",
+ "quote",
+ "rocket_http",
+ "syn",
+]
+
+[[package]]
+name = "rocket_okapi_codegen"
+version = "0.8.0-rc.2"
+source = "git+https://github.com/GREsau/okapi?rev=65244f0#65244f0037a4625f22a64cc45ef8179cdb984745"
 dependencies = [
  "darling",
  "proc-macro2",
@@ -2804,6 +2845,7 @@ dependencies = [
  "serde",
  "serde_json",
  "uuid 0.8.2",
+ "uuid 1.0.0",
 ]
 
 [[package]]

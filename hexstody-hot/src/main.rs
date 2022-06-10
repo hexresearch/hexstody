@@ -42,6 +42,8 @@ pub struct Args {
     start_regtest: bool,
     #[clap(long, env = "HEXSTODY_PUBLIC_API_ENABLED")]
     public_api_enabled: bool,
+    #[clap(long, env = "HEXSTODY_PUBLIC_API_DOMAIN")]
+    public_api_domain: Option<String>,
     #[clap(long, env = "HEXSTODY_PUBLIC_API_PORT")]
     public_api_port: Option<u16>,
     #[clap(long, env = "HEXSTODY_PUBLIC_API_STATIC_PATH")]
@@ -53,6 +55,8 @@ pub struct Args {
     public_api_secret_key: Option<String>,
     #[clap(long, env = "HEXSTODY_OPERATOR_API_ENABLED")]
     operator_api_enabled: bool,
+    #[clap(long, env = "HEXSTODY_OPERATOR_API_DOMAIN")]
+    operator_api_domain: Option<String>,
     #[clap(long, env = "HEXSTODY_OPERATOR_API_PORT")]
     operator_api_port: Option<u16>,
     #[clap(long, env = "HEXSTODY_OPERATOR_API_STATIC_PATH")]

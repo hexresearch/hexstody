@@ -51,6 +51,11 @@ impl ApiConfig {
         } else {
             figment.extract_inner("public_api_enabled").unwrap_or(true)
         };
+        let public_api_domain = args.public_api_domain.clone().unwrap_or(
+            figment
+                .extract_inner("public_api_domain")
+                .unwrap_or("http://127.0.0.1:9800".to_owned()),
+        );
         let public_api_port = args
             .public_api_port
             .unwrap_or(figment.extract_inner("public_api_port").unwrap_or(9800));
@@ -76,6 +81,7 @@ impl ApiConfig {
         let public_api_figment = figment
             .clone()
             .merge(("api_enabled", public_api_enabled))
+            .merge(("domain", public_api_domain))
             .merge(("port", public_api_port))
             .merge(("static_path", public_api_static_path))
             .merge(("template_dir", public_api_template_path))
@@ -88,6 +94,11 @@ impl ApiConfig {
                 .extract_inner("operator_api_enabled")
                 .unwrap_or(true)
         };
+        let operator_api_domain = args.operator_api_domain.clone().unwrap_or(
+            figment
+                .extract_inner("operator_api_domain")
+                .unwrap_or("http://127.0.0.1:9801".to_owned()),
+        );
         let operator_api_port = args
             .operator_api_port
             .unwrap_or(figment.extract_inner("operator_api_port").unwrap_or(9801));
@@ -113,6 +124,7 @@ impl ApiConfig {
         let operator_api_figment = figment
             .clone()
             .merge(("api_enabled", operator_api_enabled))
+            .merge(("domain", operator_api_domain))
             .merge(("port", operator_api_port))
             .merge(("static_path", operator_api_static_path))
             .merge(("template_dir", operator_api_template_path))

@@ -3,34 +3,7 @@ const fileSelectorStatus = document.getElementById("file-selector-status");
 const withdrawalRequestsTable = document.getElementById("withdrawal-requests-table");
 
 let privateKeyJwk;
-let publicKeyJwk;
-
-/*
-Convert a string into an ArrayBuffer
-from https://developers.google.com/web/updates/2012/06/How-to-convert-ArrayBuffer-to-and-from-String
-*/
-function str2ab(str) {
-    const buf = new ArrayBuffer(str.length);
-    const bufView = new Uint8Array(buf);
-    for (let i = 0, strLen = str.length; i < strLen; i++) {
-        bufView[i] = str.charCodeAt(i);
-    }
-    return buf;
-}
-
-function enableActionButtons() {
-    let actionButtons = document.querySelectorAll("#withdrawal-requests-table button");
-    for (let i = 0; i < actionButtons.length; i++) {
-        actionButtons[i].disabled = false;
-    }
-}
-
-function disableActionButtons() {
-    let actionButtons = document.querySelectorAll("#withdrawal-requests-table button");
-    for (let i = 0; i < actionButtons.length; i++) {
-        actionButtons[i].disabled = true;
-    }
-}
+let publicKeyDer;
 
 async function importKey(_event) {
     const keyObj = new window.jscu.Key('pem', this.result);
@@ -41,26 +14,26 @@ async function importKey(_event) {
         } catch (_error) {
             fileSelectorStatus.className = "text-error";
             fileSelectorStatus.innerText = "Wrong password";
-            disableActionButtons();
+            clearWithdrawalRequests();
             return;
         };
     };
     if (!keyObj.isPrivate) {
         fileSelectorStatus.className = "text-error";
         fileSelectorStatus.innerText = "The selected key is not private!";
-        disableActionButtons();
+        clearWithdrawalRequests();
         return;
     } else {
         try {
             privateKeyJwk = await keyObj.export('jwk');
-            publicKeyJwk = await keyObj.export('jwk', { outputPublic: true });
+            publicKeyDer = await keyObj.export('der', { outputPublic: true, compact: true });
             fileSelectorStatus.className = "text-success";
             fileSelectorStatus.innerText = "Private key imported successfully!";
-            enableActionButtons();
+            await updateWithdrawalRequests();
         } catch (error) {
             fileSelectorStatus.className = "text-error";
             fileSelectorStatus.innerText = error;
-            disableActionButtons();
+            clearWithdrawalRequests();
             return;
         };
     };
@@ -79,26 +52,69 @@ async function loadKeyFile(event) {
     };
 }
 
-async function processRequest(request, isConfirmation) {
-    const url = (isConfirmation ? "/confirm/" : "/reject/") + request.id;
-    const requestBody = JSON.stringify(request);
+async function makeSignedRequest(requestBody, url, method) {
+    const full_url = window.location.href + url;
     const nonce = Date.now();
-    const publicKeyStr = JSON.stringify(publicKeyJwk);
-    const elements = [url, requestBody, nonce, publicKeyStr];
-    const msg = elements.join(':');
-    const binaryMsg = str2ab(msg);
-    const signature = await window.jscec.sign(binaryMsg, privateKeyJwk, 'SHA-256').catch(error => {
+    const msg_elements = requestBody ? [full_url, JSON.stringify(requestBody), nonce] : [full_url, nonce];
+    const msg = msg_elements.join(':');
+    const encoder = new TextEncoder();
+    const binaryMsg = encoder.encode(msg);
+    const signature = await window.jscec.sign(binaryMsg, privateKeyJwk, 'SHA-256', 'der').catch(error => {
         alert(error);
     });
+    const signature_data_elements = [
+        Base64.fromUint8Array(signature),
+        nonce.toString(),
+        Base64.fromUint8Array(publicKeyDer)
+    ];
+    const signature_data = signature_data_elements.join(':');
+    try {
+        const params = requestBody ?
+            {
+                method: method,
+                body: JSON.stringify(requestBody),
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Signature-Data': signature_data
+                }
+            } : {
+                method: method,
+                headers: {
+                    'Signature-Data': signature_data
+                }
+            };
+        const response = await fetch(url, params);
+        return response;
+    } catch (error) {
+        alert('Error:', error);
+    }
+}
+
+async function processRequest(request, isConfirmation) {
+    const url = window.location.href + (isConfirmation ? "confirm" : "reject");
+    const requestBody = new Object();
+    requestBody.request_id = request.id;
+    const nonce = Date.now();
+    const msg_elements = [url, JSON.stringify(requestBody), nonce];
+    const msg = msg_elements.join(':');
+    const encoder = new TextEncoder();
+    const binaryMsg = encoder.encode(msg);
+    const signature = await window.jscec.sign(binaryMsg, privateKeyJwk, 'SHA-256', 'der').catch(error => {
+        alert(error);
+    });
+    const signature_data_elements = [
+        Base64.fromUint8Array(signature),
+        nonce.toString(),
+        Base64.fromUint8Array(publicKeyDer)
+    ];
+    const signature_data = signature_data_elements.join(':');
     try {
         await fetch(url, {
             method: 'POST',
-            body: requestBody,
+            body: JSON.stringify(requestBody),
             headers: {
                 'Content-Type': 'application/json',
-                'Signarute': btoa(signature),
-                'Signarute-Nonce': btoa(nonce),
-                'Signature-Public-Key': publicKeyStr
+                'Signature-Data': signature_data
             }
         });
     } catch (error) {
@@ -106,11 +122,18 @@ async function processRequest(request, isConfirmation) {
     }
 }
 
+function clearWithdrawalRequests() {
+    withdrawalRequestsTable.textContent = '';
+}
+
 async function updateWithdrawalRequests() {
     async function getWithdrawalRequests() {
-        const response = await fetch("/request");
-        return response.json();
+        const response = await makeSignedRequest(null, "request", 'GET');
+        let res = await response.json()
+        return res;
     }
+
+    clearWithdrawalRequests();
 
     const data = await getWithdrawalRequests();
     let tableBody = document.createElement("tbody");
@@ -134,7 +157,6 @@ async function updateWithdrawalRequests() {
         let confirmBtnText = document.createTextNode("Confirm")
         confirmBtn.appendChild(confirmBtnText);
         confirmBtn.setAttribute("class", "button primary");
-        confirmBtn.setAttribute("disabled", "");
         confirmBtnCol.appendChild(confirmBtn);
         btnRow.appendChild(confirmBtnCol);
 
@@ -145,7 +167,6 @@ async function updateWithdrawalRequests() {
         let rejectBtnText = document.createTextNode("Reject")
         rejectBtn.appendChild(rejectBtnText);
         rejectBtn.setAttribute("class", "button error");
-        rejectBtn.setAttribute("disabled", "");
         rejectBtnCol.appendChild(rejectBtn);
         btnRow.appendChild(rejectBtnCol);
 
@@ -155,14 +176,14 @@ async function updateWithdrawalRequests() {
 
     for (let request of data) {
         let row = document.createElement("tr");
-        let currency = Object.keys(request["address"])[0];
-        addCell(row, request["id"]);
-        addCell(row, request["user"]);
+        let currency = Object.keys(request.address)[0];
+        addCell(row, request.id);
+        addCell(row, request.user);
         addCell(row, currency);
-        addCell(row, request["address"][currency]);
-        addCell(row, request["created_at"]);
-        addCell(row, request["amount"]);
-        addCell(row, request["confirmation_status"]);
+        addCell(row, request.address[currency]);
+        addCell(row, request.created_at);
+        addCell(row, request.amount);
+        addCell(row, request.confirmation_status);
         addActionBtns(row, request);
         tableBody.appendChild(row);
     }
@@ -172,5 +193,3 @@ async function updateWithdrawalRequests() {
 window.addEventListener('load', function () {
     fileSelector.addEventListener('change', loadKeyFile);
 });
-
-window.onload = updateWithdrawalRequests;
