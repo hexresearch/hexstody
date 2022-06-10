@@ -35,7 +35,7 @@ sqlx = { version = "0.5", features = [
 thiserror = "1.0"
 tokio = { version = "1", features = ["full"] }
 anyhow = "1.0"
-p256 = { version = "0.10.1", features = ["pem"] }
+p256 = { version = "0.11.0", features = ["pem"] }
 pkcs8 = { version = "0.8.0", features = ["pem", "encryption", "std", "pkcs5"] }
 rand_core = { version = "0.6.3", features = ["std"] }
 rocket = { version = "0.5.0-rc.2", default-features = false, features = [
@@ -57,6 +57,5 @@ rpassword = "6.0.1"
 figment = { version = "0.10", features = ["toml", "env"] }
 hexstody-btc-client = { path = "../hexstody-btc-client" }
 base64 = "0.13.0"
-ecdsa = { version = "0.13.4", features = ["der", "pkcs8"] }
 
 [dev-dependencies]

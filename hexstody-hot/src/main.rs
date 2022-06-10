@@ -40,6 +40,16 @@ pub struct Args {
     network: Network,
     #[clap(long, env = "HEXSTODY_START_REGTEST")]
     start_regtest: bool,
+    #[clap(
+        long,
+        env = "HEXSTODY_OPERATOR_PUBLIC_KEYS",
+        takes_value = true,
+        multiple_values = true,
+        min_values = 1,
+        required = true
+    )]
+    /// List of paths to files containing trusted public keys, which operators use to confirm withdrawal requests
+    operator_public_keys: Vec<PathBuf>,
     #[clap(long, env = "HEXSTODY_PUBLIC_API_ENABLED")]
     public_api_enabled: bool,
     #[clap(long, env = "HEXSTODY_PUBLIC_API_DOMAIN")]

@@ -12,12 +12,12 @@ path = "src/lib.rs"
 bitcoin = "0.28.1"
 bitcoin_hashes = "0.10.0"
 chrono = { version = "0.4.19", features = [ "serde" ] }
-ecdsa = { version = "0.13.4", features = [ "serde", "pem" ] }
+ecdsa = { version = "0.14.0", features = [ "serde", "pem" ] }
 futures = "0.3.19"
 hexstody-api = { path = "../hexstody-api" }
 hexstody-btc-api = { path = "../hexstody-btc-api" }
 log = "0.4.14"
-p256 = "0.10.1"
+p256 = "0.11.0"
 schemars = "0.8.8"
 serde = { version = "1.0", features = [ "derive" ] }
 serde_json = "1.0"

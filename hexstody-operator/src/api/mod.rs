@@ -2,10 +2,7 @@ use base64;
 use figment::Figment;
 use log::*;
 use okapi::openapi3::*;
-use p256::ecdsa::{
-    signature::{self, Verifier},
-    Signature, VerifyingKey,
-};
+use p256::ecdsa::{signature::Verifier, Signature, VerifyingKey};
 use p256::pkcs8::DecodePublicKey;
 use rocket::fs::FileServer;
 use rocket::http::Status;
@@ -28,11 +25,17 @@ use tokio::sync::{mpsc, Mutex, Notify};
 
 use hexstody_api::types::{WithdrawalRequest, WithdrawalRequestInfo};
 use hexstody_btc_client::client::BtcClient;
-use hexstody_db::state::{withdraw, State as HexstodyState};
+use hexstody_db::state::State as HexstodyState;
 use hexstody_db::update::{
     withdrawal::WithdrawalRequestInfo as WithdrawalRequestInfoDb, StateUpdate, UpdateBody,
 };
 use hexstody_db::Pool;
+
+#[derive(Deserialize)]
+struct Config {
+    domain: String,
+    operator_public_keys: Vec<VerifyingKey>,
+}
 
 /// Signature data that comes from operators
 /// when they sign or reject requests
@@ -50,6 +53,7 @@ pub enum SignatureError {
     InvalidSignature,
     InvalidNonce,
     InvalidPublicKey,
+    UnknownPublicKey,
 }
 
 #[rocket::async_trait]
@@ -167,7 +171,11 @@ fn verify_signature(
     url: &str,
     msg: Option<&str>,
     signature_data: &SignatureData,
-) -> Result<(), signature::Error> {
+    operator_public_keys: &Vec<VerifyingKey>,
+) -> Result<(), SignatureError> {
+    if !operator_public_keys.contains(&signature_data.public_key) {
+        return Err(SignatureError::UnknownPublicKey);
+    };
     let msg_str: String = match msg {
         None => {
             let msg_items: [&str; 2] = [url, &signature_data.nonce.to_string()];
@@ -181,9 +189,8 @@ fn verify_signature(
     signature_data
         .public_key
         .verify(msg_str.as_bytes(), &signature_data.signature)
+        .map_err(|_| SignatureError::InvalidSignature)
 }
-
-struct Domain(String);
 
 #[openapi(skip)]
 #[get("/")]
@@ -210,10 +217,10 @@ async fn index(state: &RocketState<Arc<Mutex<HexstodyState>>>) -> Template {
 async fn list(
     state: &RocketState<Arc<Mutex<HexstodyState>>>,
     signature_data: SignatureData,
-    domain: &RocketState<Domain>,
+    config: &RocketState<Config>,
 ) -> Result<Json<Vec<WithdrawalRequest>>, (Status, &'static str)> {
-    let url = [domain.0.clone(), uri!(list).to_string()].join("");
-    let _ = verify_signature(&url, None, &signature_data)
+    let url = [config.domain.clone(), uri!(list).to_string()].join("");
+    let _ = verify_signature(&url, None, &signature_data, &config.operator_public_keys)
         .map_err(|_| (Status::Forbidden, "Signature verification failed"))?;
     let hexstody_state = state.lock().await;
     let withdrawal_requests = Vec::from_iter(
@@ -233,13 +240,18 @@ async fn create(
     update_sender: &RocketState<mpsc::Sender<StateUpdate>>,
     signature_data: SignatureData,
     withdrawal_request_info: Json<WithdrawalRequestInfo>,
-    domain: &RocketState<Domain>,
+    config: &RocketState<Config>,
 ) -> Result<Created<Json<WithdrawalRequest>>, (Status, &'static str)> {
     let withdrawal_request_info = withdrawal_request_info.into_inner();
-    let url = [domain.0.clone(), uri!(create).to_string()].join("");
+    let url = [config.domain.clone(), uri!(create).to_string()].join("");
     let msg = &json::to_string(&withdrawal_request_info).unwrap();
-    let _ = verify_signature(&url, Some(&msg), &signature_data)
-        .map_err(|_| (Status::Forbidden, "Signature verification failed"))?;
+    let _ = verify_signature(
+        &url,
+        Some(&msg),
+        &signature_data,
+        &config.operator_public_keys,
+    )
+    .map_err(|_| (Status::Forbidden, "Signature verification failed"))?;
     let info: WithdrawalRequestInfoDb = withdrawal_request_info.into();
     let state_update = StateUpdate::new(UpdateBody::NewWithdrawalRequest(info));
     // TODO: check that state update was correctly processed
@@ -259,16 +271,21 @@ struct ConfirmationData {
 #[openapi(tag = "Withdrawal request")]
 #[post("/confirm", format = "json", data = "<confirmation_data>")]
 async fn confirm(
-    update_sender: &RocketState<mpsc::Sender<StateUpdate>>,
+    _update_sender: &RocketState<mpsc::Sender<StateUpdate>>,
     signature_data: SignatureData,
     confirmation_data: Json<ConfirmationData>,
-    domain: &RocketState<Domain>,
+    config: &RocketState<Config>,
 ) -> Result<(), (Status, &'static str)> {
     let confirmation_data = confirmation_data.into_inner();
-    let url = [domain.0.clone(), uri!(confirm).to_string()].join("");
+    let url = [config.domain.clone(), uri!(confirm).to_string()].join("");
     let msg = json::to_string(&confirmation_data).unwrap();
-    let _ = verify_signature(&url, Some(&msg), &signature_data)
-        .map_err(|_| (Status::Forbidden, "Signature verification failed"))?;
+    let _ = verify_signature(
+        &url,
+        Some(&msg),
+        &signature_data,
+        &config.operator_public_keys,
+    )
+    .map_err(|_| (Status::Forbidden, "Signature verification failed"))?;
     Ok(())
 }
 
@@ -276,16 +293,21 @@ async fn confirm(
 #[openapi(tag = "Withdrawal request")]
 #[post("/reject", format = "json", data = "<confirmation_data>")]
 async fn reject(
-    update_sender: &RocketState<mpsc::Sender<StateUpdate>>,
+    _update_sender: &RocketState<mpsc::Sender<StateUpdate>>,
     signature_data: SignatureData,
     confirmation_data: Json<ConfirmationData>,
-    domain: &RocketState<Domain>,
+    config: &RocketState<Config>,
 ) -> Result<(), (Status, &'static str)> {
     let confirmation_data = confirmation_data.into_inner();
-    let url = [domain.0.clone(), uri!(reject).to_string()].join("");
+    let url = [config.domain.clone(), uri!(reject).to_string()].join("");
     let msg = json::to_string(&confirmation_data).unwrap();
-    let _ = verify_signature(&url, Some(&msg), &signature_data)
-        .map_err(|_| (Status::Forbidden, "Signature verification failed"))?;
+    let _ = verify_signature(
+        &url,
+        Some(&msg),
+        &signature_data,
+        &config.operator_public_keys,
+    )
+    .map_err(|_| (Status::Forbidden, "Signature verification failed"))?;
     Ok(())
 }
 
@@ -304,7 +326,6 @@ pub async fn serve_api(
         })
     });
     let static_path: PathBuf = api_config.extract_inner("static_path").unwrap();
-    let domain = Domain(api_config.extract_inner("domain").unwrap());
     let _ = rocket::custom(api_config)
         .mount("/", FileServer::from(static_path))
         .mount("/", routes![index])
@@ -320,7 +341,7 @@ pub async fn serve_api(
         .manage(pool)
         .manage(update_sender)
         .manage(btc_client)
-        .manage(domain)
+        .attach(AdHoc::config::<Config>())
         .attach(Template::fairing())
         .attach(on_ready)
         .launch()

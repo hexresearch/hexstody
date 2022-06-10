@@ -1,6 +1,6 @@
 const fileSelector = document.getElementById("file-selector");
 const fileSelectorStatus = document.getElementById("file-selector-status");
-const withdrawalRequestsTable = document.getElementById("withdrawal-requests-table");
+const withdrawalRequestsTableBody = document.getElementById("withdrawal-requests-table-body");
 
 let privateKeyJwk;
 let publicKeyDer;
@@ -90,40 +90,8 @@ async function makeSignedRequest(requestBody, url, method) {
     }
 }
 
-async function processRequest(request, isConfirmation) {
-    const url = window.location.href + (isConfirmation ? "confirm" : "reject");
-    const requestBody = new Object();
-    requestBody.request_id = request.id;
-    const nonce = Date.now();
-    const msg_elements = [url, JSON.stringify(requestBody), nonce];
-    const msg = msg_elements.join(':');
-    const encoder = new TextEncoder();
-    const binaryMsg = encoder.encode(msg);
-    const signature = await window.jscec.sign(binaryMsg, privateKeyJwk, 'SHA-256', 'der').catch(error => {
-        alert(error);
-    });
-    const signature_data_elements = [
-        Base64.fromUint8Array(signature),
-        nonce.toString(),
-        Base64.fromUint8Array(publicKeyDer)
-    ];
-    const signature_data = signature_data_elements.join(':');
-    try {
-        await fetch(url, {
-            method: 'POST',
-            body: JSON.stringify(requestBody),
-            headers: {
-                'Content-Type': 'application/json',
-                'Signature-Data': signature_data
-            }
-        });
-    } catch (error) {
-        alert('Error:', error);
-    }
-}
-
 function clearWithdrawalRequests() {
-    withdrawalRequestsTable.textContent = '';
+    withdrawalRequestsTableBody.textContent = '';
 }
 
 async function updateWithdrawalRequests() {
@@ -136,7 +104,6 @@ async function updateWithdrawalRequests() {
     clearWithdrawalRequests();
 
     const data = await getWithdrawalRequests();
-    let tableBody = document.createElement("tbody");
 
     function addCell(row, text) {
         let cell = document.createElement("td");
@@ -145,7 +112,8 @@ async function updateWithdrawalRequests() {
         row.appendChild(cell);
     }
 
-    function addActionBtns(row, request) {
+    function addActionBtns(row, withdrawal_request) {
+        var request;
         let cell = document.createElement("td");
         let btnRow = document.createElement("div");
         btnRow.setAttribute("class", "row");
@@ -153,7 +121,9 @@ async function updateWithdrawalRequests() {
         let confirmBtnCol = document.createElement("div");
         confirmBtnCol.setAttribute("class", "col");
         let confirmBtn = document.createElement("button");
-        confirmBtn.addEventListener("click", () => processRequest(request, true));
+        
+        request = { request_id: withdrawal_request.id };
+        confirmBtn.addEventListener("click", () => makeSignedRequest(request, 'confirm', 'POST'));
         let confirmBtnText = document.createTextNode("Confirm")
         confirmBtn.appendChild(confirmBtnText);
         confirmBtn.setAttribute("class", "button primary");
@@ -163,7 +133,8 @@ async function updateWithdrawalRequests() {
         let rejectBtnCol = document.createElement("div");
         rejectBtnCol.setAttribute("class", "col");
         let rejectBtn = document.createElement("button");
-        rejectBtn.addEventListener("click", () => processRequest(request, false));
+        request = { request_id: withdrawal_request.id };
+        rejectBtn.addEventListener("click", () => makeSignedRequest(request, 'reject', 'POST'));
         let rejectBtnText = document.createTextNode("Reject")
         rejectBtn.appendChild(rejectBtnText);
         rejectBtn.setAttribute("class", "button error");
@@ -174,20 +145,19 @@ async function updateWithdrawalRequests() {
         row.appendChild(cell);
     }
 
-    for (let request of data) {
+    for (let withdrawal_request of data) {
         let row = document.createElement("tr");
-        let currency = Object.keys(request.address)[0];
-        addCell(row, request.id);
-        addCell(row, request.user);
+        let currency = Object.keys(withdrawal_request.address)[0];
+        addCell(row, withdrawal_request.id);
+        addCell(row, withdrawal_request.user);
         addCell(row, currency);
-        addCell(row, request.address[currency]);
-        addCell(row, request.created_at);
-        addCell(row, request.amount);
-        addCell(row, request.confirmation_status);
-        addActionBtns(row, request);
-        tableBody.appendChild(row);
+        addCell(row, withdrawal_request.address[currency]);
+        addCell(row, withdrawal_request.created_at);
+        addCell(row, withdrawal_request.amount);
+        addCell(row, withdrawal_request.confirmation_status);
+        addActionBtns(row, withdrawal_request);
+        withdrawalRequestsTableBody.appendChild(row);
     }
-    withdrawalRequestsTable.appendChild(tableBody);
 }
 
 window.addEventListener('load', function () {
