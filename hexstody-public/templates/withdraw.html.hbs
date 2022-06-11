@@ -1,0 +1,55 @@
+{{#*inline "page"}}
+
+<script type="module" src="/scripts/page/common.js"></script>
+<script type="module" src="/scripts/page/withdraw.js"></script>
+
+<nav class="tabs is-full">
+  <a id="btc-tab" class="active">BTC</a>
+  <a id="eth-tab">ETH</a>
+</nav>
+<div id="btc-tab-body" class="card">
+
+
+  <div class="row">
+
+    <div class="col-6 text-center">
+      Available: {{btc_balance}}
+    </div>
+    <div class="col-6 text-center">
+      Fee: {{btc_balance}}
+    </div>
+
+
+
+  </div>
+  <div class="row is-center ">
+    <div class="col-1 ">
+      Address:
+    </div>
+    <div class="col-4 ">
+      <input type="text">
+    </div>
+    <div class="col-1 ">
+      Amount:
+    </div>
+    <div class="col-3 ">
+      <input type="text">
+    </div>
+    <div class="col-1 is-center">
+      <button>Max</button>
+    </div>
+  </div>
+  <div class="row ">
+    <div class="col-12  is-center">
+      <button>Send</button>
+    </div>
+  </div>
+</div>
+
+<div id="eth-tab-body" style="display: none;">
+  <p>Available: {{eth_balance}} ETH</p>
+  <input type="text">
+  <button>Submit</button>
+</div>
+{{/inline}}
+{{> base_footer_header}}

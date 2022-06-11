@@ -3,16 +3,21 @@ pub mod wallet;
 
 use auth::*;
 use figment::Figment;
+use hexstody_api::error;
+use hexstody_api::error::ErrorMessage;
 use hexstody_btc_client::client::BtcClient;
+use hexstody_db::state::State as DbState;
 use hexstody_db::state::*;
 use hexstody_db::update::*;
 use hexstody_db::Pool;
 use rocket::fairing::AdHoc;
 use rocket::fs::FileServer;
+use rocket::http::CookieJar;
+use rocket::http::Status;
 use rocket::response::Redirect;
 use rocket::serde::json::Json;
 use rocket::uri;
-use rocket::{get, routes};
+use rocket::{get, routes, State};
 use rocket_dyn_templates::Template;
 use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
 use std::collections::HashMap;
@@ -21,7 +26,7 @@ use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio::sync::{Mutex, Notify};
 use wallet::*;
-
+use hexstody_api::domain::{Currency};
 #[openapi(tag = "ping")]
 #[get("/ping")]
 fn ping() -> Json<()> {
@@ -62,9 +67,44 @@ fn deposit() -> Template {
     Template::render("deposit", context)
 }
 
+#[openapi(skip)]
+#[get("/withdraw")]
+async fn withdraw(
+    cookies: &CookieJar<'_>,
+    state: &State<Arc<Mutex<DbState>>>,
+) -> std::result::Result<Template, (Status, Json<ErrorMessage>)> {
+    
+    let e = &u64::MAX.to_string();
+    
+    if let Some(cookie) = cookies.get_private("user_id") {
+        let user_id = cookie.value();
+        {
+            let state = state.lock().await;
+            if let Some(user) = state.users.get(user_id) {
+                let x= &user.currencies.get(&Currency::BTC).unwrap().finalized_balance().to_string();
+                let y= &user.currencies.get(&Currency::ETH).unwrap().finalized_balance().to_string();
+                let context = HashMap::from([
+                    ("title", "Withdraw"),
+                    ("btc_balance", x),
+                    ("eth_balance", y),
+                    ("parent", "base_footer_header"),
+                ]);
+                Ok(Template::render("withdraw", context))
+            }else{
+                Err(error::Error::AuthRequired.into())
+            }
+
+
+        
+    }
+    } else {
+        Err(error::Error::AuthRequired.into())
+    }
+}
+
 pub async fn serve_api(
     pool: Pool,
-    state: Arc<Mutex<State>>,
+    state: Arc<Mutex<DbState>>,
     _state_notify: Arc<Notify>,
     start_notify: Arc<Notify>,
     update_sender: mpsc::Sender<StateUpdate>,
@@ -91,7 +131,10 @@ pub async fn serve_api(
                 logout
             ],
         )
-        .mount("/", routes![index, overview, signup, signin, deposit])
+        .mount(
+            "/",
+            routes![index, overview, signup, signin, deposit, withdraw],
+        )
         .mount(
             "/swagger/",
             make_swagger_ui(&SwaggerUIConfig {
