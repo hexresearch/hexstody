@@ -18,12 +18,12 @@ Tests
 cargo test
 ```
 
-Hot wallet
-```
-cargo run --bin hexstody-hot -- serve
-```
-
 Operator key generation tool
 ```
-cargo run --bin operator-keygen
+cargo run --bin operator-keygen -- -p
+```
+
+Hot wallet
+```
+cargo run --bin hexstody-hot -- --operator-public-keys operator-key.pub.pem --start-regtest serve
 ```
