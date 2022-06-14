@@ -3,6 +3,7 @@ pub mod wallet;
 
 use auth::*;
 use figment::Figment;
+use hexstody_api::domain::Currency;
 use hexstody_api::error;
 use hexstody_api::error::ErrorMessage;
 use hexstody_btc_client::client::BtcClient;
@@ -26,7 +27,6 @@ use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio::sync::{Mutex, Notify};
 use wallet::*;
-use hexstody_api::domain::{Currency};
 #[openapi(tag = "ping")]
 #[get("/ping")]
 fn ping() -> Json<()> {
@@ -73,30 +73,35 @@ async fn withdraw(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
 ) -> std::result::Result<Template, (Status, Json<ErrorMessage>)> {
-    
     let e = &u64::MAX.to_string();
-    
     if let Some(cookie) = cookies.get_private("user_id") {
         let user_id = cookie.value();
         {
             let state = state.lock().await;
             if let Some(user) = state.users.get(user_id) {
-                let x= &user.currencies.get(&Currency::BTC).unwrap().finalized_balance().to_string();
-                let y= &user.currencies.get(&Currency::ETH).unwrap().finalized_balance().to_string();
+                let btc_balance = &user
+                    .currencies
+                    .get(&Currency::BTC)
+                    .unwrap()
+                    .finalized_balance()
+                    .to_string();
+                let eth_balance = &user
+                    .currencies
+                    .get(&Currency::ETH)
+                    .unwrap()
+                    .finalized_balance()
+                    .to_string();
                 let context = HashMap::from([
                     ("title", "Withdraw"),
-                    ("btc_balance", x),
-                    ("eth_balance", y),
                     ("parent", "base_footer_header"),
+                    ("btc_balance", btc_balance),
+                    ("eth_balance", eth_balance),
                 ]);
                 Ok(Template::render("withdraw", context))
-            }else{
-                Err(error::Error::AuthRequired.into())
+            } else {
+                Err(error::Error::NoUserFound.into())
             }
-
-
-        
-    }
+        }
     } else {
         Err(error::Error::AuthRequired.into())
     }
