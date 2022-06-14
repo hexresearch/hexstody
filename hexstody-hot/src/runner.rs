@@ -1,4 +1,4 @@
-use figment::{providers::Serialized, Figment};
+use figment::Figment;
 use futures::future::{join, AbortHandle, AbortRegistration, Abortable, Aborted};
 use futures::Future;
 use log::*;

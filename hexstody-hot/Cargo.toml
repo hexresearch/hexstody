@@ -45,7 +45,7 @@ schemars = "0.8.8"
 pwhash = "1.0.0"
 ctrlc = "3.2.2"
 figment = { version = "0.10", features = ["toml", "env"] }
-p256 = { version = "0.11.0" }
+p256 = "0.11.1"
 ecdsa = { version = "0.14.1", features = ["serde"] }
 
 [dev-dependencies]

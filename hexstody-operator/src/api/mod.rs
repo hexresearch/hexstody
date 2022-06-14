@@ -1,6 +1,5 @@
 use base64;
 use figment::Figment;
-use log::*;
 use okapi::openapi3::*;
 use p256::ecdsa::{signature::Verifier, Signature, VerifyingKey};
 use p256::pkcs8::DecodePublicKey;
