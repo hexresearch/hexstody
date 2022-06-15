@@ -10,13 +10,13 @@
 <div id="btc-tab-body" class="card">
   <div class="row">
     <div class="col-6 text-center">
-      Available: <span id= "btc_balance">{{btc_balance}}</span>
+      Available: <span id="btc_balance" balance="{{btc_balance}}"></span>
     </div>
     <div class="col-6 text-center">
-      Fee: 0
+      Fee: <span id="btc_fee" fee={{btc_fee}}>{{btc_fee}}</span>
     </div>
   </div>
-  <div class="row is-center ">
+  <div class="row is-center">
     <div class="col-1 ">
       Address:
     </div>
@@ -27,10 +27,10 @@
       Amount:
     </div>
     <div class="col-3 ">
-      <input type="text">
+      <input id="btc_send_amount" type="text">
     </div>
     <div class="col-1 is-center">
-      <button>Max</button>
+      <button id="max_btc">Max</button>
     </div>
   </div>
   <div class="row ">
@@ -40,13 +40,13 @@
   </div>
 </div>
 
-<div id="eth-tab-body" style="display: none;">
+<div id="eth-tab-body" style="display: none;" class="card">
   <div class="row">
     <div class="col-6 text-center">
-      Available: <span id= "eth_balance"> {{eth_balance}}</span>
+      Available: <span id="eth_balance" balance="{{btc_balance}}"> </span>
     </div>
     <div class="col-6 text-center">
-      Fee: 0
+      Fee: <span id="eth_fee" fee={{eth_fee}}>{{btc_fee}}</span>
     </div>
   </div>
   <div class="row is-center ">
@@ -60,10 +60,10 @@
       Amount:
     </div>
     <div class="col-3 ">
-      <input type="text">
+      <input id="eth_send_amount" type="text">
     </div>
     <div class="col-1 is-center">
-      <button>Max</button>
+      <button id="max_eth">Max</button>
     </div>
   </div>
   <div class="row ">

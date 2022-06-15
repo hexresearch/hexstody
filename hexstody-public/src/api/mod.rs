@@ -79,12 +79,14 @@ async fn withdraw(
         {
             let state = state.lock().await;
             if let Some(user) = state.users.get(user_id) {
+                let btc_fee = &1000.to_string();
                 let btc_balance = &user
                     .currencies
                     .get(&Currency::BTC)
                     .unwrap()
                     .finalized_balance()
                     .to_string();
+                let eth_fee = &1000.to_string();
                 let eth_balance = &user
                     .currencies
                     .get(&Currency::ETH)
@@ -95,7 +97,9 @@ async fn withdraw(
                     ("title", "Withdraw"),
                     ("parent", "base_footer_header"),
                     ("btc_balance", btc_balance),
+                    ("btc_fee", btc_fee),
                     ("eth_balance", eth_balance),
+                    ("eth_fee", eth_fee),
                 ]);
                 Ok(Template::render("withdraw", context))
             } else {
