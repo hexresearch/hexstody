@@ -52,10 +52,20 @@ impl fmt::Display for Erc20Token {
 #[derive(
     Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
 )]
+#[serde(tag = "type")]
+#[serde(rename_all = "camelCase")]
 pub enum CurrencyAddress {
     BTC(BtcAddress),
     ETH(EthAccount),
-    ERC20(Erc20Token, EthAccount),
+    ERC20(Erc20),
+}
+
+#[derive(
+    Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
+)]
+pub struct Erc20{
+   token : Erc20Token,
+   account : EthAccount
 }
 
 impl CurrencyAddress {
@@ -63,7 +73,7 @@ impl CurrencyAddress {
         match self {
             CurrencyAddress::BTC(_) => Currency::BTC,
             CurrencyAddress::ETH(_) => Currency::ETH,
-            CurrencyAddress::ERC20(token, _) => Currency::ERC20(token.clone()),
+            CurrencyAddress::ERC20(erc20) => Currency::ERC20(erc20.token.clone()),
         }
     }
 }
@@ -73,7 +83,7 @@ impl fmt::Display for CurrencyAddress {
         match self {
             CurrencyAddress::BTC(addr) => write!(f, "{}", addr),
             CurrencyAddress::ETH(acc) => write!(f, "{}", acc),
-            CurrencyAddress::ERC20(_, acc) => write!(f, "{}", acc),
+            CurrencyAddress::ERC20(erc20) => write!(f, "{}", erc20.account),
         }
     }
 }
