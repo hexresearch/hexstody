@@ -62,6 +62,13 @@ fn deposit() -> Template {
     Template::render("deposit", context)
 }
 
+#[openapi(skip)]
+#[get("/withdraw")]
+fn withdraw() -> Template {
+    let context = HashMap::from([("title", "Withdraw"), ("parent", "base_footer_header")]);
+    Template::render("withdraw", context)
+}
+
 pub async fn serve_api(
     pool: Pool,
     state: Arc<Mutex<State>>,
@@ -91,7 +98,7 @@ pub async fn serve_api(
                 logout
             ],
         )
-        .mount("/", routes![index, overview, signup, signin, deposit])
+        .mount("/", routes![index, overview, signup, signin, deposit, withdraw])
         .mount(
             "/swagger/",
             make_swagger_ui(&SwaggerUIConfig {
