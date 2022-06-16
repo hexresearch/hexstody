@@ -123,7 +123,7 @@ fn example_user() -> &'static str {
 }
 
 fn example_address() -> CurrencyAddress {
-    CurrencyAddress::BTC(BtcAddress("1BNwxHGaFbeUBitpjy2AsKpJ29Ybxntqvb".to_owned()))
+    CurrencyAddress::BTC(BtcAddress{addr: "1BNwxHGaFbeUBitpjy2AsKpJ29Ybxntqvb".to_owned()})
 }
 
 fn example_datetime() -> &'static str {

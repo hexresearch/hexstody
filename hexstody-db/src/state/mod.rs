@@ -171,7 +171,7 @@ impl State {
 
     /// Apply update of BTC transaction
     fn with_btc_tx_update(&mut self, tx: BtcTransaction) -> Result<(), StateUpdateErr> {
-        let address = CurrencyAddress::BTC(BtcAddress(tx.address.to_string()));
+        let address = CurrencyAddress::BTC(BtcAddress{addr:tx.address.to_string()});
         if let Some(user_id) = self.find_user_address(&address) {
             if let Some(user) = self.users.get_mut(&user_id) {
                 if let Some(curr_info) = user.currencies.get_mut(&Currency::BTC) {
@@ -194,7 +194,7 @@ impl State {
 
     /// Apply cancel of BTC transaction
     fn with_btc_tx_cancel(&mut self, tx: BtcTxCancel) -> Result<(), StateUpdateErr> {
-        let address = CurrencyAddress::BTC(BtcAddress(tx.address.to_string()));
+        let address = CurrencyAddress::BTC(BtcAddress{addr: tx.address.to_string()});
         if let Some(user_id) = self.find_user_address(&address) {
             if let Some(user) = self.users.get_mut(&user_id) {
                 if let Some(curr_info) = user.currencies.get_mut(&Currency::BTC) {
@@ -284,9 +284,9 @@ mod tests {
         let mut state0 = State::default();
         let username = "bob".to_owned();
         let amount: u64 = 1;
-        let address = CurrencyAddress::BTC(BtcAddress(
-            "bc1qpv8tczdsft9lmlz4nhz8058jdyl96velqqlwgj".to_owned(),
-        ));
+        let address = CurrencyAddress::BTC(BtcAddress{
+            addr: "bc1qpv8tczdsft9lmlz4nhz8058jdyl96velqqlwgj".to_owned()
+        });
         let signup_upd = StateUpdate::new(UpdateBody::Signup(SignupInfo {
             username: username.clone(),
             auth: SignupAuth::Lightning,
