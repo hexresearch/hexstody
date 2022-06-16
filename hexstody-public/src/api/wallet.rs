@@ -186,7 +186,7 @@ async fn allocate_btc_address(
         error::Error::FailedGenAddress(Currency::BTC)
     })?;
 
-    let packed_address = CurrencyAddress::BTC(BtcAddress(format!("{}", address)));
+    let packed_address = CurrencyAddress::BTC(BtcAddress{addr: format!("{}", address)});
 
     updater
         .send(StateUpdate::new(UpdateBody::DepositAddress(

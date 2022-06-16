@@ -92,11 +92,11 @@ impl fmt::Display for CurrencyAddress {
 #[derive(
     Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
 )]
-pub struct BtcAddress(pub String);
+pub struct BtcAddress{pub addr: String}
 
 impl fmt::Display for BtcAddress {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.0)
+        write!(f, "{}", self.addr)
     }
 }
 
