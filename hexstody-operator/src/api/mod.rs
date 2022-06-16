@@ -1,176 +1,47 @@
-use base64;
 use figment::Figment;
-use okapi::openapi3::*;
-use p256::ecdsa::{signature::Verifier, Signature, VerifyingKey};
-use p256::pkcs8::DecodePublicKey;
-use rocket::fs::FileServer;
-use rocket::http::Status;
-use rocket::request::{FromRequest, Outcome, Request};
-use rocket::response::status;
-use rocket::serde::{json, json::json, json::Json, uuid::Uuid};
-use rocket::State as RocketState;
-use rocket::{fairing::AdHoc, response::status::Created};
-use rocket::{get, post, routes, uri};
+use p256::{
+    ecdsa::{signature::Verifier, VerifyingKey},
+    PublicKey,
+};
+use rocket::{
+    fs::FileServer,
+    http::Status,
+    response::status,
+    serde::{json, json::Json},
+    State as RocketState,
+    {fairing::AdHoc, response::status::Created},
+    {get, post, routes, uri},
+};
 use rocket_dyn_templates::{context, Template};
-use rocket_okapi::gen::OpenApiGenerator;
-use rocket_okapi::okapi::schemars::{self, JsonSchema};
-use rocket_okapi::request::{OpenApiFromRequest, RequestHeaderInput};
 use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
-use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
-use std::str;
-use std::sync::Arc;
+use serde::Deserialize;
+use std::{path::PathBuf, str, sync::Arc};
 use tokio::sync::{mpsc, Mutex, Notify};
 
-use hexstody_api::types::{WithdrawalRequest, WithdrawalRequestInfo};
-use hexstody_btc_client::client::BtcClient;
-use hexstody_db::state::State as HexstodyState;
-use hexstody_db::update::{
-    withdrawal::WithdrawalRequestInfo as WithdrawalRequestInfoDb, StateUpdate, UpdateBody,
+use hexstody_api::types::{
+    ConfirmationData, SignatureData, SignatureError, WithdrawalRequest, WithdrawalRequestInfo,
 };
-use hexstody_db::Pool;
+use hexstody_btc_client::client::BtcClient;
+use hexstody_db::{
+    state::State as HexstodyState,
+    update::withdrawal::{
+        WithdrawalRequestDecisionType, WithdrawalRequestInfo as WithdrawalRequestInfoDb,
+    },
+    update::{StateUpdate, UpdateBody},
+    Pool,
+};
 
 #[derive(Deserialize)]
 struct Config {
     domain: String,
-    operator_public_keys: Vec<VerifyingKey>,
-}
-
-/// Signature data that comes from operators
-/// when they sign or reject requests
-#[derive(Debug, Serialize, Deserialize)]
-pub struct SignatureData {
-    pub signature: Signature,
-    pub nonce: u64,
-    pub public_key: VerifyingKey,
-}
-
-#[derive(Debug)]
-pub enum SignatureError {
-    MissingSignatureData,
-    InvalidSignatureDataLength,
-    InvalidSignature,
-    InvalidNonce,
-    InvalidPublicKey,
-    UnknownPublicKey,
-}
-
-#[rocket::async_trait]
-impl<'r> FromRequest<'r> for SignatureData {
-    type Error = SignatureError;
-
-    async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-        match req.headers().get_one("Signature-Data") {
-            None => {
-                return Outcome::Failure((Status::BadRequest, SignatureError::MissingSignatureData))
-            }
-            Some(sig_data) => {
-                let sig_data_vec: Vec<&str> = sig_data.split(':').collect();
-                match sig_data_vec[..] {
-                    [signature_str, nonce_str, public_key_str] => {
-                        let signature = match base64::decode(signature_str) {
-                            Ok(sig_der) => match Signature::from_der(&sig_der) {
-                                Ok(sig) => sig,
-                                Err(_) => {
-                                    return Outcome::Failure((
-                                        Status::BadRequest,
-                                        SignatureError::InvalidSignature,
-                                    ));
-                                }
-                            },
-                            Err(_) => {
-                                return Outcome::Failure((
-                                    Status::BadRequest,
-                                    SignatureError::InvalidSignature,
-                                ));
-                            }
-                        };
-                        let nonce = match nonce_str.parse::<u64>() {
-                            Ok(n) => n,
-                            Err(_) => {
-                                return Outcome::Failure((
-                                    Status::BadRequest,
-                                    SignatureError::InvalidNonce,
-                                ))
-                            }
-                        };
-                        let public_key = match base64::decode(public_key_str) {
-                            Ok(key_der) => match VerifyingKey::from_public_key_der(&key_der) {
-                                Ok(key) => key,
-                                Err(_) => {
-                                    return Outcome::Failure((
-                                        Status::BadRequest,
-                                        SignatureError::InvalidPublicKey,
-                                    ))
-                                }
-                            },
-                            Err(_) => {
-                                return Outcome::Failure((
-                                    Status::BadRequest,
-                                    SignatureError::InvalidPublicKey,
-                                ))
-                            }
-                        };
-                        return Outcome::Success(SignatureData {
-                            signature: signature,
-                            nonce: nonce,
-                            public_key: public_key,
-                        });
-                    }
-                    _ => {
-                        return Outcome::Failure((
-                            Status::BadRequest,
-                            SignatureError::InvalidSignatureDataLength,
-                        ))
-                    }
-                };
-            }
-        }
-    }
-}
-
-impl<'r> OpenApiFromRequest<'r> for SignatureData {
-    fn from_request_input(
-        gen: &mut OpenApiGenerator,
-        _name: String,
-        required: bool,
-    ) -> rocket_okapi::Result<RequestHeaderInput> {
-        let schema = gen.json_schema::<String>();
-        let description = Some(
-            "Contains a string with a serialized digital signature,
-            a nonce, and the corresponding public key.
-            Format is: \"signature:nonce:public_key\".
-            Where \"signature\" is in Base64 encoded DER format.
-            \"nonce\" is an UTF-8 string containing 64-bit unsigned integer.
-            \"public_key\" is in Base64 encoded DER format."
-                .to_owned(),
-        );
-        let example = Some(json!("MEYCIQCIlvwe8VWpYMFR/0kEbIU+Wh8VU9V3NNxOxM6/obuY4gIhAMP9RzhIwIOekO2EAGONfn/jkERPXlM/U+k9q3uNyRTf:1654706913710:MDkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDIgADWlzihGEBq52xGU9C7rbuYs3hloPAmWPmCkf9XgqkBrY="));
-        Ok(RequestHeaderInput::Parameter(Parameter {
-            name: "Signature-Data".to_owned(),
-            location: "header".to_owned(),
-            description: description,
-            required,
-            deprecated: false,
-            allow_empty_value: false,
-            value: ParameterValue::Schema {
-                style: None,
-                explode: None,
-                allow_reserved: false,
-                schema,
-                example: example,
-                examples: None,
-            },
-            extensions: Object::default(),
-        }))
-    }
+    operator_public_keys: Vec<PublicKey>,
 }
 
 fn verify_signature(
     url: &str,
     msg: Option<&str>,
     signature_data: &SignatureData,
-    operator_public_keys: &Vec<VerifyingKey>,
+    operator_public_keys: &Vec<PublicKey>,
 ) -> Result<(), SignatureError> {
     if !operator_public_keys.contains(&signature_data.public_key) {
         return Err(SignatureError::UnknownPublicKey);
@@ -185,8 +56,7 @@ fn verify_signature(
             msg_items.join(":")
         }
     };
-    signature_data
-        .public_key
+    VerifyingKey::from(signature_data.public_key)
         .verify(msg_str.as_bytes(), &signature_data.signature)
         .map_err(|_| SignatureError::InvalidSignature)
 }
@@ -252,7 +122,7 @@ async fn create(
     )
     .map_err(|_| (Status::Forbidden, "Signature verification failed"))?;
     let info: WithdrawalRequestInfoDb = withdrawal_request_info.into();
-    let state_update = StateUpdate::new(UpdateBody::NewWithdrawalRequest(info));
+    let state_update = StateUpdate::new(UpdateBody::CreateWithdrawalRequest(info));
     // TODO: check that state update was correctly processed
     update_sender
         .send(state_update)
@@ -261,16 +131,11 @@ async fn create(
     Ok(status::Created::new("/request"))
 }
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
-struct ConfirmationData {
-    request_id: Uuid,
-}
-
 /// # Confirm withdrawal request
 #[openapi(tag = "Withdrawal request")]
 #[post("/confirm", format = "json", data = "<confirmation_data>")]
 async fn confirm(
-    _update_sender: &RocketState<mpsc::Sender<StateUpdate>>,
+    update_sender: &RocketState<mpsc::Sender<StateUpdate>>,
     signature_data: SignatureData,
     confirmation_data: Json<ConfirmationData>,
     config: &RocketState<Config>,
@@ -285,6 +150,20 @@ async fn confirm(
         &config.operator_public_keys,
     )
     .map_err(|_| (Status::Forbidden, "Signature verification failed"))?;
+    let state_update = StateUpdate::new(UpdateBody::WithdrawalRequestDecision(
+        (
+            confirmation_data,
+            signature_data,
+            WithdrawalRequestDecisionType::Confirm,
+            url,
+            msg,
+        )
+            .into(),
+    ));
+    update_sender
+        .send(state_update)
+        .await
+        .map_err(|_| (Status::InternalServerError, "Internal server error"))?;
     Ok(())
 }
 
@@ -292,7 +171,7 @@ async fn confirm(
 #[openapi(tag = "Withdrawal request")]
 #[post("/reject", format = "json", data = "<confirmation_data>")]
 async fn reject(
-    _update_sender: &RocketState<mpsc::Sender<StateUpdate>>,
+    update_sender: &RocketState<mpsc::Sender<StateUpdate>>,
     signature_data: SignatureData,
     confirmation_data: Json<ConfirmationData>,
     config: &RocketState<Config>,
@@ -307,6 +186,20 @@ async fn reject(
         &config.operator_public_keys,
     )
     .map_err(|_| (Status::Forbidden, "Signature verification failed"))?;
+    let state_update = StateUpdate::new(UpdateBody::WithdrawalRequestDecision(
+        (
+            confirmation_data,
+            signature_data,
+            WithdrawalRequestDecisionType::Reject,
+            url,
+            msg,
+        )
+            .into(),
+    ));
+    update_sender
+        .send(state_update)
+        .await
+        .map_err(|_| (Status::InternalServerError, "Internal server error"))?;
     Ok(())
 }
 

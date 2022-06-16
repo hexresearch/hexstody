@@ -2,8 +2,8 @@ use figment::Figment;
 use futures::future::{join, AbortHandle, AbortRegistration, Abortable, Aborted};
 use futures::Future;
 use log::*;
-use p256::ecdsa::VerifyingKey;
 use p256::pkcs8::DecodePublicKey;
+use p256::PublicKey;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::{fmt, fs};
@@ -52,7 +52,7 @@ impl ApiConfig {
             let full_path = fs::canonicalize(&p).expect("Something went wrong reading the file");
             let key_str =
                 fs::read_to_string(full_path).expect("Something went wrong reading the file");
-            let public_key = VerifyingKey::from_public_key_pem(&key_str)
+            let public_key = PublicKey::from_public_key_pem(&key_str)
                 .expect("Something went wrong decoding the key file");
             operator_public_keys.push(public_key);
         }

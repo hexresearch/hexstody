@@ -30,6 +30,19 @@ async function importKey(_event) {
             fileSelectorStatus.className = "text-success";
             fileSelectorStatus.innerText = "Private key imported successfully!";
             await updateWithdrawalRequests();
+
+            // // Debug fucntion to create request
+            // makeSignedRequest({
+            //     user: "Bob",
+            //     address: {
+            //         BTC: "bc1qynn42mrjeqhef63m4m6cf9swkutz3w0nzp0tpelfe4pr50sret9qrkyjpy"
+            //     },
+            //     amount: 42
+            // },
+            //     "request",
+            //     "POST"
+            // )
+
         } catch (error) {
             fileSelectorStatus.className = "text-error";
             fileSelectorStatus.innerText = error;
@@ -113,7 +126,6 @@ async function updateWithdrawalRequests() {
     }
 
     function addActionBtns(row, withdrawal_request) {
-        var request;
         let cell = document.createElement("td");
         let btnRow = document.createElement("div");
         btnRow.setAttribute("class", "row");
@@ -121,9 +133,8 @@ async function updateWithdrawalRequests() {
         let confirmBtnCol = document.createElement("div");
         confirmBtnCol.setAttribute("class", "col");
         let confirmBtn = document.createElement("button");
-        
-        request = { request_id: withdrawal_request.id };
-        confirmBtn.addEventListener("click", () => makeSignedRequest(request, 'confirm', 'POST'));
+
+        confirmBtn.addEventListener("click", () => makeSignedRequest(withdrawal_request, 'confirm', 'POST'));
         let confirmBtnText = document.createTextNode("Confirm")
         confirmBtn.appendChild(confirmBtnText);
         confirmBtn.setAttribute("class", "button primary");
@@ -133,8 +144,8 @@ async function updateWithdrawalRequests() {
         let rejectBtnCol = document.createElement("div");
         rejectBtnCol.setAttribute("class", "col");
         let rejectBtn = document.createElement("button");
-        request = { request_id: withdrawal_request.id };
-        rejectBtn.addEventListener("click", () => makeSignedRequest(request, 'reject', 'POST'));
+
+        rejectBtn.addEventListener("click", () => makeSignedRequest(withdrawal_request, 'reject', 'POST'));
         let rejectBtnText = document.createTextNode("Reject")
         rejectBtn.appendChild(rejectBtnText);
         rejectBtn.setAttribute("class", "button error");

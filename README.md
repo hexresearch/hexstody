@@ -20,10 +20,11 @@ cargo test
 
 Operator key generation tool
 ```
-cargo run --bin operator-keygen -- -p
+cargo run --bin operator-keygen -- -o operator-key-1 -p
+cargo run --bin operator-keygen -- -o operator-key-2 -p
 ```
 
 Hot wallet
 ```
-cargo run --bin hexstody-hot -- --operator-public-keys operator-key.pub.pem --start-regtest serve
+cargo run --bin hexstody-hot -- --operator-public-keys operator-key-1.pub.pem operator-key-2.pub.pem --start-regtest serve
 ```

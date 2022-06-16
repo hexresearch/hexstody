@@ -6,7 +6,7 @@ mod worker;
 use clap::Parser;
 use futures::future::AbortHandle;
 use hexstody_btc_client::client::BtcClient;
-use hexstody_db::state::Network;
+use hexstody_db::state::{Network, REQUIRED_NUMBER_OF_CONFIRMATIONS};
 use log::*;
 use std::error::Error;
 use std::path::PathBuf;
@@ -45,7 +45,7 @@ pub struct Args {
         env = "HEXSTODY_OPERATOR_PUBLIC_KEYS",
         takes_value = true,
         multiple_values = true,
-        min_values = 1,
+        min_values = usize::try_from(REQUIRED_NUMBER_OF_CONFIRMATIONS).unwrap(),
         required = true
     )]
     /// List of paths to files containing trusted public keys, which operators use to confirm withdrawal requests

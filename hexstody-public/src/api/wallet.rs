@@ -13,7 +13,7 @@ use hexstody_api::error;
 use hexstody_api::types as api;
 use hexstody_btc_client::client::BtcClient;
 use hexstody_db::state::State as DbState;
-use hexstody_db::state::WithdrawalRequestStatus::Confirmations;
+use hexstody_db::state::WithdrawalRequestStatus;
 use hexstody_db::state::{Transaction, WithdrawalRequest, REQUIRED_NUMBER_OF_CONFIRMATIONS};
 use hexstody_db::update::deposit::DepositAddress;
 use hexstody_db::update::{StateUpdate, UpdateBody};
@@ -108,13 +108,10 @@ pub async fn get_history(
         currency: &Currency,
         withdrawal: &WithdrawalRequest,
     ) -> api::HistoryItem {
-        let withdrawal_status = match &withdrawal.confirmation_status {
-            Confirmations(confirmations)
-                if confirmations.len() < REQUIRED_NUMBER_OF_CONFIRMATIONS as usize =>
-            {
-                api::WithdrawalRequestStatus::InProgress
-            }
-            _ => api::WithdrawalRequestStatus::Completed,
+        let withdrawal_status = match &withdrawal.status {
+            WithdrawalRequestStatus::InProgress(n) => api::WithdrawalRequestStatus::InProgress(*n),
+            WithdrawalRequestStatus::Confirmed => api::WithdrawalRequestStatus::Confirmed,
+            WithdrawalRequestStatus::Rejected => api::WithdrawalRequestStatus::Rejected,
         };
 
         api::HistoryItem::Withdrawal(api::WithdrawalHistoryItem {
