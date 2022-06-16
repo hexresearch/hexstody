@@ -23,12 +23,8 @@ Operator key generation tool
 cargo run --bin operator-keygen -- -o operator-key-1 -p
 cargo run --bin operator-keygen -- -o operator-key-2 -p
 ```
-Hot wallet with builtin regtest BTC node:
-```
-cargo run --bin hexstody-hot -- --start-regtest serve
-```
 
-Hot wallet
+Hot wallet with builtin regtest BTC node:
 ```
 cargo run --bin hexstody-hot -- --operator-public-keys operator-key-1.pub.pem operator-key-2.pub.pem --start-regtest serve
 ```
