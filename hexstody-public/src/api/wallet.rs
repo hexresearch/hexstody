@@ -163,6 +163,16 @@ pub async fn get_history(
     .await
 }
 
+#[openapi(tag = "withdraw")]
+#[post("/withdraw", data = "<withdraw_request>")]
+pub async fn post_withdraw(
+    cookies: &CookieJar<'_>,
+    state: &State<Arc<Mutex<DbState>>>,
+    withdraw_request : Json<api::UserWithdrawRequest>
+) -> error::Result<()> {
+    Ok(Json(()))
+}
+
 async fn allocate_address(
     btc: &State<BtcClient>,
     updater: &State<mpsc::Sender<StateUpdate>>,
