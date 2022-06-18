@@ -23,7 +23,7 @@ use hexstody_db::update::{StateUpdate, UpdateBody};
 pub async fn get_balance(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
-) -> error::Result<api::Balance> {
+) -> error::Result<Json<api::Balance>> {
     require_auth(cookies, |cookie| async move {
         let user_id = cookie.value();
         {
@@ -54,7 +54,7 @@ pub async fn get_deposit(
     updater: &State<mpsc::Sender<StateUpdate>>,
     btc: &State<BtcClient>,
     currency: Json<Currency>,
-) -> error::Result<api::DepositInfo> {
+) -> error::Result<Json<api::DepositInfo>> {
     require_auth(cookies, |cookie| async move {
         let user_id = cookie.value();
         {
@@ -91,7 +91,7 @@ pub async fn get_history(
     state: &State<Arc<Mutex<DbState>>>,
     skip: usize,
     take: usize,
-) -> error::Result<api::History> {
+) -> error::Result<Json<api::History>> {
     fn to_deposit_history_item(deposit: &Transaction) -> api::HistoryItem {
         match deposit {
             Transaction::Btc(btc_deposit) => api::HistoryItem::Deposit(api::DepositHistoryItem {

@@ -5,7 +5,6 @@ use auth::*;
 use figment::Figment;
 use hexstody_api::domain::Currency;
 use hexstody_api::error;
-use hexstody_api::error::ErrorMessage;
 use hexstody_btc_client::client::BtcClient;
 use hexstody_db::state::State as DbState;
 use hexstody_db::state::*;
@@ -14,7 +13,6 @@ use hexstody_db::Pool;
 use rocket::fairing::AdHoc;
 use rocket::fs::FileServer;
 use rocket::http::CookieJar;
-use rocket::http::Status;
 use rocket::response::Redirect;
 use rocket::serde::json::Json;
 use rocket::uri;
@@ -72,43 +70,32 @@ fn deposit() -> Template {
 async fn withdraw(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
-) -> std::result::Result<Template, (Status, Json<ErrorMessage>)> {
-    let e = &u64::MAX.to_string();
-    if let Some(cookie) = cookies.get_private("user_id") {
-        let user_id = cookie.value();
-        {
-            let state = state.lock().await;
-            if let Some(user) = state.users.get(user_id) {
-                let btc_fee = &1000.to_string();
-                let btc_balance = &user
-                    .currencies
-                    .get(&Currency::BTC)
-                    .unwrap()
-                    .finalized_balance()
-                    .to_string();
-                let eth_fee = &1000.to_string();
-                let eth_balance = &user
-                    .currencies
-                    .get(&Currency::ETH)
-                    .unwrap()
-                    .finalized_balance()
-                    .to_string();
-                let context = HashMap::from([
-                    ("title", "Withdraw"),
-                    ("parent", "base_footer_header"),
-                    ("btc_balance", btc_balance),
-                    ("btc_fee", btc_fee),
-                    ("eth_balance", eth_balance),
-                    ("eth_fee", eth_fee),
-                ]);
-                Ok(Template::render("withdraw", context))
-            } else {
-                Err(error::Error::NoUserFound.into())
-            }
-        }
-    } else {
-        Err(error::Error::AuthRequired.into())
-    }
+) -> error::Result<Template> {
+    require_auth_user(cookies, state, |_, user| async move {
+        let btc_fee = &1000.to_string();
+        let btc_balance = &user
+            .currencies
+            .get(&Currency::BTC)
+            .unwrap()
+            .finalized_balance()
+            .to_string();
+        let eth_fee = &1000.to_string();
+        let eth_balance = &user
+            .currencies
+            .get(&Currency::ETH)
+            .unwrap()
+            .finalized_balance()
+            .to_string();
+        let context = HashMap::from([
+            ("title", "Withdraw"),
+            ("parent", "base_footer_header"),
+            ("btc_balance", btc_balance),
+            ("btc_fee", btc_fee),
+            ("eth_balance", eth_balance),
+            ("eth_fee", eth_fee),
+        ]);
+        Ok(Template::render("withdraw", context))
+    }).await
 }
 
 pub async fn serve_api(
