@@ -12,13 +12,20 @@ use std::error::Error;
 use std::net::IpAddr;
 use std::sync::Arc;
 use std::time::Duration;
+use std::path::PathBuf;
+use std::fs;
 use thiserror::Error;
 use tokio::sync::{Mutex, Notify};
 use tokio::time::sleep;
+use p256::PublicKey;
+use p256::pkcs8::DecodePublicKey;
 
 use api::public::*;
 use state::ScanState;
 use worker::node_worker;
+
+// Should be the same as hexstody-db::state::REQUIRED_NUMBER_OF_CONFIRMATIONS
+pub const REQUIRED_NUMBER_OF_CONFIRMATIONS: i16 = 2;
 
 #[derive(Parser, Debug, Clone)]
 #[clap(about, version, author)]
@@ -55,6 +62,16 @@ enum SubCommand {
         /// Base64 encoded 64 bytes for encoding cookies. Required in release profile.
         #[clap(long, env = "HEXSTODY_BTC_SECRET_KEY", hide_env_values = true)]
         secret_key: Option<String>,
+        #[clap(
+            long,
+            env = "HEXSTODY_OPERATOR_PUBLIC_KEYS",
+            takes_value = true,
+            multiple_values = true,
+            min_values = usize::try_from(REQUIRED_NUMBER_OF_CONFIRMATIONS).unwrap(),
+            required = true
+        )]
+        /// List of paths to files containing trusted public keys, which operators use to confirm withdrawal requests
+        operator_public_keys: Vec<PathBuf>,
     },
 }
 
@@ -80,7 +97,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
             node_password,
             network,
             secret_key,
+            operator_public_keys,
         } => loop {
+            let mut op_public_keys = vec![]; //args.op_public_keys.clone()
+            for p in &operator_public_keys {
+                let full_path = fs::canonicalize(&p).expect("Something went wrong reading the file");
+                let key_str =
+                    fs::read_to_string(full_path).expect("Something went wrong reading the file");
+                let public_key = PublicKey::from_public_key_pem(&key_str)
+                    .expect("Something went wrong decoding the key file");
+                op_public_keys.push(public_key);
+            }
             let (abort_handle, abort_reg) = AbortHandle::new_pair();
             ctrlc::set_handler(move || {
                 abort_handle.abort();
@@ -121,6 +148,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     state_notify.clone(),
                     polling_duration,
                     secret_key.as_deref(),
+                    op_public_keys,
                 )
                 .await;
                 res.map_err(|err| LogicError::from(err))

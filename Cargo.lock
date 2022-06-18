@@ -1243,6 +1243,7 @@ dependencies = [
  "hexstody-btc-test",
  "log",
  "nix",
+ "p256",
  "port-selector",
  "rocket",
  "rocket_okapi 0.8.0-rc.1",

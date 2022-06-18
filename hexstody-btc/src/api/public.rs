@@ -14,6 +14,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::{Mutex, Notify};
 use tokio::time::timeout;
+use p256::PublicKey;
 
 use super::error;
 
@@ -67,6 +68,7 @@ pub async fn serve_public_api(
     state_notify: Arc<Notify>,
     polling_duration: Duration,
     secret_key: Option<&str>,
+    op_public_keys: Vec<PublicKey>
 ) -> Result<(), rocket::Error> {
     let zero_key =
         "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==";
@@ -116,6 +118,7 @@ pub async fn serve_public_api(
         .manage(state)
         .manage(state_notify)
         .manage(btc)
+        .manage(op_public_keys)
         .attach(on_ready)
         .launch()
         .await?;
