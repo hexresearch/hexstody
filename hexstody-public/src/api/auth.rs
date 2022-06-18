@@ -1,18 +1,18 @@
 use hexstody_api::error;
 use hexstody_api::types as api;
 use hexstody_db::state::*;
-use hexstody_db::update::signup::*;
 use hexstody_db::update::*;
+use hexstody_db::update::signup::*;
 use pwhash::bcrypt;
+use rocket_okapi::openapi;
 use rocket::http::{Cookie, CookieJar};
 use rocket::post;
 use rocket::serde::json::Json;
 use rocket::State as RState;
-use rocket_okapi::openapi;
 use std::future::Future;
 use std::sync::Arc;
 use tokio::sync::mpsc;
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, MutexGuard};
 
 #[openapi(tag = "auth")]
 #[post("/signup/email", data = "<data>")]
@@ -20,7 +20,7 @@ pub async fn signup_email(
     state: &RState<Arc<Mutex<State>>>,
     updater: &RState<mpsc::Sender<StateUpdate>>,
     data: Json<api::SignupEmail>,
-) -> error::Result<()> {
+) -> error::Result<Json<()>> {
     if data.user.len() < error::MIN_USER_NAME_LEN {
         return Err(error::Error::UserNameTooShort.into());
     }
@@ -58,7 +58,7 @@ pub async fn signin_email(
     state: &RState<Arc<Mutex<State>>>,
     data: Json<api::SigninEmail>,
     cookies: &CookieJar<'_>,
-) -> error::Result<()> {
+) -> error::Result<Json<()>> {
     if data.user.len() < error::MIN_USER_NAME_LEN {
         return Err(error::Error::UserNameTooShort.into());
     }
@@ -93,7 +93,7 @@ pub async fn signin_email(
 
 #[openapi(tag = "auth")]
 #[post("/logout")]
-pub async fn logout(cookies: &CookieJar<'_>) -> error::Result<()> {
+pub async fn logout(cookies: &CookieJar<'_>) -> error::Result<Json<()>> {
     require_auth(cookies, |cookie| async move {
         cookies.remove(cookie);
         Ok(Json(()))
@@ -112,4 +112,25 @@ where
     } else {
         Err(error::Error::AuthRequired.into())
     }
+}
+
+/// More specific helper than 'require_auth' as it alsow locks state 
+/// fore read only and fetches user info.
+pub async fn require_auth_user<F, Fut, R>(cookies: &CookieJar<'_>, state: &RState<Arc<Mutex<State>>>, future: F) -> error::Result<R>
+where
+    F: FnOnce(MutexGuard<State>, UserInfo) -> Fut,
+    Fut: Future<Output = error::Result<R>>,
+{
+    require_auth(cookies, |cookie| async move {
+        let user_id = cookie.value();
+        {
+            let state = state.lock().await;
+            if let Some(user) = state.users.get(user_id).cloned() {
+                future(state, user).await
+            } else {
+                Err(error::Error::NoUserFound.into())
+            }
+        }
+    })
+    .await
 }

@@ -80,7 +80,7 @@ pub struct ErrorMessage {
     pub code: u16,
 }
 
-pub type Result<T> = std::result::Result<Json<T>, (Status, Json<ErrorMessage>)>;
+pub type Result<T> = std::result::Result<T, (Status, Json<ErrorMessage>)>;
 
 impl From<Error> for ErrorMessage {
     fn from(value: Error) -> Self {
