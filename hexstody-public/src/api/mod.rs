@@ -7,7 +7,6 @@ use hexstody_api::domain::Currency;
 use hexstody_api::error;
 use hexstody_btc_client::client::BtcClient;
 use hexstody_db::state::State as DbState;
-use hexstody_db::state::*;
 use hexstody_db::update::*;
 use hexstody_db::Pool;
 use rocket::fairing::AdHoc;

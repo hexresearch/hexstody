@@ -170,7 +170,7 @@ pub async fn post_withdraw(
     state: &State<Arc<Mutex<DbState>>>,
     withdraw_request : Json<api::UserWithdrawRequest>
 ) -> error::Result<()> {
-    Ok(Json(()))
+    Ok(())
 }
 
 async fn allocate_address(
