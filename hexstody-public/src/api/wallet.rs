@@ -109,7 +109,9 @@ pub async fn get_history(
         withdrawal: &WithdrawalRequest,
     ) -> api::HistoryItem {
         let withdrawal_status = match &withdrawal.status {
-            WithdrawalRequestStatus::InProgress(n) => api::WithdrawalRequestStatus::InProgress(*n),
+            WithdrawalRequestStatus::InProgress(n) => {
+                api::WithdrawalRequestStatus::InProgress { confirmations: *n }
+            }
             WithdrawalRequestStatus::Confirmed => api::WithdrawalRequestStatus::Confirmed,
             WithdrawalRequestStatus::Rejected => api::WithdrawalRequestStatus::Rejected,
         };
@@ -183,7 +185,9 @@ async fn allocate_btc_address(
         error::Error::FailedGenAddress(Currency::BTC)
     })?;
 
-    let packed_address = CurrencyAddress::BTC(BtcAddress{addr: format!("{}", address)});
+    let packed_address = CurrencyAddress::BTC(BtcAddress {
+        addr: format!("{}", address),
+    });
 
     updater
         .send(StateUpdate::new(UpdateBody::DepositAddress(

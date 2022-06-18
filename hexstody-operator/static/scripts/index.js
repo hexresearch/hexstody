@@ -35,7 +35,8 @@ async function importKey(_event) {
             // makeSignedRequest({
             //     user: "Bob",
             //     address: {
-            //         BTC: "bc1qynn42mrjeqhef63m4m6cf9swkutz3w0nzp0tpelfe4pr50sret9qrkyjpy"
+            //         type: "BTC",
+            //         addr: "1BNwxHGaFbeUBitpjy2AsKpJ29Ybxntqvb"
             //     },
             //     amount: 42
             // },
@@ -158,14 +159,13 @@ async function updateWithdrawalRequests() {
 
     for (let withdrawal_request of data) {
         let row = document.createElement("tr");
-        let currency = Object.keys(withdrawal_request.address)[0];
         addCell(row, withdrawal_request.id);
         addCell(row, withdrawal_request.user);
-        addCell(row, currency);
-        addCell(row, withdrawal_request.address[currency]);
+        addCell(row, withdrawal_request.address.type);
+        addCell(row, withdrawal_request.address.addr);
         addCell(row, withdrawal_request.created_at);
         addCell(row, withdrawal_request.amount);
-        addCell(row, withdrawal_request.confirmation_status);
+        addCell(row, withdrawal_request.confirmation_status.type);
         addActionBtns(row, withdrawal_request);
         withdrawalRequestsTableBody.appendChild(row);
     }

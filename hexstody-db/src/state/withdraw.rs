@@ -61,7 +61,9 @@ impl From<(NaiveDateTime, WithdrawalRequestId, WithdrawalRequestInfo)> for Withd
 impl Into<WithdrawalRequestApi> for WithdrawalRequest {
     fn into(self) -> WithdrawalRequestApi {
         let confirmation_status = match self.status {
-            WithdrawalRequestStatus::InProgress(n) => WithdrawalRequestStatusApi::InProgress(n),
+            WithdrawalRequestStatus::InProgress(n) => {
+                WithdrawalRequestStatusApi::InProgress { confirmations: n }
+            }
             WithdrawalRequestStatus::Confirmed => WithdrawalRequestStatusApi::Confirmed,
             WithdrawalRequestStatus::Rejected => WithdrawalRequestStatusApi::Rejected,
         };

@@ -129,7 +129,9 @@ fn example_user() -> &'static str {
 }
 
 fn example_address() -> CurrencyAddress {
-    CurrencyAddress::BTC(BtcAddress{addr: "1BNwxHGaFbeUBitpjy2AsKpJ29Ybxntqvb".to_owned()})
+    CurrencyAddress::BTC(BtcAddress {
+        addr: "1BNwxHGaFbeUBitpjy2AsKpJ29Ybxntqvb".to_owned(),
+    })
 }
 
 fn example_datetime() -> &'static str {
@@ -141,13 +143,16 @@ fn example_amount() -> u64 {
 }
 
 fn example_confirmation_status() -> WithdrawalRequestStatus {
-    WithdrawalRequestStatus::InProgress(1)
+    WithdrawalRequestStatus::InProgress { confirmations: 1 }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
+#[serde(tag = "type")]
 pub enum WithdrawalRequestStatus {
     /// Number of confirmations received
-    InProgress(i16),
+    InProgress {
+        confirmations: i16,
+    },
     Confirmed,
     Rejected,
 }

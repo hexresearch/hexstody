@@ -53,7 +53,6 @@ impl fmt::Display for Erc20Token {
     Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
 )]
 #[serde(tag = "type")]
-#[serde(rename_all = "camelCase")]
 pub enum CurrencyAddress {
     BTC(BtcAddress),
     ETH(EthAccount),
