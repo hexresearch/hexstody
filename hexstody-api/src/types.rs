@@ -295,3 +295,21 @@ impl<'r> OpenApiFromRequest<'r> for SignatureData {
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct ConfirmationData(pub WithdrawalRequest);
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct FeeResponse {
+    /// Estimate fee rate in BTC/kB.
+    #[schemars(example = "example_fee")]
+    pub fee_rate: u64,
+    /// Block number where estimate was found. None means that there was an error and a default value was used
+    #[schemars(example = "example_block_height")]
+    pub block: Option<i64>
+}
+
+fn example_fee() -> u64 {
+    5
+}
+
+fn example_block_height() -> Option<i64> {
+    Some(12345)
+}

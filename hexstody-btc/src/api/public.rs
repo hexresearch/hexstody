@@ -3,6 +3,7 @@ use bitcoincore_rpc::{Client, RpcApi};
 use bitcoincore_rpc_json::AddressType;
 use hexstody_btc_api::bitcoin::*;
 use hexstody_btc_api::events::*;
+use hexstody_api::types::FeeResponse;
 use log::*;
 use rocket::fairing::AdHoc;
 use rocket::figment::{providers::Env, Figment};
@@ -59,6 +60,28 @@ async fn get_deposit_address(client: &State<Client>) -> error::Result<BtcAddress
     Ok(Json(address.into()))
 }
 
+#[openapi(tag = "fees")]
+#[get("/fees")]
+async fn get_fees(client: &State<Client>) -> Json<FeeResponse> {
+    let est = client
+        .estimate_smart_fee(2, None)
+        .map_err(|e| error::Error::from(e));
+    let res = FeeResponse {
+        fee_rate: 5, // default 5 sat/byte
+        block: None
+    };
+    match est {
+        Err(_) => Json(res),
+        Ok(fe) => match fe.fee_rate {
+            None => Json(res),
+            Some(val) => Json(FeeResponse{
+                fee_rate: val.as_sat(),
+                block: Some(fe.blocks)
+            })
+        }
+    }
+}
+
 pub async fn serve_public_api(
     btc: Client,
     address: IpAddr,
@@ -90,7 +113,7 @@ pub async fn serve_public_api(
     let _ = rocket::custom(figment)
         .mount(
             "/",
-            openapi_get_routes![ping, poll_events, get_deposit_address],
+            openapi_get_routes![ping, poll_events, get_deposit_address, get_fees],
         )
         .mount(
             "/swagger/",

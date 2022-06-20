@@ -1239,6 +1239,7 @@ dependencies = [
  "futures",
  "futures-channel",
  "futures-util",
+ "hexstody-api",
  "hexstody-btc-api",
  "hexstody-btc-test",
  "log",
@@ -1273,6 +1274,7 @@ name = "hexstody-btc-client"
 version = "0.1.0"
 dependencies = [
  "bitcoin",
+ "hexstody-api",
  "hexstody-btc-api",
  "log",
  "reqwest",
