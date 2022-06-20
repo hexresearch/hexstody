@@ -514,7 +514,7 @@ async fn cancel_confirmed_withdraw_test() {
 // Request fees from btc-node
 #[tokio::test]
 async fn get_fees_from_node_test() {
-    run_test(|btc, api| async move {
+    run_test(|_, api| async move {
         let fee = api.get_fees().await.expect("Failed to get fee value");
         println!("{:?}", fee);
         assert_eq!(fee.fee_rate, 5, "Fee value is different than expected");
