@@ -18,6 +18,9 @@ const sendEthBtn = document.getElementById("send_eth");
 const btcAddressEl = document.getElementById("btc_address");
 const ethAddressEl = document.getElementById("btc_address");
 
+const btcValidationDisplayEl = document.getElementById("btc_validation");
+const ethValidationDisplayEl = document.getElementById("eth_validation");
+
 async function postWithdrawRequest(currency, address, amount) {
     let body;
     switch (currency) {
@@ -36,6 +39,16 @@ async function postWithdrawRequest(currency, address, amount) {
         })
 };
 
+async function trySubmit(currency, address, amount, validationDisplayEl){
+    const result = await postWithdrawRequest(currency, address, amount);
+    if(result.ok){
+        window.location.href = "/overview";
+    }else{
+        validationDisplayEl.textContent = (await result.json()).message;
+        validationDisplayEl.hidden = false;
+    }
+}
+
 async function init() {
     const tabs = ["btc-tab", "eth-tab"];
     initTabs(tabs);
@@ -52,15 +65,17 @@ async function init() {
     maxEthAmountBtn.onclick = () => ethSendAmountEl.value =
         ethBalanceEl.getAttribute("balance") - ethFeeEl.getAttribute("fee");
 
-    sendBtcBtn.onclick = () => postWithdrawRequest(
+    sendBtcBtn.onclick = () => trySubmit(
         "BTC",
         btcAddressEl.value,
-        Number(btcSendAmountEl.value));
+        Number(btcSendAmountEl.value),
+        btcValidationDisplayEl);
 
-    sendEthBtn.onclick = () => postWithdrawRequest(
+    sendEthBtn.onclick = () => trySubmit(
         "ETH",
         ethAddressEl.value,
-        Number(ethSendAmountEl.value));
+        Number(ethSendAmountEl.value),
+        ethValidationDisplayEl);
 
 }
 
