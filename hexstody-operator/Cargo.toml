@@ -3,14 +3,14 @@ name = "hexstody-operator"
 version = "0.1.0"
 edition = "2021"
 
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
 [lib]
 name = "hexstody_operator"
 path = "src/lib.rs"
 
 [[bin]]
 name = "operator-keygen"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 chrono = { version = "0.4.19", features = ["serde"] }
@@ -21,6 +21,8 @@ futures-util = "0.3.19"
 hexstody-db = { path = "../hexstody-db" }
 hexstody-api = { path = "../hexstody-api" }
 hexstody-btc-api = { path = "../hexstody-btc-api" }
+hexstody-btc-client = { path = "../hexstody-btc-client" }
+hexstody-sig = { path = "../hexstody-sig" }
 log = "0.4.14"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -55,7 +57,6 @@ schemars = { version = "0.8.8", features = ["uuid"] }
 pwhash = "1.0.0"
 rpassword = "6.0.1"
 figment = { version = "0.10", features = ["toml", "env"] }
-hexstody-btc-client = { path = "../hexstody-btc-client" }
 base64 = "0.13.0"
 
 [dev-dependencies]

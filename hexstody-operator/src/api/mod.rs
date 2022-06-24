@@ -1,8 +1,5 @@
 use figment::Figment;
-use p256::{
-    ecdsa::{signature::Verifier, VerifyingKey},
-    PublicKey,
-};
+use p256::PublicKey;
 use rocket::{
     fs::FileServer,
     http::Status,
@@ -19,7 +16,7 @@ use std::{path::PathBuf, str, sync::Arc};
 use tokio::sync::{mpsc, Mutex, Notify};
 
 use hexstody_api::types::{
-    ConfirmationData, SignatureData, SignatureError, WithdrawalRequest, WithdrawalRequestInfo,
+    ConfirmationData, SignatureData, WithdrawalRequest, WithdrawalRequestInfo,
 };
 use hexstody_btc_client::client::BtcClient;
 use hexstody_db::{
@@ -30,35 +27,12 @@ use hexstody_db::{
     update::{StateUpdate, UpdateBody},
     Pool,
 };
+use hexstody_sig::SignatureVerificationData;
 
 #[derive(Deserialize)]
 struct Config {
     domain: String,
     operator_public_keys: Vec<PublicKey>,
-}
-
-fn verify_signature(
-    url: &str,
-    msg: Option<&str>,
-    signature_data: &SignatureData,
-    operator_public_keys: &Vec<PublicKey>,
-) -> Result<(), SignatureError> {
-    if !operator_public_keys.contains(&signature_data.public_key) {
-        return Err(SignatureError::UnknownPublicKey);
-    };
-    let msg_str: String = match msg {
-        None => {
-            let msg_items: [&str; 2] = [url, &signature_data.nonce.to_string()];
-            msg_items.join(":")
-        }
-        Some(message) => {
-            let msg_items: [&str; 3] = [url, &message, &signature_data.nonce.to_string()];
-            msg_items.join(":")
-        }
-    };
-    VerifyingKey::from(signature_data.public_key)
-        .verify(msg_str.as_bytes(), &signature_data.signature)
-        .map_err(|_| SignatureError::InvalidSignature)
 }
 
 #[openapi(skip)]
@@ -89,7 +63,16 @@ async fn list(
     config: &RocketState<Config>,
 ) -> Result<Json<Vec<WithdrawalRequest>>, (Status, &'static str)> {
     let url = [config.domain.clone(), uri!(list).to_string()].join("");
-    let _ = verify_signature(&url, None, &signature_data, &config.operator_public_keys)
+    let signature_verification_data = SignatureVerificationData {
+        url,
+        signature: signature_data.signature,
+        nonce: signature_data.nonce,
+        message: None,
+        public_key: signature_data.public_key,
+        operator_public_keys: config.operator_public_keys.clone(),
+    };
+    let _ = signature_verification_data
+        .verify()
         .map_err(|_| (Status::Forbidden, "Signature verification failed"))?;
     let hexstody_state = state.lock().await;
     let withdrawal_requests = Vec::from_iter(
@@ -113,14 +96,18 @@ async fn create(
 ) -> Result<Created<Json<WithdrawalRequest>>, (Status, &'static str)> {
     let withdrawal_request_info = withdrawal_request_info.into_inner();
     let url = [config.domain.clone(), uri!(create).to_string()].join("");
-    let msg = &json::to_string(&withdrawal_request_info).unwrap();
-    let _ = verify_signature(
-        &url,
-        Some(&msg),
-        &signature_data,
-        &config.operator_public_keys,
-    )
-    .map_err(|_| (Status::Forbidden, "Signature verification failed"))?;
+    let message = json::to_string(&withdrawal_request_info).unwrap();
+    let signature_verification_data = SignatureVerificationData {
+        url,
+        signature: signature_data.signature,
+        nonce: signature_data.nonce,
+        message: Some(message),
+        public_key: signature_data.public_key,
+        operator_public_keys: config.operator_public_keys.clone(),
+    };
+    let _ = signature_verification_data
+        .verify()
+        .map_err(|_| (Status::Forbidden, "Signature verification failed"))?;
     let info: WithdrawalRequestInfoDb = withdrawal_request_info.into();
     let state_update = StateUpdate::new(UpdateBody::CreateWithdrawalRequest(info));
     // TODO: check that state update was correctly processed
@@ -142,21 +129,25 @@ async fn confirm(
 ) -> Result<(), (Status, &'static str)> {
     let confirmation_data = confirmation_data.into_inner();
     let url = [config.domain.clone(), uri!(confirm).to_string()].join("");
-    let msg = json::to_string(&confirmation_data).unwrap();
-    let _ = verify_signature(
-        &url,
-        Some(&msg),
-        &signature_data,
-        &config.operator_public_keys,
-    )
-    .map_err(|_| (Status::Forbidden, "Signature verification failed"))?;
+    let message = json::to_string(&confirmation_data).unwrap();
+    let signature_verification_data = SignatureVerificationData {
+        url: url.clone(),
+        signature: signature_data.signature,
+        nonce: signature_data.nonce,
+        message: Some(message.clone()),
+        public_key: signature_data.public_key,
+        operator_public_keys: config.operator_public_keys.clone(),
+    };
+    let _ = signature_verification_data
+        .verify()
+        .map_err(|_| (Status::Forbidden, "Signature verification failed"))?;
     let state_update = StateUpdate::new(UpdateBody::WithdrawalRequestDecision(
         (
             confirmation_data,
             signature_data,
             WithdrawalRequestDecisionType::Confirm,
             url,
-            msg,
+            message,
         )
             .into(),
     ));
@@ -178,21 +169,25 @@ async fn reject(
 ) -> Result<(), (Status, &'static str)> {
     let confirmation_data = confirmation_data.into_inner();
     let url = [config.domain.clone(), uri!(reject).to_string()].join("");
-    let msg = json::to_string(&confirmation_data).unwrap();
-    let _ = verify_signature(
-        &url,
-        Some(&msg),
-        &signature_data,
-        &config.operator_public_keys,
-    )
-    .map_err(|_| (Status::Forbidden, "Signature verification failed"))?;
+    let message = json::to_string(&confirmation_data).unwrap();
+    let signature_verification_data = SignatureVerificationData {
+        url: url.clone(),
+        signature: signature_data.signature,
+        nonce: signature_data.nonce,
+        message: Some(message.clone()),
+        public_key: signature_data.public_key,
+        operator_public_keys: config.operator_public_keys.clone(),
+    };
+    let _ = signature_verification_data
+        .verify()
+        .map_err(|_| (Status::Forbidden, "Signature verification failed"))?;
     let state_update = StateUpdate::new(UpdateBody::WithdrawalRequestDecision(
         (
             confirmation_data,
             signature_data,
             WithdrawalRequestDecisionType::Reject,
             url,
-            msg,
+            message,
         )
             .into(),
     ));

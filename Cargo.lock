@@ -1397,6 +1397,7 @@ dependencies = [
  "hexstody-btc-api",
  "hexstody-btc-client",
  "hexstody-db",
+ "hexstody-sig",
  "log",
  "okapi 0.7.0-rc.1 (git+https://github.com/GREsau/okapi?rev=65244f0)",
  "p256",
@@ -1443,6 +1444,14 @@ dependencies = [
  "sqlx-database-tester",
  "thiserror",
  "tokio",
+]
+
+[[package]]
+name = "hexstody-sig"
+version = "0.1.0"
+dependencies = [
+ "p256",
+ "rand_core 0.6.3",
 ]
 
 [[package]]
