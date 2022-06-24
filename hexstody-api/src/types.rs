@@ -122,6 +122,12 @@ pub struct WithdrawalRequest {
     pub confirmation_status: WithdrawalRequestStatus,
 }
 
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct UserWithdrawRequest {
+    pub address: CurrencyAddress,
+    pub amount: u64,
+}
+
 fn example_uuid() -> &'static str {
     "fdb12d51-0e3f-4ff8-821e-fbc255d8e413"
 }

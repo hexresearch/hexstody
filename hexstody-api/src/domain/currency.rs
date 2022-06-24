@@ -52,6 +52,7 @@ impl fmt::Display for Erc20Token {
 #[derive(
     Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
 )]
+
 #[serde(tag = "type")]
 pub enum CurrencyAddress {
     BTC(BtcAddress),
@@ -103,10 +104,10 @@ impl fmt::Display for BtcAddress {
 #[derive(
     Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
 )]
-pub struct EthAccount(pub String);
+pub struct EthAccount{pub account: String}
 
 impl fmt::Display for EthAccount {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.0)
+        write!(f, "{}", self.account)
     }
 }
