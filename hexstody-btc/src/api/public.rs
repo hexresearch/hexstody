@@ -1,6 +1,7 @@
 use crate::state::ScanState;
 use bitcoincore_rpc::{Client, RpcApi};
 use bitcoincore_rpc_json::AddressType;
+use hexstody_api::types::{ConfirmedWithdrawal, WithdrawalResponse};
 use hexstody_btc_api::bitcoin::*;
 use hexstody_btc_api::events::*;
 use hexstody_api::types::FeeResponse;
@@ -80,6 +81,11 @@ async fn get_fees(client: &State<Client>) -> Json<FeeResponse> {
             })
         }
     }
+}
+
+#[post("/withdraw", format = "json", data = "<confirmed_withdrawal>")]
+async fn withdraw_btc(client: &State<Client>, confirmed_withdrawal: Json<ConfirmedWithdrawal>) -> error::Result<WithdrawalResponse>{
+    unimplemented!()
 }
 
 pub async fn serve_public_api(
