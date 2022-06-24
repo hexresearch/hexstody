@@ -14,7 +14,6 @@ use std::collections::HashMap;
 use thiserror::Error;
 pub use transaction::*;
 pub use user::*;
-use uuid::Uuid;
 pub use withdraw::*;
 
 use super::update::btc::BtcTxCancel;
@@ -147,15 +146,14 @@ impl State {
         timestamp: NaiveDateTime,
         withdrawal_request_info: WithdrawalRequestInfo,
     ) -> Result<(), StateUpdateErr> {
-        let request_id = Uuid::new_v4();
         let withdrawal_request: WithdrawalRequest =
-            (timestamp, request_id, withdrawal_request_info).into();
+            (timestamp, withdrawal_request_info.clone()).into();
         if let Some(user) = self.users.get_mut(&withdrawal_request.user) {
             let currency = withdrawal_request.address.currency();
             if let Some(cur_info) = user.currencies.get_mut(&currency) {
                 cur_info
                     .withdrawal_requests
-                    .insert(request_id, withdrawal_request);
+                    .insert(withdrawal_request_info.id, withdrawal_request);
                 Ok(())
             } else {
                 Err(StateUpdateErr::UserMissingCurrency(
@@ -386,81 +384,199 @@ impl Default for State {
 
 #[cfg(test)]
 mod tests {
+    use p256::{
+        ecdsa::{signature::Signer, SigningKey},
+        SecretKey,
+    };
+    use rand_core::OsRng;
+    use sqlx::{Pool, Postgres};
+    use uuid::Uuid;
+
     use super::*;
     use crate::queries::*;
     use crate::update::signup::{SignupAuth, SignupInfo};
     use crate::update::StateUpdate;
     use hexstody_api::domain::{BtcAddress, CurrencyAddress};
 
-    #[sqlx_database_tester::test(pool(variable = "pool", migrations = "./migrations"))]
-    async fn test_signup_update() {
-        let mut state0 = State::default();
-        let username = "aboba".to_owned();
-        let upd = StateUpdate::new(UpdateBody::Signup(SignupInfo {
-            username: username.clone(),
-            auth: SignupAuth::Lightning,
-        }));
-        insert_update(&pool, upd.body.clone(), Some(upd.created))
+    async fn apply_state_update(
+        update: StateUpdate,
+        state: &mut State,
+        pool: &Pool<Postgres>,
+    ) -> NaiveDateTime {
+        insert_update(pool, update.body.clone(), Some(update.created))
             .await
             .unwrap();
-        let created_at = upd.created;
-        state0.apply_update(upd).unwrap();
+        state.apply_update(update.clone()).unwrap();
+        return update.created;
+    }
 
+    #[sqlx_database_tester::test(pool(variable = "pool", migrations = "./migrations"))]
+    async fn test_signup_update() {
+        let mut state = State::default();
+        let signup_info = SignupInfo {
+            username: "Alice".to_owned(),
+            auth: SignupAuth::Lightning,
+        };
+        let created_at = apply_state_update(
+            StateUpdate::new(UpdateBody::Signup(signup_info.clone())),
+            &mut state,
+            &pool,
+        )
+        .await;
         let state = query_state(Network::Regtest, &pool).await.unwrap();
-        let expected_user = UserInfo::new(&username, SignupAuth::Lightning, created_at);
-        let extracted_user = state.users.get(&username).cloned().map(|mut u| {
-            u.created_at = created_at;
-            u
-        });
+        let expected_user = UserInfo::from((created_at, signup_info.clone()));
+        let extracted_user = state
+            .users
+            .get(&signup_info.username)
+            .cloned()
+            .map(|mut u| {
+                u.created_at = created_at;
+                u
+            });
         assert_eq!(extracted_user, Some(expected_user));
     }
 
     #[sqlx_database_tester::test(pool(variable = "pool", migrations = "./migrations"))]
     async fn test_new_withdrawal_request_update() {
-        let mut state0 = State::default();
-        let username = "bob".to_owned();
-        let amount: u64 = 1;
-        let address = CurrencyAddress::BTC(BtcAddress {
-            addr: "bc1qpv8tczdsft9lmlz4nhz8058jdyl96velqqlwgj".to_owned(),
-        });
-        let signup_upd = StateUpdate::new(UpdateBody::Signup(SignupInfo {
-            username: username.clone(),
+        let mut state = State::default();
+        let signup_info = SignupInfo {
+            username: "Alice".to_owned(),
             auth: SignupAuth::Lightning,
-        }));
-        insert_update(&pool, signup_upd.body.clone(), Some(signup_upd.created))
-            .await
-            .unwrap();
-        let upd = StateUpdate::new(UpdateBody::CreateWithdrawalRequest(WithdrawalRequestInfo {
-            user: username.clone(),
-            address: address.clone(),
-            amount,
-        }));
-        insert_update(&pool, upd.body.clone(), Some(upd.created))
-            .await
-            .unwrap();
-        state0.apply_update(signup_upd).unwrap();
-        state0.apply_update(upd).unwrap();
+        };
+        let withdrawal_request_info = WithdrawalRequestInfo {
+            id: Uuid::new_v4(),
+            user: signup_info.username.clone(),
+            address: CurrencyAddress::BTC(BtcAddress {
+                addr: "bc1qpv8tczdsft9lmlz4nhz8058jdyl96velqqlwgj".to_owned(),
+            }),
+            amount: 1,
+        };
+        let _ = apply_state_update(
+            StateUpdate::new(UpdateBody::Signup(signup_info.clone())),
+            &mut state,
+            &pool,
+        )
+        .await;
+        let _ = apply_state_update(
+            StateUpdate::new(UpdateBody::CreateWithdrawalRequest(
+                withdrawal_request_info.clone(),
+            )),
+            &mut state,
+            &pool,
+        )
+        .await;
         let state = query_state(Network::Regtest, &pool).await.unwrap();
         let extracted_withdrawal_request = state
             .users
-            .get(&username)
+            .get(&signup_info.username.clone())
             .unwrap()
             .currencies
-            .get(&Currency::BTC)
+            .get(&withdrawal_request_info.address.clone().currency())
             .unwrap()
             .withdrawal_requests
-            .iter()
-            .next()
+            .get(&withdrawal_request_info.id.clone())
+            .unwrap();
+        assert_eq!(
+            *extracted_withdrawal_request,
+            WithdrawalRequest {
+                id: extracted_withdrawal_request.id,
+                user: withdrawal_request_info.user,
+                address: withdrawal_request_info.address,
+                created_at: extracted_withdrawal_request.created_at,
+                amount: withdrawal_request_info.amount,
+                status: WithdrawalRequestStatus::InProgress(0),
+                confirmations: vec![],
+                rejections: vec![]
+            }
+        );
+    }
+
+    #[sqlx_database_tester::test(pool(variable = "pool", migrations = "./migrations"))]
+    async fn test_new_withdrawal_request_decision_update() {
+        let mut state = State::default();
+        let signup_info = SignupInfo {
+            username: "Alice".to_owned(),
+            auth: SignupAuth::Lightning,
+        };
+        let withdrawal_request_info = WithdrawalRequestInfo {
+            id: Uuid::new_v4(),
+            user: signup_info.username.clone(),
+            address: CurrencyAddress::BTC(BtcAddress {
+                addr: "bc1qpv8tczdsft9lmlz4nhz8058jdyl96velqqlwgj".to_owned(),
+            }),
+            amount: 1,
+        };
+        let _ = apply_state_update(
+            StateUpdate::new(UpdateBody::Signup(signup_info.clone())),
+            &mut state,
+            &pool,
+        )
+        .await;
+        let _ = apply_state_update(
+            StateUpdate::new(UpdateBody::CreateWithdrawalRequest(
+                withdrawal_request_info.clone(),
+            )),
+            &mut state,
+            &pool,
+        )
+        .await;
+        let extracted_withdrawal_request = state
+            .users
+            .get(&signup_info.username.clone())
             .unwrap()
-            .1;
-        assert_eq!(extracted_withdrawal_request.user, username);
-        assert_eq!(extracted_withdrawal_request.address, address);
-        assert_eq!(extracted_withdrawal_request.amount, amount);
+            .currencies
+            .get(&withdrawal_request_info.address.clone().currency())
+            .unwrap()
+            .withdrawal_requests
+            .get(&withdrawal_request_info.id.clone())
+            .unwrap();
+        let url = "test".to_owned();
+        let extracted_withdrawal_request_json =
+            serde_json::to_string(extracted_withdrawal_request).unwrap();
+        let nonce = 0;
+        let msg = [url, extracted_withdrawal_request_json, nonce.to_string()].join(":");
+        let secret_key = SecretKey::random(&mut OsRng);
+        let public_key = secret_key.public_key();
+        let signature = SigningKey::from(secret_key).sign(msg.as_bytes());
+        let withdrawal_request_decision_info = WithdrawalRequestDecisionInfo {
+            user_id: signup_info.username.clone(),
+            currency: withdrawal_request_info.address.clone().currency(),
+            request_id: extracted_withdrawal_request.id,
+            url: "test".to_owned(),
+            nonce: nonce,
+            msg: msg,
+            signature: signature,
+            public_key: public_key,
+            decision_type: WithdrawalRequestDecisionType::Confirm,
+        };
+        let _ = apply_state_update(
+            StateUpdate::new(UpdateBody::WithdrawalRequestDecision(
+                withdrawal_request_decision_info.clone(),
+            )),
+            &mut state,
+            &pool,
+        )
+        .await;
+        let state = query_state(Network::Regtest, &pool).await.unwrap();
+        let extracted_withdrawal_request = state
+            .users
+            .get(&signup_info.username.clone())
+            .unwrap()
+            .currencies
+            .get(&withdrawal_request_info.address.clone().currency())
+            .unwrap()
+            .withdrawal_requests
+            .get(&withdrawal_request_info.id.clone())
+            .unwrap();
         assert_eq!(
             extracted_withdrawal_request.status,
-            WithdrawalRequestStatus::InProgress(0)
+            WithdrawalRequestStatus::InProgress(1)
         );
-        assert_eq!(extracted_withdrawal_request.confirmations, vec![]);
-        assert_eq!(extracted_withdrawal_request.rejections, vec![]);
+        assert_eq!(
+            extracted_withdrawal_request.confirmations,
+            vec![WithdrawalRequestDecision::from(
+                withdrawal_request_decision_info
+            )]
+        );
     }
 }

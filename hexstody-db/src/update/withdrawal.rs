@@ -1,5 +1,6 @@
 use p256::{ecdsa::Signature, PublicKey};
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 use crate::state::withdraw::WithdrawalRequestId;
 use crate::update::signup::UserId;
@@ -10,6 +11,8 @@ use hexstody_api::types::{
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct WithdrawalRequestInfo {
+    /// Request ID
+    pub id: WithdrawalRequestId,
     /// User which initiated withdrawal request
     pub user: UserId,
     /// Receiving address
@@ -21,6 +24,7 @@ pub struct WithdrawalRequestInfo {
 impl From<WithdrawalRequestInfoApi> for WithdrawalRequestInfo {
     fn from(value: WithdrawalRequestInfoApi) -> WithdrawalRequestInfo {
         WithdrawalRequestInfo {
+            id: Uuid::new_v4(),
             user: value.user,
             address: value.address,
             amount: value.amount,
