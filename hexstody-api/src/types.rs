@@ -11,7 +11,7 @@ use rocket::{
 use rocket_okapi::{
     gen::OpenApiGenerator,
     okapi::schemars::{self, JsonSchema},
-    request::{OpenApiFromRequest, RequestHeaderInput, OpenApiFromData, RequestBody},
+    request::{OpenApiFromRequest, RequestHeaderInput, OpenApiFromData},
 };
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -325,44 +325,23 @@ fn example_block_height() -> Option<i64> {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ConfirmedWithdrawal {
     /// Request ID
-    //#[schemars(example = "example_uuid")]
     pub id: Uuid,
     /// User which initiated request
-    //#[schemars(example = "example_user")]
     pub user: String,
     /// Receiving address
-    //#[schemars(example = "example_address")]
     pub address: CurrencyAddress,
     /// When the request was created
-    //#[schemars(example = "example_datetime")]
     pub created_at: String,
     /// Amount of tokens to transfer
-    //#[schemars(example = "example_amount")]
     pub amount: u64,
     /// Confirmations received from operators
-    //#[schemars(example = "example_confirmations")]
     pub confirmations: Vec<SignatureData>,
     /// Rejections received from operators
-    //#[schemars(example = "example_confirmations")]
     pub rejections: Vec<SignatureData>,
 }
 
 fn example_confirmations() -> Vec<SignatureData>{
     vec![]
-}
-
-
-impl <'r> OpenApiFromData<'r> for ConfirmedWithdrawal {
-    fn request_body(gen: &mut OpenApiGenerator) -> rocket_okapi::Result<RequestBody>{
-        unimplemented!()
-    }
-}
-
-impl <'r> FromData<'r> for ConfirmedWithdrawal{
-    type Error = ConfirmedWithdrawalError;
-    fn from_data(req: &'r Request<'_>, data: Data<'r>) -> Outcome<ConfirmedWithdrawal, ConfirmedWithdrawalError>{
-        unimplemented!()
-    }
 }
 
 #[derive(Debug)]
