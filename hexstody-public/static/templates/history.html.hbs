@@ -1,10 +1,10 @@
 {{#each history_items}}
-<div class="row card">
+<div class="row">
    <div class="col">
       {{#if (isDeposit this)}}
-      <span class="text-success"> + &nbsp; {{formatCurrencyValue}}</span>
+      <span class="text-success"> +{{formatCurrencyValue}}</span>
       {{else}}
-      <span class="text-error"> - &nbsp; {{formatCurrencyValue}}</span>
+      <span class="text-error"> -{{formatCurrencyValue}}</span>
       {{/if}}
    </div>
    <div class="col">
@@ -25,10 +25,11 @@
    </div>
    {{else}}
    <div class="col">
-      Completed
+      Status: Completed
    </div>
 
    {{/if}}
    {{/if}}
 </div>
+<hr>
 {{/each}}

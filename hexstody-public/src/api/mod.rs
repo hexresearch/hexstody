@@ -3,16 +3,19 @@ pub mod wallet;
 
 use auth::*;
 use figment::Figment;
+use hexstody_api::domain::Currency;
+use hexstody_api::error;
 use hexstody_btc_client::client::BtcClient;
-use hexstody_db::state::*;
+use hexstody_db::state::State as DbState;
 use hexstody_db::update::*;
 use hexstody_db::Pool;
 use rocket::fairing::AdHoc;
 use rocket::fs::FileServer;
+use rocket::http::CookieJar;
 use rocket::response::Redirect;
 use rocket::serde::json::Json;
 use rocket::uri;
-use rocket::{get, routes};
+use rocket::{get, routes, State};
 use rocket_dyn_templates::Template;
 use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
 use std::collections::HashMap;
@@ -21,7 +24,6 @@ use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio::sync::{Mutex, Notify};
 use wallet::*;
-
 #[openapi(tag = "ping")]
 #[get("/ping")]
 fn ping() -> Json<()> {
@@ -64,14 +66,40 @@ fn deposit() -> Template {
 
 #[openapi(skip)]
 #[get("/withdraw")]
-fn withdraw() -> Template {
-    let context = HashMap::from([("title", "Withdraw"), ("parent", "base_footer_header")]);
-    Template::render("withdraw", context)
+async fn withdraw(
+    cookies: &CookieJar<'_>,
+    state: &State<Arc<Mutex<DbState>>>,
+) -> error::Result<Template> {
+    require_auth_user(cookies, state, |_, user| async move {
+        let btc_fee = &1000.to_string();
+        let btc_balance = &user
+            .currencies
+            .get(&Currency::BTC)
+            .unwrap()
+            .finalized_balance()
+            .to_string();
+        let eth_fee = &1000.to_string();
+        let eth_balance = &user
+            .currencies
+            .get(&Currency::ETH)
+            .unwrap()
+            .finalized_balance()
+            .to_string();
+        let context = HashMap::from([
+            ("title", "Withdraw"),
+            ("parent", "base_footer_header"),
+            ("btc_balance", btc_balance),
+            ("btc_fee", btc_fee),
+            ("eth_balance", eth_balance),
+            ("eth_fee", eth_fee),
+        ]);
+        Ok(Template::render("withdraw", context))
+    }).await
 }
 
 pub async fn serve_api(
     pool: Pool,
-    state: Arc<Mutex<State>>,
+    state: Arc<Mutex<DbState>>,
     _state_notify: Arc<Notify>,
     start_notify: Arc<Notify>,
     update_sender: mpsc::Sender<StateUpdate>,
@@ -93,12 +121,16 @@ pub async fn serve_api(
                 get_balance,
                 get_deposit,
                 get_history,
+                post_withdraw,
                 signup_email,
                 signin_email,
                 logout
             ],
         )
-        .mount("/", routes![index, overview, signup, signin, deposit, withdraw])
+        .mount(
+            "/",
+            routes![index, overview, signup, signin, deposit, withdraw],
+        )
         .mount(
             "/swagger/",
             make_swagger_ui(&SwaggerUIConfig {
