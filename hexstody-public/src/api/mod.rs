@@ -94,7 +94,8 @@ async fn withdraw(
             ("eth_fee", eth_fee),
         ]);
         Ok(Template::render("withdraw", context))
-    }).await
+    })
+    .await
 }
 
 pub async fn serve_api(

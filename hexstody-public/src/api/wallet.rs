@@ -1,4 +1,3 @@
-
 use log::*;
 use std::sync::Arc;
 use tokio::sync::{mpsc, Mutex};
@@ -172,29 +171,30 @@ pub async fn post_withdraw(
     cookies: &CookieJar<'_>,
     updater: &State<mpsc::Sender<StateUpdate>>,
     state: &State<Arc<Mutex<DbState>>>,
-    withdraw_request : Json<api::UserWithdrawRequest>
+    withdraw_request: Json<api::UserWithdrawRequest>,
 ) -> error::Result<()> {
     require_auth(cookies, |cookie| async move {
         let user_id = cookie.value();
         {
             let state = state.lock().await;
             if let Some(_) = state.users.get(user_id) {
-                let withdrawal_request = WithdrawalRequestInfo{
-                    user : user_id.to_owned(),
-                    address : withdraw_request.address.to_owned(),
-                    amount : withdraw_request.amount
+                let withdrawal_request = WithdrawalRequestInfo {
+                    user: user_id.to_owned(),
+                    address: withdraw_request.address.to_owned(),
+                    amount: withdraw_request.amount,
                 };
-                let state_update = StateUpdate::new(UpdateBody::NewWithdrawalRequest(withdrawal_request));
+                let state_update =
+                    StateUpdate::new(UpdateBody::NewWithdrawalRequest(withdrawal_request));
                 updater
                     .send(state_update)
                     .await
-                    .map_err(|_|error::Error::NoUserFound.into())
-            } else{
+                    .map_err(|_| error::Error::NoUserFound.into())
+            } else {
                 Err(error::Error::NoUserFound.into())
             }
         }
-    }).await
-
+    })
+    .await
 }
 
 async fn allocate_address(
@@ -220,7 +220,9 @@ async fn allocate_btc_address(
         error::Error::FailedGenAddress(Currency::BTC)
     })?;
 
-    let packed_address = CurrencyAddress::BTC(BtcAddress{addr: format!("{}", address)});
+    let packed_address = CurrencyAddress::BTC(BtcAddress {
+        addr: format!("{}", address),
+    });
 
     updater
         .send(StateUpdate::new(UpdateBody::DepositAddress(
