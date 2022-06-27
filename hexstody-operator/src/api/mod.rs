@@ -1,55 +1,79 @@
 use figment::Figment;
-use rocket::fairing::AdHoc;
-use rocket::fs::FileServer;
-use rocket::http::Status;
-use rocket::response::status::Created;
-use rocket::serde::json::Json;
-use rocket::State as RocketState;
-use rocket::{get, post, routes};
-use rocket_dyn_templates::Template;
+use p256::PublicKey;
+use rocket::{
+    fs::FileServer,
+    http::Status,
+    response::status,
+    serde::{json, json::Json},
+    State as RocketState,
+    {fairing::AdHoc, response::status::Created},
+    {get, post, routes, uri},
+};
+use rocket_dyn_templates::{context, Template};
 use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
-use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
-use std::sync::Arc;
+use serde::Deserialize;
+use std::{path::PathBuf, str, sync::Arc};
 use tokio::sync::{mpsc, Mutex, Notify};
 
-use hexstody_api::types::{WithdrawalRequest, WithdrawalRequestInfo};
-use hexstody_btc_client::client::BtcClient;
-use hexstody_db::state::State as HexstodyState;
-use hexstody_db::update::{
-    withdrawal::WithdrawalRequestInfo as WithdrawalRequestInfoDb, StateUpdate, UpdateBody,
+use hexstody_api::types::{
+    ConfirmationData, SignatureData, WithdrawalRequest, WithdrawalRequestInfo,
 };
-use hexstody_db::Pool;
+use hexstody_btc_client::client::BtcClient;
+use hexstody_db::{
+    state::State as HexstodyState,
+    update::withdrawal::{
+        WithdrawalRequestDecisionType, WithdrawalRequestInfo as WithdrawalRequestInfoDb,
+    },
+    update::{StateUpdate, UpdateBody},
+    Pool,
+};
+use hexstody_sig::SignatureVerificationData;
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct IndexHandlerContext {
-    pub title: String,
-    pub parent: String,
-    pub withdrawal_requests: Vec<WithdrawalRequest>,
+#[derive(Deserialize)]
+struct Config {
+    domain: String,
+    operator_public_keys: Vec<PublicKey>,
 }
 
 #[openapi(skip)]
 #[get("/")]
 async fn index(state: &RocketState<Arc<Mutex<HexstodyState>>>) -> Template {
     let hexstody_state = state.lock().await;
-    let withdrawal_requests = Vec::from_iter(
+    let withdrawal_requests: Vec<WithdrawalRequest> = Vec::from_iter(
         hexstody_state
             .withdrawal_requests()
             .values()
             .cloned()
             .map(|x| x.into()),
     );
-    let context = IndexHandlerContext {
+    let context = context! {
         title: "Withdrawal requests".to_owned(),
         parent: "base".to_owned(),
-        withdrawal_requests: withdrawal_requests,
+        withdrawal_requests,
     };
     Template::render("index", context)
 }
 
-#[openapi(tag = "request")]
+/// # Get all withdrawal requests
+#[openapi(tag = "Withdrawal request")]
 #[get("/request")]
-async fn list(state: &RocketState<Arc<Mutex<HexstodyState>>>) -> Json<Vec<WithdrawalRequest>> {
+async fn list(
+    state: &RocketState<Arc<Mutex<HexstodyState>>>,
+    signature_data: SignatureData,
+    config: &RocketState<Config>,
+) -> Result<Json<Vec<WithdrawalRequest>>, (Status, &'static str)> {
+    let url = [config.domain.clone(), uri!(list).to_string()].join("");
+    let signature_verification_data = SignatureVerificationData {
+        url,
+        signature: signature_data.signature,
+        nonce: signature_data.nonce,
+        message: None,
+        public_key: signature_data.public_key,
+        operator_public_keys: config.operator_public_keys.clone(),
+    };
+    let _ = signature_verification_data
+        .verify()
+        .map_err(|_| (Status::Forbidden, "Signature verification failed"))?;
     let hexstody_state = state.lock().await;
     let withdrawal_requests = Vec::from_iter(
         hexstody_state
@@ -58,23 +82,120 @@ async fn list(state: &RocketState<Arc<Mutex<HexstodyState>>>) -> Json<Vec<Withdr
             .cloned()
             .map(|x| x.into()),
     );
-    Json(withdrawal_requests)
+    Ok(Json(withdrawal_requests))
 }
 
-#[openapi(tag = "request")]
+/// # Create new withdrawal request
+#[openapi(tag = "Withdrawal request")]
 #[post("/request", format = "json", data = "<withdrawal_request_info>")]
 async fn create(
     update_sender: &RocketState<mpsc::Sender<StateUpdate>>,
+    signature_data: SignatureData,
     withdrawal_request_info: Json<WithdrawalRequestInfo>,
-) -> Result<Created<Json<WithdrawalRequest>>, Status> {
-    let info: WithdrawalRequestInfoDb = withdrawal_request_info.into_inner().into();
-    let state_update = StateUpdate::new(UpdateBody::NewWithdrawalRequest(info));
+    config: &RocketState<Config>,
+) -> Result<Created<Json<WithdrawalRequest>>, (Status, &'static str)> {
+    let withdrawal_request_info = withdrawal_request_info.into_inner();
+    let url = [config.domain.clone(), uri!(create).to_string()].join("");
+    let message = json::to_string(&withdrawal_request_info).unwrap();
+    let signature_verification_data = SignatureVerificationData {
+        url,
+        signature: signature_data.signature,
+        nonce: signature_data.nonce,
+        message: Some(message),
+        public_key: signature_data.public_key,
+        operator_public_keys: config.operator_public_keys.clone(),
+    };
+    let _ = signature_verification_data
+        .verify()
+        .map_err(|_| (Status::Forbidden, "Signature verification failed"))?;
+    let info: WithdrawalRequestInfoDb = withdrawal_request_info.into();
+    let state_update = StateUpdate::new(UpdateBody::CreateWithdrawalRequest(info));
     // TODO: check that state update was correctly processed
     update_sender
         .send(state_update)
         .await
-        .map_err(|_| Status::InternalServerError)?;
-    Ok(Created::new("/request"))
+        .map_err(|_| (Status::InternalServerError, "Internal server error"))?;
+    Ok(status::Created::new("/request"))
+}
+
+/// # Confirm withdrawal request
+#[openapi(tag = "Withdrawal request")]
+#[post("/confirm", format = "json", data = "<confirmation_data>")]
+async fn confirm(
+    update_sender: &RocketState<mpsc::Sender<StateUpdate>>,
+    signature_data: SignatureData,
+    confirmation_data: Json<ConfirmationData>,
+    config: &RocketState<Config>,
+) -> Result<(), (Status, &'static str)> {
+    let confirmation_data = confirmation_data.into_inner();
+    let url = [config.domain.clone(), uri!(confirm).to_string()].join("");
+    let message = json::to_string(&confirmation_data).unwrap();
+    let signature_verification_data = SignatureVerificationData {
+        url: url.clone(),
+        signature: signature_data.signature,
+        nonce: signature_data.nonce,
+        message: Some(message.clone()),
+        public_key: signature_data.public_key,
+        operator_public_keys: config.operator_public_keys.clone(),
+    };
+    let _ = signature_verification_data
+        .verify()
+        .map_err(|_| (Status::Forbidden, "Signature verification failed"))?;
+    let state_update = StateUpdate::new(UpdateBody::WithdrawalRequestDecision(
+        (
+            confirmation_data,
+            signature_data,
+            WithdrawalRequestDecisionType::Confirm,
+            url,
+            message,
+        )
+            .into(),
+    ));
+    update_sender
+        .send(state_update)
+        .await
+        .map_err(|_| (Status::InternalServerError, "Internal server error"))?;
+    Ok(())
+}
+
+/// # Reject withdrawal request
+#[openapi(tag = "Withdrawal request")]
+#[post("/reject", format = "json", data = "<confirmation_data>")]
+async fn reject(
+    update_sender: &RocketState<mpsc::Sender<StateUpdate>>,
+    signature_data: SignatureData,
+    confirmation_data: Json<ConfirmationData>,
+    config: &RocketState<Config>,
+) -> Result<(), (Status, &'static str)> {
+    let confirmation_data = confirmation_data.into_inner();
+    let url = [config.domain.clone(), uri!(reject).to_string()].join("");
+    let message = json::to_string(&confirmation_data).unwrap();
+    let signature_verification_data = SignatureVerificationData {
+        url: url.clone(),
+        signature: signature_data.signature,
+        nonce: signature_data.nonce,
+        message: Some(message.clone()),
+        public_key: signature_data.public_key,
+        operator_public_keys: config.operator_public_keys.clone(),
+    };
+    let _ = signature_verification_data
+        .verify()
+        .map_err(|_| (Status::Forbidden, "Signature verification failed"))?;
+    let state_update = StateUpdate::new(UpdateBody::WithdrawalRequestDecision(
+        (
+            confirmation_data,
+            signature_data,
+            WithdrawalRequestDecisionType::Reject,
+            url,
+            message,
+        )
+            .into(),
+    ));
+    update_sender
+        .send(state_update)
+        .await
+        .map_err(|_| (Status::InternalServerError, "Internal server error"))?;
+    Ok(())
 }
 
 pub async fn serve_api(
@@ -95,7 +216,7 @@ pub async fn serve_api(
     let _ = rocket::custom(api_config)
         .mount("/", FileServer::from(static_path))
         .mount("/", routes![index])
-        .mount("/", openapi_get_routes![list, create])
+        .mount("/", openapi_get_routes![list, create, confirm, reject])
         .mount(
             "/swagger/",
             make_swagger_ui(&SwaggerUIConfig {
@@ -107,6 +228,7 @@ pub async fn serve_api(
         .manage(pool)
         .manage(update_sender)
         .manage(btc_client)
+        .attach(AdHoc::config::<Config>())
         .attach(Template::fairing())
         .attach(on_ready)
         .launch()

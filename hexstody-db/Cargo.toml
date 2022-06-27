@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
 [lib]
 name = "hexstody_db"
 path = "src/lib.rs"
@@ -12,12 +13,11 @@ path = "src/lib.rs"
 bitcoin = "0.28.1"
 bitcoin_hashes = "0.10.0"
 chrono = { version = "0.4.19", features = [ "serde" ] }
-ecdsa = { version = "0.13.4", features = [ "serde", "pem" ] }
 futures = "0.3.19"
 hexstody-api = { path = "../hexstody-api" }
 hexstody-btc-api = { path = "../hexstody-btc-api" }
 log = "0.4.14"
-p256 = "0.10.1"
+p256 = { version = "0.11.1", features = ["serde"] }
 schemars = "0.8.8"
 serde = { version = "1.0", features = [ "derive" ] }
 serde_json = "1.0"
@@ -25,6 +25,7 @@ sqlx = { version = "0.5", features = [ "runtime-tokio-rustls", "migrate", "macro
 thiserror = "1.0"
 tokio = { version = "1", features = [ "full" ] }
 uuid = { version = "0.8", features = [ "serde", "v4" ] }
+rand_core = { version = "0.6.3", features = ["std"] }
 
 [dev-dependencies]
 sqlx-database-tester = { version = "0.2.0", features = [ "runtime-tokio" ] }

@@ -12,7 +12,7 @@ use thiserror::Error;
 use self::btc::{BestBtcBlock, BtcTxCancel};
 use self::deposit::DepositAddress;
 use self::signup::SignupInfo;
-use self::withdrawal::WithdrawalRequestInfo;
+use self::withdrawal::{WithdrawalRequestDecisionInfo, WithdrawalRequestInfo};
 use super::state::transaction::BtcTransaction;
 use super::state::State;
 
@@ -41,7 +41,9 @@ pub enum UpdateBody {
     /// Caching current state to database for speeding startup time
     Snapshot(State),
     /// Create new withdrawal request
-    NewWithdrawalRequest(WithdrawalRequestInfo),
+    CreateWithdrawalRequest(WithdrawalRequestInfo),
+    /// New operator's decision for the withdrawal request
+    WithdrawalRequestDecision(WithdrawalRequestDecisionInfo),
     /// Register new deposit address for user
     DepositAddress(DepositAddress),
     /// New best block for BTC
@@ -57,7 +59,8 @@ impl UpdateBody {
         match self {
             UpdateBody::Signup(_) => UpdateTag::Signup,
             UpdateBody::Snapshot(_) => UpdateTag::Snapshot,
-            UpdateBody::NewWithdrawalRequest(_) => UpdateTag::NewWithdrawalRequest,
+            UpdateBody::CreateWithdrawalRequest(_) => UpdateTag::CreateWithdrawalRequest,
+            UpdateBody::WithdrawalRequestDecision(_) => UpdateTag::WithdrawalRequestDecision,
             UpdateBody::DepositAddress(_) => UpdateTag::DepositAddress,
             UpdateBody::BestBtcBlock(_) => UpdateTag::BestBtcBlock,
             UpdateBody::UpdateBtcTx(_) => UpdateTag::UpdateBtcTx,
@@ -69,7 +72,8 @@ impl UpdateBody {
         match self {
             UpdateBody::Signup(v) => serde_json::to_value(v),
             UpdateBody::Snapshot(v) => serde_json::to_value(v),
-            UpdateBody::NewWithdrawalRequest(v) => serde_json::to_value(v),
+            UpdateBody::CreateWithdrawalRequest(v) => serde_json::to_value(v),
+            UpdateBody::WithdrawalRequestDecision(v) => serde_json::to_value(v),
             UpdateBody::DepositAddress(v) => serde_json::to_value(v),
             UpdateBody::BestBtcBlock(v) => serde_json::to_value(v),
             UpdateBody::UpdateBtcTx(v) => serde_json::to_value(v),
@@ -82,7 +86,8 @@ impl UpdateBody {
 pub enum UpdateTag {
     Signup,
     Snapshot,
-    NewWithdrawalRequest,
+    CreateWithdrawalRequest,
+    WithdrawalRequestDecision,
     DepositAddress,
     BestBtcBlock,
     UpdateBtcTx,
@@ -105,7 +110,8 @@ impl fmt::Display for UpdateTag {
         match self {
             UpdateTag::Signup => write!(f, "signup"),
             UpdateTag::Snapshot => write!(f, "snapshot"),
-            UpdateTag::NewWithdrawalRequest => write!(f, "withdrawal request"),
+            UpdateTag::CreateWithdrawalRequest => write!(f, "withdrawal request"),
+            UpdateTag::WithdrawalRequestDecision => write!(f, "withdrawal request decision"),
             UpdateTag::DepositAddress => write!(f, "deposit address"),
             UpdateTag::BestBtcBlock => write!(f, "best btc block"),
             UpdateTag::UpdateBtcTx => write!(f, "update btc tx"),
@@ -121,7 +127,8 @@ impl FromStr for UpdateTag {
         match s.to_lowercase().as_ref() {
             "signup" => Ok(UpdateTag::Signup),
             "snapshot" => Ok(UpdateTag::Snapshot),
-            "withdrawal request" => Ok(UpdateTag::NewWithdrawalRequest),
+            "withdrawal request" => Ok(UpdateTag::CreateWithdrawalRequest),
+            "withdrawal request decision" => Ok(UpdateTag::WithdrawalRequestDecision),
             "deposit address" => Ok(UpdateTag::DepositAddress),
             "best btc block" => Ok(UpdateTag::BestBtcBlock),
             "update btc tx" => Ok(UpdateTag::UpdateBtcTx),
@@ -161,7 +168,10 @@ impl UpdateTag {
         match self {
             UpdateTag::Signup => Ok(UpdateBody::Signup(serde_json::from_value(value)?)),
             UpdateTag::Snapshot => Ok(UpdateBody::Snapshot(serde_json::from_value(value)?)),
-            UpdateTag::NewWithdrawalRequest => Ok(UpdateBody::NewWithdrawalRequest(
+            UpdateTag::CreateWithdrawalRequest => Ok(UpdateBody::CreateWithdrawalRequest(
+                serde_json::from_value(value)?,
+            )),
+            UpdateTag::WithdrawalRequestDecision => Ok(UpdateBody::WithdrawalRequestDecision(
                 serde_json::from_value(value)?,
             )),
             UpdateTag::DepositAddress => {

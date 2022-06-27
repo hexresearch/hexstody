@@ -7,3 +7,9 @@
 #file-selector {
     width: auto;
 }
+
+.address-cell {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
