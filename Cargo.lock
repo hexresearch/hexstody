@@ -1187,6 +1187,7 @@ version = "0.1.0"
 dependencies = [
  "base64",
  "chrono",
+ "hexstody-btc-api",
  "okapi 0.7.0-rc.1 (git+https://github.com/GREsau/okapi?rev=65244f0)",
  "p256",
  "pwhash",
@@ -1214,10 +1215,12 @@ dependencies = [
  "futures",
  "futures-channel",
  "futures-util",
+ "hexstody-api",
  "hexstody-btc-api",
  "hexstody-btc-test",
  "log",
  "nix",
+ "p256",
  "port-selector",
  "rocket",
  "rocket_okapi 0.8.0-rc.1",
@@ -1247,6 +1250,7 @@ name = "hexstody-btc-client"
 version = "0.1.0"
 dependencies = [
  "bitcoin",
+ "hexstody-api",
  "hexstody-btc-api",
  "log",
  "reqwest",

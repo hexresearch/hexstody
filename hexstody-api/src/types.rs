@@ -6,14 +6,16 @@ use rocket::{
     http::Status,
     request::{FromRequest, Outcome, Request},
     serde::json::json,
+    data::{Data, FromData, Outcome as DataOutcome}
 };
 use rocket_okapi::{
     gen::OpenApiGenerator,
     okapi::schemars::{self, JsonSchema},
-    request::{OpenApiFromRequest, RequestHeaderInput},
+    request::{OpenApiFromRequest, RequestHeaderInput, OpenApiFromData},
 };
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use hexstody_btc_api::bitcoin::txid::BtcTxid;
 
 use super::domain::currency::{BtcAddress, Currency, CurrencyAddress};
 
@@ -301,3 +303,66 @@ impl<'r> OpenApiFromRequest<'r> for SignatureData {
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct ConfirmationData(pub WithdrawalRequest);
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct FeeResponse {
+    /// Estimate fee rate in BTC/kB.
+    #[schemars(example = "example_fee")]
+    pub fee_rate: u64,
+    /// Block number where estimate was found. None means that there was an error and a default value was used
+    #[schemars(example = "example_block_height")]
+    pub block: Option<i64>
+}
+
+fn example_fee() -> u64 {
+    5
+}
+
+fn example_block_height() -> Option<i64> {
+    Some(12345)
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ConfirmedWithdrawal {
+    /// Request ID
+    pub id: Uuid,
+    /// User which initiated request
+    pub user: String,
+    /// Receiving address
+    pub address: CurrencyAddress,
+    /// When the request was created
+    pub created_at: String,
+    /// Amount of tokens to transfer
+    pub amount: u64,
+    /// Confirmations received from operators
+    pub confirmations: Vec<SignatureData>,
+    /// Rejections received from operators
+    pub rejections: Vec<SignatureData>,
+}
+
+fn example_confirmations() -> Vec<SignatureData>{
+    vec![]
+}
+
+#[derive(Debug)]
+pub enum ConfirmedWithdrawalError {
+    MissingId,
+    InvalidId,
+    MissingUser,
+    MissingAddress,
+    InvalidAddress,
+    MissingCreatedAt,
+    MissingAmount,
+    InvalidAmount,
+    InsufficientConfirmations,
+    MoreRejections,
+    InvalidSignature(SignatureError)
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct WithdrawalResponse {
+    /// Request ID
+    pub id: Uuid,
+    /// Transaction ID
+    pub txid: BtcTxid
+}
