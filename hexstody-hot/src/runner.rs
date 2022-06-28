@@ -2,9 +2,11 @@ use figment::Figment;
 use futures::future::{join, AbortHandle, AbortRegistration, Abortable, Aborted};
 use futures::Future;
 use log::*;
-use std::fmt;
+use p256::pkcs8::DecodePublicKey;
+use p256::PublicKey;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::{fmt, fs};
 use thiserror::Error;
 use tokio::sync::mpsc;
 use tokio::sync::{Mutex, Notify};
@@ -45,12 +47,25 @@ impl ApiConfig {
         let figment = rocket::Config::figment();
         let default_secret_key =
             "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==".to_owned();
-
+        let mut operator_public_keys = vec![]; //args.operator_public_keys.clone()
+        for p in &args.operator_public_keys {
+            let full_path = fs::canonicalize(&p).expect("Something went wrong reading the file");
+            let key_str =
+                fs::read_to_string(full_path).expect("Something went wrong reading the file");
+            let public_key = PublicKey::from_public_key_pem(&key_str)
+                .expect("Something went wrong decoding the key file");
+            operator_public_keys.push(public_key);
+        }
         let public_api_enabled = if args.public_api_enabled {
             true
         } else {
             figment.extract_inner("public_api_enabled").unwrap_or(true)
         };
+        let public_api_domain = args.public_api_domain.clone().unwrap_or(
+            figment
+                .extract_inner("public_api_domain")
+                .unwrap_or("http://127.0.0.1:9800".to_owned()),
+        );
         let public_api_port = args
             .public_api_port
             .unwrap_or(figment.extract_inner("public_api_port").unwrap_or(9800));
@@ -75,7 +90,9 @@ impl ApiConfig {
         );
         let public_api_figment = figment
             .clone()
+            .merge(("operator_public_keys", operator_public_keys.clone()))
             .merge(("api_enabled", public_api_enabled))
+            .merge(("domain", public_api_domain))
             .merge(("port", public_api_port))
             .merge(("static_path", public_api_static_path))
             .merge(("template_dir", public_api_template_path))
@@ -88,6 +105,11 @@ impl ApiConfig {
                 .extract_inner("operator_api_enabled")
                 .unwrap_or(true)
         };
+        let operator_api_domain = args.operator_api_domain.clone().unwrap_or(
+            figment
+                .extract_inner("operator_api_domain")
+                .unwrap_or("http://127.0.0.1:9801".to_owned()),
+        );
         let operator_api_port = args
             .operator_api_port
             .unwrap_or(figment.extract_inner("operator_api_port").unwrap_or(9801));
@@ -112,7 +134,9 @@ impl ApiConfig {
         );
         let operator_api_figment = figment
             .clone()
+            .merge(("operator_public_keys", operator_public_keys.clone()))
             .merge(("api_enabled", operator_api_enabled))
+            .merge(("domain", operator_api_domain))
             .merge(("port", operator_api_port))
             .merge(("static_path", operator_api_static_path))
             .merge(("template_dir", operator_api_template_path))

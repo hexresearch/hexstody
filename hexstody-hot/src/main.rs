@@ -6,7 +6,7 @@ mod worker;
 use clap::Parser;
 use futures::future::AbortHandle;
 use hexstody_btc_client::client::BtcClient;
-use hexstody_db::state::Network;
+use hexstody_db::state::{Network, REQUIRED_NUMBER_OF_CONFIRMATIONS};
 use log::*;
 use std::error::Error;
 use std::path::PathBuf;
@@ -40,8 +40,20 @@ pub struct Args {
     network: Network,
     #[clap(long, env = "HEXSTODY_START_REGTEST")]
     start_regtest: bool,
+    #[clap(
+        long,
+        env = "HEXSTODY_OPERATOR_PUBLIC_KEYS",
+        takes_value = true,
+        multiple_values = true,
+        min_values = usize::try_from(REQUIRED_NUMBER_OF_CONFIRMATIONS).unwrap(),
+        required = true
+    )]
+    /// List of paths to files containing trusted public keys, which operators use to confirm withdrawal requests
+    operator_public_keys: Vec<PathBuf>,
     #[clap(long, env = "HEXSTODY_PUBLIC_API_ENABLED")]
     public_api_enabled: bool,
+    #[clap(long, env = "HEXSTODY_PUBLIC_API_DOMAIN")]
+    public_api_domain: Option<String>,
     #[clap(long, env = "HEXSTODY_PUBLIC_API_PORT")]
     public_api_port: Option<u16>,
     #[clap(long, env = "HEXSTODY_PUBLIC_API_STATIC_PATH")]
@@ -53,6 +65,8 @@ pub struct Args {
     public_api_secret_key: Option<String>,
     #[clap(long, env = "HEXSTODY_OPERATOR_API_ENABLED")]
     operator_api_enabled: bool,
+    #[clap(long, env = "HEXSTODY_OPERATOR_API_DOMAIN")]
+    operator_api_domain: Option<String>,
     #[clap(long, env = "HEXSTODY_OPERATOR_API_PORT")]
     operator_api_port: Option<u16>,
     #[clap(long, env = "HEXSTODY_OPERATOR_API_STATIC_PATH")]

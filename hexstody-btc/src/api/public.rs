@@ -1,8 +1,10 @@
 use crate::state::ScanState;
 use bitcoincore_rpc::{Client, RpcApi};
 use bitcoincore_rpc_json::AddressType;
+use hexstody_api::types::{ConfirmedWithdrawal, WithdrawalResponse};
 use hexstody_btc_api::bitcoin::*;
 use hexstody_btc_api::events::*;
+use hexstody_api::types::FeeResponse;
 use log::*;
 use rocket::fairing::AdHoc;
 use rocket::figment::{providers::Env, Figment};
@@ -14,6 +16,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::{Mutex, Notify};
 use tokio::time::timeout;
+use p256::PublicKey;
 
 use super::error;
 
@@ -58,6 +61,33 @@ async fn get_deposit_address(client: &State<Client>) -> error::Result<BtcAddress
     Ok(Json(address.into()))
 }
 
+#[openapi(tag = "fees")]
+#[get("/fees")]
+async fn get_fees(client: &State<Client>) -> Json<FeeResponse> {
+    let est = client
+        .estimate_smart_fee(2, None)
+        .map_err(|e| error::Error::from(e));
+    let res = FeeResponse {
+        fee_rate: 5, // default 5 sat/byte
+        block: None
+    };
+    match est {
+        Err(_) => Json(res),
+        Ok(fe) => match fe.fee_rate {
+            None => Json(res),
+            Some(val) => Json(FeeResponse{
+                fee_rate: val.as_sat(),
+                block: Some(fe.blocks)
+            })
+        }
+    }
+}
+
+#[post("/withdraw", format = "json", data = "<confirmed_withdrawal>")]
+async fn withdraw_btc(client: &State<Client>, confirmed_withdrawal: Json<ConfirmedWithdrawal>) -> error::Result<WithdrawalResponse>{
+    unimplemented!()
+}
+
 pub async fn serve_public_api(
     btc: Client,
     address: IpAddr,
@@ -67,6 +97,7 @@ pub async fn serve_public_api(
     state_notify: Arc<Notify>,
     polling_duration: Duration,
     secret_key: Option<&str>,
+    op_public_keys: Vec<PublicKey>
 ) -> Result<(), rocket::Error> {
     let zero_key =
         "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==";
@@ -88,7 +119,7 @@ pub async fn serve_public_api(
     let _ = rocket::custom(figment)
         .mount(
             "/",
-            openapi_get_routes![ping, poll_events, get_deposit_address],
+            openapi_get_routes![ping, poll_events, get_deposit_address, get_fees],
         )
         .mount(
             "/swagger/",
@@ -116,6 +147,7 @@ pub async fn serve_public_api(
         .manage(state)
         .manage(state_notify)
         .manage(btc)
+        .manage(op_public_keys)
         .attach(on_ready)
         .launch()
         .await?;

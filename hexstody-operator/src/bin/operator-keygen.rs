@@ -1,7 +1,10 @@
 use anyhow::{bail, Context, Result};
 use clap::Parser;
 use p256::SecretKey;
-use pkcs8::{der::Document, pkcs5::pbes2, EncodePrivateKey, EncodePublicKey};
+use pkcs8::der::pem::PemLabel;
+use pkcs8::{
+    pkcs5::pbes2, EncodePrivateKey, EncodePublicKey, EncryptedPrivateKeyInfo, PrivateKeyInfo,
+};
 use rand_core::{OsRng, RngCore};
 use rpassword;
 use std::fs::OpenOptions;
@@ -46,12 +49,13 @@ fn main() -> Result<()> {
             // For some reason pkcs8::pkcs5::Error doesn't automaticaly converts to pkcs8::Error with '?'
             let pbes2_params =
                 pbes2::Parameters::pbkdf2_sha256_aes256cbc(100_000, &salt, &iv).unwrap();
-            secret_key
-                .to_pkcs8_der()?
+            PrivateKeyInfo::try_from(secret_key.to_pkcs8_der()?.as_bytes())?
                 .encrypt_with_params(pbes2_params, password)?
-                .to_pem(Default::default())?
+                .to_pem(EncryptedPrivateKeyInfo::PEM_LABEL, Default::default())?
         }
-        None => secret_key.to_pkcs8_der()?.to_pem(Default::default())?,
+        None => secret_key
+            .to_pkcs8_der()?
+            .to_pem(PrivateKeyInfo::PEM_LABEL, Default::default())?,
     };
 
     // Write secret key to file

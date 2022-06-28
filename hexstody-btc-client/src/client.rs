@@ -1,5 +1,6 @@
 use bitcoin::Address;
 use hexstody_btc_api::events::*;
+use hexstody_api::types::FeeResponse;
 use log::*;
 use thiserror::Error;
 
@@ -62,6 +63,21 @@ impl BtcClient {
         let path = "/deposit/address";
         let endpoint = format!("{}{}", self.server, path);
         let request = self.client.post(endpoint).build()?;
+        let response = self
+            .client
+            .execute(request)
+            .await?
+            .error_for_status()?
+            .text()
+            .await?;
+        debug!("Response {path}: {}", response);
+        Ok(serde_json::from_str(&response)?)
+    }
+
+    pub async fn get_fees(&self) -> Result<FeeResponse>{
+        let path = "/fees";
+        let endpoint = format!("{}{}", self.server, path);
+        let request = self.client.get(endpoint).build()?;
         let response = self
             .client
             .execute(request)

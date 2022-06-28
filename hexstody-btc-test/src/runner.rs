@@ -107,6 +107,7 @@ async fn setup_api(rpc_port: u16) -> u16 {
                 state_notify,
                 polling_duration,
                 None,
+                vec![]
             )
             .await
             .expect("start api");
