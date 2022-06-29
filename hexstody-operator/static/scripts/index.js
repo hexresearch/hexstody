@@ -43,15 +43,16 @@ async function importKey(_event) {
         //     user: "Bob",
         //     address: {
         //         type: "BTC",
-        //         addr: "1BNwxHGaFbeUBitpjy2AsKpJ29Ybxntqvb"
+        //         addr: "12uds9HMP52vruDTi1xwHFm83xaqomxNx4"
         //     },
-        //     amount: 42
+        //     amount: 3
         // },
         //     "request",
         //     "POST"
         // )
     } else {
-        if (response.status == 403) {
+        console.log(response);
+        if (response.status == 401) {
             fileSelectorStatus.className = "text-error";
             fileSelectorStatus.innerText = "Invalid key";
             clearWithdrawalRequests();

@@ -6,15 +6,15 @@ use rocket::{
     http::Status,
     request::{FromRequest, Outcome, Request},
     serde::json::json,
-    data::{Data, FromData, Outcome as DataOutcome}
 };
 use rocket_okapi::{
     gen::OpenApiGenerator,
     okapi::schemars::{self, JsonSchema},
-    request::{OpenApiFromRequest, RequestHeaderInput, OpenApiFromData},
+    request::{OpenApiFromRequest, RequestHeaderInput},
 };
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+
 use hexstody_btc_api::bitcoin::txid::BtcTxid;
 
 use super::domain::currency::{BtcAddress, Currency, CurrencyAddress};
@@ -311,7 +311,7 @@ pub struct FeeResponse {
     pub fee_rate: u64,
     /// Block number where estimate was found. None means that there was an error and a default value was used
     #[schemars(example = "example_block_height")]
-    pub block: Option<i64>
+    pub block: Option<i64>,
 }
 
 fn example_fee() -> u64 {
@@ -340,10 +340,6 @@ pub struct ConfirmedWithdrawal {
     pub rejections: Vec<SignatureData>,
 }
 
-fn example_confirmations() -> Vec<SignatureData>{
-    vec![]
-}
-
 #[derive(Debug)]
 pub enum ConfirmedWithdrawalError {
     MissingId,
@@ -356,7 +352,7 @@ pub enum ConfirmedWithdrawalError {
     InvalidAmount,
     InsufficientConfirmations,
     MoreRejections,
-    InvalidSignature(SignatureError)
+    InvalidSignature(SignatureError),
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
@@ -364,5 +360,5 @@ pub struct WithdrawalResponse {
     /// Request ID
     pub id: Uuid,
     /// Transaction ID
-    pub txid: BtcTxid
+    pub txid: BtcTxid,
 }

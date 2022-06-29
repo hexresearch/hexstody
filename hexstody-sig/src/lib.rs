@@ -2,12 +2,25 @@ use p256::{
     ecdsa::{signature::Verifier, Signature, VerifyingKey},
     PublicKey,
 };
+use std::error::Error as StdError;
+use std::fmt;
 
 #[derive(Debug, PartialEq)]
-pub enum SignatureError {
+pub enum Error {
     InvalidPublicKey,
     InvalidSignature,
 }
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Error::InvalidPublicKey => write!(f, "Invalid public key"),
+            Error::InvalidSignature => write!(f, "Invalid signature"),
+        }
+    }
+}
+
+impl StdError for Error {}
 
 #[derive(Debug, PartialEq)]
 pub struct SignatureVerificationData {
@@ -20,9 +33,9 @@ pub struct SignatureVerificationData {
 }
 
 impl SignatureVerificationData {
-    pub fn verify(&self) -> Result<(), SignatureError> {
+    pub fn verify(&self) -> Result<(), Error> {
         if !self.operator_public_keys.contains(&self.public_key) {
-            return Err(SignatureError::InvalidPublicKey);
+            return Err(Error::InvalidPublicKey);
         };
         let message_items = match self.message.clone() {
             None => vec![self.url.clone(), self.nonce.to_string()],
@@ -31,7 +44,7 @@ impl SignatureVerificationData {
         let message = message_items.join(":");
         VerifyingKey::from(self.public_key)
             .verify(message.as_bytes(), &self.signature)
-            .map_err(|_| SignatureError::InvalidSignature)
+            .map_err(|_| Error::InvalidSignature)
     }
 }
 
@@ -43,7 +56,7 @@ mod tests {
     };
     use rand_core::OsRng;
 
-    use crate::{SignatureVerificationData, SignatureError};
+    use crate::{Error, SignatureVerificationData};
 
     #[test]
     fn test_signature() {
@@ -103,7 +116,10 @@ mod tests {
             // No trusted keys
             operator_public_keys: vec![],
         };
-        assert_eq!(signature_verification_data.verify(), Err(SignatureError::InvalidPublicKey));
+        assert_eq!(
+            signature_verification_data.verify(),
+            Err(Error::InvalidPublicKey)
+        );
     }
 
     #[test]
@@ -124,6 +140,9 @@ mod tests {
             message: None,
             operator_public_keys: vec![public_key],
         };
-        assert_eq!(signature_verification_data.verify(), Err(SignatureError::InvalidSignature));
+        assert_eq!(
+            signature_verification_data.verify(),
+            Err(Error::InvalidSignature)
+        );
     }
 }

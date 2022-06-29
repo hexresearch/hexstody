@@ -2,7 +2,7 @@ use figment::Figment;
 use p256::PublicKey;
 use rocket::{
     fs::FileServer,
-    http::Status,
+    http::uri,
     response::status,
     serde::{json, json::Json},
     State as RocketState,
@@ -15,8 +15,9 @@ use serde::Deserialize;
 use std::{path::PathBuf, str, sync::Arc};
 use tokio::sync::{mpsc, Mutex, Notify};
 
-use hexstody_api::types::{
-    ConfirmationData, SignatureData, WithdrawalRequest, WithdrawalRequestInfo,
+use hexstody_api::{
+    error,
+    types::{ConfirmationData, SignatureData, WithdrawalRequest, WithdrawalRequestInfo},
 };
 use hexstody_btc_client::client::BtcClient;
 use hexstody_db::{
@@ -33,6 +34,30 @@ use hexstody_sig::SignatureVerificationData;
 struct Config {
     domain: String,
     operator_public_keys: Vec<PublicKey>,
+}
+
+fn absolute_url(config: &Config, url: uri::Origin) -> String {
+    [config.domain.clone(), url.to_string()].join("")
+}
+
+/// Helper for implementing endpoints that require authorization
+fn require_auth(
+    signature_data: &SignatureData,
+    message: Option<String>,
+    url: uri::Origin,
+    config: &Config,
+) -> error::Result<()> {
+    let signature_verification_data = SignatureVerificationData {
+        url: absolute_url(config, url),
+        signature: signature_data.signature,
+        nonce: signature_data.nonce,
+        message: message,
+        public_key: signature_data.public_key,
+        operator_public_keys: config.operator_public_keys.clone(),
+    };
+    signature_verification_data
+        .verify()
+        .map_err(|err| error::Error::SignatureError(err).into())
 }
 
 #[openapi(skip)]
@@ -61,19 +86,8 @@ async fn list(
     state: &RocketState<Arc<Mutex<HexstodyState>>>,
     signature_data: SignatureData,
     config: &RocketState<Config>,
-) -> Result<Json<Vec<WithdrawalRequest>>, (Status, &'static str)> {
-    let url = [config.domain.clone(), uri!(list).to_string()].join("");
-    let signature_verification_data = SignatureVerificationData {
-        url,
-        signature: signature_data.signature,
-        nonce: signature_data.nonce,
-        message: None,
-        public_key: signature_data.public_key,
-        operator_public_keys: config.operator_public_keys.clone(),
-    };
-    let _ = signature_verification_data
-        .verify()
-        .map_err(|_| (Status::Forbidden, "Signature verification failed"))?;
+) -> error::Result<Json<Vec<WithdrawalRequest>>> {
+    require_auth(&signature_data, None, uri!(list), config)?;
     let hexstody_state = state.lock().await;
     let withdrawal_requests = Vec::from_iter(
         hexstody_state
@@ -93,28 +107,17 @@ async fn create(
     signature_data: SignatureData,
     withdrawal_request_info: Json<WithdrawalRequestInfo>,
     config: &RocketState<Config>,
-) -> Result<Created<Json<WithdrawalRequest>>, (Status, &'static str)> {
+) -> error::Result<Created<Json<WithdrawalRequest>>> {
     let withdrawal_request_info = withdrawal_request_info.into_inner();
-    let url = [config.domain.clone(), uri!(create).to_string()].join("");
     let message = json::to_string(&withdrawal_request_info).unwrap();
-    let signature_verification_data = SignatureVerificationData {
-        url,
-        signature: signature_data.signature,
-        nonce: signature_data.nonce,
-        message: Some(message),
-        public_key: signature_data.public_key,
-        operator_public_keys: config.operator_public_keys.clone(),
-    };
-    let _ = signature_verification_data
-        .verify()
-        .map_err(|_| (Status::Forbidden, "Signature verification failed"))?;
+    require_auth(&signature_data, Some(message), uri!(create), config)?;
     let info: WithdrawalRequestInfoDb = withdrawal_request_info.into();
     let state_update = StateUpdate::new(UpdateBody::CreateWithdrawalRequest(info));
     // TODO: check that state update was correctly processed
     update_sender
         .send(state_update)
         .await
-        .map_err(|_| (Status::InternalServerError, "Internal server error"))?;
+        .map_err(|_| (error::Error::InternalServerError))?;
     Ok(status::Created::new("/request"))
 }
 
@@ -126,27 +129,21 @@ async fn confirm(
     signature_data: SignatureData,
     confirmation_data: Json<ConfirmationData>,
     config: &RocketState<Config>,
-) -> Result<(), (Status, &'static str)> {
+) -> error::Result<()> {
     let confirmation_data = confirmation_data.into_inner();
-    let url = [config.domain.clone(), uri!(confirm).to_string()].join("");
     let message = json::to_string(&confirmation_data).unwrap();
-    let signature_verification_data = SignatureVerificationData {
-        url: url.clone(),
-        signature: signature_data.signature,
-        nonce: signature_data.nonce,
-        message: Some(message.clone()),
-        public_key: signature_data.public_key,
-        operator_public_keys: config.operator_public_keys.clone(),
-    };
-    let _ = signature_verification_data
-        .verify()
-        .map_err(|_| (Status::Forbidden, "Signature verification failed"))?;
+    require_auth(
+        &signature_data,
+        Some(message.clone()),
+        uri!(confirm),
+        config,
+    )?;
     let state_update = StateUpdate::new(UpdateBody::WithdrawalRequestDecision(
         (
             confirmation_data,
             signature_data,
             WithdrawalRequestDecisionType::Confirm,
-            url,
+            absolute_url(config, uri!(confirm)),
             message,
         )
             .into(),
@@ -154,7 +151,7 @@ async fn confirm(
     update_sender
         .send(state_update)
         .await
-        .map_err(|_| (Status::InternalServerError, "Internal server error"))?;
+        .map_err(|_| (error::Error::InternalServerError))?;
     Ok(())
 }
 
@@ -166,27 +163,16 @@ async fn reject(
     signature_data: SignatureData,
     confirmation_data: Json<ConfirmationData>,
     config: &RocketState<Config>,
-) -> Result<(), (Status, &'static str)> {
+) -> error::Result<()> {
     let confirmation_data = confirmation_data.into_inner();
-    let url = [config.domain.clone(), uri!(reject).to_string()].join("");
     let message = json::to_string(&confirmation_data).unwrap();
-    let signature_verification_data = SignatureVerificationData {
-        url: url.clone(),
-        signature: signature_data.signature,
-        nonce: signature_data.nonce,
-        message: Some(message.clone()),
-        public_key: signature_data.public_key,
-        operator_public_keys: config.operator_public_keys.clone(),
-    };
-    let _ = signature_verification_data
-        .verify()
-        .map_err(|_| (Status::Forbidden, "Signature verification failed"))?;
+    require_auth(&signature_data, Some(message.clone()), uri!(reject), config)?;
     let state_update = StateUpdate::new(UpdateBody::WithdrawalRequestDecision(
         (
             confirmation_data,
             signature_data,
             WithdrawalRequestDecisionType::Reject,
-            url,
+            absolute_url(config, uri!(reject)),
             message,
         )
             .into(),
@@ -194,7 +180,7 @@ async fn reject(
     update_sender
         .send(state_update)
         .await
-        .map_err(|_| (Status::InternalServerError, "Internal server error"))?;
+        .map_err(|_| (error::Error::InternalServerError))?;
     Ok(())
 }
 

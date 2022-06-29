@@ -5,6 +5,8 @@ use rocket_okapi::okapi::schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+use hexstody_sig;
+
 pub const MIN_USER_NAME_LEN: usize = 3;
 pub const MAX_USER_NAME_LEN: usize = 320;
 pub const MIN_USER_PASSWORD_LEN: usize = 6;
@@ -38,6 +40,10 @@ pub enum Error {
     NoUserCurrency(Currency),
     #[error("Failed to generate new deposit address for currency {0}")]
     FailedGenAddress(Currency),
+    #[error("Signature error")]
+    SignatureError(#[from] hexstody_sig::Error),
+    #[error("Internal server error")]
+    InternalServerError,
 }
 
 impl Error {
@@ -54,6 +60,8 @@ impl Error {
             Error::NoUserFound => 8,
             Error::NoUserCurrency(_) => 9,
             Error::FailedGenAddress(_) => 10,
+            Error::SignatureError(_) => 11,
+            Error::InternalServerError => 12,
         }
     }
 
@@ -70,6 +78,8 @@ impl Error {
             Error::NoUserFound => Status::from_code(500).unwrap(),
             Error::NoUserCurrency(_) => Status::from_code(500).unwrap(),
             Error::FailedGenAddress(_) => Status::from_code(500).unwrap(),
+            Error::SignatureError(_) => Status::from_code(401).unwrap(),
+            Error::InternalServerError => Status::from_code(500).unwrap(),
         }
     }
 }

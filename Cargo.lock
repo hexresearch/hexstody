@@ -1188,6 +1188,7 @@ dependencies = [
  "base64",
  "chrono",
  "hexstody-btc-api",
+ "hexstody-sig",
  "okapi 0.7.0-rc.1 (git+https://github.com/GREsau/okapi?rev=65244f0)",
  "p256",
  "pwhash",
