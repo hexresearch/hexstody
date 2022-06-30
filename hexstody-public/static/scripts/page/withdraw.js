@@ -39,11 +39,11 @@ async function postWithdrawRequest(currency, address, amount) {
         })
 };
 
-async function trySubmit(currency, address, amount, validationDisplayEl){
+async function trySubmit(currency, address, amount, validationDisplayEl) {
     const result = await postWithdrawRequest(currency, address, amount);
-    if(result.ok){
+    if (result.ok) {
         window.location.href = "/overview";
-    }else{
+    } else {
         validationDisplayEl.textContent = (await result.json()).message;
         validationDisplayEl.hidden = false;
     }
@@ -60,10 +60,10 @@ async function init() {
         ethBalanceEl.getAttribute("balance"));
 
     maxBtcAmountBtn.onclick = () => btcSendAmountEl.value =
-        btcBalanceEl.getAttribute("balance") - btcFeeEl.getAttribute("fee");
+        Math.max(0, btcBalanceEl.getAttribute("balance") - btcFeeEl.getAttribute("fee"));
 
     maxEthAmountBtn.onclick = () => ethSendAmountEl.value =
-        ethBalanceEl.getAttribute("balance") - ethFeeEl.getAttribute("fee");
+        Math.max(0, ethBalanceEl.getAttribute("balance") - ethFeeEl.getAttribute("fee"));
 
     sendBtcBtn.onclick = () => trySubmit(
         "BTC",
