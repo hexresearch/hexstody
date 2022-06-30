@@ -149,6 +149,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     polling_duration,
                     secret_key.as_deref(),
                     op_public_keys,
+                    REQUIRED_NUMBER_OF_CONFIRMATIONS
                 )
                 .await;
                 res.map_err(|err| LogicError::from(err))

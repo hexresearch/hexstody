@@ -16,13 +16,13 @@ use std::{path::PathBuf, str, sync::Arc};
 use tokio::sync::{mpsc, Mutex, Notify};
 
 use hexstody_api::types::{
-    ConfirmationData, SignatureData, WithdrawalRequest, WithdrawalRequestInfo,
+    ConfirmationData, SignatureData, WithdrawalRequest, WithdrawalRequestInfo, WithdrawalRequestDecisionType
 };
 use hexstody_btc_client::client::BtcClient;
 use hexstody_db::{
     state::State as HexstodyState,
     update::withdrawal::{
-        WithdrawalRequestDecisionType, WithdrawalRequestInfo as WithdrawalRequestInfoDb,
+        WithdrawalRequestInfo as WithdrawalRequestInfoDb,
     },
     update::{StateUpdate, UpdateBody},
     Pool,

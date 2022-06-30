@@ -5,10 +5,13 @@ use hexstody_api::types::{ConfirmedWithdrawal, WithdrawalResponse};
 use hexstody_btc_api::bitcoin::*;
 use hexstody_btc_api::events::*;
 use hexstody_api::types::FeeResponse;
+use hexstody_sig::verify_withdrawal_signature;
 use log::*;
 use rocket::fairing::AdHoc;
 use rocket::figment::{providers::Env, Figment};
 use rocket::{get, post, serde::json::Json, Config, State};
+use rocket::http::Status;
+use rocket::serde::json;
 use rocket_okapi::settings::UrlObject;
 use rocket_okapi::{openapi, openapi_get_routes, rapidoc::*, swagger_ui::*};
 use std::net::IpAddr;
@@ -83,9 +86,46 @@ async fn get_fees(client: &State<Client>) -> Json<FeeResponse> {
     }
 }
 
-#[post("/withdraw", format = "json", data = "<confirmed_withdrawal>")]
-async fn withdraw_btc(client: &State<Client>, confirmed_withdrawal: Json<ConfirmedWithdrawal>) -> error::Result<WithdrawalResponse>{
-    unimplemented!()
+#[openapi(tag = "withdraw")]
+#[post("/withdraw", format = "json", data = "<cw>")]
+async fn withdraw_btc(
+    client: &State<Client>, 
+    min_confirmations: &State<i16>, 
+    op_public_keys: &State<Vec<PublicKey>>,
+    cw: Json<ConfirmedWithdrawal>
+) -> error::Result<WithdrawalResponse>{
+    let mut valid_confirms = 0;
+    let mut valid_rejections = 0;
+    let min_confirmations = min_confirmations.inner().clone();
+    let msg = [
+        json::to_string(&cw.id).unwrap(), 
+        cw.user.clone(), 
+        json::to_string(&cw.address).unwrap(), 
+        cw.created_at.clone(), 
+        cw.amount.to_string()
+        ].join(":");
+    let op_keys = Some(op_public_keys.inner().clone());
+    for wsig in &cw.confirmations {
+        let op_keys = op_keys.clone();
+        if verify_withdrawal_signature(op_keys, wsig, msg.clone()).is_ok(){
+            valid_confirms = valid_confirms + 1;
+        }
+    }
+    for wsig in &cw.rejections {
+        let op_keys = op_keys.clone();
+        if verify_withdrawal_signature(op_keys, wsig, msg.clone()).is_ok(){
+            valid_rejections = valid_rejections + 1;
+        }
+    }
+
+    if (valid_confirms >= min_confirmations) && (valid_confirms > valid_rejections) {
+        unimplemented!()
+    } else {
+        Err((Status::Forbidden, Json(crate::api::error::ErrorMessage {
+            message: "Signature verification failed".to_owned(),
+            code: 403,
+        })))
+    }
 }
 
 pub async fn serve_public_api(
@@ -97,7 +137,8 @@ pub async fn serve_public_api(
     state_notify: Arc<Notify>,
     polling_duration: Duration,
     secret_key: Option<&str>,
-    op_public_keys: Vec<PublicKey>
+    op_public_keys: Vec<PublicKey>,
+    min_confirmations: i16
 ) -> Result<(), rocket::Error> {
     let zero_key =
         "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==";
@@ -119,7 +160,7 @@ pub async fn serve_public_api(
     let _ = rocket::custom(figment)
         .mount(
             "/",
-            openapi_get_routes![ping, poll_events, get_deposit_address, get_fees],
+            openapi_get_routes![ping, poll_events, get_deposit_address, get_fees, withdraw_btc],
         )
         .mount(
             "/swagger/",
@@ -148,6 +189,7 @@ pub async fn serve_public_api(
         .manage(state_notify)
         .manage(btc)
         .manage(op_public_keys)
+        .manage(min_confirmations)
         .attach(on_ready)
         .launch()
         .await?;

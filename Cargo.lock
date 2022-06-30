@@ -1218,6 +1218,7 @@ dependencies = [
  "hexstody-api",
  "hexstody-btc-api",
  "hexstody-btc-test",
+ "hexstody-sig",
  "log",
  "nix",
  "p256",
@@ -1429,6 +1430,7 @@ dependencies = [
 name = "hexstody-sig"
 version = "0.1.0"
 dependencies = [
+ "hexstody-api",
  "p256",
  "rand_core 0.6.3",
 ]

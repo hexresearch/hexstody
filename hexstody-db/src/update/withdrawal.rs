@@ -6,7 +6,7 @@ use crate::state::withdraw::WithdrawalRequestId;
 use crate::update::signup::UserId;
 use hexstody_api::domain::{Currency, CurrencyAddress};
 use hexstody_api::types::{
-    ConfirmationData, SignatureData, WithdrawalRequestInfo as WithdrawalRequestInfoApi,
+    ConfirmationData, SignatureData, WithdrawalRequestInfo as WithdrawalRequestInfoApi, WithdrawalRequestDecisionType
 };
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -30,12 +30,6 @@ impl From<WithdrawalRequestInfoApi> for WithdrawalRequestInfo {
             amount: value.amount,
         }
     }
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub enum WithdrawalRequestDecisionType {
-    Confirm,
-    Reject,
 }
 
 // This data type is used to create DB state update

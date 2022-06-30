@@ -28,3 +28,11 @@ Hot wallet with builtin regtest BTC node:
 ```
 cargo run --bin hexstody-hot -- --operator-public-keys operator-key-1.pub.pem operator-key-2.pub.pem --start-regtest serve
 ```
+
+# Tips and trics
+
+Run vscode with export to allow rust extension to validate sqlx macros
+
+```
+(export DATABASE_URL=postgres://hexstody:hexstody@localhost/hexstody; code)
+```

@@ -20,11 +20,12 @@ use super::update::btc::BtcTxCancel;
 use super::update::deposit::DepositAddress;
 use super::update::signup::{SignupInfo, UserId};
 use super::update::withdrawal::{
-    WithdrawalRequestDecision, WithdrawalRequestDecisionInfo, WithdrawalRequestDecisionType,
+    WithdrawalRequestDecision, WithdrawalRequestDecisionInfo,
     WithdrawalRequestInfo,
 };
 use super::update::{StateUpdate, UpdateBody};
 use hexstody_api::domain::*;
+use hexstody_api::types::WithdrawalRequestDecisionType;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct State {

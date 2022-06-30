@@ -1,3 +1,4 @@
+
 use base64;
 use chrono::NaiveDateTime;
 use okapi::openapi3::*;
@@ -6,12 +7,11 @@ use rocket::{
     http::Status,
     request::{FromRequest, Outcome, Request},
     serde::json::json,
-    data::{Data, FromData, Outcome as DataOutcome}
 };
 use rocket_okapi::{
     gen::OpenApiGenerator,
     okapi::schemars::{self, JsonSchema},
-    request::{OpenApiFromRequest, RequestHeaderInput, OpenApiFromData},
+    request::{OpenApiFromRequest, RequestHeaderInput},
 };
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -96,7 +96,7 @@ pub struct WithdrawalRequestInfo {
     pub address: CurrencyAddress,
     /// Amount of tokens to transfer
     #[schemars(example = "example_amount")]
-    pub amount: u64,
+    pub amount: u64, 
 }
 
 /// Auxiliary data type to display `WithdrawalRequest` on the page
@@ -173,7 +173,7 @@ pub struct DepositInfo {
 /// Signature data that comes from operators
 /// when they sign or reject requests.
 /// This data type is used for authorization.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
 pub struct SignatureData {
     pub signature: Signature,
     pub nonce: u64,
@@ -322,7 +322,37 @@ fn example_block_height() -> Option<i64> {
     Some(12345)
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy)]
+pub enum WithdrawalRequestDecisionType {
+    Confirm,
+    Reject,
+}
+
+impl WithdrawalRequestDecisionType {
+    pub fn to_json(&self) -> String {
+        rocket::serde::json::to_string(self).unwrap()
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
+pub struct WithdrawalSignature {
+    pub signature: Signature,
+    pub public_key: PublicKey,
+    pub nonce: u64,
+    pub verdict: WithdrawalRequestDecisionType,
+}
+
+// Dummy JsonSchema. Needed for derive JsonSchema elsewhere
+impl JsonSchema for WithdrawalSignature {
+    fn schema_name() -> String {
+        "Withdrawal signature".to_string()
+    }
+    fn json_schema(_: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
+        schemars::schema::Schema::Object(schemars::schema::SchemaObject::default())
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct ConfirmedWithdrawal {
     /// Request ID
     pub id: Uuid,
@@ -335,13 +365,9 @@ pub struct ConfirmedWithdrawal {
     /// Amount of tokens to transfer
     pub amount: u64,
     /// Confirmations received from operators
-    pub confirmations: Vec<SignatureData>,
+    pub confirmations: Vec<WithdrawalSignature>,
     /// Rejections received from operators
-    pub rejections: Vec<SignatureData>,
-}
-
-fn example_confirmations() -> Vec<SignatureData>{
-    vec![]
+    pub rejections: Vec<WithdrawalSignature>,
 }
 
 #[derive(Debug)]

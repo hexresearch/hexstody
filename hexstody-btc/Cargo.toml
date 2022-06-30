@@ -26,6 +26,7 @@ futures = "0.3.19"
 futures-channel = "0.3"
 futures-util = "0.3.19"
 hexstody-api = { path = "../hexstody-api" }
+hexstody-sig = { path = "../hexstody-sig" }
 hexstody-btc-api = { path = "../hexstody-btc-api" }
 log = "0.4.14"
 rocket = { version = "=0.5.0-rc.2", default-features = false, features = ["json"] }
