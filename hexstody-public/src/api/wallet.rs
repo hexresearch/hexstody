@@ -99,7 +99,7 @@ pub async fn get_history(
                 currency: Currency::BTC,
                 date: btc_deposit.timestamp,
                 number_of_confirmations: btc_deposit.confirmations,
-                value: btc_deposit.amount,
+                value: btc_deposit.amount.abs() as u64,
             }),
             Transaction::Eth() => todo!("Eth deposit history mapping"),
         }
@@ -191,8 +191,8 @@ pub async fn post_withdraw(
                     .ok_or(error::Error::NoUserCurrency(Currency::BTC))?
                     .finalized_balance();
                 let max_btc_amount_to_spend =
-                    btc_balance - (btc_fee_per_byte * BTC_BYTES_PER_TRANSACTION) as i64;
-                if max_btc_amount_to_spend >= withdraw_request.amount as i64 {
+                    btc_balance - btc_fee_per_byte * BTC_BYTES_PER_TRANSACTION;
+                if max_btc_amount_to_spend >= withdraw_request.amount {
                     let withdrawal_request = WithdrawalRequestInfo {
                         id: Uuid::new_v4(),
                         user: user_id.to_owned(),

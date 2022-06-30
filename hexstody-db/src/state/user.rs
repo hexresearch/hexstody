@@ -83,7 +83,7 @@ impl UserCurrencyInfo {
             .filter_map(|t| if t.is_conflicted() { None } else { Some(t) })
     }
     /// Includes unconfirmed transactions
-    pub fn balance(&self) -> i64 {
+    pub fn balance(&self) -> u64 {
         let tx_sum: i64 = self
             .transactions
             .iter()
@@ -97,12 +97,12 @@ impl UserCurrencyInfo {
             .sum();
         let pending_withdrawals: u64 = self.withdrawal_requests.iter().map(|(_, w)| w.amount).sum();
 
-        tx_sum - (pending_withdrawals as i64)
+        tx_sum as u64 - pending_withdrawals
     }
 
     /// Include only finalized transactions
-    pub fn finalized_balance(&self) -> i64 {
-        let tx_sum: i64 = self
+    pub fn finalized_balance(&self) -> u64 {
+        let tx_sum : i64 = self
             .transactions
             .iter()
             .filter_map(|t| {
@@ -115,7 +115,7 @@ impl UserCurrencyInfo {
             .sum();
         let pending_withdrawals: u64 = self.withdrawal_requests.iter().map(|(_, w)| w.amount).sum();
 
-        tx_sum - (pending_withdrawals as i64)
+        tx_sum as u64 - pending_withdrawals  
     }
 
     pub fn has_address(&self, address: &CurrencyAddress) -> bool {
