@@ -90,7 +90,12 @@ async fn setup_api(rpc_port: u16) -> u16 {
         )
         .expect("Node client")
     };
-
+    let sk1bytes = [226, 143, 42, 33, 23, 231, 50, 229, 188, 25, 0, 63, 245, 176, 125, 158, 27, 252, 214, 95, 182, 243, 70, 176, 48, 9, 105, 34, 180, 198, 131, 6];
+    let sk2bytes = [197, 103, 161, 120, 28, 231, 101, 35, 34, 117, 53, 115, 210, 176, 147, 227, 72, 177, 3, 11, 69, 147, 176, 246, 176, 171, 80, 1, 68, 143, 100, 96];
+    let sk1 = p256::SecretKey::from_be_bytes(&sk1bytes).unwrap();
+    let sk2 = p256::SecretKey::from_be_bytes(&sk2bytes).unwrap();
+    let pk1 = sk1.public_key();
+    let pk2 = sk2.public_key();
     tokio::spawn({
         let start_notify = start_notify.clone();
         let state_notify = state_notify.clone();
@@ -107,8 +112,9 @@ async fn setup_api(rpc_port: u16) -> u16 {
                 state_notify,
                 polling_duration,
                 None,
-                vec![],
-                2
+                vec![pk1,pk2],
+                1,
+                "http://127.0.0.1:8080".to_owned()
             )
             .await
             .expect("start api");

@@ -1,9 +1,19 @@
 use bitcoin::Amount;
 use bitcoincore_rpc::RpcApi;
+use hexstody_api::domain::CurrencyAddress;
+use hexstody_api::types::{
+    ConfirmedWithdrawal,
+    WithdrawalRequestDecisionType, WithdrawalSignature
+};
 use hexstody_btc_api::bitcoin::*;
 use hexstody_btc_api::events::*;
 use hexstody_btc_test::helpers::*;
 use hexstody_btc_test::runner::*;
+use p256::*;
+use p256::ecdsa::SigningKey;
+use p256::ecdsa::signature::Signer;
+use rand_core::OsRng;
+use rocket::serde::json;
 
 // Check that we have node and API operational
 #[tokio::test]
@@ -273,6 +283,50 @@ async fn cancel_confirmed_test() {
         }
     })
     .await;
+}
+
+#[tokio::test]
+async fn process_withdrawal_request(){
+    run_test(|btc, api| async move{
+        fund_wallet(&btc);
+        let sk1bytes = [226, 143, 42, 33, 23, 231, 50, 229, 188, 25, 0, 63, 245, 176, 125, 158, 27, 252, 214, 95, 182, 243, 70, 176, 48, 9, 105, 34, 180, 198, 131, 6];
+        let sk2bytes = [197, 103, 161, 120, 28, 231, 101, 35, 34, 117, 53, 115, 210, 176, 147, 227, 72, 177, 3, 11, 69, 147, 176, 246, 176, 171, 80, 1, 68, 143, 100, 96];
+        let sk1 = p256::SecretKey::from_be_bytes(&sk1bytes).unwrap();
+        let sk2 = p256::SecretKey::from_be_bytes(&sk2bytes).unwrap();
+        let pk1 = sk1.public_key();
+        let pk2 = sk2.public_key();
+        let addr = new_address(&btc).to_string();
+        let id = uuid::Uuid::new_v4();
+        let user = "test_user".to_owned();
+        let address = CurrencyAddress::BTC(hexstody_api::domain::BtcAddress{addr});
+        let created_at = "now".to_owned();
+        let amount = 10000000;
+        let url = "http://127.0.0.1:8080".to_owned();
+        let verdict = WithdrawalRequestDecisionType::Confirm;
+        let msg = [
+            json::to_string(&id).unwrap(), 
+            user.clone(), 
+            json::to_string(&address).unwrap(), 
+            created_at.clone(), 
+            amount.to_string(),
+            url,
+            json::to_string(&verdict).unwrap(), 
+            ].join(":");
+        let nonce1 = 0;
+        let nonce2 = 1;
+        let msg1 = [msg.clone(), nonce1.to_string()].join(":");
+        let msg2 = [msg, nonce2.to_string()].join(":");
+        println!("msg1  : {}",msg1);
+        let sig1 = SigningKey::from(sk1).sign(msg1.as_bytes());
+        let sig2 = SigningKey::from(sk2).sign(msg2.as_bytes());
+        let ws1 = WithdrawalSignature {signature: sig1, public_key: pk1, nonce: nonce1, verdict};
+        let ws2 = WithdrawalSignature {signature: sig2, public_key: pk2, nonce: nonce1, verdict};
+        let confirmations = vec![ws1, ws2];
+        let rejections = vec![];
+        let cw = ConfirmedWithdrawal{id, user, address, created_at, amount, confirmations, rejections};
+        let resp = api.withdraw_btc(cw).await;
+        assert!(resp.is_ok(), "Failed to post tx");
+    }).await;
 }
 
 // Withdraw unconfirmed transation

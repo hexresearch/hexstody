@@ -163,11 +163,11 @@ pub async fn get_history(
 }
 
 #[openapi(tag = "withdraw")]
-#[post("/withdraw", data = "<withdraw_request>")]
+#[post("/withdraw", data = "<_withdraw_request>")]
 pub async fn post_withdraw(
-    cookies: &CookieJar<'_>,
-    state: &State<Arc<Mutex<DbState>>>,
-    withdraw_request : Json<api::UserWithdrawRequest>
+    _cookies: &CookieJar<'_>,
+    _state: &State<Arc<Mutex<DbState>>>,
+    _withdraw_request : Json<api::UserWithdrawRequest>
 ) -> error::Result<()> {
     Ok(())
 }

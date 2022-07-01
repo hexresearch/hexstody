@@ -334,7 +334,7 @@ impl WithdrawalRequestDecisionType {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct WithdrawalSignature {
     pub signature: Signature,
     pub public_key: PublicKey,

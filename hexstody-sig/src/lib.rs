@@ -9,6 +9,7 @@ use hexstody_api::types::WithdrawalSignature;
 pub enum SignatureError {
     InvalidPublicKey,
     InvalidSignature,
+    InvalidDomain,
 }
 
 #[derive(Debug, PartialEq)]
@@ -57,10 +58,11 @@ pub fn verify_signature(
 pub fn verify_withdrawal_signature(
     operator_public_keys: Option<Vec<PublicKey>>,
     withdrawal_signature: &WithdrawalSignature,
+    domain: String,
     message: String
 ) -> Result<(), SignatureError>{
     let WithdrawalSignature { signature, public_key, nonce, verdict } = withdrawal_signature;
-    let msg = [message, verdict.to_json()].join(":");
+    let msg = [message, domain, verdict.to_json()].join(":");
     verify_signature(operator_public_keys, public_key, nonce, msg, signature)
 }
 
@@ -78,8 +80,9 @@ mod tests {
     fn mk_withdrawal_signature(secret_key: &SecretKey) -> WithdrawalSignature{
         let nonce = 0;
         let message = "test_message".to_owned();
+        let domain = "hexstody-hot".to_owned();
         let verdict = WithdrawalRequestDecisionType::Confirm;
-        let message_to_sign = [message.clone(), verdict.to_json(), nonce.to_string()].join(":");
+        let message_to_sign = [message.clone(), domain, verdict.to_json(), nonce.to_string()].join(":");
         let public_key = secret_key.public_key().clone();
         let signature = SigningKey::from(secret_key).sign(message_to_sign.as_bytes());
         WithdrawalSignature { signature, public_key, nonce, verdict }
@@ -219,8 +222,9 @@ mod tests {
         let secret_key = SecretKey::random(&mut OsRng);
         let message = "test_message".to_owned();
         let ws = mk_withdrawal_signature(&secret_key);
+        let domain = "hexstody-hot".to_owned();
         let public_key = secret_key.public_key();
-        assert_eq!(verify_withdrawal_signature(Some(vec![public_key]), &ws, message), Ok(()));
+        assert_eq!(verify_withdrawal_signature(Some(vec![public_key]), &ws, domain, message), Ok(()));
     }
 
     #[test]
@@ -228,7 +232,8 @@ mod tests {
         let secret_key = SecretKey::random(&mut OsRng);
         let message = "test_message".to_owned();
         let ws = mk_withdrawal_signature(&secret_key);
-        assert_eq!(verify_withdrawal_signature(None, &ws, message), Ok(()));
+        let domain = "hexstody-hot".to_owned();
+        assert_eq!(verify_withdrawal_signature(None, &ws, domain, message), Ok(()));
     }
 
     #[test]
@@ -236,7 +241,8 @@ mod tests {
         let secret_key = SecretKey::random(&mut OsRng);
         let message = "test_message".to_owned();
         let ws = mk_withdrawal_signature(&secret_key);
-        assert_eq!(verify_withdrawal_signature(Some(vec![]), &ws, message), Err(SignatureError::InvalidPublicKey));
+        let domain = "hexstody-hot".to_owned();
+        assert_eq!(verify_withdrawal_signature(Some(vec![]), &ws, domain, message), Err(SignatureError::InvalidPublicKey));
     }
 
     #[test]
@@ -244,6 +250,7 @@ mod tests {
         let secret_key = SecretKey::random(&mut OsRng);
         let message = "wrong_message".to_owned();
         let ws = mk_withdrawal_signature(&secret_key);
-        assert_eq!(verify_withdrawal_signature(None, &ws, message), Err(SignatureError::InvalidSignature));
+        let domain = "hexstody-hot".to_owned();
+        assert_eq!(verify_withdrawal_signature(None, &ws, domain, message), Err(SignatureError::InvalidSignature));
     }
 }
