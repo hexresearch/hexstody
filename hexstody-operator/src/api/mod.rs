@@ -126,7 +126,7 @@ async fn confirm(
     config: &RocketState<Config>,
 ) -> Result<(), (Status, &'static str)> {
     let confirmation_data = confirmation_data.into_inner();
-    if let Some(_) = confirmation_data.0.confirmation_status {
+    if confirmation_data.0.confirmation_status.is_some() {
         return Err((Status::BadRequest, "Confirmation status should be empty"));
     }
     let url = [config.domain.clone(), uri!(confirm).to_string()].join("");
@@ -167,6 +167,9 @@ async fn reject(
     config: &RocketState<Config>,
 ) -> Result<(), (Status, &'static str)> {
     let confirmation_data = confirmation_data.into_inner();
+    if confirmation_data.0.confirmation_status.is_some() {
+        return Err((Status::BadRequest, "Confirmation status should be empty"));
+    }
     let url = [config.domain.clone(), uri!(reject).to_string()].join("");
     let message = json::to_string(&confirmation_data).unwrap();
     let signature_verification_data = SignatureVerificationData {

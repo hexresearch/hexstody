@@ -26,8 +26,8 @@ pub async fn update_results_worker(
                         state.get_withdrawal_request(id)
                     };
                     if let Some(req) = sreq {
-                        let confirmations = vec![];
-                        let rejections = vec![];
+                        let confirmations = req.confirmations.iter().map(|wrd| wrd.clone().into()).collect();
+                        let rejections = req.rejections.iter().map(|wrd| wrd.clone().into()).collect();
                         let cw = ConfirmedWithdrawal{
                             id,
                             user: req.user,

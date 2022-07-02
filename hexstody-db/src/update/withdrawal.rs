@@ -106,3 +106,13 @@ impl From<WithdrawalRequestDecisionInfo> for WithdrawalRequestDecision {
         }
     }
 }
+
+impl From<WithdrawalRequestDecision> for SignatureData {
+    fn from(wrd: WithdrawalRequestDecision) -> SignatureData {
+        SignatureData {
+            signature: wrd.signature,
+            nonce: wrd.nonce,
+            public_key: wrd.public_key,
+        }
+    }
+}
