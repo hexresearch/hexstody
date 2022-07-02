@@ -97,12 +97,13 @@ impl UserCurrencyInfo {
             .sum();
         let pending_withdrawals: u64 = self.withdrawal_requests.iter().map(|(_, w)| w.amount).sum();
 
-        tx_sum as u64 - pending_withdrawals
+        // zero to prevent spreading overflow bug when in less then out
+        0.max(tx_sum - pending_withdrawals as i64) as u64
     }
 
     /// Include only finalized transactions
     pub fn finalized_balance(&self) -> u64 {
-        let tx_sum : i64 = self
+        let tx_sum: i64 = self
             .transactions
             .iter()
             .filter_map(|t| {
@@ -115,7 +116,8 @@ impl UserCurrencyInfo {
             .sum();
         let pending_withdrawals: u64 = self.withdrawal_requests.iter().map(|(_, w)| w.amount).sum();
 
-        tx_sum as u64 - pending_withdrawals  
+        // zero to prevent spreading overflow bug when in less then out
+        0.max(tx_sum - pending_withdrawals as i64) as u64
     }
 
     pub fn has_address(&self, address: &CurrencyAddress) -> bool {

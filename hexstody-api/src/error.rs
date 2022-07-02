@@ -41,7 +41,7 @@ pub enum Error {
     #[error("Failed to get fee for currency {0}")]
     FailedGetFee(Currency),
     #[error("Not enough {0}!")]
-    InsufficientFounds(Currency),
+    InsufficientFunds(Currency),
 }
 
 impl Error {
@@ -59,7 +59,7 @@ impl Error {
             Error::NoUserCurrency(_) => 9,
             Error::FailedGenAddress(_) => 10,
             Error::FailedGetFee(_) => 11,
-            Error::InsufficientFounds(_) => 12,
+            Error::InsufficientFunds(_) => 12,
         }
     }
 
@@ -77,7 +77,7 @@ impl Error {
             Error::NoUserCurrency(_) => Status::from_code(500).unwrap(),
             Error::FailedGenAddress(_) => Status::from_code(500).unwrap(),
             Error::FailedGetFee(_) => Status::from_code(500).unwrap(),
-            Error::InsufficientFounds(_) =>  Status::from_code(500).unwrap(),
+            Error::InsufficientFunds(_) =>  Status::from_code(500).unwrap(),
         }
     }
 }

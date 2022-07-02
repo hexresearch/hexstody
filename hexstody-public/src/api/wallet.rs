@@ -206,7 +206,7 @@ pub async fn post_withdraw(
                         .await
                         .map_err(|_| error::Error::NoUserFound.into())
                 } else {
-                    Err(error::Error::InsufficientFounds(Currency::BTC).into())
+                    Err(error::Error::InsufficientFunds(Currency::BTC).into())
                 }
             } else {
                 Err(error::Error::NoUserFound.into())
