@@ -118,8 +118,12 @@ pub struct WithdrawalRequest {
     #[schemars(example = "example_amount")]
     pub amount: u64,
     /// Some request require manual confirmation
+    /// From server to the operator we send the status
+    /// Operator uses the status to display, but removes it before signing the request
+    /// This is needed to insure proper checking of signatures in hexstody-hot
+    /// Otherwise h-hot has to know the status at the signing moment, which is impractical
     #[schemars(example = "example_confirmation_status")]
-    pub confirmation_status: WithdrawalRequestStatus,
+    pub confirmation_status: Option<WithdrawalRequestStatus>,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
@@ -150,8 +154,8 @@ fn example_amount() -> u64 {
     3
 }
 
-fn example_confirmation_status() -> WithdrawalRequestStatus {
-    WithdrawalRequestStatus::InProgress { confirmations: 1 }
+fn example_confirmation_status() -> Option<WithdrawalRequestStatus> {
+    Some(WithdrawalRequestStatus::InProgress { confirmations: 1 })
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
@@ -178,6 +182,16 @@ pub struct SignatureData {
     pub signature: Signature,
     pub nonce: u64,
     pub public_key: PublicKey,
+}
+
+// Dummy JsonSchema. Needed for derive JsonSchema elsewhere
+impl JsonSchema for SignatureData {
+    fn schema_name() -> String {
+        "Signature data".to_string()
+    }
+    fn json_schema(_: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
+        schemars::schema::Schema::Object(schemars::schema::SchemaObject::default())
+    }
 }
 
 #[derive(Debug)]
@@ -334,24 +348,6 @@ impl WithdrawalRequestDecisionType {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct WithdrawalSignature {
-    pub signature: Signature,
-    pub public_key: PublicKey,
-    pub nonce: u64,
-    pub verdict: WithdrawalRequestDecisionType,
-}
-
-// Dummy JsonSchema. Needed for derive JsonSchema elsewhere
-impl JsonSchema for WithdrawalSignature {
-    fn schema_name() -> String {
-        "Withdrawal signature".to_string()
-    }
-    fn json_schema(_: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
-        schemars::schema::Schema::Object(schemars::schema::SchemaObject::default())
-    }
-}
-
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct ConfirmedWithdrawal {
     /// Request ID
@@ -365,9 +361,9 @@ pub struct ConfirmedWithdrawal {
     /// Amount of tokens to transfer
     pub amount: u64,
     /// Confirmations received from operators
-    pub confirmations: Vec<WithdrawalSignature>,
+    pub confirmations: Vec<SignatureData>,
     /// Rejections received from operators
-    pub rejections: Vec<WithdrawalSignature>,
+    pub rejections: Vec<SignatureData>,
 }
 
 #[derive(Debug)]

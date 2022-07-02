@@ -1,6 +1,7 @@
 mod api;
 mod state;
 mod worker;
+mod constants;
 
 use bitcoin::network::constants::Network;
 use bitcoincore_rpc::{Auth, Client};

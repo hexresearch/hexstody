@@ -43,8 +43,6 @@ pub struct WithdrawalRequestDecisionInfo {
     pub request_id: WithdrawalRequestId,
     /// API URL wich was used to send the decision
     pub url: String,
-    /// Confirmaiton message
-    pub msg: String,
     /// Operator's digital signature
     pub signature: Signature,
     /// Nonce that was generated during decision
@@ -61,7 +59,6 @@ impl
         SignatureData,
         WithdrawalRequestDecisionType,
         String,
-        String,
     )> for WithdrawalRequestDecisionInfo
 {
     fn from(
@@ -70,7 +67,6 @@ impl
             SignatureData,
             WithdrawalRequestDecisionType,
             String,
-            String,
         ),
     ) -> WithdrawalRequestDecisionInfo {
         WithdrawalRequestDecisionInfo {
@@ -78,7 +74,6 @@ impl
             currency: value.0 .0.address.currency(),
             request_id: value.0 .0.id,
             url: value.3,
-            msg: value.4,
             signature: value.1.signature,
             nonce: value.1.nonce,
             public_key: value.1.public_key,
@@ -93,8 +88,6 @@ impl
 pub struct WithdrawalRequestDecision {
     /// API URL wich was used to send the decision
     pub url: String,
-    /// Confirmaiton message
-    pub msg: String,
     /// Operator's digital signature
     pub signature: Signature,
     /// Nonce that was generated during decision
@@ -107,7 +100,6 @@ impl From<WithdrawalRequestDecisionInfo> for WithdrawalRequestDecision {
     fn from(info: WithdrawalRequestDecisionInfo) -> WithdrawalRequestDecision {
         WithdrawalRequestDecision {
             url: info.url,
-            msg: info.msg,
             signature: info.signature,
             nonce: info.nonce,
             public_key: info.public_key,

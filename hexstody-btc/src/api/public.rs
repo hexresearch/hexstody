@@ -1,12 +1,13 @@
+use crate::constants::{WITHDRAWAL_CONFIRM_URI, WITHDRAWAL_REJECT_URI};
 use crate::state::ScanState;
 use bitcoincore_rpc::{Client, RpcApi};
 use bitcoincore_rpc_json::AddressType;
 use hexstody_api::domain::CurrencyAddress;
-use hexstody_api::types::{ConfirmedWithdrawal, WithdrawalResponse};
+use hexstody_api::types::{ConfirmedWithdrawal, WithdrawalResponse, WithdrawalRequest, ConfirmationData, SignatureData};
 use hexstody_btc_api::bitcoin::*;
 use hexstody_btc_api::events::*;
 use hexstody_api::types::FeeResponse;
-use hexstody_sig::verify_withdrawal_signature;
+use hexstody_sig::verify_signature;
 use log::*;
 use rocket::fairing::AdHoc;
 use rocket::figment::{providers::Env, Figment};
@@ -100,26 +101,34 @@ async fn withdraw_btc(
     let mut valid_confirms = 0;
     let mut valid_rejections = 0;
     let min_confirmations = min_confirmations.inner().clone();
-    let msg = [
-        json::to_string(&cw.id).unwrap(), 
-        cw.user.clone(), 
-        json::to_string(&cw.address).unwrap(), 
-        cw.created_at.clone(), 
-        cw.amount.to_string()
-        ].join(":");
+    let confirmation_data = ConfirmationData(WithdrawalRequest{
+        id: cw.id,
+        user: cw.user.clone(),
+        address: cw.address.clone(),
+        created_at: cw.created_at.clone(),
+        amount: cw.amount,
+        confirmation_status: None,
+    });
+    let msg = json::to_string(&confirmation_data).unwrap();
+    let confirm_url = [hot_domain.inner().clone(), WITHDRAWAL_CONFIRM_URI.to_owned()].join("");
+    let reject_url = [hot_domain.inner().clone(), WITHDRAWAL_REJECT_URI.to_owned()].join("");
+    let confirm_msg = [confirm_url, msg.clone()].join(":");
+    let reject_msg = [reject_url, msg].join(":");
     let op_keys = Some(op_public_keys.inner().clone());
-    for wsig in &cw.confirmations {
+    for sigdata in &cw.confirmations {
         let op_keys = op_keys.clone();
-        if verify_withdrawal_signature(op_keys, wsig, hot_domain.inner().clone(), msg.clone()).is_ok() {
+        let SignatureData{ signature, nonce, public_key } = sigdata;
+        if verify_signature(op_keys, public_key, nonce, confirm_msg.clone(), signature).is_ok() {
             valid_confirms = valid_confirms + 1;
-        }
-    }
-    for wsig in &cw.rejections {
+        };
+    };
+    for sigdata in &cw.rejections {
         let op_keys = op_keys.clone();
-        if verify_withdrawal_signature(op_keys, wsig, hot_domain.inner().clone(), msg.clone()).is_ok(){
+        let SignatureData{ signature, nonce, public_key } = sigdata;
+        if verify_signature(op_keys, public_key, nonce, reject_msg.clone(), signature).is_ok() {
             valid_rejections = valid_rejections + 1;
-        }
-    }
+        };
+    };
 
     if (valid_confirms >= min_confirmations) && (valid_confirms > valid_rejections) {
         println!("0");

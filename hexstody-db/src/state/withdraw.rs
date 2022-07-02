@@ -73,7 +73,7 @@ impl Into<WithdrawalRequestApi> for WithdrawalRequest {
             address: self.address,
             created_at: self.created_at.format("%Y-%m-%d %H:%M:%S").to_string(),
             amount: self.amount,
-            confirmation_status: confirmation_status,
+            confirmation_status: Some(confirmation_status),
         }
     }
 }

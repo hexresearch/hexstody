@@ -560,7 +560,6 @@ mod tests {
             request_id: extracted_withdrawal_request.id,
             url: "test".to_owned(),
             nonce: nonce,
-            msg: msg,
             signature: signature,
             public_key: public_key,
             decision_type: WithdrawalRequestDecisionType::Confirm,
