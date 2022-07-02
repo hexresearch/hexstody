@@ -15,7 +15,7 @@
    </div>
    {{#if (isWithdrawal this)}}
    <div class="col">
-      Status: {{status}}
+      Status: {{formatWithdrawalStatus status}}
    </div>
    {{/if}}
    {{#if (isDeposit this)}}
