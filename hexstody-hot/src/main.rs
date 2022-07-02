@@ -15,7 +15,7 @@ use std::time::Duration;
 use tokio::sync::Notify;
 use tokio::time::sleep;
 
-use hexstody_btc_test::runner::run_test as run_btc_regtest;
+use hexstody_btc_test::runner::run_two_nodes_test;
 use runner::run_hot_wallet;
 
 #[derive(Parser, Debug, Clone)]
@@ -119,7 +119,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
     match args.subcmd.clone() {
         SubCommand::Serve => {
             if args.start_regtest {
-                run_btc_regtest(|_, btc_client| {
+                // We start 2 btc nodes here so we can top up the 
+                // user's balance from an external wallet
+                run_two_nodes_test(|_, _, btc_client| {
                     let mut args = args.clone();
                     args.network = Network::Regtest;
                     async move { run(btc_client, &args).await }

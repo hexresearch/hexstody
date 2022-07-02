@@ -18,25 +18,26 @@ use std::time::Duration;
 use tempdir::TempDir;
 use tokio::sync::{Mutex, Notify};
 
-fn setup_node() -> (Child, u16, TempDir) {
+fn setup_node() -> (Child, u16, u16, TempDir) {
     info!("Starting regtest node");
     let tmp_dir = TempDir::new("regtest-data").expect("temporary data dir created");
+    let port: u16 = random_free_tcp_port().expect("available port");
     let rpc_port: u16 = random_free_tcp_port().expect("available port");
 
     let node_handle = Command::new("bitcoind")
         .arg("-regtest")
         .arg("-server")
-        .arg("-listen=0")
         .arg("-rpcuser=regtest")
         .arg("-rpcpassword=regtest")
         .arg("-fallbackfee=0.000002")
+        .arg(format!("-port={}", port))
         .arg(format!("-rpcport={}", rpc_port))
         .arg(format!("-datadir={}", tmp_dir.path().to_str().unwrap()))
         .stdout(Stdio::null())
         .spawn()
         .expect("bitcoin node starts");
 
-    (node_handle, rpc_port, tmp_dir)
+    (node_handle, port, rpc_port, tmp_dir)
 }
 
 fn teardown_node(mut node_handle: Child) {
@@ -45,10 +46,11 @@ fn teardown_node(mut node_handle: Child) {
     node_handle.wait().expect("Node terminated");
 }
 
-async fn setup_node_ready() -> (Child, Client, u16, TempDir) {
+async fn setup_node_ready() -> (Child, Client, u16, u16, TempDir) {
     let _ = env_logger::builder().is_test(true).try_init();
-    let (node_handle, rpc_port, temp_dir) = setup_node();
-    info!("Running first bitcoin node on {rpc_port}");
+    let (node_handle, port, rpc_port, temp_dir) = setup_node();
+    info!("Running bitcoin node\nport: {port}\nRPC port: {rpc_port}");
+    
     let rpc_url = format!("http://127.0.0.1:{rpc_port}");
     let client = Client::new(
         &rpc_url,
@@ -59,7 +61,7 @@ async fn setup_node_ready() -> (Child, Client, u16, TempDir) {
     client
         .create_wallet("", None, None, None, None)
         .expect("create default wallet");
-    (node_handle, client, rpc_port, temp_dir)
+    (node_handle, client, port, rpc_port, temp_dir)
 }
 
 async fn wait_for_node(client: &Client) -> () {
@@ -131,7 +133,7 @@ where
     Fut: Future<Output = ()>,
 {
     let _ = env_logger::builder().is_test(true).try_init();
-    let (node_handle, client, rpc_port, _tmp_dir) = setup_node_ready().await;
+    let (node_handle, client, _port, rpc_port, _tmp_dir) = setup_node_ready().await;
 
     let api_port = setup_api(rpc_port).await;
     info!("Running API server on {api_port}");
@@ -151,10 +153,11 @@ where
     Fut: Future<Output = ()>,
 {
     let _ = env_logger::builder().is_test(true).try_init();
-    let (node1_handle, client1, rpc_port, _tmp1) = setup_node_ready().await;
-    let (node2_handle, client2, _, _tmp2) = setup_node_ready().await;
+    let (node1_handle, client1, _port1, rpc_port1, _tmp1) = setup_node_ready().await;
+    let (node2_handle, client2, port2, _rpc_port2, _tmp2) = setup_node_ready().await;
+    client1.add_node(&format!("127.0.0.1:{port2}")).unwrap();
 
-    let api_port = setup_api(rpc_port).await;
+    let api_port = setup_api(rpc_port1).await;
     info!("Running API server on {api_port}");
 
     let api_client = BtcClient::new(&format!("http://127.0.0.1:{api_port}"));
