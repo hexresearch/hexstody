@@ -1,14 +1,54 @@
+use hexstody_api::types::ConfirmedWithdrawal;
 use hexstody_btc_api::events::*;
 use hexstody_btc_client::client::BtcClient;
 use hexstody_db::{
     state::State,
-    update::{btc::BestBtcBlock, StateUpdate, UpdateBody},
+    update::{btc::BestBtcBlock, StateUpdate, UpdateBody, results::UpdateResult},
 };
 use log::*;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::{mpsc, Mutex};
 use tokio::time::sleep;
+
+pub async fn update_results_worker(
+    btc_client: BtcClient,
+    state_mx: Arc<Mutex<State>>,
+    mut update_receiver: mpsc::Receiver<UpdateResult>,
+){
+    trace!("Starting update results worker");
+    loop {
+        match update_receiver.recv().await {
+            Some(upd) => match upd {
+                UpdateResult::WithdrawConfirmed(id) => {
+                    let sreq = {   
+                        let state = state_mx.lock().await;
+                        state.get_withdrawal_request(id)
+                    };
+                    if let Some(req) = sreq {
+                        let confirmations = vec![];
+                        let rejections = vec![];
+                        let cw = ConfirmedWithdrawal{
+                            id,
+                            user: req.user,
+                            address: req.address,
+                            created_at: req.created_at.to_string(),
+                            amount: req.amount,
+                            confirmations,
+                            rejections,
+                        };
+                        if let Err(e) = btc_client.withdraw_btc(cw).await{
+                            error!("Failed to post tx: {:?}", e);
+                        }
+                    }
+                }
+
+            },
+            None => break,
+        }
+    }
+
+}
 
 pub async fn btc_worker(
     btc_client: BtcClient,

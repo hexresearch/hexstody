@@ -9,10 +9,8 @@ use hexstody_btc_api::bitcoin::*;
 use hexstody_btc_api::events::*;
 use hexstody_btc_test::helpers::*;
 use hexstody_btc_test::runner::*;
-use p256::*;
 use p256::ecdsa::SigningKey;
 use p256::ecdsa::signature::Signer;
-use rand_core::OsRng;
 use rocket::serde::json;
 
 // Check that we have node and API operational
