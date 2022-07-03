@@ -11,13 +11,16 @@ async function getFor(currency) {
 
 async function init() {
     depositTemplate = await loadTemplate("/templates/deposit.html.hbs");
-    const result = await getFor("BTC");
-    const params = {addresses : [{currency: "BTC", address: result.address}]};
+    const resultBTC = await getFor("BTC");
+//    const resultETH = await getFor("ETH");
+    const params = {addresses : [{currency: "BTC", address: resultBTC.address}
+                                ,{currency: "ETH", address: resultBTC.address}]};
     const depositDrawUpdate = depositTemplate(params);
     const depositElem = document.getElementById("deposit");
     depositElem.insertAdjacentHTML('beforeend', depositDrawUpdate);
 
-    new QRCode(document.getElementById("qrcode"), result.address);
+    new QRCode(document.getElementById("qrcode-BTC"), resultBTC.address);
+    new QRCode(document.getElementById("qrcode-ETH"), resultBTC.address);
 }
 
 document.addEventListener("DOMContentLoaded", init);

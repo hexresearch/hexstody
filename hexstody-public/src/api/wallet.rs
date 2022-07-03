@@ -62,6 +62,7 @@ pub async fn get_deposit(
             if let Some(user) = state.users.get(user_id) {
                 if let Some(info) = user.currencies.get(&currency.0) {
                     if let Some(address) = info.deposit_info.last() {
+
                         Ok(Json(api::DepositInfo {
                             address: format!("{}", address),
                         }))
