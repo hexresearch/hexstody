@@ -3,7 +3,7 @@ use crate::state::ScanState;
 use bitcoincore_rpc::{Client, RpcApi};
 use bitcoincore_rpc_json::AddressType;
 use hexstody_api::domain::CurrencyAddress;
-use hexstody_api::types::{ConfirmedWithdrawal, WithdrawalResponse, WithdrawalRequest, ConfirmationData, SignatureData};
+use hexstody_api::types::{ConfirmedWithdrawal, WithdrawalResponse, ConfirmationData, SignatureData};
 use hexstody_btc_api::bitcoin::*;
 use hexstody_btc_api::events::*;
 use hexstody_api::types::FeeResponse;

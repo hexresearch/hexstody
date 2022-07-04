@@ -1,6 +1,6 @@
-
 use base64;
 use chrono::NaiveDateTime;
+use hexstody_btc_api::bitcoin::txid::BtcTxid;
 use okapi::openapi3::*;
 use p256::{ecdsa::Signature, pkcs8::DecodePublicKey, PublicKey};
 use rocket::{
@@ -15,7 +15,6 @@ use rocket_okapi::{
 };
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use hexstody_btc_api::bitcoin::txid::BtcTxid;
 
 use super::domain::currency::{BtcAddress, Currency, CurrencyAddress};
 
@@ -96,7 +95,7 @@ pub struct WithdrawalRequestInfo {
     pub address: CurrencyAddress,
     /// Amount of tokens to transfer
     #[schemars(example = "example_amount")]
-    pub amount: u64, 
+    pub amount: u64,
 }
 
 /// Auxiliary data type to display `WithdrawalRequest` on the page
@@ -118,12 +117,8 @@ pub struct WithdrawalRequest {
     #[schemars(example = "example_amount")]
     pub amount: u64,
     /// Some request require manual confirmation
-    /// From server to the operator we send the status
-    /// Operator uses the status to display, but removes it before signing the request
-    /// This is needed to insure proper checking of signatures in hexstody-hot
-    /// Otherwise h-hot has to know the status at the signing moment, which is impractical
     #[schemars(example = "example_confirmation_status")]
-    pub confirmation_status: Option<WithdrawalRequestStatus>,
+    pub confirmation_status: WithdrawalRequestStatus,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
@@ -173,8 +168,8 @@ fn example_amount() -> u64 {
     3
 }
 
-fn example_confirmation_status() -> Option<WithdrawalRequestStatus> {
-    Some(WithdrawalRequestStatus::InProgress { confirmations: 1 })
+fn example_confirmation_status() -> WithdrawalRequestStatus {
+    WithdrawalRequestStatus::InProgress { confirmations: 1 }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
@@ -341,7 +336,7 @@ pub struct FeeResponse {
     pub fee_rate: u64,
     /// Block number where estimate was found. None means that there was an error and a default value was used
     #[schemars(example = "example_block_height")]
-    pub block: Option<i64>
+    pub block: Option<i64>,
 }
 
 fn example_fee() -> u64 {
@@ -394,7 +389,7 @@ pub enum ConfirmedWithdrawalError {
     InvalidAmount,
     InsufficientConfirmations,
     MoreRejections,
-    InvalidSignature(SignatureError)
+    InvalidSignature(SignatureError),
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
@@ -402,5 +397,5 @@ pub struct WithdrawalResponse {
     /// Request ID
     pub id: Uuid,
     /// Transaction ID
-    pub txid: BtcTxid
+    pub txid: BtcTxid,
 }
