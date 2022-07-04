@@ -286,6 +286,7 @@ pub async fn run_hot_wallet(
     let state_mx = Arc::new(Mutex::new(state));
     let state_notify = Arc::new(Notify::new());
     let (update_sender, update_receiver) = mpsc::channel(1000);
+    let (update_resp_sender, update_resp_receiver) = mpsc::channel(1000);
     let api_config = ApiConfig::parse_figment(args);
 
     let update_worker_hndl = tokio::spawn({
@@ -293,7 +294,7 @@ pub async fn run_hot_wallet(
         let state_mx = state_mx.clone();
         let state_notify = state_notify.clone();
         async move {
-            update_worker(pool, state_mx, state_notify, update_receiver).await;
+            update_worker(pool, state_mx, state_notify, update_receiver, update_resp_sender).await;
         }
     });
     let btc_worker_hndl = tokio::spawn({
@@ -303,6 +304,14 @@ pub async fn run_hot_wallet(
         async move {
             btc_worker(btc_client, state_mx, update_sender).await;
         }
+    });
+
+    let update_response_hndl = tokio::spawn({
+        let state_mx = state_mx.clone();
+        let btc_client = btc_client.clone();
+        async move {
+            update_results_worker(btc_client, state_mx, update_resp_receiver).await;
+        }    
     });
 
     if let Err(Aborted) = serve_apis(
@@ -320,6 +329,7 @@ pub async fn run_hot_wallet(
         info!("Logic aborted, exiting...");
         update_worker_hndl.abort();
         btc_worker_hndl.abort();
+        update_response_hndl.abort();
         Err(Error::Aborted)
     } else {
         Ok(())

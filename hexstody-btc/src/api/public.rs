@@ -1,16 +1,23 @@
+use crate::constants::{WITHDRAWAL_CONFIRM_URI, WITHDRAWAL_REJECT_URI};
 use crate::state::ScanState;
 use bitcoincore_rpc::{Client, RpcApi};
 use bitcoincore_rpc_json::AddressType;
+use hexstody_api::domain::CurrencyAddress;
+use hexstody_api::types::{ConfirmedWithdrawal, WithdrawalResponse, WithdrawalRequest, ConfirmationData, SignatureData};
 use hexstody_btc_api::bitcoin::*;
 use hexstody_btc_api::events::*;
 use hexstody_api::types::FeeResponse;
+use hexstody_sig::verify_signature;
 use log::*;
 use rocket::fairing::AdHoc;
 use rocket::figment::{providers::Env, Figment};
 use rocket::{get, post, serde::json::Json, Config, State};
+use rocket::http::Status;
+use rocket::serde::json;
 use rocket_okapi::settings::UrlObject;
 use rocket_okapi::{openapi, openapi_get_routes, rapidoc::*, swagger_ui::*};
 use std::net::IpAddr;
+use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::{Mutex, Notify};
@@ -82,6 +89,87 @@ async fn get_fees(client: &State<Client>) -> Json<FeeResponse> {
     }
 }
 
+#[openapi(tag = "withdraw")]
+#[post("/withdraw", format = "json", data = "<cw>")]
+async fn withdraw_btc(
+    client: &State<Client>, 
+    min_confirmations: &State<i16>, 
+    op_public_keys: &State<Vec<PublicKey>>,
+    hot_domain: &State<String>,
+    cw: Json<ConfirmedWithdrawal>
+) -> error::Result<WithdrawalResponse>{
+    let mut valid_confirms = 0;
+    let mut valid_rejections = 0;
+    let min_confirmations = min_confirmations.inner().clone();
+    let confirmation_data = ConfirmationData(WithdrawalRequest{
+        id: cw.id,
+        user: cw.user.clone(),
+        address: cw.address.clone(),
+        created_at: cw.created_at.clone(),
+        amount: cw.amount,
+        confirmation_status: None,
+    });
+    let msg = json::to_string(&confirmation_data).unwrap();
+    let confirm_url = [hot_domain.inner().clone(), WITHDRAWAL_CONFIRM_URI.to_owned()].join("");
+    let reject_url = [hot_domain.inner().clone(), WITHDRAWAL_REJECT_URI.to_owned()].join("");
+    let confirm_msg = [confirm_url, msg.clone()].join(":");
+    let reject_msg = [reject_url, msg].join(":");
+    let op_keys = Some(op_public_keys.inner().clone());
+    for sigdata in &cw.confirmations {
+        let op_keys = op_keys.clone();
+        let SignatureData{ signature, nonce, public_key } = sigdata;
+        if verify_signature(op_keys, public_key, nonce, confirm_msg.clone(), signature).is_ok() {
+            valid_confirms = valid_confirms + 1;
+        };
+    };
+    for sigdata in &cw.rejections {
+        let op_keys = op_keys.clone();
+        let SignatureData{ signature, nonce, public_key } = sigdata;
+        if verify_signature(op_keys, public_key, nonce, reject_msg.clone(), signature).is_ok() {
+            valid_rejections = valid_rejections + 1;
+        };
+    };
+
+    if (valid_confirms >= min_confirmations) && (valid_confirms > valid_rejections) {
+        println!("0");
+        if let CurrencyAddress::BTC(hexstody_api::domain::BtcAddress{addr}) = &cw.address {
+            println!("00");
+            if let Ok(addr) = bitcoin::Address::from_str(addr.as_str()){
+                println!("01");
+                let comment = cw.id.to_string();
+                let amount = bitcoin::Amount::from_sat(cw.amount);
+                let txid = client
+                    .send_to_address(&addr, amount, Some(&comment), None, None, None, None, None)
+                    .map_err(|e|{
+                        (Status::InternalServerError, Json(crate::api::error::ErrorMessage {
+                            message: format!("Failed to post the tx: {:?}", e),
+                            code: 500,
+                        }))
+                    })?;
+                let resp = WithdrawalResponse{ id: cw.id.clone(), txid: BtcTxid(txid) };
+                Ok(Json(resp))
+            } else {
+                println!("1");
+                Err((Status::BadRequest, Json(crate::api::error::ErrorMessage {
+                    message: "Not BTC??".to_owned(),
+                    code: 500,
+                })))  
+            }
+        } else {
+            println!("2");
+            Err((Status::BadRequest, Json(crate::api::error::ErrorMessage {
+                message: "Not BTC??".to_owned(),
+                code: 500,
+            })))  
+        }
+    } else {
+        Err((Status::Forbidden, Json(crate::api::error::ErrorMessage {
+            message: "Signature verification failed".to_owned(),
+            code: 403,
+        })))
+    }
+}
+
 pub async fn serve_public_api(
     btc: Client,
     address: IpAddr,
@@ -91,7 +179,9 @@ pub async fn serve_public_api(
     state_notify: Arc<Notify>,
     polling_duration: Duration,
     secret_key: Option<&str>,
-    op_public_keys: Vec<PublicKey>
+    op_public_keys: Vec<PublicKey>,
+    min_confirmations: i16,
+    hot_domain: String
 ) -> Result<(), rocket::Error> {
     let zero_key =
         "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==";
@@ -113,7 +203,7 @@ pub async fn serve_public_api(
     let _ = rocket::custom(figment)
         .mount(
             "/",
-            openapi_get_routes![ping, poll_events, get_deposit_address, get_fees],
+            openapi_get_routes![ping, poll_events, get_deposit_address, get_fees, withdraw_btc],
         )
         .mount(
             "/swagger/",
@@ -142,6 +232,8 @@ pub async fn serve_public_api(
         .manage(state_notify)
         .manage(btc)
         .manage(op_public_keys)
+        .manage(min_confirmations)
+        .manage(hot_domain)
         .attach(on_ready)
         .launch()
         .await?;

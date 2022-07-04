@@ -43,14 +43,14 @@ pub struct WithdrawalRequest {
     pub rejections: Vec<WithdrawalRequestDecision>,
 }
 
-impl From<(NaiveDateTime, WithdrawalRequestId, WithdrawalRequestInfo)> for WithdrawalRequest {
-    fn from(value: (NaiveDateTime, WithdrawalRequestId, WithdrawalRequestInfo)) -> Self {
+impl From<(NaiveDateTime, WithdrawalRequestInfo)> for WithdrawalRequest {
+    fn from(value: (NaiveDateTime, WithdrawalRequestInfo)) -> Self {
         WithdrawalRequest {
-            id: value.1,
-            user: value.2.user,
-            address: value.2.address,
+            id: value.1.id,
+            user: value.1.user,
+            address: value.1.address,
             created_at: value.0,
-            amount: value.2.amount,
+            amount: value.1.amount,
             status: WithdrawalRequestStatus::InProgress(0),
             confirmations: vec![],
             rejections: vec![],
@@ -73,7 +73,7 @@ impl Into<WithdrawalRequestApi> for WithdrawalRequest {
             address: self.address,
             created_at: self.created_at.format("%Y-%m-%d %H:%M:%S").to_string(),
             amount: self.amount,
-            confirmation_status: confirmation_status,
+            confirmation_status: Some(confirmation_status),
         }
     }
 }

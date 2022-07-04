@@ -1,9 +1,17 @@
 use bitcoin::Amount;
 use bitcoincore_rpc::RpcApi;
+use hexstody_api::domain::CurrencyAddress;
+use hexstody_api::types::{
+    ConfirmedWithdrawal,
+    SignatureData, ConfirmationData, WithdrawalRequest
+};
 use hexstody_btc_api::bitcoin::*;
 use hexstody_btc_api::events::*;
 use hexstody_btc_test::helpers::*;
 use hexstody_btc_test::runner::*;
+use p256::ecdsa::SigningKey;
+use p256::ecdsa::signature::Signer;
+use rocket::serde::json;
 
 // Check that we have node and API operational
 #[tokio::test]
@@ -273,6 +281,104 @@ async fn cancel_confirmed_test() {
         }
     })
     .await;
+}
+
+#[tokio::test]
+async fn process_withdrawal_request(){
+    run_test(|btc, api| async move{
+        fund_wallet(&btc);
+        let sk1bytes = [226, 143, 42, 33, 23, 231, 50, 229, 188, 25, 0, 63, 245, 176, 125, 158, 27, 252, 214, 95, 182, 243, 70, 176, 48, 9, 105, 34, 180, 198, 131, 6];
+        let sk2bytes = [197, 103, 161, 120, 28, 231, 101, 35, 34, 117, 53, 115, 210, 176, 147, 227, 72, 177, 3, 11, 69, 147, 176, 246, 176, 171, 80, 1, 68, 143, 100, 96];
+        let sk3bytes = [136, 43, 196, 241, 144, 235, 247, 160, 3, 26, 8, 234, 164, 69, 85, 59, 219, 248, 130, 95, 240, 188, 175, 229, 43, 160, 105, 235, 187, 120, 183, 16];
+        let sk1 = p256::SecretKey::from_be_bytes(&sk1bytes).unwrap();
+        let sk2 = p256::SecretKey::from_be_bytes(&sk2bytes).unwrap();
+        let sk3 = p256::SecretKey::from_be_bytes(&sk3bytes).unwrap();
+        let pk1 = sk1.public_key();
+        let pk2 = sk2.public_key();
+        let pk3 = sk3.public_key();
+        let addr = new_address(&btc).to_string();
+        let id = uuid::Uuid::new_v4();
+        let user = "test_user".to_owned();
+        let address = CurrencyAddress::BTC(hexstody_api::domain::BtcAddress{addr});
+        let created_at = "now".to_owned();
+        let amount = 10000000;
+        let confirmation_data = ConfirmationData(WithdrawalRequest{ 
+            id: id.clone(), 
+            user: user.clone(), 
+            address: address.clone(), 
+            created_at: created_at.clone(), 
+            amount: amount.clone(), 
+            confirmation_status: None });
+        let cd_json = json::to_string(&confirmation_data).unwrap();
+        let url_confirm = "http://127.0.0.1:8080/confirm".to_owned();
+        let url_reject = "http://127.0.0.1:8080/reject".to_owned();
+        let nonce1 = 1;
+        let nonce2 = 2;
+        let nonce3 = 3;
+        let msg1 = [url_confirm.clone(), cd_json.clone(), nonce1.to_string()].join(":");
+        let msg2 = [url_confirm.clone(), cd_json.clone(), nonce2.to_string()].join(":");
+        let msg3 = [url_reject.clone(), cd_json.clone(), nonce3.to_string()].join(":");
+        let sig1 = SigningKey::from(sk1).sign(msg1.as_bytes());
+        let sig2 = SigningKey::from(sk2).sign(msg2.as_bytes());
+        let sig3 = SigningKey::from(sk3).sign(msg3.as_bytes());
+        let sd1 = SignatureData {signature: sig1, public_key: pk1, nonce: nonce1};
+        let sd2 = SignatureData {signature: sig2, public_key: pk2, nonce: nonce2};
+        let sd3 = SignatureData {signature: sig3, public_key: pk3, nonce: nonce3};
+        let confirmations = vec![sd1, sd2];
+        let rejections = vec![sd3];
+        let cw = ConfirmedWithdrawal{id, user, address, created_at, amount, confirmations, rejections};
+        let resp = api.withdraw_btc(cw).await;
+        assert!(resp.is_ok(), "Failed to post tx");
+    }).await;
+}
+
+#[tokio::test]
+async fn reject_withdrawal_request(){
+    run_test(|btc, api| async move{
+        fund_wallet(&btc);
+        let sk1bytes = [226, 143, 42, 33, 23, 231, 50, 229, 188, 25, 0, 63, 245, 176, 125, 158, 27, 252, 214, 95, 182, 243, 70, 176, 48, 9, 105, 34, 180, 198, 131, 6];
+        let sk2bytes = [197, 103, 161, 120, 28, 231, 101, 35, 34, 117, 53, 115, 210, 176, 147, 227, 72, 177, 3, 11, 69, 147, 176, 246, 176, 171, 80, 1, 68, 143, 100, 96];
+        let sk3bytes = [136, 43, 196, 241, 144, 235, 247, 160, 3, 26, 8, 234, 164, 69, 85, 59, 219, 248, 130, 95, 240, 188, 175, 229, 43, 160, 105, 235, 187, 120, 183, 16];
+        let sk1 = p256::SecretKey::from_be_bytes(&sk1bytes).unwrap();
+        let sk2 = p256::SecretKey::from_be_bytes(&sk2bytes).unwrap();
+        let sk3 = p256::SecretKey::from_be_bytes(&sk3bytes).unwrap();
+        let pk1 = sk1.public_key();
+        let pk2 = sk2.public_key();
+        let pk3 = sk3.public_key();
+        let addr = new_address(&btc).to_string();
+        let id = uuid::Uuid::new_v4();
+        let user = "test_user".to_owned();
+        let address = CurrencyAddress::BTC(hexstody_api::domain::BtcAddress{addr});
+        let created_at = "now".to_owned();
+        let amount = 10000000;
+        let confirmation_data = ConfirmationData(WithdrawalRequest{ 
+            id: id.clone(), 
+            user: user.clone(), 
+            address: address.clone(), 
+            created_at: created_at.clone(), 
+            amount: amount.clone(), 
+            confirmation_status: None });
+        let cd_json = json::to_string(&confirmation_data).unwrap();
+        let url_confirm = "http://127.0.0.1:8080/confirm".to_owned();
+        let url_reject = "http://127.0.0.1:8080/reject".to_owned();
+        let nonce1 = 0;
+        let nonce2 = 1;
+        let nonce3 = 2;
+        let msg1 = [url_reject.clone(), cd_json.clone(), nonce1.to_string()].join(":");
+        let msg2 = [url_reject, cd_json.clone(), nonce2.to_string()].join(":");
+        let msg3 = [url_confirm, cd_json.clone(), nonce3.to_string()].join(":");
+        let sig1 = SigningKey::from(sk1).sign(msg1.as_bytes());
+        let sig2 = SigningKey::from(sk2).sign(msg2.as_bytes());
+        let sig3 = SigningKey::from(sk3).sign(msg3.as_bytes());
+        let sd1 = SignatureData {signature: sig1, public_key: pk1, nonce: nonce1};
+        let sd2 = SignatureData {signature: sig2, public_key: pk2, nonce: nonce2};
+        let sd3 = SignatureData {signature: sig3, public_key: pk3, nonce: nonce3};
+        let rejections = vec![sd1, sd2];
+        let confirmations = vec![sd3];
+        let cw = ConfirmedWithdrawal{id, user, address, created_at, amount, confirmations, rejections};
+        let resp = api.withdraw_btc(cw).await;
+        assert!(resp.is_err(), "Failed to reject tx");
+    }).await;
 }
 
 // Withdraw unconfirmed transation

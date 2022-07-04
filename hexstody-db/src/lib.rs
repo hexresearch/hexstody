@@ -6,8 +6,9 @@ use log::*;
 use queries::insert_update;
 use sqlx::postgres::{PgPoolOptions, Postgres};
 use state::*;
+use update::results::UpdateResult;
 use std::sync::Arc;
-use tokio::sync::mpsc::Receiver;
+use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::sync::{Mutex, Notify};
 use update::*;
 
@@ -31,6 +32,7 @@ pub async fn update_worker(
     state: Arc<Mutex<State>>,
     state_notify: Arc<Notify>,
     mut update_receiver: Receiver<StateUpdate>,
+    update_resp_sender: Sender<UpdateResult>
 ) {
     info!("Update state worker started");
     while let Some(i) = update_receiver.recv().await {
@@ -39,9 +41,14 @@ pub async fn update_worker(
             let mut mstate = state.lock().await;
             let mut copy_state = mstate.clone();
             match copy_state.apply_update(i.clone()) {
-                Ok(_) => match insert_update(&pool, i.body, Some(i.created)).await {
+                Ok(res) => match insert_update(&pool, i.body, Some(i.created)).await {
                     Ok(_) => {
                         *mstate = copy_state;
+                        if let Some(update_result) = res {
+                            if let Err(e) = update_resp_sender.send(update_result).await{
+                                error!("Failed to send an update result: {e}");
+                            }
+                        };
                     }
                     Err(e) => {
                         error!("Failed to store state update, reverting: {:?}", e);

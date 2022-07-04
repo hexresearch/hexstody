@@ -1,3 +1,2 @@
-use bitcoin::network::constants::Network;
-
-pub const BTC_NETWORK: Network = Network::Bitcoin;
+pub const WITHDRAWAL_CONFIRM_URI : &str = "/confirm";
+pub const WITHDRAWAL_REJECT_URI : &str = "/reject";

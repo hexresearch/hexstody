@@ -1,6 +1,7 @@
 mod api;
 mod state;
 mod worker;
+mod constants;
 
 use bitcoin::network::constants::Network;
 use bitcoincore_rpc::{Auth, Client};
@@ -72,6 +73,8 @@ enum SubCommand {
         )]
         /// List of paths to files containing trusted public keys, which operators use to confirm withdrawal requests
         operator_public_keys: Vec<PathBuf>,
+        #[clap(long, env="HEXSTODY_BTC_HOT_DOMAIN")]
+        hot_domain: String,
     },
 }
 
@@ -98,6 +101,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             network,
             secret_key,
             operator_public_keys,
+            hot_domain,
         } => loop {
             let mut op_public_keys = vec![]; //args.op_public_keys.clone()
             for p in &operator_public_keys {
@@ -149,6 +153,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     polling_duration,
                     secret_key.as_deref(),
                     op_public_keys,
+                    REQUIRED_NUMBER_OF_CONFIRMATIONS,
+                    hot_domain.clone()
                 )
                 .await;
                 res.map_err(|err| LogicError::from(err))
