@@ -21,14 +21,14 @@ use super::domain::currency::{BtcAddress, Currency, CurrencyAddress};
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct BalanceItem {
     pub currency: Currency,
-    pub value: i64,
+    pub value: u64,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
 pub struct DepositHistoryItem {
     pub currency: Currency,
     pub date: NaiveDateTime,
-    pub value: i64,
+    pub value: u64,
     pub number_of_confirmations: u64,
 }
 

@@ -38,6 +38,10 @@ pub enum Error {
     NoUserCurrency(Currency),
     #[error("Failed to generate new deposit address for currency {0}")]
     FailedGenAddress(Currency),
+    #[error("Failed to get fee for currency {0}")]
+    FailedGetFee(Currency),
+    #[error("Not enough {0}!")]
+    InsufficientFunds(Currency),
 }
 
 impl Error {
@@ -54,6 +58,8 @@ impl Error {
             Error::NoUserFound => 8,
             Error::NoUserCurrency(_) => 9,
             Error::FailedGenAddress(_) => 10,
+            Error::FailedGetFee(_) => 11,
+            Error::InsufficientFunds(_) => 12,
         }
     }
 
@@ -70,6 +76,8 @@ impl Error {
             Error::NoUserFound => Status::from_code(500).unwrap(),
             Error::NoUserCurrency(_) => Status::from_code(500).unwrap(),
             Error::FailedGenAddress(_) => Status::from_code(500).unwrap(),
+            Error::FailedGetFee(_) => Status::from_code(500).unwrap(),
+            Error::InsufficientFunds(_) =>  Status::from_code(500).unwrap(),
         }
     }
 }
