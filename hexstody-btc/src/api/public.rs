@@ -101,14 +101,13 @@ async fn withdraw_btc(
     let mut valid_confirms = 0;
     let mut valid_rejections = 0;
     let min_confirmations = min_confirmations.inner().clone();
-    let confirmation_data = ConfirmationData(WithdrawalRequest{
+    let confirmation_data = ConfirmationData{
         id: cw.id,
         user: cw.user.clone(),
         address: cw.address.clone(),
         created_at: cw.created_at.clone(),
         amount: cw.amount,
-        confirmation_status: None,
-    });
+    };
     let msg = json::to_string(&confirmation_data).unwrap();
     let confirm_url = [hot_domain.inner().clone(), WITHDRAWAL_CONFIRM_URI.to_owned()].join("");
     let reject_url = [hot_domain.inner().clone(), WITHDRAWAL_REJECT_URI.to_owned()].join("");
