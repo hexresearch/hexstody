@@ -31,7 +31,7 @@ async function importKey(_event) {
             fileSelectorStatus.innerText = "Private key imported successfully!";
             await updateWithdrawalRequests();
 
-            // // Debug fucntion to create request
+            // // Debug fucntion to create withdrawal request
             // makeSignedRequest({
             //     user: "Bob",
             //     address: {
@@ -127,6 +127,9 @@ async function updateWithdrawalRequests() {
     }
 
     function addActionBtns(row, withdrawal_request) {
+        // Here we copy withdrawal_request and remove confirmation status feild
+        let confirmation_data = (({ confirmation_status, ...o }) => o)(withdrawal_request);
+
         let cell = document.createElement("td");
         let btnRow = document.createElement("div");
         btnRow.setAttribute("class", "row");
@@ -135,7 +138,7 @@ async function updateWithdrawalRequests() {
         confirmBtnCol.setAttribute("class", "col");
         let confirmBtn = document.createElement("button");
 
-        confirmBtn.addEventListener("click", () => makeSignedRequest(withdrawal_request, 'confirm', 'POST'));
+        confirmBtn.addEventListener("click", () => makeSignedRequest(confirmation_data, 'confirm', 'POST'));
         let confirmBtnText = document.createTextNode("Confirm")
         confirmBtn.appendChild(confirmBtnText);
         confirmBtn.setAttribute("class", "button primary");
@@ -146,7 +149,7 @@ async function updateWithdrawalRequests() {
         rejectBtnCol.setAttribute("class", "col");
         let rejectBtn = document.createElement("button");
 
-        rejectBtn.addEventListener("click", () => makeSignedRequest(withdrawal_request, 'reject', 'POST'));
+        rejectBtn.addEventListener("click", () => makeSignedRequest(confirmation_data, 'reject', 'POST'));
         let rejectBtnText = document.createTextNode("Reject")
         rejectBtn.appendChild(rejectBtnText);
         rejectBtn.setAttribute("class", "button error");

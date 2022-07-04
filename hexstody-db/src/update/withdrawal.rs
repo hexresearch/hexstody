@@ -76,9 +76,9 @@ impl
         ),
     ) -> WithdrawalRequestDecisionInfo {
         WithdrawalRequestDecisionInfo {
-            user_id: value.0 .0.user,
-            currency: value.0 .0.address.currency(),
-            request_id: value.0 .0.id,
+            user_id: value.0.user,
+            currency: value.0.address.currency(),
+            request_id: value.0.id,
             url: value.3,
             msg: value.4,
             signature: value.1.signature,

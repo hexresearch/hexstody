@@ -120,6 +120,25 @@ pub struct WithdrawalRequest {
     pub confirmation_status: WithdrawalRequestStatus,
 }
 
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct ConfirmationData {
+    /// Withdrawal request ID
+    #[schemars(example = "example_uuid")]
+    pub id: Uuid,
+    /// User which initiated withdrawal request
+    #[schemars(example = "example_user")]
+    pub user: String,
+    /// Receiving address
+    #[schemars(example = "example_address")]
+    pub address: CurrencyAddress,
+    /// When the request was created
+    #[schemars(example = "example_datetime")]
+    pub created_at: String,
+    /// Amount of tokens to transfer
+    #[schemars(example = "example_amount")]
+    pub amount: u64,
+}
+
 fn example_uuid() -> &'static str {
     "fdb12d51-0e3f-4ff8-821e-fbc255d8e413"
 }
@@ -292,9 +311,6 @@ impl<'r> OpenApiFromRequest<'r> for SignatureData {
         }))
     }
 }
-
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct ConfirmationData(pub WithdrawalRequest);
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct FeeResponse {
