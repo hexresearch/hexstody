@@ -1,6 +1,6 @@
 use bitcoin::Address;
-use hexstody_btc_api::events::*;
 use hexstody_api::types::FeeResponse;
+use hexstody_btc_api::events::*;
 use log::*;
 use thiserror::Error;
 
@@ -14,6 +14,8 @@ pub enum Error {
 
 /// Alias for a `Result` with the error type `self::Error`.
 pub type Result<T> = std::result::Result<T, Error>;
+
+pub const BTC_BYTES_PER_TRANSACTION: u64 = 1024;
 
 #[derive(Clone)]
 pub struct BtcClient {
@@ -74,7 +76,7 @@ impl BtcClient {
         Ok(serde_json::from_str(&response)?)
     }
 
-    pub async fn get_fees(&self) -> Result<FeeResponse>{
+    pub async fn get_fees(&self) -> Result<FeeResponse> {
         let path = "/fees";
         let endpoint = format!("{}{}", self.server, path);
         let request = self.client.get(endpoint).build()?;
