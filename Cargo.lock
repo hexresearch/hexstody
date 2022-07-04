@@ -1256,7 +1256,6 @@ dependencies = [
  "hexstody-btc-api",
  "log",
  "reqwest",
- "rocket",
  "schemars",
  "serde",
  "serde_json",

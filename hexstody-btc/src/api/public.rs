@@ -89,18 +89,24 @@ async fn get_fees(client: &State<Client>) -> Json<FeeResponse> {
     }
 }
 
+// Configuration for /withdraw handler
+struct WithdrawCfg {
+    min_confirmations: i16,
+    op_public_keys: Vec<PublicKey>,
+    hot_domain: String
+}
+
 #[openapi(tag = "withdraw")]
 #[post("/withdraw", format = "json", data = "<cw>")]
 async fn withdraw_btc(
     client: &State<Client>, 
-    min_confirmations: &State<i16>, 
-    op_public_keys: &State<Vec<PublicKey>>,
-    hot_domain: &State<String>,
+    cfg: &State<WithdrawCfg>,
     cw: Json<ConfirmedWithdrawal>
 ) -> error::Result<WithdrawalResponse>{
+    let WithdrawCfg { min_confirmations, op_public_keys, hot_domain } = cfg.inner();
     let mut valid_confirms = 0;
     let mut valid_rejections = 0;
-    let min_confirmations = min_confirmations.inner().clone();
+    let min_confirmations = min_confirmations.clone();
     let confirmation_data = ConfirmationData{
         id: cw.id,
         user: cw.user.clone(),
@@ -109,11 +115,11 @@ async fn withdraw_btc(
         amount: cw.amount,
     };
     let msg = json::to_string(&confirmation_data).unwrap();
-    let confirm_url = [hot_domain.inner().clone(), WITHDRAWAL_CONFIRM_URI.to_owned()].join("");
-    let reject_url = [hot_domain.inner().clone(), WITHDRAWAL_REJECT_URI.to_owned()].join("");
+    let confirm_url = [hot_domain.clone(), WITHDRAWAL_CONFIRM_URI.to_owned()].join("");
+    let reject_url = [hot_domain.clone(), WITHDRAWAL_REJECT_URI.to_owned()].join("");
     let confirm_msg = [confirm_url, msg.clone()].join(":");
     let reject_msg = [reject_url, msg].join(":");
-    let op_keys = Some(op_public_keys.inner().clone());
+    let op_keys = Some(op_public_keys.clone());
     for sigdata in &cw.confirmations {
         let op_keys = op_keys.clone();
         let SignatureData{ signature, nonce, public_key } = sigdata;
@@ -129,12 +135,9 @@ async fn withdraw_btc(
         };
     };
 
-    if (valid_confirms >= min_confirmations) && (valid_confirms > valid_rejections) {
-        println!("0");
+    if (valid_confirms > valid_rejections) && (valid_confirms-valid_rejections >= min_confirmations) {
         if let CurrencyAddress::BTC(hexstody_api::domain::BtcAddress{addr}) = &cw.address {
-            println!("00");
             if let Ok(addr) = bitcoin::Address::from_str(addr.as_str()){
-                println!("01");
                 let comment = cw.id.to_string();
                 let amount = bitcoin::Amount::from_sat(cw.amount);
                 let txid = client
@@ -148,14 +151,12 @@ async fn withdraw_btc(
                 let resp = WithdrawalResponse{ id: cw.id.clone(), txid: BtcTxid(txid) };
                 Ok(Json(resp))
             } else {
-                println!("1");
                 Err((Status::BadRequest, Json(crate::api::error::ErrorMessage {
                     message: "Not BTC??".to_owned(),
                     code: 500,
                 })))  
             }
         } else {
-            println!("2");
             Err((Status::BadRequest, Json(crate::api::error::ErrorMessage {
                 message: "Not BTC??".to_owned(),
                 code: 500,
@@ -199,6 +200,7 @@ pub async fn serve_public_api(
         })
     });
 
+    let withdraw_cfg = WithdrawCfg{ min_confirmations, op_public_keys, hot_domain };
     let _ = rocket::custom(figment)
         .mount(
             "/",
@@ -230,9 +232,7 @@ pub async fn serve_public_api(
         .manage(state)
         .manage(state_notify)
         .manage(btc)
-        .manage(op_public_keys)
-        .manage(min_confirmations)
-        .manage(hot_domain)
+        .manage(withdraw_cfg)
         .attach(on_ready)
         .launch()
         .await?;
