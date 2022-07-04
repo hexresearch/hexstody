@@ -1,0 +1,27 @@
+{{#*inline "page"}}
+
+<script type="module" src="/scripts/page/common.js"></script>
+<script type="module" src="/scripts/page/signup.js"></script>
+
+<div class="row  is-center text-center is-full-screen">
+    <div class="col-4 card">
+        <p>
+        <h1>Sign Up </h1>
+        </p>
+        <p>
+            <input id="signUpEmail" type="email" placeholder="name@email.com">
+        </p>
+        <p>
+            <input id="signUpPassword" type="password" placeholder="Type your Password">
+        </p>
+        <p>
+            <label id="validationError" hidden="hidden" class="text-error"></label>
+        </p>
+        <p>
+            <button id="submit" class="button primary">Submit</button>
+        </p>
+
+    </div>
+</div>
+{{/inline}}
+{{> base}}
