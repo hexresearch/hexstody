@@ -12,8 +12,8 @@ rocket = { version = "=0.5.0-rc.2", default-features = false, features = [
   "json",
   "uuid",
 ] }
-okapi = { git = "https://github.com/GREsau/okapi", rev = "65244f0" }
-rocket_okapi = { git = "https://github.com/GREsau/okapi", rev = "65244f0", features = [
+okapi = { git = "https://github.com/GREsau/okapi", rev = "ddb07a709129b24ed8e106b0fbf576b6ded615ac" }
+rocket_okapi = { git = "https://github.com/GREsau/okapi", rev = "ddb07a709129b24ed8e106b0fbf576b6ded615ac", features = [
   "rapidoc",
   "swagger",
   "uuid",
