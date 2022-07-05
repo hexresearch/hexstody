@@ -23,6 +23,7 @@ use hexstody_db::update::{StateUpdate, UpdateBody};
 #[get("/balance")]
 pub async fn get_balance(
     cookies: &CookieJar<'_>,
+    btc: &State<BtcClient>,
     state: &State<Arc<Mutex<DbState>>>,
 ) -> error::Result<Json<api::Balance>> {
     require_auth(cookies, |cookie| async move {
@@ -30,12 +31,18 @@ pub async fn get_balance(
         {
             let state = state.lock().await;
             if let Some(user) = state.users.get(user_id) {
+                let btc_fee_per_byte = &btc
+                    .get_fees()
+                    .await
+                    .map_err(|_| error::Error::FailedGetFee(Currency::BTC))?
+                    .fee_rate;
+                let btc_fee_per_transaction = btc_fee_per_byte * BTC_BYTES_PER_TRANSACTION;
                 let balances: Vec<api::BalanceItem> = user
                     .currencies
                     .iter()
                     .map(|(cur, info)| api::BalanceItem {
                         currency: cur.clone(),
-                        value: info.balance(),
+                        value: info.balance(btc_fee_per_transaction),
                     })
                     .collect();
                 Ok(Json(api::Balance { balances }))
@@ -184,12 +191,12 @@ pub async fn post_withdraw(
                     .await
                     .map_err(|_| error::Error::FailedGetFee(Currency::BTC))?
                     .fee_rate;
-
+                let btc_fee_per_transaction = btc_fee_per_byte * BTC_BYTES_PER_TRANSACTION;
                 let btc_balance = &user
                     .currencies
                     .get(&Currency::BTC)
                     .ok_or(error::Error::NoUserCurrency(Currency::BTC))?
-                    .finalized_balance();
+                    .finalized_balance(btc_fee_per_transaction);
                 let max_btc_amount_to_spend =
                     btc_balance - btc_fee_per_byte * BTC_BYTES_PER_TRANSACTION;
                 if max_btc_amount_to_spend >= withdraw_request.amount {

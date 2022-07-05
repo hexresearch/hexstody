@@ -76,48 +76,51 @@ impl UserCurrencyInfo {
         }
     }
 
+    fn calculate_balance<F>(&self, btc_fee_per_transaction: u64, mut tx_filter: F) -> u64
+    where
+        F: FnMut(&Transaction) -> Option<&Transaction>,
+    {
+        let tx_sum: i64 = self
+            .transactions
+            .iter()
+            .filter_map(|t| tx_filter(t).map(|t| t.amount()))
+            .sum();
+        let pending_withdrawals: u64 = self
+            .withdrawal_requests
+            .iter()
+            .map(|(_, w)| w.amount - btc_fee_per_transaction)
+            .sum();
+        // zero to prevent spreading overflow bug when in less then out
+        0.max(tx_sum - pending_withdrawals as i64) as u64
+    }
+
     /// Includes unconfirmed transactions
     pub fn unconfirmed_transactions(&self) -> impl Iterator<Item = &Transaction> {
         self.transactions
             .iter()
             .filter_map(|t| if t.is_conflicted() { None } else { Some(t) })
     }
-    /// Includes unconfirmed transactions
-    pub fn balance(&self) -> u64 {
-        let tx_sum: i64 = self
-            .transactions
-            .iter()
-            .filter_map(|t| {
-                if t.is_conflicted() {
-                    None
-                } else {
-                    Some(t.amount())
-                }
-            })
-            .sum();
-        let pending_withdrawals: u64 = self.withdrawal_requests.iter().map(|(_, w)| w.amount).sum();
 
-        // zero to prevent spreading overflow bug when in less then out
-        0.max(tx_sum - pending_withdrawals as i64) as u64
+    /// Includes unconfirmed transactions
+    pub fn balance(&self, btc_fee_per_transaction: u64) -> u64 {
+        self.calculate_balance(btc_fee_per_transaction, |t| {
+            if t.is_conflicted() {
+                None
+            } else {
+                Some(t)
+            }
+        })
     }
 
     /// Include only finalized transactions
-    pub fn finalized_balance(&self) -> u64 {
-        let tx_sum: i64 = self
-            .transactions
-            .iter()
-            .filter_map(|t| {
-                if t.is_finalized() {
-                    Some(t.amount())
-                } else {
-                    None
-                }
-            })
-            .sum();
-        let pending_withdrawals: u64 = self.withdrawal_requests.iter().map(|(_, w)| w.amount).sum();
-
-        // zero to prevent spreading overflow bug when in less then out
-        0.max(tx_sum - pending_withdrawals as i64) as u64
+    pub fn finalized_balance(&self, btc_fee_per_transaction: u64) -> u64 {
+        self.calculate_balance(btc_fee_per_transaction, |t| {
+            if t.is_finalized() {
+                None
+            } else {
+                Some(t)
+            }
+        })
     }
 
     pub fn has_address(&self, address: &CurrencyAddress) -> bool {
