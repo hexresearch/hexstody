@@ -32,7 +32,7 @@ pub async fn update_results_worker(
                             id,
                             user: req.user,
                             address: req.address,
-                            created_at: req.created_at.to_string(),
+                            created_at: req.created_at.format("%Y-%m-%d %H:%M:%S").to_string(),
                             amount: req.amount,
                             confirmations,
                             rejections,
