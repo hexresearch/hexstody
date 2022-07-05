@@ -5,8 +5,6 @@ mod worker;
 
 use clap::Parser;
 use futures::future::AbortHandle;
-use hexstody_btc_client::client::BtcClient;
-use hexstody_db::state::{Network, REQUIRED_NUMBER_OF_CONFIRMATIONS};
 use log::*;
 use std::error::Error;
 use std::path::PathBuf;
@@ -15,7 +13,9 @@ use std::time::Duration;
 use tokio::sync::Notify;
 use tokio::time::sleep;
 
-use hexstody_btc_test::runner::run_two_nodes_test;
+use hexstody_btc_client::client::BtcClient;
+use hexstody_btc_test::runner::run_regtest;
+use hexstody_db::state::{Network, REQUIRED_NUMBER_OF_CONFIRMATIONS};
 use runner::run_hot_wallet;
 
 #[derive(Parser, Debug, Clone)]
@@ -119,13 +119,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
     match args.subcmd.clone() {
         SubCommand::Serve => {
             if args.start_regtest {
-                // We start 2 btc nodes here so we can top up the 
-                // user's balance from an external wallet
-                run_two_nodes_test(|_, _, btc_client| {
-                    let mut args = args.clone();
-                    args.network = Network::Regtest;
-                    async move { run(btc_client, &args).await }
-                })
+                run_regtest(
+                    args.operator_api_domain.clone(),
+                    args.operator_public_keys.clone(),
+                    |_node_1_client, _node_2_client, btc_client| {
+                        let mut args = args.clone();
+                        args.network = Network::Regtest;
+                        async move { run(btc_client, &args).await }
+                    },
+                )
                 .await
             } else {
                 let btc_client = BtcClient::new(&args.btc_module);

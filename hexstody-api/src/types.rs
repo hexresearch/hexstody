@@ -1,21 +1,20 @@
 use base64;
 use chrono::NaiveDateTime;
+use hexstody_btc_api::bitcoin::txid::BtcTxid;
 use okapi::openapi3::*;
 use p256::{ecdsa::Signature, pkcs8::DecodePublicKey, PublicKey};
 use rocket::{
     http::Status,
     request::{FromRequest, Outcome, Request},
     serde::json::json,
-    data::{Data, FromData, Outcome as DataOutcome}
 };
 use rocket_okapi::{
     gen::OpenApiGenerator,
     okapi::schemars::{self, JsonSchema},
-    request::{OpenApiFromRequest, RequestHeaderInput, OpenApiFromData},
+    request::{OpenApiFromRequest, RequestHeaderInput},
 };
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use hexstody_btc_api::bitcoin::txid::BtcTxid;
 
 use super::domain::currency::{BtcAddress, Currency, CurrencyAddress};
 
@@ -128,6 +127,25 @@ pub struct UserWithdrawRequest {
     pub amount: u64,
 }
 
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct ConfirmationData {
+    /// Withdrawal request ID
+    #[schemars(example = "example_uuid")]
+    pub id: Uuid,
+    /// User which initiated withdrawal request
+    #[schemars(example = "example_user")]
+    pub user: String,
+    /// Receiving address
+    #[schemars(example = "example_address")]
+    pub address: CurrencyAddress,
+    /// When the request was created
+    #[schemars(example = "example_datetime")]
+    pub created_at: String,
+    /// Amount of tokens to transfer
+    #[schemars(example = "example_amount")]
+    pub amount: u64,
+}
+
 fn example_uuid() -> &'static str {
     "fdb12d51-0e3f-4ff8-821e-fbc255d8e413"
 }
@@ -173,11 +191,21 @@ pub struct DepositInfo {
 /// Signature data that comes from operators
 /// when they sign or reject requests.
 /// This data type is used for authorization.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
 pub struct SignatureData {
     pub signature: Signature,
     pub nonce: u64,
     pub public_key: PublicKey,
+}
+
+// Dummy JsonSchema. Needed for derive JsonSchema elsewhere
+impl JsonSchema for SignatureData {
+    fn schema_name() -> String {
+        "Signature data".to_string()
+    }
+    fn json_schema(_: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
+        schemars::schema::Schema::Object(schemars::schema::SchemaObject::default())
+    }
 }
 
 #[derive(Debug)]
@@ -302,16 +330,13 @@ impl<'r> OpenApiFromRequest<'r> for SignatureData {
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct ConfirmationData(pub WithdrawalRequest);
-
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct FeeResponse {
     /// Estimate fee rate in BTC/kB.
     #[schemars(example = "example_fee")]
     pub fee_rate: u64,
     /// Block number where estimate was found. None means that there was an error and a default value was used
     #[schemars(example = "example_block_height")]
-    pub block: Option<i64>
+    pub block: Option<i64>,
 }
 
 fn example_fee() -> u64 {
@@ -322,7 +347,19 @@ fn example_block_height() -> Option<i64> {
     Some(12345)
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy)]
+pub enum WithdrawalRequestDecisionType {
+    Confirm,
+    Reject,
+}
+
+impl WithdrawalRequestDecisionType {
+    pub fn to_json(&self) -> String {
+        rocket::serde::json::to_string(self).unwrap()
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct ConfirmedWithdrawal {
     /// Request ID
     pub id: Uuid,
@@ -340,10 +377,6 @@ pub struct ConfirmedWithdrawal {
     pub rejections: Vec<SignatureData>,
 }
 
-fn example_confirmations() -> Vec<SignatureData>{
-    vec![]
-}
-
 #[derive(Debug)]
 pub enum ConfirmedWithdrawalError {
     MissingId,
@@ -356,7 +389,7 @@ pub enum ConfirmedWithdrawalError {
     InvalidAmount,
     InsufficientConfirmations,
     MoreRejections,
-    InvalidSignature(SignatureError)
+    InvalidSignature(SignatureError),
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
@@ -364,5 +397,5 @@ pub struct WithdrawalResponse {
     /// Request ID
     pub id: Uuid,
     /// Transaction ID
-    pub txid: BtcTxid
+    pub txid: BtcTxid,
 }

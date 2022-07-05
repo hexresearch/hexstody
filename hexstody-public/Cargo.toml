@@ -36,7 +36,7 @@ rocket = { version = "0.5.0-rc.2", default-features = false, features = [
   "secrets",
   "uuid",
 ] }
-rocket_okapi = { git = "https://github.com/ThouCheese/okapi", branch = "feat/rocket0.5-rc.2", features = [
+rocket_okapi = { git = "https://github.com/GREsau/okapi", rev = "ddb07a709129b24ed8e106b0fbf576b6ded615ac", features = [
   "rapidoc",
   "swagger",
 ] }

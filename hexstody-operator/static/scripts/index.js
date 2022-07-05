@@ -183,8 +183,8 @@ function addStatusCell(row, status) {
     row.appendChild(cell);
 }
 
-async function confirmRequest(withdrawalRequest) {
-    const response = await makeSignedRequest(withdrawalRequest, 'confirm', 'POST');
+async function confirmRequest(confirmationData) {
+    const response = await makeSignedRequest(confirmationData, 'confirm', 'POST');
     if (response.ok) {
         await updateWithdrawalRequests();
     } else {
@@ -192,8 +192,8 @@ async function confirmRequest(withdrawalRequest) {
     };
 }
 
-async function rejectRequest(withdrawalRequest) {
-    const response = await makeSignedRequest(withdrawalRequest, 'reject', 'POST');;
+async function rejectRequest(confirmationData) {
+    const response = await makeSignedRequest(confirmationData, 'reject', 'POST');;
     if (response.ok) {
         await updateWithdrawalRequests();
     } else {
@@ -202,6 +202,9 @@ async function rejectRequest(withdrawalRequest) {
 }
 
 function addActionBtns(row, withdrawalRequest, requestStatus) {
+    // Here we copy withdrawal_request and remove confirmation status feild
+    let confirmationData = (({ confirmation_status, ...o }) => o)(withdrawalRequest);
+
     let disabled = (requestStatus == "InProgress") ? false : true;
     let cell = document.createElement("td");
     let btnRow = document.createElement("div");
@@ -210,7 +213,7 @@ function addActionBtns(row, withdrawalRequest, requestStatus) {
     let confirmBtnCol = document.createElement("div");
     confirmBtnCol.setAttribute("class", "col");
     let confirmBtn = document.createElement("button");
-    confirmBtn.addEventListener("click", () => { confirmRequest(withdrawalRequest); });
+    confirmBtn.addEventListener("click", () => { confirmRequest(confirmationData); });
     let confirmBtnText = document.createTextNode("Confirm")
     confirmBtn.appendChild(confirmBtnText);
     confirmBtn.setAttribute("class", "button primary");
@@ -223,7 +226,7 @@ function addActionBtns(row, withdrawalRequest, requestStatus) {
     let rejectBtnCol = document.createElement("div");
     rejectBtnCol.setAttribute("class", "col");
     let rejectBtn = document.createElement("button");
-    rejectBtn.addEventListener("click", () => { rejectRequest(withdrawalRequest); });
+    rejectBtn.addEventListener("click", () => { rejectRequest(confirmationData); });
     let rejectBtnText = document.createTextNode("Reject")
     rejectBtn.appendChild(rejectBtnText);
     rejectBtn.setAttribute("class", "button error");

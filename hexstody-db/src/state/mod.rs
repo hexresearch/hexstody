@@ -20,11 +20,12 @@ use super::update::btc::BtcTxCancel;
 use super::update::deposit::DepositAddress;
 use super::update::signup::{SignupInfo, UserId};
 use super::update::withdrawal::{
-    WithdrawalRequestDecision, WithdrawalRequestDecisionInfo, WithdrawalRequestDecisionType,
+    WithdrawalRequestDecision, WithdrawalRequestDecisionInfo,
     WithdrawalRequestInfo,
 };
-use super::update::{StateUpdate, UpdateBody};
+use super::update::{StateUpdate, UpdateBody, results::UpdateResult};
 use hexstody_api::domain::*;
+use hexstody_api::types::WithdrawalRequestDecisionType;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct State {
@@ -76,32 +77,32 @@ impl State {
     }
 
     /// Apply an update event from persistent store
-    pub fn apply_update(&mut self, update: StateUpdate) -> Result<(), StateUpdateErr> {
+    pub fn apply_update(&mut self, update: StateUpdate) -> Result<Option<UpdateResult>, StateUpdateErr> {
         match update.body {
             UpdateBody::Signup(info) => {
                 self.with_signup(update.created, info)?;
                 self.last_changed = update.created;
-                Ok(())
+                Ok(None)
             }
             UpdateBody::Snapshot(snaphsot) => {
                 *self = snaphsot;
                 self.last_changed = update.created;
-                Ok(())
+                Ok(None)
             }
             UpdateBody::CreateWithdrawalRequest(withdrawal_request) => {
                 self.with_new_withdrawal_request(update.created, withdrawal_request)?;
                 self.last_changed = update.created;
-                Ok(())
+                Ok(None)
             }
             UpdateBody::WithdrawalRequestDecision(withdrawal_request_decision) => {
-                self.with_withdrawal_request_decision(withdrawal_request_decision)?;
+                let res = self.with_withdrawal_request_decision(withdrawal_request_decision)?;
                 self.last_changed = update.created;
-                Ok(())
+                Ok(res.map(UpdateResult::WithdrawConfirmed))
             }
             UpdateBody::DepositAddress(dep_address) => {
                 self.with_deposit_address(dep_address)?;
                 self.last_changed = update.created;
-                Ok(())
+                Ok(None)
             }
             UpdateBody::BestBtcBlock(btc) => {
                 self.btc_state = BtcState {
@@ -109,17 +110,17 @@ impl State {
                     block_hash: btc.block_hash,
                 };
                 self.last_changed = update.created;
-                Ok(())
+                Ok(None)
             }
             UpdateBody::UpdateBtcTx(tx) => {
                 self.with_btc_tx_update(tx)?;
                 self.last_changed = update.created;
-                Ok(())
+                Ok(None)
             }
             UpdateBody::CancelBtcTx(tx) => {
                 self.with_btc_tx_cancel(tx)?;
                 self.last_changed = update.created;
-                Ok(())
+                Ok(None)
             }
         }
     }
@@ -202,10 +203,11 @@ impl State {
     /// Apply withdrawal request decision update
     /// We don't check here that public key is in the whitelist,
     /// this is done by the web server.
+    /// Returns Ok(True) if the request was just confirmed
     fn with_withdrawal_request_decision(
         &mut self,
         withdrawal_request_decision: WithdrawalRequestDecisionInfo,
-    ) -> Result<(), StateUpdateErr> {
+    ) -> Result<Option<WithdrawalRequestId>, StateUpdateErr> {
         let withdrawal_request =
             self.get_withdrawal_request_by_decision_info(withdrawal_request_decision.clone())?;
         let is_confirmed_by_this_key = withdrawal_request
@@ -247,10 +249,11 @@ impl State {
                         let m = if is_rejected_by_this_key { 2 } else { 1 };
                         if n == REQUIRED_NUMBER_OF_CONFIRMATIONS - m {
                             withdrawal_request.status = WithdrawalRequestStatus::Confirmed;
+                            return Ok(Some(withdrawal_request.id));
                         } else {
                             withdrawal_request.status = WithdrawalRequestStatus::InProgress(n + m);
+                            return Ok(None)
                         };
-                        return Ok(());
                     }
                     WithdrawalRequestDecisionType::Reject => {
                         if is_rejected_by_this_key {
@@ -273,7 +276,7 @@ impl State {
                         } else {
                             withdrawal_request.status = WithdrawalRequestStatus::InProgress(n - m);
                         };
-                        return Ok(());
+                        return Ok(None);
                     }
                 }
             }
@@ -373,6 +376,19 @@ impl State {
             }
         }
         result
+    }
+
+    pub fn get_withdrawal_request(&self, id: WithdrawalRequestId) -> Option<WithdrawalRequest>{
+        for (_, user) in self.users.iter() {
+            for (_, info) in user.currencies.iter(){
+                for (req_id, req) in info.withdrawal_requests.iter(){
+                    if req_id.clone() == id {
+                        return Some(req.clone())
+                    }
+                }
+            }
+        }
+        None
     }
 }
 
@@ -544,7 +560,6 @@ mod tests {
             request_id: extracted_withdrawal_request.id,
             url: "test".to_owned(),
             nonce: nonce,
-            msg: msg,
             signature: signature,
             public_key: public_key,
             decision_type: WithdrawalRequestDecisionType::Confirm,

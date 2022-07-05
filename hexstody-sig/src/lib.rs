@@ -7,6 +7,7 @@ use p256::{
 pub enum SignatureError {
     InvalidPublicKey,
     InvalidSignature,
+    InvalidDomain,
 }
 
 #[derive(Debug, PartialEq)]
@@ -16,12 +17,11 @@ pub struct SignatureVerificationData {
     pub nonce: u64,
     pub public_key: PublicKey,
     pub message: Option<String>,
-    pub operator_public_keys: Vec<PublicKey>,
 }
 
 impl SignatureVerificationData {
-    pub fn verify(&self) -> Result<(), SignatureError> {
-        if !self.operator_public_keys.contains(&self.public_key) {
+    pub fn verify(&self, operator_public_keys: Vec<PublicKey>) -> Result<(), SignatureError> {
+        if !operator_public_keys.contains(&self.public_key) {
             return Err(SignatureError::InvalidPublicKey);
         };
         let message_items = match self.message.clone() {
@@ -35,6 +35,22 @@ impl SignatureVerificationData {
     }
 }
 
+pub fn verify_signature(
+    operator_public_keys: Option<Vec<PublicKey>>,
+    public_key: &PublicKey,
+    nonce: &u64, 
+    message: String,
+    signature: &Signature
+) -> Result<(), SignatureError>{
+    if operator_public_keys.map(|pks| !pks.contains(&public_key)).unwrap_or(false) {
+        return Err(SignatureError::InvalidPublicKey);
+    };
+    let message = [message, nonce.to_string()].join(":");
+    VerifyingKey::from(public_key)
+        .verify(message.as_bytes(), &signature)
+        .map_err(|_| SignatureError::InvalidSignature)
+}
+
 #[cfg(test)]
 mod tests {
     use p256::{
@@ -43,10 +59,10 @@ mod tests {
     };
     use rand_core::OsRng;
 
-    use crate::{SignatureVerificationData, SignatureError};
+    use crate::{SignatureVerificationData, SignatureError, verify_signature};
 
     #[test]
-    fn test_signature() {
+    fn test_signature_svd() {
         let url = "test_url".to_owned();
         let nonce = 0;
         let message = "test_message".to_owned();
@@ -60,13 +76,12 @@ mod tests {
             nonce,
             public_key,
             message: Some(message),
-            operator_public_keys: vec![public_key],
         };
-        assert_eq!(signature_verification_data.verify(), Ok(()));
+        assert_eq!(signature_verification_data.verify(vec![public_key]), Ok(()));
     }
 
     #[test]
-    fn test_signature_empty_message() {
+    fn test_signature_empty_message_svd() {
         let url = "test_url".to_owned();
         let nonce = 0;
         let message_to_sign = [url.clone(), nonce.to_string()].join(":");
@@ -80,13 +95,12 @@ mod tests {
             public_key,
             // The message is empty
             message: None,
-            operator_public_keys: vec![public_key],
         };
-        assert_eq!(signature_verification_data.verify(), Ok(()));
+        assert_eq!(signature_verification_data.verify(vec![public_key]), Ok(()));
     }
 
     #[test]
-    fn test_signature_invalid_key() {
+    fn test_signature_invalid_key_svd() {
         let url = "test_url".to_owned();
         let nonce = 0;
         let message = "test_message".to_owned();
@@ -100,10 +114,9 @@ mod tests {
             nonce,
             public_key,
             message: None,
-            // No trusted keys
-            operator_public_keys: vec![],
         };
-        assert_eq!(signature_verification_data.verify(), Err(SignatureError::InvalidPublicKey));
+        // No trusted keys
+        assert_eq!(signature_verification_data.verify(vec![]), Err(SignatureError::InvalidPublicKey));
     }
 
     #[test]
@@ -122,8 +135,52 @@ mod tests {
             nonce: nonce + 1,
             public_key,
             message: None,
-            operator_public_keys: vec![public_key],
         };
-        assert_eq!(signature_verification_data.verify(), Err(SignatureError::InvalidSignature));
+        assert_eq!(signature_verification_data.verify(vec![public_key]), Err(SignatureError::InvalidSignature));
+    }
+
+    #[test]
+    fn test_signature() {
+        let nonce = 0;
+        let message = "test_message".to_owned();
+        let message_to_sign = [message.clone(), nonce.to_string()].join(":");
+        let secret_key = SecretKey::random(&mut OsRng);
+        let public_key = secret_key.public_key();
+        let signature = SigningKey::from(secret_key).sign(message_to_sign.as_bytes());
+        assert_eq!(verify_signature(Some(vec![public_key]), &public_key, &nonce, message, &signature), Ok(()));
+    }
+
+    #[test]
+    fn test_signature_no_keys_required() {
+        let nonce = 0;
+        let message = "test_message".to_owned();
+        let message_to_sign = [message.clone(), nonce.to_string()].join(":");
+        let secret_key = SecretKey::random(&mut OsRng);
+        let public_key = secret_key.public_key();
+        let signature = SigningKey::from(secret_key).sign(message_to_sign.as_bytes());
+        assert_eq!(verify_signature(None, &public_key, &nonce, message, &signature), Ok(()));
+    }
+
+    #[test]
+    fn test_signature_no_trusted_keys() {
+        let nonce = 0;
+        let message = "test_message".to_owned();
+        let message_to_sign = [message.clone(), nonce.to_string()].join(":");
+        let secret_key = SecretKey::random(&mut OsRng);
+        let public_key = secret_key.public_key();
+        let signature = SigningKey::from(secret_key).sign(message_to_sign.as_bytes());
+        assert_eq!(verify_signature(Some(vec![]), &public_key, &nonce, message, &signature), Err(SignatureError::InvalidPublicKey));
+    }
+
+    #[test]
+    fn test_signature_invalid_sig(){
+        let nonce = 0;
+        let notnonce = 1;
+        let message = "test_message".to_owned();
+        let message_to_sign = [message.clone(), nonce.to_string()].join(":");
+        let secret_key = SecretKey::random(&mut OsRng);
+        let public_key = secret_key.public_key();
+        let signature = SigningKey::from(secret_key).sign(message_to_sign.as_bytes());
+        assert_eq!(verify_signature(None, &public_key, &notnonce, message, &signature), Err(SignatureError::InvalidSignature));
     }
 }
