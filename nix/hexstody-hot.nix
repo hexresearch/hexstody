@@ -36,12 +36,6 @@ in {
           Which hostname is binded to the node.
         '';
       };
-      domain = mkOption {
-        type = types.str;
-        description = ''
-          Which domain is binded to the node.
-        '';
-      };
       operatorKeys = mkOption {
         type = types.listOf types.str;
         description = ''
@@ -139,7 +133,6 @@ in {
             --public-api-static-path ${cfg.package}/share/public/static \
             --operator-api-template-path ${cfg.package}/share/operator/templates \
             --public-api-template-path ${cfg.package}/share/public/templates \
-            --hot-domain ${cfg.domain} \
             --operator-public-keys ${pkgs.lib.concatStringsSep " " (builtins.map mkKeyFile cfg.operatorKeys)} \
             serve
       '';
