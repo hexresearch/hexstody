@@ -128,12 +128,12 @@ in {
         export HEXSTODY_PUBLIC_API_SECRET_KEY=$HEXSTODY_OPERATOR_API_SECRET_KEY
         cd ${cfg.package}/share
         ${cfg.package}/bin/hexstody-hot \
+            --operator-public-keys ${pkgs.lib.concatStringsSep " " (builtins.map mkKeyFile cfg.operatorKeys)} \
             --btc-module ${cfg.btcModule} \
             --operator-api-static-path ${cfg.package}/share/operator/static \
             --public-api-static-path ${cfg.package}/share/public/static \
             --operator-api-template-path ${cfg.package}/share/operator/templates \
             --public-api-template-path ${cfg.package}/share/public/templates \
-            --operator-public-keys ${pkgs.lib.concatStringsSep " " (builtins.map mkKeyFile cfg.operatorKeys)} \
             serve
       '';
       serviceConfig = {
