@@ -1,12 +1,26 @@
 <script src="/scripts/qrcode.min.js"></script>
+<style>
+.is-horizontal-center {
+  justify-content: center;
+}
+</style>
 
 {{#each addresses}}
-<div class="row is-center text-center ">
-    <div class="col-6 card">
-        <div id="qrcode-{{currency}}" class="is-center"></div>
-        <div>
-            {{currency}} {{address}}
-        </div>
+<div class="card column is-half is-offset-one-quarter">
+  <div class="card-header">
+    <p class="card-header-title is-centered">
+      {{currency}} {{address}}
+    </p>
+  </div>
+  <div class="card-image">
+    <div class='card-content is-flex is-horizontal-center'>
+        <figure class="image is-512x512">
+          <div id="qrcode-{{currency}}">
+          </div>
+        </figure>
     </div>
+  </div>
 </div>
+<div class="my-4"></div>
+
 {{/each}}

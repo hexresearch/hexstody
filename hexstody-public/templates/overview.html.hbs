@@ -1,19 +1,216 @@
 {{#*inline "page"}}
 
-<script type="module" src="/scripts/page/common.js"></script>
-<script type="module" src="/scripts/page/overview.js"></script>
-<p>
-<div class="row is-center" id="balance"></div>
-</p>
-<p id="history" class="card"></p>
-<div class="row">
-  <div class="col is-center"></div>
-</div>
-<div class="row">
-  <div class="col is-center">
-    <button class="button outline" id="loadMore">LoadMore</button>
-  </div>
-</div>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset='utf-8'>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="referrer" content="unsafe-url">
+    <title>Hexstody</title>
+    <link href='https://fonts.googleapis.com/css?family=Inter' rel='stylesheet'>
+    <link rel="stylesheet" href="https://cdn.materialdesignicons.com/5.4.55/css/materialdesignicons.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.3/css/bulma.min.css">
+    <script type="module" src="/scripts/page/common.js"></script>
+    <script type="module" src="/scripts/page/overview.js"></script>
+    <link rel="stylesheet" href="css/style.css">
+
+    <style>
+      body {
+        background-color: #ECEFF4;
+      }
+      .page-content {
+        margin-left: 15%;
+        margin-right: 15%;
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 700;
+        color: #282143;
+      }
+      .nav-logo {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 700;
+        font-size: 24px;
+        line-height: 32px;
+        letter-spacing: 0.02em;
+        color: #282143;
+      }
+      .nav-lang{
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 500;
+        font-size: 14px;
+        line-height: 20px;
+        color: #282143;
+        }
+      .nav-account {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 500;
+        font-size: 16px;
+        line-height: 120%;
+        color: #282143;
+      }
+      .content-row {
+        margin-left: 40px;
+        margin-right: 40px;
+      }
+      .balance-label {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 600;
+        font-size: 20px;
+        line-height: 28px;
+        color: #282143;
+      }
+      .balance-val-bg {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 600;
+        font-size: 36px;
+        line-height: 48px;
+        letter-spacing: 0.02em;
+        color: #282143;
+      }
+      .balance-val-gr {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 600;
+        font-size: 36px;
+        line-height: 48px;
+        letter-spacing: 0.02em;
+        color: #77778C;
+      }
+      .content-separator {
+        border: 1px solid #D5D7E7;
+        height: 1px;
+      }
+      .item-label {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 600;
+        font-size: 16px;
+        line-height: 24px;
+        color: #282143;
+      }
+      .item-val-bg {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 600;
+        font-size: 28px;
+        line-height: 36px;
+        color: #282143;
+      }
+      .item-val-gr {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 600;
+        font-size: 16px;
+        line-height: 24px;
+        color: #77778C;
+      }
+      .item-buttom-w {
+        float: right;
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 500;
+        color: #282143;
+      }
+      .item-buttom-d {
+        float: right;
+        background-color: #409EFF !Important;
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 500;
+        color: #FFFFFF;
+      }
+      .column-item-one{
+        padding: 12px;
+      }
+      .rt-item-one {
+        width: 40px;
+        height: 40px;
+        background-color: #ECEFF4;
+        border-radius: 20px;
+        padding-left: 8px;
+        padding-top: 8px;
+      }
+      .rt-item-icon-one {
+        color: #409EFF;
+      }
+      .rt-item-two-bg {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 600;
+        font-size: 16px;
+        line-height: 24px;
+        color: #282143;
+      }
+      .rt-item-two-gr {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 500;
+        font-size: 16px;
+        line-height: 24px;
+        color: #77778C;
+      }
+      .rt-item-three {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 500;
+        font-size: 16px;
+        line-height: 24px;
+        color: #77778C;
+      }
+      .rt-item-four {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 600;
+        font-size: 16px;
+        line-height: 24px;
+        color: #77778C;
+      }
+      .column-item-four{
+        text-align: right;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="full-height" style="background-color: #ECEFF4;">
+
+      <div class="container" style="padding-top: 25px;">
+
+        <div class="box page-content" style="box-shadow: none !Important;">
+          <div class="content-row">
+            <span class="balance-label">Total Balance</span>
+          </div>
+          <div class="content-row">
+            <span class="balance-val-bg">0 $</span>
+            <span class="balance-val-gr">(0 P)</span>
+          </div>
+
+          <div class="content-row content-separator my-4"></div>
+          <div class="row is-center" id="balance">
+          </div>
+        </div>
+
+        <div class="box page-content" style="box-shadow: none !Important;">
+          <div class="content-row">
+            <span class="balance-label">Recent transactions</span>
+          </div>
+
+          <div class="content-separator my-4"></div>
+          <div id="history">
+
+          </div>
+        </div>
+
+      </div>
+      <button style="visibility: collapse"  id="loadMore">LoadMore</button>
+
+    </div>
+  </body>
+</html>
 
 {{/inline}}
 {{> base_footer_header}}

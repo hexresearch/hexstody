@@ -1,0 +1,76 @@
+{{#*inline "page"}}
+
+<script type="module" src="/scripts/page/common.js"></script>
+<script type="module" src="/scripts/page/withdraw.js"></script>
+
+<nav class="tabs is-full">
+  <a id="btc-tab" class="active">BTC</a>
+  <a id="eth-tab">ETH</a>
+</nav>
+<div id="btc-tab-body" class="card">
+  <div class="row">
+    <div class="col-6 text-center">
+      Available: <span id="btc_balance" balance="{{btc_balance}}"></span>
+    </div>
+    <div class="col-6 text-center">
+      Fee: <span id="btc_fee" fee={{btc_fee}}>{{btc_fee}}</span>
+    </div>
+  </div>
+  <div class="row is-center">
+    <div class="col-1 ">
+      Address:
+    </div>
+    <div class="col-4 ">
+      <input id="btc_address" type="text">
+    </div>
+    <div class="col-1 ">
+      Amount:
+    </div>
+    <div class="col-3 ">
+      <input id="btc_send_amount" type="text">
+    </div>
+    <div class="col-1 is-center">
+      <button id="max_btc">Max</button>
+    </div>
+  </div>
+  <div class="row ">
+    <div class="col-12  is-center">
+      <button id="send_btc">Send</button>
+    </div>
+  </div>
+</div>
+
+<div id="eth-tab-body" style="display: none;" class="card">
+  <div class="row">
+    <div class="col-6 text-center">
+      Available: <span id="eth_balance" balance="{{btc_balance}}"> </span>
+    </div>
+    <div class="col-6 text-center">
+      Fee: <span id="eth_fee" fee={{eth_fee}}>{{btc_fee}}</span>
+    </div>
+  </div>
+  <div class="row is-center ">
+    <div class="col-1 ">
+      Address:
+    </div>
+    <div class="col-4 ">
+      <input id="eth_address" type="text">
+    </div>
+    <div class="col-1 ">
+      Amount:
+    </div>
+    <div class="col-3 ">
+      <input id="eth_send_amount" type="text">
+    </div>
+    <div class="col-1 is-center">
+      <button id="max_eth">Max</button>
+    </div>
+  </div>
+  <div class="row ">
+    <div class="col-12  is-center">
+      <button id = "send_eth">Send</button>
+    </div>
+  </div>
+</div>
+{{/inline}}
+{{> base_footer_header}}

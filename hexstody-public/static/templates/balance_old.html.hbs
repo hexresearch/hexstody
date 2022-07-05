@@ -1,0 +1,12 @@
+{{#each balances}}
+<div class="col-4 card">
+    <div class="row text-center">
+        <div class="col-12 ">
+            {{this.currency}}
+        </div>
+        <div class="col-12">
+            {{formatCurrencyValue}}
+        </div>
+    </div>
+</div>
+{{/each}}
