@@ -36,6 +36,18 @@ in {
           Which hostname is binded to the node.
         '';
       };
+      domain = mkOption {
+        type = types.str;
+        description = ''
+          Which domain is binded to the node.
+        '';
+      };
+      operatorKeys = mkOption {
+        type = types.listOf types.str;
+        description = ''
+          Public keys of operators
+        '';
+      };
 
       btcModule = mkOption {
         type = types.str;
@@ -113,7 +125,9 @@ in {
       description = "Hexstody hot wallet";
       after = ["network.target" cfg.passwordFileService cfg.secretKeyService];
       wants = ["network.target" cfg.passwordFileService cfg.secretKeyService];
-      script = ''
+      script = let 
+        mkKeyFile = content: pkgs.writeText "operator-pubkey.pem" content;
+      in ''
         export DB_PASSWORD=$(cat ${cfg.passwordFile} | xargs echo -n)
         export DATABASE_URL="postgresql://${cfg.databaseUser}:$DB_PASSWORD@${cfg.databaseHost}/${cfg.databaseName}"
         export HEXSTODY_OPERATOR_API_SECRET_KEY=$(cat ${cfg.secretKey} | xargs echo -n)
@@ -125,6 +139,8 @@ in {
             --public-api-static-path ${cfg.package}/share/public/static \
             --operator-api-template-path ${cfg.package}/share/operator/templates \
             --public-api-template-path ${cfg.package}/share/public/templates \
+            --hot-domain ${cfg.domain} \
+            --operator-public-keys ${pkgs.lib.concatStringsSep " " (builtins.map mkKeyFile cfg.operatorKeys)} \
             serve
       '';
       serviceConfig = {
