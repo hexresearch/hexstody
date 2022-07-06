@@ -42,13 +42,6 @@ fn index() -> Redirect {
 }
 
 #[openapi(skip)]
-#[get("/overview")]
-fn overview() -> Template {
-    let context = HashMap::from([("title", "Overview"), ("parent", "base_footer_header")]);
-    Template::render("overview", context)
-}
-
-#[openapi(skip)]
 #[get("/signup")]
 fn signup() -> Template {
     let context = HashMap::from([("title", "Sign Up"), ("parent", "base")]);
@@ -63,10 +56,25 @@ fn signin() -> Template {
 }
 
 #[openapi(skip)]
+#[get("/overview")]
+async fn overview(cookies: &CookieJar<'_>) -> Template {
+    require_auth(cookies, |_| async move {
+        let context = HashMap::from([("title", "Overview"), ("parent", "base_footer_header")]);
+        Ok(Template::render("overview", context))
+    })
+    .await
+    .unwrap_or_else(|_| signin())
+}
+
+#[openapi(skip)]
 #[get("/deposit")]
-fn deposit() -> Template {
-    let context = HashMap::from([("title", "Deposit"), ("parent", "base_footer_header")]);
-    Template::render("deposit", context)
+async fn deposit(cookies: &CookieJar<'_>) -> Template {
+    require_auth(cookies, |_| async move {
+        let context = HashMap::from([("title", "Deposit"), ("parent", "base_footer_header")]);
+        Ok(Template::render("deposit", context))
+    })
+    .await
+    .unwrap_or_else(|_| signin())
 }
 
 #[openapi(skip)]
@@ -76,7 +84,7 @@ async fn withdraw(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
 ) -> error::Result<Template> {
-    require_auth_user(cookies, state, |_, user| async move {
+    let result = require_auth_user(cookies, state, |_, user| async move {
         let btc_fee_per_byte = &btc
             .get_fees()
             .await
@@ -108,7 +116,11 @@ async fn withdraw(
             Err(error::Error::NoUserCurrency(Currency::BTC).into())
         }
     })
-    .await
+    .await;
+    match result {
+        Err((status, _)) if status == error::Error::AuthRequired.status() => Ok(signin()),
+        _ => result,
+    }
 }
 
 pub async fn serve_api(
