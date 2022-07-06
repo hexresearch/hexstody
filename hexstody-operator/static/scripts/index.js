@@ -147,6 +147,11 @@ function addAddressCell(row, address) {
     contentWrapper.appendChild(addressTextWrapper);
     copyBtn.setAttribute("class", "button clear icon-only");
     copyBtn.innerHTML = '<img src="https://icongr.am/feather/copy.svg?size=18"></img>';
+    copyBtn.addEventListener("click", () => {
+        navigator.clipboard.writeText(addr).then(function () { }, function (err) {
+            console.error('Could not copy text: ', err);
+        });
+    });
     tippy(copyBtn, {
         content: "Copied",
         trigger: "click",
