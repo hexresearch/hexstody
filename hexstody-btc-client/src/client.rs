@@ -1,6 +1,6 @@
 use bitcoin::Address;
-use hexstody_api::types::FeeResponse;
 use hexstody_btc_api::events::*;
+use hexstody_api::types::{FeeResponse, WithdrawalResponse, ConfirmedWithdrawal};
 use log::*;
 use thiserror::Error;
 
@@ -80,6 +80,21 @@ impl BtcClient {
         let path = "/fees";
         let endpoint = format!("{}{}", self.server, path);
         let request = self.client.get(endpoint).build()?;
+        let response = self
+            .client
+            .execute(request)
+            .await?
+            .error_for_status()?
+            .text()
+            .await?;
+        debug!("Response {path}: {}", response);
+        Ok(serde_json::from_str(&response)?)
+    }
+
+    pub async fn withdraw_btc(&self, cw: ConfirmedWithdrawal) -> Result<WithdrawalResponse>{
+        let path = "/withdraw";
+        let endpoint = format!("{}{}", self.server, path);
+        let request = self.client.post(endpoint).json(&cw).build()?;
         let response = self
             .client
             .execute(request)

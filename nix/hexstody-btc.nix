@@ -36,6 +36,18 @@ in {
           Which hostname is binded to the node.
         '';
       };
+      domain = mkOption {
+        type = types.str;
+        description = ''
+          Which domain is binded to the node.
+        '';
+      };
+      operatorKeys = mkOption {
+        type = types.listOf types.str;
+        description = ''
+          Public keys of operators
+        '';
+      };
 
       btcNode = mkOption {
         type = types.str;
@@ -98,14 +110,18 @@ in {
       description = "Hexstody BTC adapter";
       after = ["network.target" cfg.passwordFileService cfg.secretKeyService];
       wants = ["network.target" cfg.passwordFileService cfg.secretKeyService];
-      script = ''
+      script = let 
+        mkKeyFile = content: pkgs.writeText "operator-pubkey.pem" content;
+      in ''
         export HEXSTODY_BTC_NODE_PASSWORD=$(cat ${cfg.passwordFile} | xargs echo -n)
         export HEXSTODY_BTC_SECRET_KEY=$(cat ${cfg.secretKey} | xargs echo -n)
         ${cfg.package}/bin/hexstody-btc serve \
             --address ${cfg.host} \
             --node-url ${cfg.btcNode} \
             --node-user ${cfg.rpcUser} \
-            --port ${builtins.toString cfg.port} 
+            --port ${builtins.toString cfg.port} \
+            --hot-domain ${cfg.domain} \
+            --operator-public-keys ${pkgs.lib.concatStringsSep " " (builtins.map mkKeyFile cfg.operatorKeys)} 
       '';
       serviceConfig = {
           Restart = "always";

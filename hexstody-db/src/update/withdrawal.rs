@@ -6,7 +6,7 @@ use crate::state::withdraw::WithdrawalRequestId;
 use crate::update::signup::UserId;
 use hexstody_api::domain::{Currency, CurrencyAddress};
 use hexstody_api::types::{
-    ConfirmationData, SignatureData, WithdrawalRequestInfo as WithdrawalRequestInfoApi,
+    ConfirmationData, SignatureData, WithdrawalRequestInfo as WithdrawalRequestInfoApi, WithdrawalRequestDecisionType
 };
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -32,12 +32,6 @@ impl From<WithdrawalRequestInfoApi> for WithdrawalRequestInfo {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub enum WithdrawalRequestDecisionType {
-    Confirm,
-    Reject,
-}
-
 // This data type is used to create DB state update
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct WithdrawalRequestDecisionInfo {
@@ -49,8 +43,6 @@ pub struct WithdrawalRequestDecisionInfo {
     pub request_id: WithdrawalRequestId,
     /// API URL wich was used to send the decision
     pub url: String,
-    /// Confirmaiton message
-    pub msg: String,
     /// Operator's digital signature
     pub signature: Signature,
     /// Nonce that was generated during decision
@@ -67,7 +59,6 @@ impl
         SignatureData,
         WithdrawalRequestDecisionType,
         String,
-        String,
     )> for WithdrawalRequestDecisionInfo
 {
     fn from(
@@ -76,15 +67,13 @@ impl
             SignatureData,
             WithdrawalRequestDecisionType,
             String,
-            String,
         ),
     ) -> WithdrawalRequestDecisionInfo {
         WithdrawalRequestDecisionInfo {
-            user_id: value.0 .0.user,
-            currency: value.0 .0.address.currency(),
-            request_id: value.0 .0.id,
+            user_id: value.0.user,
+            currency: value.0.address.currency(),
+            request_id: value.0.id,
             url: value.3,
-            msg: value.4,
             signature: value.1.signature,
             nonce: value.1.nonce,
             public_key: value.1.public_key,
@@ -99,8 +88,6 @@ impl
 pub struct WithdrawalRequestDecision {
     /// API URL wich was used to send the decision
     pub url: String,
-    /// Confirmaiton message
-    pub msg: String,
     /// Operator's digital signature
     pub signature: Signature,
     /// Nonce that was generated during decision
@@ -113,10 +100,19 @@ impl From<WithdrawalRequestDecisionInfo> for WithdrawalRequestDecision {
     fn from(info: WithdrawalRequestDecisionInfo) -> WithdrawalRequestDecision {
         WithdrawalRequestDecision {
             url: info.url,
-            msg: info.msg,
             signature: info.signature,
             nonce: info.nonce,
             public_key: info.public_key,
+        }
+    }
+}
+
+impl From<WithdrawalRequestDecision> for SignatureData {
+    fn from(wrd: WithdrawalRequestDecision) -> SignatureData {
+        SignatureData {
+            signature: wrd.signature,
+            nonce: wrd.nonce,
+            public_key: wrd.public_key,
         }
     }
 }

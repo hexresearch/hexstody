@@ -16,13 +16,13 @@ use std::{path::PathBuf, str, sync::Arc};
 use tokio::sync::{mpsc, Mutex, Notify};
 
 use hexstody_api::types::{
-    ConfirmationData, SignatureData, WithdrawalRequest, WithdrawalRequestInfo,
+    ConfirmationData, SignatureData, WithdrawalRequest, WithdrawalRequestInfo, WithdrawalRequestDecisionType
 };
 use hexstody_btc_client::client::BtcClient;
 use hexstody_db::{
     state::State as HexstodyState,
     update::withdrawal::{
-        WithdrawalRequestDecisionType, WithdrawalRequestInfo as WithdrawalRequestInfoDb,
+        WithdrawalRequestInfo as WithdrawalRequestInfoDb,
     },
     update::{StateUpdate, UpdateBody},
     Pool,
@@ -69,10 +69,9 @@ async fn list(
         nonce: signature_data.nonce,
         message: None,
         public_key: signature_data.public_key,
-        operator_public_keys: config.operator_public_keys.clone(),
     };
     let _ = signature_verification_data
-        .verify()
+        .verify(config.operator_public_keys.clone())
         .map_err(|_| (Status::Forbidden, "Signature verification failed"))?;
     let hexstody_state = state.lock().await;
     let withdrawal_requests = Vec::from_iter(
@@ -103,10 +102,9 @@ async fn create(
         nonce: signature_data.nonce,
         message: Some(message),
         public_key: signature_data.public_key,
-        operator_public_keys: config.operator_public_keys.clone(),
     };
     let _ = signature_verification_data
-        .verify()
+        .verify(config.operator_public_keys.clone())
         .map_err(|_| (Status::Forbidden, "Signature verification failed"))?;
     let info: WithdrawalRequestInfoDb = withdrawal_request_info.into();
     let state_update = StateUpdate::new(UpdateBody::CreateWithdrawalRequest(info));
@@ -136,10 +134,9 @@ async fn confirm(
         nonce: signature_data.nonce,
         message: Some(message.clone()),
         public_key: signature_data.public_key,
-        operator_public_keys: config.operator_public_keys.clone(),
     };
     let _ = signature_verification_data
-        .verify()
+        .verify(config.operator_public_keys.clone())
         .map_err(|_| (Status::Forbidden, "Signature verification failed"))?;
     let state_update = StateUpdate::new(UpdateBody::WithdrawalRequestDecision(
         (
@@ -147,7 +144,6 @@ async fn confirm(
             signature_data,
             WithdrawalRequestDecisionType::Confirm,
             url,
-            message,
         )
             .into(),
     ));
@@ -176,10 +172,9 @@ async fn reject(
         nonce: signature_data.nonce,
         message: Some(message.clone()),
         public_key: signature_data.public_key,
-        operator_public_keys: config.operator_public_keys.clone(),
     };
     let _ = signature_verification_data
-        .verify()
+        .verify(config.operator_public_keys.clone(),)
         .map_err(|_| (Status::Forbidden, "Signature verification failed"))?;
     let state_update = StateUpdate::new(UpdateBody::WithdrawalRequestDecision(
         (
@@ -187,7 +182,6 @@ async fn reject(
             signature_data,
             WithdrawalRequestDecisionType::Reject,
             url,
-            message,
         )
             .into(),
     ));

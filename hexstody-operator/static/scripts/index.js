@@ -123,19 +123,35 @@ function addCell(row, text) {
 }
 
 function addAddressCell(row, address) {
+    var addr;
+    switch (address.type) {
+        case "BTC":
+            addr = address.addr;
+            break;
+        case "ETH":
+            addr = address.account;
+            break;
+        default:
+            addr = "unknown";
+    }
     let cell = document.createElement("td");
     let contentWrapper = document.createElement("div");
     contentWrapper.setAttribute("class", "address-cell");
     let copyBtn = document.createElement("a");
     let addressTextWrapper = document.createElement("span");
-    let addressText = document.createTextNode(truncate(address, 15));
+    let addressText = document.createTextNode(truncate(addr, 15));
     addressTextWrapper.appendChild(addressText);
     tippy(addressTextWrapper, {
-        content: address,
+        content: addr,
     });
     contentWrapper.appendChild(addressTextWrapper);
     copyBtn.setAttribute("class", "button clear icon-only");
     copyBtn.innerHTML = '<img src="https://icongr.am/feather/copy.svg?size=18"></img>';
+    copyBtn.addEventListener("click", () => {
+        navigator.clipboard.writeText(addr).then(function () { }, function (err) {
+            console.error('Could not copy text: ', err);
+        });
+    });
     tippy(copyBtn, {
         content: "Copied",
         trigger: "click",
@@ -183,8 +199,8 @@ function addStatusCell(row, status) {
     row.appendChild(cell);
 }
 
-async function confirmRequest(withdrawalRequest) {
-    const response = await makeSignedRequest(withdrawalRequest, 'confirm', 'POST');
+async function confirmRequest(confirmationData) {
+    const response = await makeSignedRequest(confirmationData, 'confirm', 'POST');
     if (response.ok) {
         await updateWithdrawalRequests();
     } else {
@@ -192,8 +208,8 @@ async function confirmRequest(withdrawalRequest) {
     };
 }
 
-async function rejectRequest(withdrawalRequest) {
-    const response = await makeSignedRequest(withdrawalRequest, 'reject', 'POST');;
+async function rejectRequest(confirmationData) {
+    const response = await makeSignedRequest(confirmationData, 'reject', 'POST');;
     if (response.ok) {
         await updateWithdrawalRequests();
     } else {
@@ -202,6 +218,9 @@ async function rejectRequest(withdrawalRequest) {
 }
 
 function addActionBtns(row, withdrawalRequest, requestStatus) {
+    // Here we copy withdrawal_request and remove confirmation status feild
+    let confirmationData = (({ confirmation_status, ...o }) => o)(withdrawalRequest);
+
     let disabled = (requestStatus == "InProgress") ? false : true;
     let cell = document.createElement("td");
     let btnRow = document.createElement("div");
@@ -210,7 +229,7 @@ function addActionBtns(row, withdrawalRequest, requestStatus) {
     let confirmBtnCol = document.createElement("div");
     confirmBtnCol.setAttribute("class", "col");
     let confirmBtn = document.createElement("button");
-    confirmBtn.addEventListener("click", () => { confirmRequest(withdrawalRequest); });
+    confirmBtn.addEventListener("click", () => { confirmRequest(confirmationData); });
     let confirmBtnText = document.createTextNode("Confirm")
     confirmBtn.appendChild(confirmBtnText);
     confirmBtn.setAttribute("class", "button primary");
@@ -223,7 +242,7 @@ function addActionBtns(row, withdrawalRequest, requestStatus) {
     let rejectBtnCol = document.createElement("div");
     rejectBtnCol.setAttribute("class", "col");
     let rejectBtn = document.createElement("button");
-    rejectBtn.addEventListener("click", () => { rejectRequest(withdrawalRequest); });
+    rejectBtn.addEventListener("click", () => { rejectRequest(confirmationData); });
     let rejectBtnText = document.createTextNode("Reject")
     rejectBtn.appendChild(rejectBtnText);
     rejectBtn.setAttribute("class", "button error");
@@ -253,7 +272,7 @@ async function updateWithdrawalRequests() {
             addRequestIdCell(row, withdrawalRequest.id);
             addCell(row, withdrawalRequest.user);
             addCell(row, withdrawalRequest.address.type);
-            addAddressCell(row, withdrawalRequest.address.addr);
+            addAddressCell(row, withdrawalRequest.address);
             addCell(row, withdrawalRequest.amount);
             addStatusCell(row, withdrawalRequest.confirmation_status);
             addActionBtns(row, withdrawalRequest, withdrawalRequest.confirmation_status.type);

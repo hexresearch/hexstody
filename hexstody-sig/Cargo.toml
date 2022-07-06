@@ -12,3 +12,4 @@ path = "src/lib.rs"
 [dependencies]
 p256 ="0.11.1"
 rand_core = { version = "0.6.3", features = ["std"] }
+hexstody-api = {path = "../hexstody-api"}
