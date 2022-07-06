@@ -331,12 +331,20 @@ impl<'r> OpenApiFromRequest<'r> for SignatureData {
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct FeeResponse {
-    /// Estimate fee rate in BTC/kB.
+    /// Estimate fee rate in sat/kB.
     #[schemars(example = "example_fee")]
     pub fee_rate: u64,
     /// Block number where estimate was found. None means that there was an error and a default value was used
     #[schemars(example = "example_block_height")]
     pub block: Option<i64>,
+}
+
+use num_integer::Integer;
+
+impl FeeResponse {
+    pub fn fee_for_transaction(&self, transaction_bytes_amount: u64) -> u64 {
+        self.fee_rate * Integer::div_ceil(&transaction_bytes_amount, &1024)
+    }
 }
 
 fn example_fee() -> u64 {

@@ -85,12 +85,12 @@ async fn withdraw(
     state: &State<Arc<Mutex<DbState>>>,
 ) -> error::Result<Template> {
     let result = require_auth_user(cookies, state, |_, user| async move {
-        let btc_fee_per_byte = &btc
+        let btc_fee_per_transaction = btc
             .get_fees()
             .await
             .map_err(|_| error::Error::FailedGetFee(Currency::BTC))?
-            .fee_rate;
-        let btc_fee_per_transaction = btc_fee_per_byte * BTC_BYTES_PER_TRANSACTION;
+            .fee_for_transaction(BTC_BYTES_PER_TRANSACTION);
+        let btc_fee_str = &btc_fee_per_transaction.to_string();
 
         if let Some(info) = user.currencies.get(&Currency::BTC) {
             let btc_balance = &info.finalized_balance(btc_fee_per_transaction).to_string();
@@ -102,12 +102,11 @@ async fn withdraw(
                 .unwrap()
                 .finalized_balance(100)
                 .to_string();
-            let x = &btc_fee_per_transaction.to_string();
             let context = HashMap::from([
                 ("title", "Withdraw"),
                 ("parent", "base_footer_header"),
                 ("btc_balance", btc_balance),
-                ("btc_fee", x),
+                ("btc_fee", btc_fee_str),
                 ("eth_balance", eth_balance),
                 ("eth_fee", eth_fee),
             ]);
