@@ -123,19 +123,35 @@ function addCell(row, text) {
 }
 
 function addAddressCell(row, address) {
+    var addr;
+    switch (address.type) {
+        case "BTC":
+            addr = address.addr;
+            break;
+        case "ETH":
+            addr = address.account;
+            break;
+        default:
+            addr = "unknown";
+    }
     let cell = document.createElement("td");
     let contentWrapper = document.createElement("div");
     contentWrapper.setAttribute("class", "address-cell");
     let copyBtn = document.createElement("a");
     let addressTextWrapper = document.createElement("span");
-    let addressText = document.createTextNode(truncate(address, 15));
+    let addressText = document.createTextNode(truncate(addr, 15));
     addressTextWrapper.appendChild(addressText);
     tippy(addressTextWrapper, {
-        content: address,
+        content: addr,
     });
     contentWrapper.appendChild(addressTextWrapper);
     copyBtn.setAttribute("class", "button clear icon-only");
     copyBtn.innerHTML = '<img src="https://icongr.am/feather/copy.svg?size=18"></img>';
+    copyBtn.addEventListener("click", () => {
+        navigator.clipboard.writeText(addr).then(function () { }, function (err) {
+            console.error('Could not copy text: ', err);
+        });
+    });
     tippy(copyBtn, {
         content: "Copied",
         trigger: "click",
@@ -256,7 +272,7 @@ async function updateWithdrawalRequests() {
             addRequestIdCell(row, withdrawalRequest.id);
             addCell(row, withdrawalRequest.user);
             addCell(row, withdrawalRequest.address.type);
-            addAddressCell(row, withdrawalRequest.address.addr);
+            addAddressCell(row, withdrawalRequest.address);
             addCell(row, withdrawalRequest.amount);
             addStatusCell(row, withdrawalRequest.confirmation_status);
             addActionBtns(row, withdrawalRequest, withdrawalRequest.confirmation_status.type);
