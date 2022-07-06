@@ -75,4 +75,6 @@ async function init() {
     updateLoop();
 };
 
+
+
 document.addEventListener("DOMContentLoaded", init);
