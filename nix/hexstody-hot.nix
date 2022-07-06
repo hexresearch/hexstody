@@ -36,6 +36,12 @@ in {
           Which hostname is binded to the node.
         '';
       };
+      operatorDomain = mkOption {
+        type = types.str;
+        description = ''
+          Domain with http or https prefix, example https://operator.host.me
+        '';
+      };
 
       btcModule = mkOption {
         type = types.str;
@@ -125,6 +131,7 @@ in {
             --public-api-static-path ${cfg.package}/share/public/static \
             --operator-api-template-path ${cfg.package}/share/operator/templates \
             --public-api-template-path ${cfg.package}/share/public/templates \
+            --operator-api-domain ${cfg.operatorDomain} \
             serve
       '';
       serviceConfig = {
