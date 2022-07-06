@@ -1,14 +1,14 @@
 use hexstody_api::error;
 use hexstody_api::types as api;
 use hexstody_db::state::*;
-use hexstody_db::update::*;
 use hexstody_db::update::signup::*;
+use hexstody_db::update::*;
 use pwhash::bcrypt;
-use rocket_okapi::openapi;
 use rocket::http::{Cookie, CookieJar};
 use rocket::post;
 use rocket::serde::json::Json;
 use rocket::State as RState;
+use rocket_okapi::openapi;
 use std::future::Future;
 use std::sync::Arc;
 use tokio::sync::mpsc;
@@ -114,9 +114,13 @@ where
     }
 }
 
-/// More specific helper than 'require_auth' as it alsow locks state 
+/// More specific helper than 'require_auth' as it alsow locks state
 /// fore read only and fetches user info.
-pub async fn require_auth_user<F, Fut, R>(cookies: &CookieJar<'_>, state: &RState<Arc<Mutex<State>>>, future: F) -> error::Result<R>
+pub async fn require_auth_user<F, Fut, R>(
+    cookies: &CookieJar<'_>,
+    state: &RState<Arc<Mutex<State>>>,
+    future: F,
+) -> error::Result<R>
 where
     F: FnOnce(MutexGuard<State>, UserInfo) -> Fut,
     Fut: Future<Output = error::Result<R>>,

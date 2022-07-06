@@ -26,6 +26,18 @@ async function initTemplates() {
 
     Handlebars.registerHelper('isDeposit', (historyItem) => historyItem.type === "deposit");
     Handlebars.registerHelper('isWithdrawal', (historyItem) => historyItem.type === "withdrawal");
+    Handlebars.registerHelper('formatWithdrawalStatus', (status) => {
+        switch (status.type) {
+            case "InProgress":
+                return "In progress";
+            case "Confirmed":
+                return "Confirmed";
+            case "Rejected":
+                return "Rejected";
+            default:
+                return "Unknown";
+        };
+    });
     Handlebars.registerHelper('formatCurrencyValue', function () {
         return formattedCurrencyValue(this.currency, this.value);
     });

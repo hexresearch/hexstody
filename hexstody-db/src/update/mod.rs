@@ -2,6 +2,7 @@ pub mod btc;
 pub mod deposit;
 pub mod signup;
 pub mod withdrawal;
+pub mod results;
 
 use chrono::prelude::*;
 use serde::{Deserialize, Serialize};
