@@ -18,6 +18,18 @@ use hexstody_db::state::WithdrawalRequestStatus;
 use hexstody_db::state::{Transaction, WithdrawalRequest, REQUIRED_NUMBER_OF_CONFIRMATIONS};
 use hexstody_db::update::deposit::DepositAddress;
 use hexstody_db::update::{StateUpdate, UpdateBody};
+use reqwest;
+
+use serde::{Deserialize, Serialize};
+use std::i64;
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UserETH {
+    pub id: i32,
+    pub login: String,
+    pub address: String,
+}
+
 
 #[openapi(tag = "wallet")]
 #[get("/balance")]
@@ -30,6 +42,32 @@ pub async fn get_balance(
         {
             let state = state.lock().await;
             if let Some(user) = state.users.get(user_id) {
+                let balance = reqwest::get(&("http://localhost:8000/balance/".to_owned()+&user.username))
+                                                                                            .await
+                                                                                            .unwrap()
+                                                                                            .text()
+                                                                                            .await;
+                let userETHstr = reqwest::get(&("http://localhost:8000/user/".to_owned()+&user.username))
+                                                                                            .await
+                                                                                            .unwrap()
+                                                                                            .text()
+                                                                                            .await
+                                                                                            .unwrap();
+                let userETH : UserETH = (serde_json::from_str(&userETHstr)).unwrap();
+                println!("==========BALANCES==DEBUG================");
+                println!("==========BALANCES==DEBUG================");
+                println!("==========BALANCES==DEBUG================");
+                println!("==========BALANCES==DEBUG================");
+                println!("==========BALANCES==DEBUG================");
+                println!("User: {:?}",user.username);
+                println!("body = {:?}", balance);
+                println!("userETH = {:?}", userETH);
+                println!("==========BALANCES==DEBUG================");
+                println!("==========BALANCES==DEBUG================");
+                println!("==========BALANCES==DEBUG================");
+                println!("==========BALANCES==DEBUG================");
+                println!("==========BALANCES==DEBUG================");
+
                 let balances: Vec<api::BalanceItem> = user
                     .currencies
                     .iter()
@@ -82,6 +120,43 @@ pub async fn get_deposit(
                 Err(error::Error::NoUserFound.into())
             }
         }
+    })
+    .await
+}
+
+#[openapi(tag = "wallet")]
+#[post("/depositETH", data = "<currency>")]
+pub async fn get_deposit_eth(
+    cookies: &CookieJar<'_>,
+    state: &State<Arc<Mutex<DbState>>>,
+    updater: &State<mpsc::Sender<StateUpdate>>,
+    btc: &State<BtcClient>,
+    currency: Json<Currency>,
+) -> error::Result<Json<api::DepositInfo>> {
+    require_auth(cookies, |cookie| async move {
+        let user_id = cookie.value();
+        let userETHstr = reqwest::get(&("http://localhost:8000/user/".to_owned()+&user_id))
+                                                                                    .await
+                                                                                    .unwrap()
+                                                                                    .text()
+                                                                                    .await
+                                                                                    .unwrap();
+        let userETH : UserETH = (serde_json::from_str(&userETHstr)).unwrap();
+        println!("==========DEPOSIT==DEBUG================");
+        println!("==========DEPOSIT==DEBUG================");
+        println!("==========DEPOSIT==DEBUG================");
+        println!("==========DEPOSIT==DEBUG================");
+        println!("==========DEPOSIT==DEBUG================");
+        println!("User: {:?}",user_id);
+        println!("userETHstr: {:?}",userETH.address);
+        println!("==========DEPOSIT==DEBUG================");
+        println!("==========DEPOSIT==DEBUG================");
+        println!("==========DEPOSIT==DEBUG================");
+        println!("==========DEPOSIT==DEBUG================");
+        println!("==========DEPOSIT==DEBUG================");
+        Ok(Json(api::DepositInfo {
+            address: format!("{}", &userETH.address),
+        }))
     })
     .await
 }
@@ -256,3 +331,27 @@ async fn allocate_btc_address(
 
     Ok(packed_address)
 }
+/*
+async fn allocate_eth_address(
+    ethAddr: &str,
+    updater: &State<mpsc::Sender<StateUpdate>>,
+    user_id: &str,
+) -> Result<CurrencyAddress, error::Error> {
+    let address = ethAddr;
+
+    let packed_address = CurrencyAddress::ETH(EthAccount {
+        account: format!("{}", address),
+    });
+
+    updater
+        .send(StateUpdate::new(UpdateBody::DepositAddress(
+            DepositAddress {
+                user_id: user_id.to_owned(),
+                address: packed_address.clone(),
+            },
+        )))
+        .await
+        .unwrap();
+
+    Ok(packed_address)
+}*/

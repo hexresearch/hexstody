@@ -2,8 +2,16 @@ import { initTabs,loadTemplate} from "./common.js";
 
 let depositTemplate = null;
 
-async function getFor(currency) {
+async function getForBTC(currency) {
     return await fetch("/deposit",
+    {
+        method: "POST",
+        body: JSON.stringify(currency)
+    }).then(r => r.json());
+};
+
+async function getForETH(currency) {
+    return await fetch("/depositETH",
     {
         method: "POST",
         body: JSON.stringify(currency)
@@ -16,10 +24,10 @@ async function init() {
     //initTabs(tabs);
 
     depositTemplate = await loadTemplate("/templates/deposit.html.hbs");
-    const resultBTC = await getFor("BTC");
-//    const resultETH = await getFor("ETH");
+    const resultBTC = await getForBTC("BTC");
+    const resultETH = await getForETH("ETH");
     const params = {addresses : [{currency: "BTC", address: resultBTC.address}
-                                ,{currency: "ETH", address: resultBTC.address}]};
+                                ,{currency: "ETH", address: resultETH.address}]};
     const depositDrawUpdate = depositTemplate(params);
     const depositElem = document.getElementById("deposit");
     depositElem.insertAdjacentHTML('beforeend', depositDrawUpdate);
@@ -29,7 +37,7 @@ async function init() {
     box.style.display = 'none';
 
     new QRCode(document.getElementById("qrcode-BTC"), resultBTC.address);
-    new QRCode(document.getElementById("qrcode-ETH"), resultBTC.address);
+    new QRCode(document.getElementById("qrcode-ETH"), resultETH.address);
 }
 
 

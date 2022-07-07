@@ -137,6 +137,7 @@ pub async fn serve_api(
                 ping,
                 get_balance,
                 get_deposit,
+                get_deposit_eth,
                 get_history,
                 post_withdraw,
                 signup_email,
