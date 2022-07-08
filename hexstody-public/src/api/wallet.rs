@@ -198,7 +198,6 @@ pub async fn get_deposit_eth(
     .await
 }
 
-//https://min-api.cryptocompare.com/data/price?fsym=ETH&tsyms=USD,RUB
 
 #[openapi(tag = "wallet")]
 #[post("/ethticker", data = "<currency>")]
@@ -232,6 +231,7 @@ pub async fn eth_ticker(
     })
     .await
 }
+
 
 #[openapi(tag = "history")]
 #[get("/history/<skip>/<take>")]
@@ -278,6 +278,40 @@ pub async fn get_history(
             let state = state.lock().await;
 
             if let Some(user) = state.users.get(user_id) {
+                let userETHstr = reqwest::get(&("http://localhost:8000/user/".to_owned()+&user.username))
+                                                                                            .await
+                                                                                            .unwrap()
+                                                                                            .text()
+                                                                                            .await
+                                                                                            .unwrap();
+                let userETH : UserETH = (serde_json::from_str(&userETHstr)).unwrap();
+
+
+                let resurl = ("https://api.etherscan.io/api?module=account&action=txlist&address=".to_owned() +
+                             &userETH.address +
+                             "&startblock=0&endblock=99999999&page=1&offset=10&sort=asc&apikey=P8AXZC7V71IJA4XPMFEIIYX9S2S4D8U3T6");
+
+                let userETHHistStr = reqwest::get(resurl)
+                                                        .await
+                                                        .unwrap()
+                                                        .text()
+                                                        .await
+                                                        .unwrap();
+
+                let ethHistList: api::EthHistResp = (serde_json::from_str(&userETHHistStr)).unwrap();
+                println!("==========HISTORY==DEBUG================");
+                println!("==========HISTORY==DEBUG================");
+                println!("==========HISTORY==DEBUG================");
+                println!("==========HISTORY==DEBUG================");
+                println!("==========HISTORY==DEBUG================");
+                println!("UserAddress: {:?}",&userETH.address);
+                println!("UserHistStr: {:?}",ethHistList);
+                println!("==========HISTORY==DEBUG================");
+                println!("==========HISTORY==DEBUG================");
+                println!("==========HISTORY==DEBUG================");
+                println!("==========HISTORY==DEBUG================");
+                println!("==========HISTORY==DEBUG================");
+
                 let mut history = user
                     .currencies
                     .iter()
@@ -303,6 +337,98 @@ pub async fn get_history(
                     target_number_of_confirmations: REQUIRED_NUMBER_OF_CONFIRMATIONS,
                     history_items: history_slice,
                 }))
+            } else {
+                Err(error::Error::NoUserFound.into())
+            }
+        }
+    })
+    .await
+}
+
+
+#[openapi(tag = "history")]
+#[get("/historyeth")]
+pub async fn get_history_eth(
+    cookies: &CookieJar<'_>,
+    state: &State<Arc<Mutex<DbState>>>,
+) -> error::Result<Json<Vec<api::EthHistUnitU>>> {
+    require_auth(cookies, |cookie| async move {
+        let user_id = cookie.value();
+        {
+            let state = state.lock().await;
+
+            if let Some(user) = state.users.get(user_id) {
+                let userETHstr = reqwest::get(&("http://localhost:8000/user/".to_owned()+&user.username))
+                                                                                            .await
+                                                                                            .unwrap()
+                                                                                            .text()
+                                                                                            .await
+                                                                                            .unwrap();
+                let userETH : UserETH = (serde_json::from_str(&userETHstr)).unwrap();
+
+
+                let resurl = ("https://api.etherscan.io/api?module=account&action=txlist&address=".to_owned() +
+                             &userETH.address +
+                             "&startblock=0&endblock=99999999&page=1&offset=10&sort=asc&apikey=P8AXZC7V71IJA4XPMFEIIYX9S2S4D8U3T6");
+
+                let userETHHistStr = reqwest::get(resurl)
+                                                        .await
+                                                        .unwrap()
+                                                        .text()
+                                                        .await
+                                                        .unwrap();
+
+                let ethHistPred : api::EthHistResp = (serde_json::from_str(&userETHHistStr)).unwrap();
+                let ethHistList : Vec<api::EthHistUnit> = ethHistPred.result;
+                println!("==========HISTORY==DEBUG================");
+                println!("==========HISTORY==DEBUG================");
+                println!("userETHHistStr: {:?}",userETHHistStr);
+                println!("==========HISTORY==DEBUG================");
+                println!("==========HISTORY==DEBUG================");
+                println!("==========HISTORY==DEBUG================");
+                println!("UserAddress: {:?}",&userETH.address);
+                println!("UserHistStr: {:?}",ethHistList);
+                println!("==========HISTORY==DEBUG================");
+                println!("==========HISTORY==DEBUG================");
+                println!("==========HISTORY==DEBUG================");
+                println!("==========HISTORY==DEBUG================");
+                println!("==========HISTORY==DEBUG================");
+
+                let ethHistListU : Vec<api::EthHistUnitU> = ethHistList.iter()
+                                                                       .map(|x| {
+                                                                           let mut tp = "w";
+                                                                           if (&x.from == &userETH.address)
+                                                                           {tp = "w"}
+                                                                           else
+                                                                           {tp = "d"};
+                                                                           return api::EthHistUnitU {
+                                                                           blockNumber : x.blockNumber.clone(),
+                                                                           timeStamp : x.timeStamp.clone(),
+                                                                           hash : x.hash.clone(),
+                                                                           nonce : x.nonce.clone(),
+                                                                           blockHash : x.blockHash.clone(),
+                                                                           transactionIndex : x.transactionIndex.clone(),
+                                                                           from : x.from.clone(),
+                                                                           to : x.to.clone(),
+                                                                           value : x.value.clone(),
+                                                                           gas : x.gas.clone(),
+                                                                           gasPrice : x.gasPrice.clone(),
+                                                                           isError : x.isError.clone(),
+                                                                           txreceipt_status : x.txreceipt_status.clone(),
+                                                                           input : x.input.clone(),
+                                                                           contractAddress : x.contractAddress.clone(),
+                                                                           cumulativeGasUsed : x.cumulativeGasUsed.clone(),
+                                                                           gasUsed : x.gasUsed.clone(),
+                                                                           confirmations : x.confirmations.clone(),
+                                                                           methodId : x.methodId.clone(),
+                                                                           functionName : x.functionName.clone(),
+                                                                           flowType : tp.to_owned()
+                                                                            };
+                                                                        }
+                                                                    ).collect();
+
+
+                Ok(Json(ethHistList))
             } else {
                 Err(error::Error::NoUserFound.into())
             }

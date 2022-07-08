@@ -15,6 +15,10 @@ async function getHistory(skip, take) {
     return fetch(`/history/${skip}/${take}`).then(r => r.json());
 }
 
+async function getHistoryETH() {
+    return fetch("/historyeth").then(r => r.json());
+}
+
 async function getCourseForETH(currency) {
     return await fetch("/ethticker",
     {
@@ -71,6 +75,15 @@ async function loadHistory() {
     historyElem.innerHTML = historyDrawUpdate;
 }
 
+async function loadHistoryETH() {
+    const history = await getHistoryETH();
+    const hist = {histories: history}
+    console.log(hist);
+    const historyDrawUpdate = historyTemplate(hist);
+    const historyElem = document.getElementById("history");
+    historyElem.innerHTML = historyDrawUpdate;
+}
+
 async function loadMoreHistory() {
     const history = await getHistory(
         historyPagesToLoad * historyPageSize - 1,
@@ -85,7 +98,7 @@ async function loadMoreHistory() {
 }
 
 async function updateLoop() {
-    await Promise.allSettled([loadBalance(), loadHistory()]);
+    await Promise.allSettled([loadBalance(), loadHistoryETH()]);
     const jsonres = await getCourseForETH("ETH")
     const usdToEth = document.getElementById("usd-ETH");
     const currValEth = document.getElementById("curr-val-ETH").textContent;

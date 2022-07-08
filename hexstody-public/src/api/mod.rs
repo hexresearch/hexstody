@@ -141,6 +141,7 @@ pub async fn serve_api(
                 get_deposit_eth,
                 eth_ticker,
                 get_history,
+                get_history_eth,
                 post_withdraw,
                 signup_email,
                 signin_email,
