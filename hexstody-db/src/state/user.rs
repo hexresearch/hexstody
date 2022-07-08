@@ -18,6 +18,8 @@ pub struct UserInfo {
     /// Withdrawal requests for given user. The id can be used to retreive the body of request.
     /// Here goes only withdrawals that are not yet fully performed.
     pub withdrawal_requests: HashSet<WithdrawalRequestId>,
+    /// Completed withdrawal requests
+    pub completed_requests: HashSet<WithdrawalRequestId>,
     /// Information for each currency
     pub currencies: HashMap<Currency, UserCurrencyInfo>,
 }
@@ -29,6 +31,7 @@ impl UserInfo {
             auth,
             created_at,
             withdrawal_requests: HashSet::new(),
+            completed_requests: HashSet::new(),
             currencies: Currency::supported()
                 .into_iter()
                 .map(|c| (c.clone(), UserCurrencyInfo::new(c)))

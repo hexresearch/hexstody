@@ -1,10 +1,11 @@
+use chrono::NaiveDateTime;
 use p256::{ecdsa::Signature, PublicKey};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::state::withdraw::WithdrawalRequestId;
 use crate::update::signup::UserId;
-use hexstody_api::domain::{Currency, CurrencyAddress};
+use hexstody_api::domain::{Currency, CurrencyAddress, CurrencyTxId};
 use hexstody_api::types::{
     ConfirmationData, SignatureData, WithdrawalRequestInfo as WithdrawalRequestInfoApi, WithdrawalRequestDecisionType
 };
@@ -115,4 +116,13 @@ impl From<WithdrawalRequestDecision> for SignatureData {
             public_key: wrd.public_key,
         }
     }
+}
+
+/// This data type is passed for an update.
+/// Contains information required to set withdraw request to confirmed
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+pub struct WithdrawConfirmedInfo {
+    pub id: WithdrawalRequestId,
+    pub confirmed_at: NaiveDateTime,
+    pub txid: CurrencyTxId
 }

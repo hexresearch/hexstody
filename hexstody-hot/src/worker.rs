@@ -1,9 +1,10 @@
-use hexstody_api::types::ConfirmedWithdrawal;
+use chrono::Utc;
+use hexstody_api::{types::ConfirmedWithdrawal, domain::{CurrencyTxId, BTCTxid}};
 use hexstody_btc_api::events::*;
 use hexstody_btc_client::client::BtcClient;
 use hexstody_db::{
     state::State,
-    update::{btc::BestBtcBlock, StateUpdate, UpdateBody, results::UpdateResult},
+    update::{btc::BestBtcBlock, StateUpdate, UpdateBody, results::UpdateResult, withdrawal::WithdrawConfirmedInfo},
 };
 use log::*;
 use std::sync::Arc;
@@ -15,6 +16,7 @@ pub async fn update_results_worker(
     btc_client: BtcClient,
     state_mx: Arc<Mutex<State>>,
     mut update_receiver: mpsc::Receiver<UpdateResult>,
+    update_sender: mpsc::Sender<StateUpdate>,
 ){
     trace!("Starting update results worker");
     loop {
@@ -37,8 +39,22 @@ pub async fn update_results_worker(
                             confirmations,
                             rejections,
                         };
-                        if let Err(e) = btc_client.withdraw_btc(cw).await{
-                            error!("Failed to post tx: {:?}", e);
+                        match btc_client.withdraw_btc(cw).await {
+                            Ok(resp) => {
+                                debug!("withdraw_btc_resp: {:?}", resp);
+                                let txid = resp.txid.0.to_string();
+                                let bod = UpdateBody::WithdrawalRequestConfirm(WithdrawConfirmedInfo{
+                                    id: resp.id,
+                                    confirmed_at: Utc::now().naive_utc(),
+                                    txid: CurrencyTxId::BTC(BTCTxid{txid})
+                                });
+                                if let Err(e) = update_sender.send(StateUpdate::new(bod)).await{
+                                    debug!("Failed to send update with confirmation: {}", e);
+                                };
+                            },
+                            Err(e) => {
+                                debug!("Failed to post tx: {:?}", e);
+                            },
                         }
                     }
                 }

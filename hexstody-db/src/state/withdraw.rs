@@ -1,6 +1,6 @@
 use crate::update::withdrawal::WithdrawalRequestInfo;
 use crate::update::{signup::UserId, withdrawal::WithdrawalRequestDecision};
-use hexstody_api::domain::CurrencyAddress;
+use hexstody_api::domain::{CurrencyAddress, CurrencyTxId};
 use hexstody_api::types::{
     WithdrawalRequest as WithdrawalRequestApi,
     WithdrawalRequestStatus as WithdrawalRequestStatusApi,
@@ -19,8 +19,25 @@ pub type WithdrawalRequestId = Uuid;
 pub enum WithdrawalRequestStatus {
     /// Number of confirmations minus number of rejections received
     InProgress(i16),
-    Confirmed,
+    Completed,
+    Confirmed {
+        /// Time when the request was processed
+        confirmed_at: NaiveDateTime,
+        /// Txid
+        txid: CurrencyTxId
+    },
     Rejected,
+}
+
+impl Into<WithdrawalRequestStatusApi> for WithdrawalRequestStatus {
+    fn into(self) -> WithdrawalRequestStatusApi {
+        match self {
+            WithdrawalRequestStatus::InProgress(n) => WithdrawalRequestStatusApi::InProgress { confirmations: n },
+            WithdrawalRequestStatus::Completed => WithdrawalRequestStatusApi::Completed,
+            WithdrawalRequestStatus::Confirmed { confirmed_at, txid } => WithdrawalRequestStatusApi::Confirmed { confirmed_at, txid},
+            WithdrawalRequestStatus::Rejected => WithdrawalRequestStatusApi::Rejected,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -41,6 +58,7 @@ pub struct WithdrawalRequest {
     pub confirmations: Vec<WithdrawalRequestDecision>,
     /// Rejections received from operators
     pub rejections: Vec<WithdrawalRequestDecision>,
+
 }
 
 impl From<(NaiveDateTime, WithdrawalRequestInfo)> for WithdrawalRequest {
@@ -60,13 +78,7 @@ impl From<(NaiveDateTime, WithdrawalRequestInfo)> for WithdrawalRequest {
 
 impl Into<WithdrawalRequestApi> for WithdrawalRequest {
     fn into(self) -> WithdrawalRequestApi {
-        let confirmation_status = match self.status {
-            WithdrawalRequestStatus::InProgress(n) => {
-                WithdrawalRequestStatusApi::InProgress { confirmations: n }
-            }
-            WithdrawalRequestStatus::Confirmed => WithdrawalRequestStatusApi::Confirmed,
-            WithdrawalRequestStatus::Rejected => WithdrawalRequestStatusApi::Rejected,
-        };
+        let confirmation_status = self.status.into();
         WithdrawalRequestApi {
             id: self.id,
             user: self.user,

@@ -111,3 +111,31 @@ impl fmt::Display for EthAccount {
         write!(f, "{}", self.account)
     }
 }
+
+#[derive(
+    Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
+)]
+pub struct BTCTxid {pub txid: String}
+
+#[derive(
+    Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
+)]
+pub struct ETHTxid {pub txid: String}
+
+#[derive(
+    Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
+)]
+#[serde(tag = "type")]
+pub enum CurrencyTxId {
+    BTC(BTCTxid),
+    ETH(ETHTxid),
+}
+
+impl fmt::Display for CurrencyTxId {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            CurrencyTxId::BTC(BTCTxid{txid}) => write!(f, "{}", txid),
+            CurrencyTxId::ETH(ETHTxid{txid}) => write!(f, "{}", txid),
+        }
+    }
+}
