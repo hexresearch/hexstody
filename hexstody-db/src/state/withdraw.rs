@@ -19,8 +19,8 @@ pub type WithdrawalRequestId = Uuid;
 pub enum WithdrawalRequestStatus {
     /// Number of confirmations minus number of rejections received
     InProgress(i16),
-    Completed,
-    Confirmed {
+    Confirmed,
+    Completed {
         /// Time when the request was processed
         confirmed_at: NaiveDateTime,
         /// Txid
@@ -33,8 +33,8 @@ impl Into<WithdrawalRequestStatusApi> for WithdrawalRequestStatus {
     fn into(self) -> WithdrawalRequestStatusApi {
         match self {
             WithdrawalRequestStatus::InProgress(n) => WithdrawalRequestStatusApi::InProgress { confirmations: n },
-            WithdrawalRequestStatus::Completed => WithdrawalRequestStatusApi::Completed,
-            WithdrawalRequestStatus::Confirmed { confirmed_at, txid } => WithdrawalRequestStatusApi::Confirmed { confirmed_at, txid},
+            WithdrawalRequestStatus::Confirmed => WithdrawalRequestStatusApi::Confirmed,
+            WithdrawalRequestStatus::Completed { confirmed_at, txid } => WithdrawalRequestStatusApi::Completed { confirmed_at, txid},
             WithdrawalRequestStatus::Rejected => WithdrawalRequestStatusApi::Rejected,
         }
     }

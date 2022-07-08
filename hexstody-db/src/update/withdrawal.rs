@@ -121,7 +121,7 @@ impl From<WithdrawalRequestDecision> for SignatureData {
 /// This data type is passed for an update.
 /// Contains information required to set withdraw request to confirmed
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub struct WithdrawConfirmedInfo {
+pub struct WithdrawCompleteInfo {
     pub id: WithdrawalRequestId,
     pub confirmed_at: NaiveDateTime,
     pub txid: CurrencyTxId

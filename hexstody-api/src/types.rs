@@ -181,8 +181,10 @@ pub enum WithdrawalRequestStatus {
     InProgress {
         confirmations: i16,
     },
-    Completed,
-    Confirmed {
+    /// Enough confirmations is collected
+    Confirmed,
+    /// Withdrawal tx is posted
+    Completed {
         confirmed_at: NaiveDateTime,
         txid: CurrencyTxId
     },

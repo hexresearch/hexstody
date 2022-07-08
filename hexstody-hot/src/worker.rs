@@ -4,7 +4,7 @@ use hexstody_btc_api::events::*;
 use hexstody_btc_client::client::BtcClient;
 use hexstody_db::{
     state::State,
-    update::{btc::BestBtcBlock, StateUpdate, UpdateBody, results::UpdateResult, withdrawal::WithdrawConfirmedInfo},
+    update::{btc::BestBtcBlock, StateUpdate, UpdateBody, results::UpdateResult, withdrawal::WithdrawCompleteInfo},
 };
 use log::*;
 use std::sync::Arc;
@@ -43,7 +43,7 @@ pub async fn update_results_worker(
                             Ok(resp) => {
                                 debug!("withdraw_btc_resp: {:?}", resp);
                                 let txid = resp.txid.0.to_string();
-                                let bod = UpdateBody::WithdrawalRequestConfirm(WithdrawConfirmedInfo{
+                                let bod = UpdateBody::WithdrawalRequestComplete(WithdrawCompleteInfo{
                                     id: resp.id,
                                     confirmed_at: Utc::now().naive_utc(),
                                     txid: CurrencyTxId::BTC(BTCTxid{txid})

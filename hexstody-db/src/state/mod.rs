@@ -16,7 +16,7 @@ pub use transaction::*;
 pub use user::*;
 pub use withdraw::*;
 
-use crate::update::withdrawal::WithdrawConfirmedInfo;
+use crate::update::withdrawal::WithdrawCompleteInfo;
 
 use super::update::btc::BtcTxCancel;
 use super::update::deposit::DepositAddress;
@@ -101,8 +101,8 @@ impl State {
                 self.last_changed = update.created;
                 Ok(res.map(UpdateResult::WithdrawConfirmed))
             }
-            UpdateBody::WithdrawalRequestConfirm(withdrawal_confirmed_info) => {
-                self.set_withdrawal_request_confirmed(withdrawal_confirmed_info)?;
+            UpdateBody::WithdrawalRequestComplete(withdrawal_completed_info) => {
+                self.set_withdrawal_request_completed(withdrawal_completed_info)?;
                 self.last_changed = update.created;
                 Ok(None)
             }
@@ -226,12 +226,12 @@ impl State {
             .iter()
             .any(|c| c.public_key == withdrawal_request_decision.public_key);
         match withdrawal_request.status {
-            WithdrawalRequestStatus::Completed => {
+            WithdrawalRequestStatus::Completed{..} => {
                 return Err(StateUpdateErr::WithdrawalRequestAlreadyConfirmed(
                     withdrawal_request.id,
                 ))
             }
-            WithdrawalRequestStatus::Confirmed {..} => {
+            WithdrawalRequestStatus::Confirmed => {
                 return Err(StateUpdateErr::WithdrawalRequestAlreadyConfirmed(
                     withdrawal_request.id,
                 ))
@@ -260,7 +260,7 @@ impl State {
                             .push(WithdrawalRequestDecision::from(withdrawal_request_decision));
                         let m = if is_rejected_by_this_key { 2 } else { 1 };
                         if n == REQUIRED_NUMBER_OF_CONFIRMATIONS - m {
-                            withdrawal_request.status = WithdrawalRequestStatus::Completed;
+                            withdrawal_request.status = WithdrawalRequestStatus::Confirmed;
                             return Ok(Some(withdrawal_request.id));
                         } else {
                             withdrawal_request.status = WithdrawalRequestStatus::InProgress(n + m);
@@ -403,12 +403,12 @@ impl State {
         None
     }
 
-    pub fn set_withdrawal_request_confirmed(&mut self, withdrawal_confirmed_info: WithdrawConfirmedInfo) -> Result<(), StateUpdateErr>{
+    pub fn set_withdrawal_request_completed(&mut self, withdrawal_confirmed_info: WithdrawCompleteInfo) -> Result<(), StateUpdateErr>{
         for (_, user) in self.users.iter_mut() {
             for (_, info) in user.currencies.iter_mut(){
                 for (req_id, req) in info.withdrawal_requests.iter_mut(){
                     if req_id.clone() == withdrawal_confirmed_info.id {
-                        let stat = WithdrawalRequestStatus::Confirmed { 
+                        let stat = WithdrawalRequestStatus::Completed { 
                             confirmed_at: withdrawal_confirmed_info.confirmed_at,
                             txid: withdrawal_confirmed_info.txid.clone() };
                         req.status = stat;

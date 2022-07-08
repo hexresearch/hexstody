@@ -13,7 +13,7 @@ use thiserror::Error;
 use self::btc::{BestBtcBlock, BtcTxCancel};
 use self::deposit::DepositAddress;
 use self::signup::SignupInfo;
-use self::withdrawal::{WithdrawalRequestDecisionInfo, WithdrawalRequestInfo, WithdrawConfirmedInfo};
+use self::withdrawal::{WithdrawalRequestDecisionInfo, WithdrawalRequestInfo, WithdrawCompleteInfo};
 use super::state::transaction::BtcTransaction;
 use super::state::State;
 
@@ -46,7 +46,7 @@ pub enum UpdateBody {
     /// New operator's decision for the withdrawal request
     WithdrawalRequestDecision(WithdrawalRequestDecisionInfo),
     /// Set withdraw request to confirmed
-    WithdrawalRequestConfirm(WithdrawConfirmedInfo),
+    WithdrawalRequestComplete(WithdrawCompleteInfo),
     /// Register new deposit address for user
     DepositAddress(DepositAddress),
     /// New best block for BTC
@@ -64,7 +64,7 @@ impl UpdateBody {
             UpdateBody::Snapshot(_) => UpdateTag::Snapshot,
             UpdateBody::CreateWithdrawalRequest(_) => UpdateTag::CreateWithdrawalRequest,
             UpdateBody::WithdrawalRequestDecision(_) => UpdateTag::WithdrawalRequestDecision,
-            UpdateBody::WithdrawalRequestConfirm(_) => UpdateTag::WithdrawalRequestConfirm,
+            UpdateBody::WithdrawalRequestComplete(_) => UpdateTag::WithdrawalRequestConfirm,
             UpdateBody::DepositAddress(_) => UpdateTag::DepositAddress,
             UpdateBody::BestBtcBlock(_) => UpdateTag::BestBtcBlock,
             UpdateBody::UpdateBtcTx(_) => UpdateTag::UpdateBtcTx,
@@ -78,7 +78,7 @@ impl UpdateBody {
             UpdateBody::Snapshot(v) => serde_json::to_value(v),
             UpdateBody::CreateWithdrawalRequest(v) => serde_json::to_value(v),
             UpdateBody::WithdrawalRequestDecision(v) => serde_json::to_value(v),
-            UpdateBody::WithdrawalRequestConfirm(v) => serde_json::to_value(v),
+            UpdateBody::WithdrawalRequestComplete(v) => serde_json::to_value(v),
             UpdateBody::DepositAddress(v) => serde_json::to_value(v),
             UpdateBody::BestBtcBlock(v) => serde_json::to_value(v),
             UpdateBody::UpdateBtcTx(v) => serde_json::to_value(v),
@@ -182,7 +182,7 @@ impl UpdateTag {
             UpdateTag::WithdrawalRequestDecision => Ok(UpdateBody::WithdrawalRequestDecision(
                 serde_json::from_value(value)?,
             )),
-            UpdateTag::WithdrawalRequestConfirm => Ok(UpdateBody::WithdrawalRequestConfirm(
+            UpdateTag::WithdrawalRequestConfirm => Ok(UpdateBody::WithdrawalRequestComplete(
                 serde_json::from_value(value)?,
             )),
             UpdateTag::DepositAddress => {
