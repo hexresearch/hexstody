@@ -1,5 +1,7 @@
+<script type="module" src="/scripts/page/nav.js"></script>
+
 <nav class="">
-  <nav class="navbar" style="background-color: #ECEFF4;">
+  <nav class="navbar" id="nav" style="background-color: #ECEFF4;">
     <div class="navbar-brand">
       <a href="" class="navbar-item nav-logo">
         <span>LOGO</span>
@@ -38,16 +40,9 @@
     <div class="navbar-end">
       <div class="navbar-item has-dropdown is-hoverable lang-dropdown has-text-weight-bold nav-account">
         <a class="navbar-link is-arrowless has-text-black">
-          <span>account@gmail.com</span>
+          <span id="navbarlogin" hidden="true">account</span>
           <span class="icon"><span class="mdi mdi-menu-down mdi-16px"></span></span>
         </a>
-        <div class="navbar-dropdown is-boxed is-right">
-          <a class="navbar-item has-text-black">
-            <span>Item 1</span></a>
-          <a class="navbar-item has-text-black">
-            <span>Item 2</span>
-          </a>
-        </div>
       </div>
     </div>
   </nav>

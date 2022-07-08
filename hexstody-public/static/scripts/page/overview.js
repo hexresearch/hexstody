@@ -15,7 +15,16 @@ async function getHistory(skip, take) {
     return fetch(`/history/${skip}/${take}`).then(r => r.json());
 }
 
+async function getCourseForETH(currency) {
+    return await fetch("/ethticker",
+    {
+        method: "POST",
+        body: JSON.stringify(currency)
+    }).then(r => r.json());
+};
+
 async function initTemplates() {
+
     const [balanceTemp, historyTemp] = await Promise.allSettled([
         await loadTemplate("/templates/balance.html.hbs"),
         await loadTemplate("/templates/history.html.hbs")
@@ -23,6 +32,7 @@ async function initTemplates() {
 
     balanceTemplate = balanceTemp.value;
     historyTemplate = historyTemp.value;
+
 
     Handlebars.registerHelper('isDeposit', (historyItem) => historyItem.type === "deposit");
     Handlebars.registerHelper('isWithdrawal', (historyItem) => historyItem.type === "withdrawal");
@@ -76,17 +86,27 @@ async function loadMoreHistory() {
 
 async function updateLoop() {
     await Promise.allSettled([loadBalance(), loadHistory()]);
+    const jsonres = await getCourseForETH("ETH")
+    const usdToEth = document.getElementById("usd-ETH");
+    const currValEth = document.getElementById("curr-val-ETH").textContent;
+    usdToEth.textContent = "$"+(currValEth*jsonres.USD).toFixed(2);
+
+    const totalUsd = document.getElementById("total-bal-usd");
+    const totalRub = document.getElementById("total-bal-rub");
+    totalUsd.textContent = "$"+(currValEth*jsonres.USD).toFixed(2);
+    totalRub.textContent = "₽"+(currValEth*jsonres.RUB).toFixed(2);
+
     await new Promise((resolve) => setTimeout(resolve, refreshInterval));
     updateLoop();
 }
 
 async function init() {
     await initTemplates();
+
     const loadMoreButton = document.getElementById("loadMore");
     loadMoreButton.onclick = loadMoreHistory;
     updateLoop();
 };
-
 
 
 document.addEventListener("DOMContentLoaded", init);

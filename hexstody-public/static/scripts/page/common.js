@@ -8,6 +8,9 @@ export function formattedCurrencyValue(currency, value) {
         case "BTC":
             const nf = new Intl.NumberFormat('en-US');
             return nf.format(value);
+        case "ETH":
+            const newv = value / 1000000000000000000
+            return newv.toFixed(8)
         default:
             return value;
     }
@@ -58,7 +61,7 @@ export function initTabs(tabIds) {
         });
     }
     tabIds.forEach(tab => document.getElementById(tab).onclick = () => tabClicked(tab));
-    
+
     function openTab(evt, tabName) {
         var i, x, tablinks;
         x = document.getElementsByClassName("content-tab");

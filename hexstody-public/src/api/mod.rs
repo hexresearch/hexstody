@@ -104,6 +104,7 @@ async fn withdraw(
         let context = HashMap::from([
             ("title", "Withdraw"),
             ("parent", "base_footer_header"),
+            ("login", "lalala"),
             ("btc_balance", btc_balance),
             ("btc_fee", btc_fee_per_transaction),
             ("eth_balance", eth_balance),
@@ -138,6 +139,7 @@ pub async fn serve_api(
                 get_balance,
                 get_deposit,
                 get_deposit_eth,
+                eth_ticker,
                 get_history,
                 post_withdraw,
                 signup_email,

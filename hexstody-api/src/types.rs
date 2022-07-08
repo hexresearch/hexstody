@@ -19,6 +19,12 @@ use uuid::Uuid;
 use super::domain::currency::{BtcAddress, Currency, CurrencyAddress};
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct TickerETH {
+    pub USD: f32,
+    pub RUB: f32
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct BalanceItem {
     pub currency: Currency,
     pub value: u64,
