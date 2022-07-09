@@ -2,7 +2,7 @@ import { loadTemplate, formattedCurrencyValue, formattedElapsedTime } from "./co
 
 let balanceTemplate = null;
 let historyTemplate = null;
-const refreshInterval = 3000;
+const refreshInterval = 20000;
 const historyPageSize = 50;
 let historyPagesToLoad = 1;
 
@@ -77,11 +77,51 @@ async function loadHistory() {
 
 async function loadHistoryETH() {
     const history = await getHistoryETH();
-    const hist = {histories: history}
+    var histOrig = {histories: history};
+    var hist = {histories: [] }
+    var c=histOrig.histories.length-1;
+    for(var j=0; j<histOrig.histories.length; j++){
+      hist.histories[c] = histOrig.histories[j];
+      c=c-1;
+    }
     console.log(hist);
+    console.log(histOrig);
+    for(var i=0; i<hist.histories.length;i++){
+      hist.histories[i].timeStamp=timeStampToTime(parseInt(hist.histories[i].timeStamp));
+      hist.histories[i].hashtoshow=hist.histories[i].hash.slice(0, 10)+"...";
+      hist.histories[i].fromtoshow=hist.histories[i].from.slice(0, 10)+"...";
+      hist.histories[i].totoshow=hist.histories[i].to.slice(0, 10)+"...";
+      hist.histories[i].valuetoshow=formattedCurrencyValue("ETH",hist.histories[i].value);
+      hist.histories[i].fee=formattedCurrencyValue("ETH",hist.histories[i].gas*hist.histories[i].gasPrice);
+      if (hist.histories[i].addr.toUpperCase() == hist.histories[i].from.toUpperCase()){
+          hist.histories[i].arrow = "mdi-arrow-collapse-up"
+          hist.histories[i].flowType = "Withdraw"
+      }
+      else{
+        hist.histories[i].arrow = "mdi-arrow-collapse-down"
+        hist.histories[i].flowType = "Deposit"
+      }
+    };
     const historyDrawUpdate = historyTemplate(hist);
     const historyElem = document.getElementById("history");
     historyElem.innerHTML = historyDrawUpdate;
+}
+
+function timeStampToTime(unix_timestamp) {
+  var date = new Date(unix_timestamp * 1000);
+  // Hours part from the timestamp
+  var hours = date.getHours();
+  // Minutes part from the timestamp
+  var minutes = "0" + date.getMinutes();
+  // Seconds part from the timestamp
+  var seconds = "0" + date.getSeconds();
+
+  // Will display time in 10:30:23 format
+  var formattedTime = date.getFullYear()
+                    +"-"+date.getMonth()
+                    +"-"+date.getDay()
+                    +" "+hours + ':' + minutes.substr(-2) + ':' + seconds.substr(-2);
+  return formattedTime
 }
 
 async function loadMoreHistory() {

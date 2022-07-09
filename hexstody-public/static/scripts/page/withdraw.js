@@ -12,7 +12,7 @@ const ethSendAmountEl = document.getElementById("eth_send_amount");
 const maxBtcAmountBtn = document.getElementById("max_btc");
 const maxEthAmountBtn = document.getElementById("max_eth");
 
-const sendBtcBtn = document.getElementById("send_btc");
+const sendBtcBtn = document.getElementById("send_btc_eth");
 const sendEthBtn = document.getElementById("send_eth");
 
 const btcAddressEl = document.getElementById("btc_address");
@@ -32,7 +32,7 @@ async function postWithdrawRequest(currency, address, amount) {
             break;
     }
 
-    return await fetch("/withdraw",
+    return await fetch("/withdraw_eth/"+addr+"/"+amount,
         {
             method: "POST",
             body: JSON.stringify(body)
@@ -58,13 +58,13 @@ async function init() {
 
     ethBalanceEl.innerText = formattedCurrencyValue("ETH",
         ethBalanceEl.getAttribute("balance"));
-
+/*
     maxBtcAmountBtn.onclick = () => btcSendAmountEl.value =
         Math.max(0, btcBalanceEl.getAttribute("balance") - btcFeeEl.getAttribute("fee"));
 
     maxEthAmountBtn.onclick = () => ethSendAmountEl.value =
         Math.max(0, ethBalanceEl.getAttribute("balance") - ethFeeEl.getAttribute("fee"));
-
+*/
     sendBtcBtn.onclick = () => trySubmit(
         "BTC",
         btcAddressEl.value,
@@ -76,8 +76,17 @@ async function init() {
         ethAddressEl.value,
         Number(ethSendAmountEl.value),
         ethValidationDisplayEl);
-
 }
 
+
+
+
+
+/*return await fetch('/ethticker',
+{
+    method: 'get',
+    body: JSON.stringify(currency)
+}).then(r => r.json());
+*/
 
 document.addEventListener("DOMContentLoaded", init);

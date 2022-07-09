@@ -1,17 +1,34 @@
 {{#each histories}}
 
+<style media="screen">
+</style>
+
 <div class="columns content-row">
   <div class="column-item-one">
     <div class="rt-item-one">
+      <span class="icon rt-item-icon-one"><span class="mdi {{arrow}} mdi-24px"></span></span>
     </div>
   </div>
-  <div class="column">
-    <span class="rt-item-two-bg">Transaction {{currency}}</span>
+  <div class="column-item-one is-2 ">
+    <span class="rt-item-two-bg">{{flowType}}</span>
     <br>
     <span class="rt-item-two-gr">{{timeStamp}}</span>
   </div>
-  <div class="column">
-    <span class="rt-item-three" style="width: 6ch;">{{hash}}</span>
+  <div class="column-item-one is-2">
+    <span class="rt-item-three"><a href="https://etherscan.io/tx/{{hash}}">{{hashtoshow}}</a></span>
+  </div>
+  <div class="column-item-one is-2">
+    <span class="rt-item-three"><a href="https://etherscan.io/address/{{from}}">{{fromtoshow}}</a></span>
+  </div>
+  <div class="column-item-one is-2">
+    <span class="rt-item-three"><a href="https://etherscan.io/address/{{to}}">{{totoshow}}</a></span>
+  </div>
+  <div class="column-item-one is-2">
+    <span class="rt-item-three">{{valuetoshow}} ETH</span>
+  </div>
+  <div class="column-item-one is-2">
+    <span class="rt-item-three">{{fee}} fee</span>
+  </div>
   </div>
 </div>
 {{/each}}

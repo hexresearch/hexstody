@@ -60,24 +60,14 @@ pub struct EthHistUnitU {
     pub blockNumber: String,
     pub timeStamp: String,
     pub hash: String,
-    pub nonce: String,
-    pub blockHash: String,
-    pub transactionIndex: String,
     pub from: String,
     pub to: String,
     pub value: String,
     pub gas: String,
     pub gasPrice: String,
-    pub isError: String,
-    pub txreceipt_status: String,
-    pub input: String,
     pub contractAddress: String,
-    pub cumulativeGasUsed: String,
-    pub gasUsed: String,
     pub confirmations: String,
-    pub methodId: String,
-    pub functionName: String,
-    pub flowType: String
+    pub addr: String
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]

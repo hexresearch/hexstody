@@ -396,39 +396,59 @@ pub async fn get_history_eth(
 
                 let ethHistListU : Vec<api::EthHistUnitU> = ethHistList.iter()
                                                                        .map(|x| {
-                                                                           let mut tp = "w";
-                                                                           if (&x.from == &userETH.address)
-                                                                           {tp = "w"}
-                                                                           else
-                                                                           {tp = "d"};
                                                                            return api::EthHistUnitU {
                                                                            blockNumber : x.blockNumber.clone(),
                                                                            timeStamp : x.timeStamp.clone(),
                                                                            hash : x.hash.clone(),
-                                                                           nonce : x.nonce.clone(),
-                                                                           blockHash : x.blockHash.clone(),
-                                                                           transactionIndex : x.transactionIndex.clone(),
                                                                            from : x.from.clone(),
                                                                            to : x.to.clone(),
                                                                            value : x.value.clone(),
                                                                            gas : x.gas.clone(),
                                                                            gasPrice : x.gasPrice.clone(),
-                                                                           isError : x.isError.clone(),
-                                                                           txreceipt_status : x.txreceipt_status.clone(),
-                                                                           input : x.input.clone(),
                                                                            contractAddress : x.contractAddress.clone(),
-                                                                           cumulativeGasUsed : x.cumulativeGasUsed.clone(),
-                                                                           gasUsed : x.gasUsed.clone(),
                                                                            confirmations : x.confirmations.clone(),
-                                                                           methodId : x.methodId.clone(),
-                                                                           functionName : x.functionName.clone(),
-                                                                           flowType : tp.to_owned()
-                                                                            };
+                                                                           addr : userETH.address.clone()
+                                                                        };
                                                                         }
                                                                     ).collect();
 
 
-                Ok(Json(ethHistList))
+                Ok(Json(ethHistListU))
+            } else {
+                Err(error::Error::NoUserFound.into())
+            }
+        }
+    })
+    .await
+}
+
+
+#[openapi(tag = "history")]
+#[get("/withdraweth/<addr>/<amount>")]
+pub async fn withdraw_eth(
+    cookies: &CookieJar<'_>,
+    state: &State<Arc<Mutex<DbState>>>,
+    addr: String,
+    amount: String,
+) -> error::Result<()> {
+    require_auth(cookies, |cookie| async move {
+        let user_id = cookie.value();
+        {
+            let state = state.lock().await;
+
+            if let Some(user) = state.users.get(user_id) {
+
+                println!("==========WIRTHDRAWETH==DEBUG================");
+                println!("==========WIRTHDRAWETH==DEBUG================");
+                println!("==========WIRTHDRAWETH==DEBUG================");
+                println!("addr: {:?}",addr);
+                println!("amount: {:?}",amount);
+                println!("==========WIRTHDRAWETH==DEBUG================");
+                println!("==========WIRTHDRAWETH==DEBUG================");
+                println!("==========WIRTHDRAWETH==DEBUG================");
+                println!("==========WIRTHDRAWETH==DEBUG================");
+
+                Ok(())
             } else {
                 Err(error::Error::NoUserFound.into())
             }

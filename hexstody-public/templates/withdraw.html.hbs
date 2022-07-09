@@ -16,8 +16,8 @@ body {
 </style>
 <div class="tabs is-large is-centered">
   <ul>
-    <li class="is-active">  <a id="btc-tab">BTC</a></li>
-    <li><a id="eth-tab">ETH</a></li>
+    <li>  <a id="btc-tab">BTC</a></li>
+    <li class="is-active"><a id="eth-tab">ETH</a></li>
   </ul>
 </div>
 
@@ -56,7 +56,9 @@ body {
 
     <div class="columns is-center">
       <div class="column">
-        <button id="send_btc"
+        <button id="send_btc_eth" onclick="
+        (function(){alert('sended')})
+        "
          type="button" class="button is-info is-fullwidth item-buttom-d">
           Send
         </button>
