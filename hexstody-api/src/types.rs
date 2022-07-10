@@ -96,6 +96,9 @@ pub struct WithdrawalRequestInfo {
     /// Amount of tokens to transfer
     #[schemars(example = "example_amount")]
     pub amount: u64,
+    /// Fee taken for posting transaction
+    #[schemars(example = "example_fee")]
+    pub fee: u64,
 }
 
 /// Auxiliary data type to display `WithdrawalRequest` on the page
@@ -116,6 +119,9 @@ pub struct WithdrawalRequest {
     /// Amount of tokens to transfer
     #[schemars(example = "example_amount")]
     pub amount: u64,
+    /// Fee taken for posting transaction
+    #[schemars(example = "example_fee")]
+    pub fee: u64,
     /// Some request require manual confirmation
     #[schemars(example = "example_confirmation_status")]
     pub confirmation_status: WithdrawalRequestStatus,

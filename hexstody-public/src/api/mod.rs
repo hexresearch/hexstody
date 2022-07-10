@@ -3,7 +3,6 @@ pub mod wallet;
 
 use auth::*;
 use figment::Figment;
-use log::*;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -93,14 +92,14 @@ async fn withdraw(
         let btc_fee_str = &btc_fee_per_transaction.to_string();
 
         if let Some(info) = user.currencies.get(&Currency::BTC) {
-            let btc_balance = &info.finalized_balance(btc_fee_per_transaction).to_string();
+            let btc_balance = &info.finalized_balance().to_string();
 
             let eth_fee = &1000.to_string();
             let eth_balance = &user
                 .currencies
                 .get(&Currency::ETH)
                 .unwrap()
-                .finalized_balance(100)
+                .finalized_balance()
                 .to_string();
             let context = HashMap::from([
                 ("title", "Withdraw"),

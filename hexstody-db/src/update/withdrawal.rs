@@ -19,6 +19,8 @@ pub struct WithdrawalRequestInfo {
     pub address: CurrencyAddress,
     /// Amount of tokens to transfer
     pub amount: u64,
+    /// Fee taken for posting transaction
+    pub fee: u64,
 }
 
 impl From<WithdrawalRequestInfoApi> for WithdrawalRequestInfo {
@@ -28,6 +30,7 @@ impl From<WithdrawalRequestInfoApi> for WithdrawalRequestInfo {
             user: value.user,
             address: value.address,
             amount: value.amount,
+            fee: value.fee,
         }
     }
 }
