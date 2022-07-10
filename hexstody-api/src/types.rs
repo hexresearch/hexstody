@@ -188,7 +188,10 @@ pub enum WithdrawalRequestStatus {
         confirmed_at: NaiveDateTime,
         txid: CurrencyTxId
     },
-    Rejected,
+    OpRejected,
+    NodeRejected {
+        reason: String
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]

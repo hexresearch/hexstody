@@ -16,7 +16,7 @@ pub use transaction::*;
 pub use user::*;
 pub use withdraw::*;
 
-use crate::update::withdrawal::WithdrawCompleteInfo;
+use crate::update::withdrawal::{WithdrawCompleteInfo, WithdrawalRejectInfo};
 
 use super::update::btc::BtcTxCancel;
 use super::update::deposit::DepositAddress;
@@ -103,6 +103,11 @@ impl State {
             }
             UpdateBody::WithdrawalRequestComplete(withdrawal_completed_info) => {
                 self.set_withdrawal_request_completed(withdrawal_completed_info)?;
+                self.last_changed = update.created;
+                Ok(None)
+            }
+            UpdateBody::WithdrawalRequestNodeRejected(reject_info) => {
+                self.set_withdrawal_request_node_rejected(reject_info)?;
                 self.last_changed = update.created;
                 Ok(None)
             }
@@ -236,7 +241,12 @@ impl State {
                     withdrawal_request.id,
                 ))
             }
-            WithdrawalRequestStatus::Rejected => {
+            WithdrawalRequestStatus::OpRejected => {
+                return Err(StateUpdateErr::WithdrawalRequestAlreadyRejected(
+                    withdrawal_request.id,
+                ))
+            }
+            WithdrawalRequestStatus::NodeRejected{..} => {
                 return Err(StateUpdateErr::WithdrawalRequestAlreadyRejected(
                     withdrawal_request.id,
                 ))
@@ -284,7 +294,7 @@ impl State {
                             .push(WithdrawalRequestDecision::from(withdrawal_request_decision));
                         let m = if is_confirmed_by_this_key { 2 } else { 1 };
                         if n == m - REQUIRED_NUMBER_OF_CONFIRMATIONS {
-                            withdrawal_request.status = WithdrawalRequestStatus::Rejected;
+                            withdrawal_request.status = WithdrawalRequestStatus::OpRejected;
                         } else {
                             withdrawal_request.status = WithdrawalRequestStatus::InProgress(n - m);
                         };
@@ -411,6 +421,22 @@ impl State {
                         let stat = WithdrawalRequestStatus::Completed { 
                             confirmed_at: withdrawal_confirmed_info.confirmed_at,
                             txid: withdrawal_confirmed_info.txid.clone() };
+                        req.status = stat;
+                    }
+                }
+            }
+        };
+        Ok(())
+    }
+
+    pub fn set_withdrawal_request_node_rejected(&mut self, reject_info: WithdrawalRejectInfo) -> Result<(), StateUpdateErr> {
+        for (_, user) in self.users.iter_mut() {
+            for (_, info) in user.currencies.iter_mut(){
+                for (req_id, req) in info.withdrawal_requests.iter_mut(){
+                    if req_id.clone() == reject_info.id {
+                        let stat = WithdrawalRequestStatus::NodeRejected { 
+                            reason: reject_info.reason.clone()
+                        };
                         req.status = stat;
                     }
                 }

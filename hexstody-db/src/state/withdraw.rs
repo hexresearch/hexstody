@@ -26,7 +26,10 @@ pub enum WithdrawalRequestStatus {
         /// Txid
         txid: CurrencyTxId
     },
-    Rejected,
+    OpRejected,
+    NodeRejected {
+        reason: String
+    }
 }
 
 impl Into<WithdrawalRequestStatusApi> for WithdrawalRequestStatus {
@@ -35,7 +38,8 @@ impl Into<WithdrawalRequestStatusApi> for WithdrawalRequestStatus {
             WithdrawalRequestStatus::InProgress(n) => WithdrawalRequestStatusApi::InProgress { confirmations: n },
             WithdrawalRequestStatus::Confirmed => WithdrawalRequestStatusApi::Confirmed,
             WithdrawalRequestStatus::Completed { confirmed_at, txid } => WithdrawalRequestStatusApi::Completed { confirmed_at, txid},
-            WithdrawalRequestStatus::Rejected => WithdrawalRequestStatusApi::Rejected,
+            WithdrawalRequestStatus::OpRejected => WithdrawalRequestStatusApi::OpRejected,
+            WithdrawalRequestStatus::NodeRejected{reason} => WithdrawalRequestStatusApi::NodeRejected{reason}
         }
     }
 }
@@ -86,6 +90,16 @@ impl Into<WithdrawalRequestApi> for WithdrawalRequest {
             created_at: self.created_at.format("%Y-%m-%d %H:%M:%S").to_string(),
             amount: self.amount,
             confirmation_status: confirmation_status,
+        }
+    }
+}
+
+impl WithdrawalRequest {
+    pub fn is_rejected(&self) -> bool {
+        match self.status {
+            WithdrawalRequestStatus::OpRejected => true,
+            WithdrawalRequestStatus::NodeRejected{..} => true,
+            _ => false
         }
     }
 }

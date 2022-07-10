@@ -4,7 +4,7 @@ use hexstody_btc_api::events::*;
 use hexstody_btc_client::client::BtcClient;
 use hexstody_db::{
     state::State,
-    update::{btc::BestBtcBlock, StateUpdate, UpdateBody, results::UpdateResult, withdrawal::WithdrawCompleteInfo},
+    update::{btc::BestBtcBlock, StateUpdate, UpdateBody, results::UpdateResult, withdrawal::{WithdrawCompleteInfo, WithdrawalRejectInfo}},
 };
 use log::*;
 use std::sync::Arc;
@@ -54,6 +54,14 @@ pub async fn update_results_worker(
                             },
                             Err(e) => {
                                 debug!("Failed to post tx: {:?}", e);
+                                let info = WithdrawalRejectInfo {
+                                    id,
+                                    reason: format!("{}",e),
+                                };
+                                let bod = UpdateBody::WithdrawalRequestNodeRejected(info);
+                                if let Err(e) = update_sender.send(StateUpdate::new(bod)).await{
+                                    debug!("Failed to send update with node rejection: {}", e);
+                                };
                             },
                         }
                     }

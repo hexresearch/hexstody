@@ -126,3 +126,9 @@ pub struct WithdrawCompleteInfo {
     pub confirmed_at: NaiveDateTime,
     pub txid: CurrencyTxId
 }
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+pub struct WithdrawalRejectInfo {
+    pub id: WithdrawalRequestId,
+    pub reason: String
+}

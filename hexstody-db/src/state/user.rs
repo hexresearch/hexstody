@@ -98,7 +98,8 @@ impl UserCurrencyInfo {
                 }
             })
             .sum();
-        let pending_withdrawals: u64 = self.withdrawal_requests.iter().map(|(_, w)| w.amount).sum();
+        // Do not count rejected withdrawals
+        let pending_withdrawals: u64 = self.withdrawal_requests.iter().map(|(_, w)| if w.is_rejected() {0} else {w.amount}).sum();
 
         // zero to prevent spreading overflow bug when in less then out
         0.max(tx_sum - pending_withdrawals as i64) as u64
@@ -117,7 +118,8 @@ impl UserCurrencyInfo {
                 }
             })
             .sum();
-        let pending_withdrawals: u64 = self.withdrawal_requests.iter().map(|(_, w)| w.amount).sum();
+        // Do not count rejected withdrawals
+        let pending_withdrawals: u64 = self.withdrawal_requests.iter().map(|(_, w)| if w.is_rejected() {0} else {w.amount}).sum();
 
         // zero to prevent spreading overflow bug when in less then out
         0.max(tx_sum - pending_withdrawals as i64) as u64
