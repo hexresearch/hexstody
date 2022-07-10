@@ -19,15 +19,20 @@ pub type WithdrawalRequestId = Uuid;
 pub enum WithdrawalRequestStatus {
     /// Number of confirmations minus number of rejections received
     InProgress(i16),
+    /// Confirmed by operators, but not yet sent to the node
     Confirmed,
+    /// Tx sent to the node
     Completed {
         /// Time when the request was processed
         confirmed_at: NaiveDateTime,
         /// Txid
         txid: CurrencyTxId
     },
+    /// Rejected by operators
     OpRejected,
+    /// Rejected by the node
     NodeRejected {
+        /// Node
         reason: String
     }
 }

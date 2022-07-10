@@ -181,15 +181,20 @@ pub enum WithdrawalRequestStatus {
     InProgress {
         confirmations: i16,
     },
-    /// Enough confirmations is collected
+    /// Confirmed by operators, but not yet sent to the node
     Confirmed,
-    /// Withdrawal tx is posted
+    /// Tx sent to the node
     Completed {
+        /// Time when the request was processed
         confirmed_at: NaiveDateTime,
+        /// Txid
         txid: CurrencyTxId
     },
+    /// Rejected by operators
     OpRejected,
+    /// Rejected by the node
     NodeRejected {
+        /// Node
         reason: String
     }
 }
