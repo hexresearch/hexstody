@@ -3,7 +3,6 @@ pub mod wallet;
 
 use auth::*;
 use figment::Figment;
-use log::*;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -42,13 +41,6 @@ fn index() -> Redirect {
 }
 
 #[openapi(skip)]
-#[get("/overview")]
-fn overview() -> Template {
-    let context = HashMap::from([("title", "Overview"), ("parent", "base_footer_header")]);
-    Template::render("overview", context)
-}
-
-#[openapi(skip)]
 #[get("/signup")]
 fn signup() -> Template {
     let context = HashMap::from([("title", "Sign Up"), ("parent", "base")]);
@@ -63,10 +55,25 @@ fn signin() -> Template {
 }
 
 #[openapi(skip)]
+#[get("/overview")]
+async fn overview(cookies: &CookieJar<'_>) -> Template {
+    require_auth(cookies, |_| async move {
+        let context = HashMap::from([("title", "Overview"), ("parent", "base_footer_header")]);
+        Ok(Template::render("overview", context))
+    })
+    .await
+    .unwrap_or_else(|_| signin())
+}
+
+#[openapi(skip)]
 #[get("/deposit")]
-fn deposit() -> Template {
-    let context = HashMap::from([("title", "Deposit"), ("parent", "base_footer_header")]);
-    Template::render("deposit", context)
+async fn deposit(cookies: &CookieJar<'_>) -> Template {
+    require_auth(cookies, |_| async move {
+        let context = HashMap::from([("title", "Deposit"), ("parent", "base_footer_header")]);
+        Ok(Template::render("deposit", context))
+    })
+    .await
+    .unwrap_or_else(|_| signin())
 }
 
 #[openapi(skip)]
@@ -76,42 +83,42 @@ async fn withdraw(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
 ) -> error::Result<Template> {
-    require_auth_user(cookies, state, |_, user| async move {
-        let btc_fee_per_byte = &btc
+    let result = require_auth_user(cookies, state, |_, user| async move {
+        let btc_fee_per_transaction = btc
             .get_fees()
             .await
-            .map_err(|e| {
-                error!("{}", e);
-                error::Error::FailedGetFee(Currency::BTC)
-            })?
-            .fee_rate;
+            .map_err(|_| error::Error::FailedGetFee(Currency::BTC))?
+            .fee_for_transaction(BTC_BYTES_PER_TRANSACTION);
+        let btc_fee_str = &btc_fee_per_transaction.to_string();
 
-        let btc_fee_per_transaction = &(btc_fee_per_byte * BTC_BYTES_PER_TRANSACTION).to_string();
-        let btc_balance = &user
-            .currencies
-            .get(&Currency::BTC)
-            .unwrap()
-            .finalized_balance()
-            .to_string();
+        if let Some(info) = user.currencies.get(&Currency::BTC) {
+            let btc_balance = &info.finalized_balance().to_string();
 
-        let eth_fee = &1000.to_string();
-        let eth_balance = &user
-            .currencies
-            .get(&Currency::ETH)
-            .unwrap()
-            .finalized_balance()
-            .to_string();
-        let context = HashMap::from([
-            ("title", "Withdraw"),
-            ("parent", "base_footer_header"),
-            ("btc_balance", btc_balance),
-            ("btc_fee", btc_fee_per_transaction),
-            ("eth_balance", eth_balance),
-            ("eth_fee", eth_fee),
-        ]);
-        Ok(Template::render("withdraw", context))
+            let eth_fee = &1000.to_string();
+            let eth_balance = &user
+                .currencies
+                .get(&Currency::ETH)
+                .unwrap()
+                .finalized_balance()
+                .to_string();
+            let context = HashMap::from([
+                ("title", "Withdraw"),
+                ("parent", "base_footer_header"),
+                ("btc_balance", btc_balance),
+                ("btc_fee", btc_fee_str),
+                ("eth_balance", eth_balance),
+                ("eth_fee", eth_fee),
+            ]);
+            Ok(Template::render("withdraw", context))
+        } else {
+            Err(error::Error::NoUserCurrency(Currency::BTC).into())
+        }
     })
-    .await
+    .await;
+    match result {
+        Err((status, _)) if status == error::Error::AuthRequired.status() => Ok(signin()),
+        _ => result,
+    }
 }
 
 pub async fn serve_api(

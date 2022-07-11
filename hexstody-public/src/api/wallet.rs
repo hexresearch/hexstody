@@ -179,25 +179,23 @@ pub async fn post_withdraw(
         {
             let state = state.lock().await;
             if let Some(user) = state.users.get(user_id) {
-                let btc_fee_per_byte = &btc
+                let btc_fee_per_transaction = btc
                     .get_fees()
                     .await
                     .map_err(|_| error::Error::FailedGetFee(Currency::BTC))?
-                    .fee_rate;
-
+                    .fee_for_transaction(BTC_BYTES_PER_TRANSACTION);
                 let btc_balance = &user
                     .currencies
                     .get(&Currency::BTC)
                     .ok_or(error::Error::NoUserCurrency(Currency::BTC))?
                     .finalized_balance();
-                let max_btc_amount_to_spend =
-                    btc_balance - btc_fee_per_byte * BTC_BYTES_PER_TRANSACTION;
-                if max_btc_amount_to_spend >= withdraw_request.amount {
+                if withdraw_request.amount <= btc_balance + btc_fee_per_transaction {
                     let withdrawal_request = WithdrawalRequestInfo {
                         id: Uuid::new_v4(),
                         user: user_id.to_owned(),
                         address: withdraw_request.address.to_owned(),
                         amount: withdraw_request.amount,
+                        fee: btc_fee_per_transaction,
                     };
                     let state_update =
                         StateUpdate::new(UpdateBody::CreateWithdrawalRequest(withdrawal_request));

@@ -1188,6 +1188,7 @@ dependencies = [
  "base64",
  "chrono",
  "hexstody-btc-api",
+ "num-integer",
  "okapi",
  "p256",
  "pwhash",

@@ -7,9 +7,9 @@ export function formattedCurrencyValue(currency, value) {
     switch (currency) {
         case "BTC":
             const nf = new Intl.NumberFormat('en-US');
-            return nf.format(value);
+            return nf.format(value) + " sat";
         default:
-            return value;
+            return value + " wei";
     }
 }
 

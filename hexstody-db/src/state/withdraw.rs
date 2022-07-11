@@ -35,6 +35,8 @@ pub struct WithdrawalRequest {
     pub created_at: NaiveDateTime,
     /// Amount of tokens to transfer
     pub amount: u64,
+    /// Fee taken for posting transaction
+    pub fee: u64,
     /// Some request require manual confirmation
     pub status: WithdrawalRequestStatus,
     /// Confirmations received from operators
@@ -51,6 +53,7 @@ impl From<(NaiveDateTime, WithdrawalRequestInfo)> for WithdrawalRequest {
             address: value.1.address,
             created_at: value.0,
             amount: value.1.amount,
+            fee: value.1.fee,
             status: WithdrawalRequestStatus::InProgress(0),
             confirmations: vec![],
             rejections: vec![],
@@ -73,6 +76,7 @@ impl Into<WithdrawalRequestApi> for WithdrawalRequest {
             address: self.address,
             created_at: self.created_at.format("%Y-%m-%d %H:%M:%S").to_string(),
             amount: self.amount,
+            fee: self.fee,
             confirmation_status: confirmation_status,
         }
     }
