@@ -12,6 +12,7 @@ use std::net::{IpAddr, Ipv4Addr};
 use std::panic::AssertUnwindSafe;
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
+use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 use tempdir::TempDir;
@@ -19,7 +20,7 @@ use tokio::sync::{Mutex, Notify};
 
 use hexstody_btc::api::public::serve_public_api;
 use hexstody_btc::state::ScanState;
-use hexstody_btc::worker::node_worker;
+use hexstody_btc::worker::{node_worker, cold_wallet_worker};
 use hexstody_btc_client::client::BtcClient;
 
 fn setup_node(port: u16, rpc_port: u16) -> (Child, TempDir) {
@@ -139,13 +140,96 @@ async fn setup_api(rpc_port: u16) -> u16 {
     tokio::spawn({
         let client = make_client();
         let polling_duration = Duration::from_millis(100);
+        let tx_notify = Arc::new(Notify::new());
         async move {
-            node_worker(&client, state, state_notify, polling_duration).await;
+            node_worker(&client, state, state_notify, polling_duration, tx_notify).await;
         }
     });
 
     start_notify.notified().await;
     port
+}
+
+async fn setup_cold_api(cold_amount: u64, rpc_port: u16) -> u16{
+    let port: u16 = random_free_tcp_port().expect("available port");
+    info!("Running API server on port {port}");
+    let address = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
+    let start_notify = Arc::new(Notify::new());
+    let state_notify = Arc::new(Notify::new());
+    let state = Arc::new(Mutex::new(ScanState::new(Network::Regtest)));
+    
+    let make_client = || {
+        let rpc_url = format!("http://127.0.0.1:{rpc_port}");
+        Client::new(
+            &rpc_url,
+            Auth::UserPass("regtest".to_owned(), "regtest".to_owned()),
+        )
+        .expect("Node client")
+    };
+
+    tokio::spawn({
+        let start_notify = start_notify.clone();
+        let state_notify = state_notify.clone();
+        let state = state.clone();
+        let polling_duration = Duration::from_secs(1);
+        let client = make_client();
+        async move {
+            serve_public_api(
+                client,
+                address,
+                port,
+                start_notify,
+                state,
+                state_notify,
+                polling_duration,
+                None,
+                vec![],
+                1,
+                "http://127.0.0.1:8080".to_owned(),
+            )
+            .await
+            .expect("start api");
+        }
+    });
+    let tx_notify = Arc::new(Notify::new());
+    tokio::spawn({
+        let client = make_client();
+        let polling_duration = Duration::from_millis(100);
+        let tx_notify = tx_notify.clone();
+        async move {
+            node_worker(&client, state, state_notify, polling_duration, tx_notify).await;
+        }
+    });
+    tokio::spawn({
+        let client = make_client();
+        let cold_amount = bitcoin::Amount::from_sat(cold_amount);
+        let cold_address = bitcoin::Address::from_str("bcrt1qtunasj84306suy56cts988hc0rdnrmuvqgs2ee").expect("Failed to parse cold address");
+        async move {
+            cold_wallet_worker(&client, tx_notify.clone(), cold_amount, cold_address).await;
+        }
+    });
+
+    start_notify.notified().await;
+    port
+}
+
+pub async fn run_cold_test<F, Fut>(cold_amount: u64, test_body: F)
+where
+    F: FnOnce(Client, BtcClient) -> Fut,
+    Fut: Future<Output = ()>,
+{
+    let _ = env_logger::builder().is_test(true).try_init();
+    let node_port = random_free_tcp_port().expect("available port");
+    let node_rpc_port = random_free_tcp_port().expect("available port");
+    let (node_handle, client, _tmp_dir) = setup_node_ready(node_port, node_rpc_port).await;
+    let api_port = setup_cold_api(cold_amount, node_rpc_port).await;
+    info!("Running API server on {api_port}");
+    let api_client = BtcClient::new(&format!("http://127.0.0.1:{api_port}"));
+    let res = AssertUnwindSafe(test_body(client, api_client))
+        .catch_unwind()
+        .await;
+    teardown_node(node_handle);
+    assert!(res.is_ok());
 }
 
 pub async fn run_test<F, Fut>(test_body: F)
@@ -249,8 +333,9 @@ async fn setup_api_regtest(
     tokio::spawn({
         let client = make_client();
         let polling_duration = Duration::from_millis(100);
+        let tx_notify = Arc::new(Notify::new());
         async move {
-            node_worker(&client, state, state_notify, polling_duration).await;
+            node_worker(&client, state, state_notify, polling_duration, tx_notify).await;
         }
     });
 
