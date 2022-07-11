@@ -234,32 +234,33 @@ pub async fn eth_ticker(
 
 
 #[openapi(tag = "wallet")]
-#[get("/eth_fee")]
-pub async fn eth_fee(
+#[get("/ethfee")]
+pub async fn ethfee(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
-) -> error::Result<()> {
+) -> error::Result<Json<api::EthGasPrice>> {
     require_auth(cookies, |cookie| async move {
         let resurl = ("https://api.etherscan.io/api?module=gastracker&action=gasoracle&apikey=P8AXZC7V71IJA4XPMFEIIYX9S2S4D8U3T6");
 
-        let userETHHistStr = reqwest::get(resurl)
-                                                .await
-                                                .unwrap()
-                                                .text()
-                                                .await
-                                                .unwrap();
+        let feeETHres = reqwest::get(resurl)
+                                            .await
+                                            .unwrap()
+                                            .text()
+                                            .await
+                                            .unwrap();
 
-        println!("==========TICKER==DEBUG================");
-        println!("==========TICKER==DEBUG================");
-        println!("==========TICKER==DEBUG================");
-        println!("==========TICKER==DEBUG================");
-        println!("==========TICKER==DEBUG================");
-        println!("==========TICKER==DEBUG================");
-        println!("==========TICKER==DEBUG================");
-        println!("==========TICKER==DEBUG================");
-        println!("==========TICKER==DEBUG================");
-        println!("==========TICKER==DEBUG================");
-        Ok(())
+        let feeETH : api::EthFeeResp = (serde_json::from_str(&feeETHres)).unwrap();
+        println!("==========FEE==DEBUG================");
+        println!("==========FEE==DEBUG================");
+        println!("==========FEE==DEBUG================");
+        println!("==========FEE==DEBUG================");
+        println!("Fee ETH: {:?}",feeETH.result);
+        println!("==========FEE==DEBUG================");
+        println!("==========FEE==DEBUG================");
+        println!("==========FEE==DEBUG================");
+        println!("==========FEE==DEBUG================");
+        println!("==========FEE==DEBUG================");
+        Ok(Json(feeETH.result))
     })
     .await
 }

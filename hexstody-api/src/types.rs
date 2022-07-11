@@ -71,6 +71,23 @@ pub struct EthHistUnitU {
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct EthFeeResp {
+    pub status: String,
+    pub message: String,
+    pub result: EthGasPrice
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct EthGasPrice {
+    pub LastBlock: String,
+    pub SafeGasPrice: String,
+    pub ProposeGasPrice: String,
+    pub FastGasPrice: String,
+    pub suggestBaseFee: String,
+    pub gasUsedRatio: String
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct BalanceItem {
     pub currency: Currency,
     pub value: u64,

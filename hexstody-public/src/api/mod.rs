@@ -94,7 +94,7 @@ async fn withdraw(
             .finalized_balance()
             .to_string();
 
-        let eth_fee = &1000.to_string();
+        let ethfee = &1000.to_string();
         let eth_balance = &user
             .currencies
             .get(&Currency::ETH)
@@ -108,7 +108,7 @@ async fn withdraw(
             ("btc_balance", btc_balance),
             ("btc_fee", btc_fee_per_transaction),
             ("eth_balance", eth_balance),
-            ("eth_fee", eth_fee),
+            ("ethfee", ethfee),
         ]);
         Ok(Template::render("withdraw", context))
     })
@@ -140,6 +140,7 @@ pub async fn serve_api(
                 get_deposit,
                 get_deposit_eth,
                 eth_ticker,
+                ethfee,
                 get_history,
                 get_history_eth,
                 withdraw_eth,

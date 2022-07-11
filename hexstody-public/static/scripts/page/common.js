@@ -16,6 +16,19 @@ export function formattedCurrencyValue(currency, value) {
     }
 }
 
+export function formattedCurrencyValueFixed(currency, value,fixed) {
+    switch (currency) {
+        case "BTC":
+            const nf = new Intl.NumberFormat('en-US');
+            return nf.format(value);
+        case "ETH":
+            const newv = value / 1000000000000000000
+            return newv.toFixed(fixed)
+        default:
+            return value;
+    }
+}
+
 const SECOND = 1000;
 const MINUTE = 60 * SECOND;
 const HOUR = 60 * MINUTE;

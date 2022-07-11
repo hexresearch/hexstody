@@ -1,4 +1,7 @@
-import { initTabs, formattedCurrencyValue } from "./common.js";
+import { initTabs,
+         formattedCurrencyValue,
+        formattedCurrencyValueFixed }
+         from "./common.js";
 
 
 
@@ -7,7 +10,7 @@ const refreshInterval = 10000;
 const ethBalanceEl = document.getElementById("eth_balance");
 
 const btcFeeEl = document.getElementById("btc_fee");
-const ethFeeEl = document.getElementById("eth_fee");
+const ethFeeEl = document.getElementById("ethfee");
 
 const btcSendAmountEl = document.getElementById("btc_send_amount");
 const ethSendAmountEl = document.getElementById("eth_send_amount");
@@ -87,18 +90,20 @@ async function getBalances() {
 };
 
 async function getEthFee() {
-    return await fetch("/eth_fee").then(r => r.json());
+    return await fetch("/ethfee").then(r => r.json());
 };
 
 async function updateBalanceAndFeeLoop() {
-    console.log("debug loop 1");
     const balancesObj = await getBalances();
+    const feeObj = await getEthFee();
+    const tikerObj = await getCourseForETH("ETH")
     const balancEth = balancesObj.balances[0]
     const withdrawBalanceElem = document.getElementById("withdraw-bal");
     const withdrawFeeElem = document.getElementById("withdraw-fee");
-    console.log("debug loop", balancEth);
-    const txtBal = formattedCurrencyValue("ETH", balancEth.value) + " ETH"
-    const txtFee = formattedCurrencyValue("ETH", 210000*12*1000000000) + " ETH";
+    const balToUSD = (tikerObj.USD*balancEth.value/1000000000000000000).toFixed(2);
+    const feeToUSD = (tikerObj.USD*21*feeObj.FastGasPrice/1000000).toFixed(2);
+    const txtBal = formattedCurrencyValue("ETH", balancEth.value) + " ETH" + " ($ " + balToUSD + ")"
+    const txtFee = formattedCurrencyValueFixed("ETH", 210000*feeObj.FastGasPrice*1000000000,5) + " ETH" + " ($"+ feeToUSD +")";
     withdrawBalanceElem.textContent = txtBal;
     withdrawFeeElem.textContent = txtFee
 }
@@ -111,11 +116,12 @@ async function updateLoop() {
     updateLoop();
 }
 
-/*return await fetch('/ethticker',
-{
-    method: 'get',
-    body: JSON.stringify(currency)
-}).then(r => r.json());
-*/
+async function getCourseForETH(currency) {
+    return await fetch("/ethticker",
+    {
+        method: "POST",
+        body: JSON.stringify(currency)
+    }).then(r => r.json());
+};
 
 document.addEventListener("DOMContentLoaded", init);
