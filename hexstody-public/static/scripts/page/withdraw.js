@@ -1,6 +1,9 @@
 import { initTabs, formattedCurrencyValue } from "./common.js";
 
-const btcBalanceEl = document.getElementById("btc_balance");
+
+
+const refreshInterval = 10000;
+
 const ethBalanceEl = document.getElementById("eth_balance");
 
 const btcFeeEl = document.getElementById("btc_fee");
@@ -32,11 +35,12 @@ async function postWithdrawRequest(currency, address, amount) {
             break;
     }
 
-    return await fetch("/withdraw_eth/"+addr+"/"+amount,
+    const res = await fetch("/withdraweth/"+address+"/"+amount,
         {
-            method: "POST",
-            body: JSON.stringify(body)
-        })
+            method: "GET"
+        });
+
+    return res;
 };
 
 async function trySubmit(currency, address, amount, validationDisplayEl) {
@@ -52,9 +56,9 @@ async function trySubmit(currency, address, amount, validationDisplayEl) {
 async function init() {
     const tabs = ["btc-tab", "eth-tab"];
     initTabs(tabs);
+    updateLoop();
 
-    btcBalanceEl.innerText = formattedCurrencyValue("BTC",
-        btcBalanceEl.getAttribute("balance"));
+
 
     ethBalanceEl.innerText = formattedCurrencyValue("ETH",
         ethBalanceEl.getAttribute("balance"));
@@ -78,9 +82,34 @@ async function init() {
         ethValidationDisplayEl);
 }
 
+async function getBalances() {
+    return await fetch("/balance").then(r => r.json());
+};
+
+async function getEthFee() {
+    return await fetch("/eth_fee").then(r => r.json());
+};
+
+async function updateBalanceAndFeeLoop() {
+    console.log("debug loop 1");
+    const balancesObj = await getBalances();
+    const balancEth = balancesObj.balances[0]
+    const withdrawBalanceElem = document.getElementById("withdraw-bal");
+    const withdrawFeeElem = document.getElementById("withdraw-fee");
+    console.log("debug loop", balancEth);
+    const txtBal = formattedCurrencyValue("ETH", balancEth.value) + " ETH"
+    const txtFee = formattedCurrencyValue("ETH", 210000*12*1000000000) + " ETH";
+    withdrawBalanceElem.textContent = txtBal;
+    withdrawFeeElem.textContent = txtFee
+}
 
 
-
+async function updateLoop() {
+    await Promise.allSettled([updateBalanceAndFeeLoop()]);
+    updateBalanceAndFeeLoop();
+    await new Promise((resolve) => setTimeout(resolve, refreshInterval));
+    updateLoop();
+}
 
 /*return await fetch('/ethticker',
 {

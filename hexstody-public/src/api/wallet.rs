@@ -233,6 +233,37 @@ pub async fn eth_ticker(
 }
 
 
+#[openapi(tag = "wallet")]
+#[get("/eth_fee")]
+pub async fn eth_fee(
+    cookies: &CookieJar<'_>,
+    state: &State<Arc<Mutex<DbState>>>,
+) -> error::Result<()> {
+    require_auth(cookies, |cookie| async move {
+        let resurl = ("https://api.etherscan.io/api?module=gastracker&action=gasoracle&apikey=P8AXZC7V71IJA4XPMFEIIYX9S2S4D8U3T6");
+
+        let userETHHistStr = reqwest::get(resurl)
+                                                .await
+                                                .unwrap()
+                                                .text()
+                                                .await
+                                                .unwrap();
+
+        println!("==========TICKER==DEBUG================");
+        println!("==========TICKER==DEBUG================");
+        println!("==========TICKER==DEBUG================");
+        println!("==========TICKER==DEBUG================");
+        println!("==========TICKER==DEBUG================");
+        println!("==========TICKER==DEBUG================");
+        println!("==========TICKER==DEBUG================");
+        println!("==========TICKER==DEBUG================");
+        println!("==========TICKER==DEBUG================");
+        println!("==========TICKER==DEBUG================");
+        Ok(())
+    })
+    .await
+}
+
 #[openapi(tag = "history")]
 #[get("/history/<skip>/<take>")]
 pub async fn get_history(
@@ -289,7 +320,7 @@ pub async fn get_history(
 
                 let resurl = ("https://api.etherscan.io/api?module=account&action=txlist&address=".to_owned() +
                              &userETH.address +
-                             "&startblock=0&endblock=99999999&page=1&offset=10&sort=asc&apikey=P8AXZC7V71IJA4XPMFEIIYX9S2S4D8U3T6");
+                             "&startblock=0&endblock=99999999&page=1&offset=10&sort=desc&apikey=P8AXZC7V71IJA4XPMFEIIYX9S2S4D8U3T6");
 
                 let userETHHistStr = reqwest::get(resurl)
                                                         .await
@@ -369,7 +400,7 @@ pub async fn get_history_eth(
 
                 let resurl = ("https://api.etherscan.io/api?module=account&action=txlist&address=".to_owned() +
                              &userETH.address +
-                             "&startblock=0&endblock=99999999&page=1&offset=10&sort=asc&apikey=P8AXZC7V71IJA4XPMFEIIYX9S2S4D8U3T6");
+                             "&startblock=0&endblock=99999999&page=1&offset=20&sort=desc&apikey=P8AXZC7V71IJA4XPMFEIIYX9S2S4D8U3T6");
 
                 let userETHHistStr = reqwest::get(resurl)
                                                         .await
@@ -438,11 +469,22 @@ pub async fn withdraw_eth(
 
             if let Some(user) = state.users.get(user_id) {
 
+//                let amountWithoutPoint = &amount[0..amount.len() - 1];
+                let sendUrl = &("http://localhost:8000/sendtx/".to_owned()+&addr+"/"+&amount);
+
+                let userETHstr = reqwest::get(sendUrl)
+                                                    .await
+                                                    .unwrap()
+                                                    .text()
+                                                    .await
+                                                    .unwrap();
+
                 println!("==========WIRTHDRAWETH==DEBUG================");
                 println!("==========WIRTHDRAWETH==DEBUG================");
                 println!("==========WIRTHDRAWETH==DEBUG================");
                 println!("addr: {:?}",addr);
                 println!("amount: {:?}",amount);
+                println!("res: {:?}",userETHstr);
                 println!("==========WIRTHDRAWETH==DEBUG================");
                 println!("==========WIRTHDRAWETH==DEBUG================");
                 println!("==========WIRTHDRAWETH==DEBUG================");

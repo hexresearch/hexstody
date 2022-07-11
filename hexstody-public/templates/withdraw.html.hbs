@@ -25,10 +25,10 @@ body {
   <div class='card-content'>
     <div class="columns is-center">
       <div class="column">
-        Available: <span id="btc_balance" balance="{{btc_balance}}"></span>
+        Available: <span id="withdraw-bal"></span>
       </div>
       <div class="column has-text-right">
-        Fee: <span id="btc_fee" fee={{btc_fee}}>{{btc_fee}}</span>
+        Fee: <span id="withdraw-fee"></span>
       </div>
     </div>
     <div class="columns is-center">
@@ -44,7 +44,7 @@ body {
           Amount:
       </div>
       <div class="column is-6">
-          <input class="input" id="btc_address" type="text">
+          <input class="input" id="btc_send_amount" type="text">
       </div>
       <div class="column">
         <button id="max_btc"

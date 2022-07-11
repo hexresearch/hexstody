@@ -77,15 +77,7 @@ async function loadHistory() {
 
 async function loadHistoryETH() {
     const history = await getHistoryETH();
-    var histOrig = {histories: history};
-    var hist = {histories: [] }
-    var c=histOrig.histories.length-1;
-    for(var j=0; j<histOrig.histories.length; j++){
-      hist.histories[c] = histOrig.histories[j];
-      c=c-1;
-    }
-    console.log(hist);
-    console.log(histOrig);
+    var hist = {histories: history }
     for(var i=0; i<hist.histories.length;i++){
       hist.histories[i].timeStamp=timeStampToTime(parseInt(hist.histories[i].timeStamp));
       hist.histories[i].hashtoshow=hist.histories[i].hash.slice(0, 10)+"...";
