@@ -1,8 +1,9 @@
 pub mod btc;
 pub mod deposit;
+mod old;
+pub mod results;
 pub mod signup;
 pub mod withdrawal;
-pub mod results;
 
 use chrono::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -149,7 +150,7 @@ pub enum UpdateBodyError {
     UnexpectedVersion(u16),
 }
 
-pub const CURRENT_BODY_VERSION: u16 = 0;
+pub const CURRENT_BODY_VERSION: u16 = 1;
 
 impl UpdateTag {
     pub fn from_tag(
@@ -158,17 +159,31 @@ impl UpdateTag {
         value: serde_json::Value,
     ) -> Result<UpdateBody, UpdateBodyError> {
         let tag = <UpdateTag as FromStr>::from_str(tag)?;
-        if version != CURRENT_BODY_VERSION {
+        if version > CURRENT_BODY_VERSION {
             return Err(UpdateBodyError::UnexpectedVersion(version));
         }
-        tag.deserialize(value.clone())
+        tag.deserialize(version, value.clone())
             .map_err(|e| UpdateBodyError::Deserialize(version, tag, e, value))
     }
 
-    pub fn deserialize(&self, value: serde_json::Value) -> Result<UpdateBody, serde_json::Error> {
+    pub fn deserialize(
+        &self,
+        version: u16,
+        value: serde_json::Value,
+    ) -> Result<UpdateBody, serde_json::Error> {
         match self {
             UpdateTag::Signup => Ok(UpdateBody::Signup(serde_json::from_value(value)?)),
             UpdateTag::Snapshot => Ok(UpdateBody::Snapshot(serde_json::from_value(value)?)),
+            UpdateTag::CreateWithdrawalRequest if version == 0 => {
+                let x: old::WithdrawalRequestInfo0 = serde_json::from_value(value)?;
+                Ok(UpdateBody::CreateWithdrawalRequest(WithdrawalRequestInfo {
+                    id: x.id,
+                    address: x.address,
+                    amount: x.amount,
+                    user: x.user,
+                    fee: 0,
+                }))
+            }
             UpdateTag::CreateWithdrawalRequest => Ok(UpdateBody::CreateWithdrawalRequest(
                 serde_json::from_value(value)?,
             )),
