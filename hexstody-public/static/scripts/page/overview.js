@@ -32,8 +32,12 @@ async function initTemplates() {
                 return "In progress";
             case "Confirmed":
                 return "Confirmed";
-            case "Rejected":
-                return "Rejected";
+            case "Completed":
+                return "Completed";
+            case "OpRejected":
+                return "Rejected by operators";
+            case "NodeRejected":
+                return "Rejected by node";
             default:
                 return "Unknown";
         };

@@ -189,8 +189,14 @@ function addStatusCell(row, status) {
         case "Confirmed":
             cellText = document.createTextNode("Confirmed");
             break;
-        case "Rejected":
-            cellText = document.createTextNode("Rejected");
+        case "OpRejected":
+            cellText = document.createTextNode("Rejected by operators");
+            break;
+        case "NodeRejected":
+            cellText = document.createTextNode("Rejected by node (" + status.reason + ")");
+            break;
+        case "Completed":
+            cellText = document.createTextNode("Completed");
             break;
         default:
             cellText = document.createTextNode("Unknown");

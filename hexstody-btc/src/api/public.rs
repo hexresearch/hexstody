@@ -103,6 +103,7 @@ async fn withdraw_btc(
     cfg: &State<WithdrawCfg>,
     cw: Json<ConfirmedWithdrawal>
 ) -> error::Result<WithdrawalResponse>{
+    debug!("{:?}", cw);
     let WithdrawCfg { min_confirmations, op_public_keys, hot_domain } = cfg.inner();
     let mut valid_confirms = 0;
     let mut valid_rejections = 0;
@@ -134,7 +135,7 @@ async fn withdraw_btc(
             valid_rejections = valid_rejections + 1;
         };
     };
-
+    debug!("Confirms/rejections: {}/{}", valid_confirms, valid_rejections);
     if (valid_confirms > valid_rejections) && (valid_confirms-valid_rejections >= min_confirmations) {
         if let CurrencyAddress::BTC(hexstody_api::domain::BtcAddress{addr}) = &cw.address {
             if let Ok(addr) = bitcoin::Address::from_str(addr.as_str()){
@@ -149,6 +150,7 @@ async fn withdraw_btc(
                         }))
                     })?;
                 let resp = WithdrawalResponse{ id: cw.id.clone(), txid: BtcTxid(txid) };
+                debug!("OK: {:?}", resp);
                 Ok(Json(resp))
             } else {
                 Err((Status::BadRequest, Json(crate::api::error::ErrorMessage {

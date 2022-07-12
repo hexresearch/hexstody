@@ -4,7 +4,7 @@ mod worker;
 mod constants;
 
 use bitcoin::network::constants::Network;
-use bitcoincore_rpc::{Auth, Client};
+use bitcoincore_rpc::{Auth, Client, RpcApi};
 use clap::Parser;
 use futures::future::try_join;
 use futures::future::{AbortHandle, Abortable, Aborted};
@@ -143,6 +143,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
             let start_notify = Arc::new(Notify::new());
             let public_api_fut = async {
                 let client = make_client();
+                if network == bitcoin::Network::Regtest {
+                    let regtestfee: f64 = 0.00005; 
+                    let val = serde_json::to_value(regtestfee);
+                    if let Ok(v) = val {
+                        if let Err(e) = client.call::<bool>("settxfee", &[v]){
+                            debug!("Failed to set tx fee! {}", e);
+                        }
+                    }
+                };
                 let res = serve_public_api(
                     client,
                     address,
