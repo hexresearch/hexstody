@@ -9,7 +9,7 @@ use rocket::{get, post, State};
 use rocket_okapi::openapi;
 
 use super::auth::require_auth;
-use hexstody_api::domain::{BtcAddress, Currency, CurrencyAddress};
+use hexstody_api::domain::{BtcAddress, Currency, CurrencyAddress, Erc20Token};
 use hexstody_api::error;
 use hexstody_api::types as api;
 use hexstody_btc_client::client::{BtcClient, BTC_BYTES_PER_TRANSACTION};
@@ -68,6 +68,22 @@ pub async fn get_balance(
                                                                                             .await
                                                                                             .unwrap();
                 let bal : BalResp = (serde_json::from_str(&balance)).unwrap();
+                let balanceUSDT = reqwest::get(&("http://localhost:8000/baltoken/".to_owned()+&userETH.address
+                +"/0xdAC17F958D2ee523a2206206994597C13D831ec7"))
+                                                                                            .await
+                                                                                            .unwrap()
+                                                                                            .text()
+                                                                                            .await
+                                                                                            .unwrap();
+                let balUSDT : BalResp = (serde_json::from_str(&balanceUSDT)).unwrap();
+                let balanceCRV = reqwest::get(&("http://localhost:8000/baltoken/".to_owned()+&userETH.address
+                +"/0xD533a949740bb3306d119CC777fa900bA034cd52"))
+                                                                                            .await
+                                                                                            .unwrap()
+                                                                                            .text()
+                                                                                            .await
+                                                                                            .unwrap();
+                let balCRV : BalResp = (serde_json::from_str(&balanceCRV)).unwrap();
                 println!("==========BALANCES==DEBUG================");
                 println!("==========BALANCES==DEBUG================");
                 println!("==========BALANCES==DEBUG================");
@@ -82,6 +98,8 @@ pub async fn get_balance(
                 println!("==========BALANCES==DEBUG================");
                 println!("==========BALANCES==DEBUG================");
                 let brf = bal.result.parse::<u64>().unwrap();
+                let bUSDTrf = balUSDT.result.parse::<u64>().unwrap();
+                let bCRVTrf = balCRV.result.parse::<u64>().unwrap();
 
 
                 let mut balances: Vec<api::BalanceItem> = user
@@ -94,9 +112,25 @@ pub async fn get_balance(
                     .collect();
 
                 let ethindex = balances.iter().position(|r| r.currency == Currency::ETH ).unwrap();
-
-
                 balances[ethindex] = api::BalanceItem{currency: Currency::ETH, value: brf};
+                let usdtindex = balances.iter().position(|r| r.currency == Currency::ERC20(Erc20Token{ticker:"USDT".to_string()
+                                           ,name:"USDT".to_string()
+                                           ,contract:"0xdAC17F958D2ee523a2206206994597C13D831ec7".to_string()
+                                           }) ).unwrap();
+                balances[usdtindex] = api::BalanceItem{currency: Currency::ERC20(Erc20Token{ticker:"USDT".to_string()
+                                           ,name:"USDT".to_string()
+                                           ,contract:"0xdAC17F958D2ee523a2206206994597C13D831ec7".to_string()
+                                           }),
+                     value: bUSDTrf};
+                let usdtindex = balances.iter().position(|r| r.currency == Currency::ERC20(Erc20Token{ticker:"CRV".to_string()
+                                        ,name:"CRV".to_string()
+                                        ,contract:"0xD533a949740bb3306d119CC777fa900bA034cd52".to_string()
+                                        }) ).unwrap();
+                balances[usdtindex] = api::BalanceItem{currency: Currency::ERC20(Erc20Token{ticker:"CRV".to_string()
+                                           ,name:"CRV".to_string()
+                                           ,contract:"0xD533a949740bb3306d119CC777fa900bA034cd52".to_string()
+                                           }),
+                     value: bCRVTrf};
                 println!("==========BALANCES==DEBUG================");
                 println!("==========BALANCES==DEBUG================");
                 println!("==========BALANCES==DEBUG================");
@@ -215,6 +249,38 @@ pub async fn eth_ticker(
                                                                                     .text()
                                                                                     .await
                                                                                     .unwrap();
+        let tETH : api::TickerETH = (serde_json::from_str(&tickETHstr)).unwrap();
+        println!("==========TICKER==DEBUG================");
+        println!("==========TICKER==DEBUG================");
+        println!("==========TICKER==DEBUG================");
+        println!("==========TICKER==DEBUG================");
+        println!("==========TICKER==DEBUG================");
+        println!("TickerETH: {:?}",tETH);
+        println!("==========TICKER==DEBUG================");
+        println!("==========TICKER==DEBUG================");
+        println!("==========TICKER==DEBUG================");
+        println!("==========TICKER==DEBUG================");
+        println!("==========TICKER==DEBUG================");
+        Ok(Json(tETH))
+    })
+    .await
+}
+
+#[openapi(tag = "wallet")]
+#[get("/erc20ticker/<token>")]
+pub async fn erc20_ticker(
+    cookies: &CookieJar<'_>,
+    state: &State<Arc<Mutex<DbState>>>,
+    token: &str,
+) -> error::Result<Json<api::TickerETH>> {
+    require_auth(cookies, |cookie| async move {
+        let urlReq = "https://min-api.cryptocompare.com/data/price?fsym=".to_owned() + token +"&tsyms=USD,RUB";
+        let tickETHstr = reqwest::get(urlReq)
+                                        .await
+                                        .unwrap()
+                                        .text()
+                                        .await
+                                        .unwrap();
         let tETH : api::TickerETH = (serde_json::from_str(&tickETHstr)).unwrap();
         println!("==========TICKER==DEBUG================");
         println!("==========TICKER==DEBUG================");
@@ -383,7 +449,7 @@ pub async fn get_history(
 pub async fn get_history_eth(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
-) -> error::Result<Json<Vec<api::EthHistUnitU>>> {
+) -> error::Result<Json<Vec<api::Erc20HistUnitU>>> {
     require_auth(cookies, |cookie| async move {
         let user_id = cookie.value();
         {
@@ -426,17 +492,116 @@ pub async fn get_history_eth(
                 println!("==========HISTORY==DEBUG================");
                 println!("==========HISTORY==DEBUG================");
 
-                let ethHistListU : Vec<api::EthHistUnitU> = ethHistList.iter()
+                let ethHistListU : Vec<api::Erc20HistUnitU> = ethHistList.iter()
                                                                        .map(|x| {
-                                                                           return api::EthHistUnitU {
+                                                                           return api::Erc20HistUnitU {
                                                                            blockNumber : x.blockNumber.clone(),
                                                                            timeStamp : x.timeStamp.clone(),
                                                                            hash : x.hash.clone(),
                                                                            from : x.from.clone(),
                                                                            to : x.to.clone(),
                                                                            value : x.value.clone(),
+                                                                           tokenName : "ETH".to_string(),
                                                                            gas : x.gas.clone(),
                                                                            gasPrice : x.gasPrice.clone(),
+                                                                           contractAddress : x.contractAddress.clone(),
+                                                                           confirmations : x.confirmations.clone(),
+                                                                           addr : userETH.address.clone()
+                                                                        };
+                                                                        }
+                                                                    ).collect();
+
+
+                Ok(Json(ethHistListU))
+            } else {
+                Err(error::Error::NoUserFound.into())
+            }
+        }
+    })
+    .await
+}
+/*
+https://api.etherscan.io/api
+   ?module=account
+   &action=tokentx
+   &contractaddress=0x9f8f72aa9304c8b593d555f12ef6589cc3a579a2
+   &address=0x4e83362442b8d1bec281594cea3050c8eb01311c
+   &page=1
+   &offset=100
+   &startblock=0
+   &endblock=27025780
+   &sort=asc
+   &apikey=YourApiKeyToken
+*/
+
+#[openapi(tag = "history")]
+#[get("/historyerc20/<token>")]
+pub async fn get_history_erc20(
+    cookies: &CookieJar<'_>,
+    state: &State<Arc<Mutex<DbState>>>,
+    token: String,
+) -> error::Result<Json<Vec<api::Erc20HistUnitU>>> {
+    require_auth(cookies, |cookie| async move {
+        let user_id = cookie.value();
+        {
+            let state = state.lock().await;
+
+            if let Some(user) = state.users.get(user_id) {
+                let userETHstr = reqwest::get(&("http://localhost:8000/user/".to_owned()+&user.username))
+                                                                                            .await
+                                                                                            .unwrap()
+                                                                                            .text()
+                                                                                            .await
+                                                                                            .unwrap();
+                let userETH : UserETH = (serde_json::from_str(&userETHstr)).unwrap();
+
+
+                let resurl = ("https://api.etherscan.io/api?module=account&action=tokentx&address=".to_owned() +
+                             &userETH.address +
+                             "&contractaddress=" +
+                             &token +
+                             "&startblock=0&endblock=99999999&page=1&offset=20&sort=desc&apikey=P8AXZC7V71IJA4XPMFEIIYX9S2S4D8U3T6");
+
+                let userETHHistStr = reqwest::get(resurl)
+                                                        .await
+                                                        .unwrap()
+                                                        .text()
+                                                        .await
+                                                        .unwrap();
+
+                println!("==========ERC20=HISTORY==DEBUG================");
+                println!("==========ERC20=HISTORY==DEBUG================");
+                println!("userETHHistStr: {:?}",userETHHistStr);
+                println!("==========ERC20=HISTORY==DEBUG================");
+                let ethHistPred : api::Erc20HistResp = (serde_json::from_str(&userETHHistStr)).unwrap();
+                println!("==========ERC20=HISTORY==DEBUG================");
+                println!("==========ERC20=HISTORY==DEBUG================");
+                println!("ethHistPred: {:?}",ethHistPred);
+                println!("==========ERC20=HISTORY==DEBUG================");
+                println!("==========ERC20=HISTORY==DEBUG================");
+                let ethHistList : Vec<api::Erc20HistUnit> = ethHistPred.result;
+                println!("==========ERC20=HISTORY==DEBUG================");
+                println!("==========ERC20=HISTORY==DEBUG================");
+                println!("UserAddress: {:?}",&userETH.address);
+                println!("UserHistStr: {:?}",ethHistList);
+                println!("==========ERC20=HISTORY==DEBUG================");
+                println!("==========ERC20=HISTORY==DEBUG================");
+                println!("==========ERC20=HISTORY==DEBUG================");
+                println!("==========ERC20=HISTORY==DEBUG================");
+                println!("==========ERC20=HISTORY==DEBUG================");
+
+                let ethHistListU : Vec<api::Erc20HistUnitU> = ethHistList.iter()
+                                                                       .map(|x| {
+                                                                           return api::Erc20HistUnitU {
+                                                                           blockNumber : x.blockNumber.clone(),
+                                                                           timeStamp : x.timeStamp.clone(),
+                                                                           hash : x.hash.clone(),
+                                                                           from : x.from.clone(),
+                                                                           to : x.to.clone(),
+                                                                           value : x.value.clone(),
+                                                                           tokenName : x.tokenSymbol.clone(),
+                                                                           gas: x.gas.clone(),
+                                                                           gasPrice: x.gasPrice.clone(),
                                                                            contractAddress : x.contractAddress.clone(),
                                                                            confirmations : x.confirmations.clone(),
                                                                            addr : userETH.address.clone()

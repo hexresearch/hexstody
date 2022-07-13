@@ -15,6 +15,10 @@ async function getHistory(skip, take) {
     return fetch(`/history/${skip}/${take}`).then(r => r.json());
 }
 
+async function getHistoryERC20(tokenAddr) {
+  return fetch("/historyerc20/" + tokenAddr).then(r => r.json());
+}
+
 async function getHistoryETH() {
     return fetch("/historyeth").then(r => r.json());
 }
@@ -24,6 +28,20 @@ async function getCourseForETH(currency) {
     {
         method: "POST",
         body: JSON.stringify(currency)
+    }).then(r => r.json());
+};
+
+async function getCourseForERC20(currency,token) {
+    return await fetch("/erc20ticker/"+token,
+    {
+        method: "GET",
+    }).then(r => r.json());
+};
+
+async function getBalanceERC20(currency,token) {
+    return await fetch("/getBalanceERC20/"+token,
+    {
+        method: "GET",
     }).then(r => r.json());
 };
 
@@ -53,8 +71,26 @@ async function initTemplates() {
         };
     });
     Handlebars.registerHelper('formatCurrencyValue', function () {
+      if (
+          typeof this.currency === 'object'
+      ) {
+          return formattedCurrencyValue(this.currency.ERC20.ticker, this.value);
+      }else {
         return formattedCurrencyValue(this.currency, this.value);
+      }
     });
+
+    Handlebars.registerHelper('formatCurrencyName', function () {
+      if (
+          typeof this.currency === 'object'
+      ) {
+          return this.currency.ERC20.ticker;
+      }else {
+        return this.currency;
+      }
+    });
+
+
     Handlebars.registerHelper('formattedElapsedTime', function () {
         return formattedElapsedTime(this.date);
     });
@@ -75,15 +111,33 @@ async function loadHistory() {
     historyElem.innerHTML = historyDrawUpdate;
 }
 
+function compareHist( a, b ) {
+  if ( a.timeStamp > b.timeStamp ){
+    return -1;
+  }
+  if ( a.timeStamp < b.timeStamp ){
+    return 1;
+  }
+  return 0;
+}
+
 async function loadHistoryETH() {
+    const histUSDT = await getHistoryERC20("0xdAC17F958D2ee523a2206206994597C13D831ec7");
+    const histCRV = await getHistoryERC20("0xD533a949740bb3306d119CC777fa900bA034cd52");
     const history = await getHistoryETH();
-    var hist = {histories: history }
+    const histFull = (history.concat(histCRV).concat(histUSDT)).sort(compareHist);
+    var hist = {histories: histFull }
     for(var i=0; i<hist.histories.length;i++){
+      console.log("=====DEBUG=====")
+      console.log("=====DEBUG=====")
+      console.log(hist.histories[i].tokenName)
+      console.log("=====DEBUG=====")
+      console.log("=====DEBUG=====")
       hist.histories[i].timeStamp=timeStampToTime(parseInt(hist.histories[i].timeStamp));
-      hist.histories[i].hashtoshow=hist.histories[i].hash.slice(0, 10)+"...";
-      hist.histories[i].fromtoshow=hist.histories[i].from.slice(0, 10)+"...";
-      hist.histories[i].totoshow=hist.histories[i].to.slice(0, 10)+"...";
-      hist.histories[i].valuetoshow=formattedCurrencyValue("ETH",hist.histories[i].value);
+      hist.histories[i].hashtoshow=hist.histories[i].hash.slice(0, 8)+"...";
+      hist.histories[i].fromtoshow=hist.histories[i].from.slice(0, 8)+"...";
+      hist.histories[i].totoshow=hist.histories[i].to.slice(0, 8)+"...";
+      hist.histories[i].valuetoshow=formattedCurrencyValue(hist.histories[i].tokenName,hist.histories[i].value) + " " + hist.histories[i].tokenName;
       hist.histories[i].fee=formattedCurrencyValue("ETH",hist.histories[i].gas*hist.histories[i].gasPrice);
       if (hist.histories[i].addr.toUpperCase() == hist.histories[i].from.toUpperCase()){
           hist.histories[i].arrow = "mdi-arrow-collapse-up"
@@ -135,11 +189,23 @@ async function updateLoop() {
     const usdToEth = document.getElementById("usd-ETH");
     const currValEth = document.getElementById("curr-val-ETH").textContent;
     usdToEth.textContent = "$"+(currValEth*jsonres.USD).toFixed(2);
+    const jsonresUSDT = await getCourseForERC20("USDT","USDT")
+    const usdToUSDT = document.getElementById("usd-USDT");
+    const currValUSDT = document.getElementById("curr-val-USDT").textContent;
+    usdToUSDT.textContent = "$"+(currValUSDT*1.0).toFixed(2);
+
+    const jsonresCRV = await getCourseForERC20("CRV","CRV")
+    const usdToCRV = document.getElementById("usd-CRV");
+    const currValCRV = document.getElementById("curr-val-CRV").textContent;
+    usdToCRV.textContent = "$"+(currValCRV*jsonresCRV.USD).toFixed(2);
+
+    const awBal = await (currValCRV*jsonresCRV.USD + parseFloat(currValUSDT) + currValEth*jsonres.USD)
+    const awBalRub = await (currValCRV*jsonresCRV.RUB + currValUSDT*jsonresUSDT.RUB + currValEth*jsonres.RUB)
 
     const totalUsd = document.getElementById("total-bal-usd");
     const totalRub = document.getElementById("total-bal-rub");
-    totalUsd.textContent = "$"+(currValEth*jsonres.USD).toFixed(2);
-    totalRub.textContent = "₽"+(currValEth*jsonres.RUB).toFixed(2);
+    totalUsd.textContent = "$"+(awBal).toFixed(2);
+    totalRub.textContent = "₽"+(awBalRub).toFixed(2);
 
     await new Promise((resolve) => setTimeout(resolve, refreshInterval));
     updateLoop();

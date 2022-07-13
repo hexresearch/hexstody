@@ -32,6 +32,13 @@ pub struct EthHistResp {
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct Erc20HistResp {
+    pub status: String,
+    pub message: String,
+    pub result: Vec<Erc20HistUnit>
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct EthHistUnit {
     pub blockNumber: String,
     pub timeStamp: String,
@@ -63,6 +70,45 @@ pub struct EthHistUnitU {
     pub from: String,
     pub to: String,
     pub value: String,
+    pub gas: String,
+    pub gasPrice: String,
+    pub contractAddress: String,
+    pub confirmations: String,
+    pub addr: String
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct Erc20HistUnit {
+    pub blockNumber: String,
+    pub timeStamp: String,
+    pub hash: String,
+    pub nonce: String,
+    pub blockHash: String,
+    pub from: String,
+    pub contractAddress: String,
+    pub to: String,
+    pub value: String,
+    pub tokenName: String,
+    pub tokenSymbol: String,
+    pub tokenDecimal: String,
+    pub transactionIndex: String,
+    pub gas: String,
+    pub gasPrice: String,
+    pub gasUsed: String,
+    pub cumulativeGasUsed: String,
+    pub input: String,
+    pub confirmations: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct Erc20HistUnitU {
+    pub blockNumber: String,
+    pub timeStamp: String,
+    pub hash: String,
+    pub from: String,
+    pub to: String,
+    pub value: String,
+    pub tokenName: String,
     pub gas: String,
     pub gasPrice: String,
     pub contractAddress: String,

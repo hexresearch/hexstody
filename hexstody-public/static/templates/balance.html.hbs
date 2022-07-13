@@ -162,15 +162,15 @@
 
 <div class="content-row mt-5">
   <div>
-    <span class="item-label">
-      {{this.currency}}
+    <span id="bal-curr-label" class="item-label">
+      {{formatCurrencyName}}
     </span>
   </div>
   <div>
-    <span id="curr-val-{{this.currency}}" class="item-val-bg">
+    <span id="curr-val-{{formatCurrencyName}}" class="item-val-bg">
       {{formatCurrencyValue}}
     </span>
-    <span id="usd-{{this.currency}}" class="item-val-gr">
+    <span id="usd-{{formatCurrencyName}}" class="item-val-gr">
     </span>
     <button onclick="location.href='/withdraw'"
      type="button" class="button item-buttom-w">

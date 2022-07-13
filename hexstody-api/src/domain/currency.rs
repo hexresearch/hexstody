@@ -25,7 +25,17 @@ impl fmt::Display for Currency {
 impl Currency {
     /// List supported currencies at the moment
     pub fn supported() -> Vec<Currency> {
-        vec![Currency::BTC, Currency::ETH]
+        vec![Currency::BTC,
+             Currency::ETH,
+             Currency::ERC20(Erc20Token{ticker:"USDT".to_string()
+                                        ,name:"USDT".to_string()
+                                        ,contract:"0xdAC17F958D2ee523a2206206994597C13D831ec7".to_string()
+                                    }),
+             Currency::ERC20(Erc20Token{ticker:"CRV".to_string()
+                                        ,name:"CRV".to_string()
+                                        ,contract:"0xD533a949740bb3306d119CC777fa900bA034cd52".to_string()
+                                    })
+            ]
     }
 }
 

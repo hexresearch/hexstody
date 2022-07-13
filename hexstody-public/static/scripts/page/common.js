@@ -10,7 +10,13 @@ export function formattedCurrencyValue(currency, value) {
             return nf.format(value);
         case "ETH":
             const newv = value / 1000000000000000000
-            return newv.toFixed(8)
+            return newv.toFixed(8);
+        case "USDT":
+            const newu = value / 1000000
+            return newu.toFixed(8);
+        case "CRV":
+            const newc = value / 1000000000000000000
+            return newc.toFixed(8);
         default:
             return value;
     }
