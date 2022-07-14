@@ -196,7 +196,29 @@ function addStatusCell(row, status) {
             cellText = document.createTextNode("Rejected by node (" + status.reason + ")");
             break;
         case "Completed":
-            cellText = document.createTextNode("Completed");
+            let linkToTx;
+            switch (status.txid.type) {
+                case "BTC":
+                    linkToTx = `https://mempool.space/tx/${status.txid.txid}`
+                    break;
+                default:
+                    console.error('undefined link for: ', status.txid.type);
+                    break;
+            }
+
+            const goToExplorerLink = document.createElement("a");
+            goToExplorerLink.href = linkToTx;
+            goToExplorerLink.target = "_blank"
+            goToExplorerLink.setAttribute("class", "button clear icon-only");
+            goToExplorerLink.innerHTML = '<img src="https://icongr.am/feather/corner-right-up.svg?size=18"></img>';
+            tippy(goToExplorerLink, {
+                content: "View transaction in explorer"
+            });
+            statusText = document.createTextNode("Completed");
+            const contentWrapper = document.createElement("div");
+            contentWrapper.appendChild(statusText);
+            contentWrapper.appendChild(goToExplorerLink);
+            cellText = contentWrapper;
             break;
         default:
             cellText = document.createTextNode("Unknown");
