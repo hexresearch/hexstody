@@ -16,6 +16,8 @@ use rocket_okapi::{
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use crate::domain::CurrencyTxId;
+
 use super::domain::currency::{BtcAddress, Currency, CurrencyAddress};
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
@@ -294,8 +296,22 @@ pub enum WithdrawalRequestStatus {
     InProgress {
         confirmations: i16,
     },
+    /// Confirmed by operators, but not yet sent to the node
     Confirmed,
-    Rejected,
+    /// Tx sent to the node
+    Completed {
+        /// Time when the request was processed
+        confirmed_at: NaiveDateTime,
+        /// Txid
+        txid: CurrencyTxId
+    },
+    /// Rejected by operators
+    OpRejected,
+    /// Rejected by the node
+    NodeRejected {
+        /// Node
+        reason: String
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]

@@ -309,8 +309,9 @@ pub async fn run_hot_wallet(
     let update_response_hndl = tokio::spawn({
         let state_mx = state_mx.clone();
         let btc_client = btc_client.clone();
+        let update_sender = update_sender.clone();
         async move {
-            update_results_worker(btc_client, state_mx, update_resp_receiver).await;
+            update_results_worker(btc_client, state_mx, update_resp_receiver, update_sender).await;
         }    
     });
 
