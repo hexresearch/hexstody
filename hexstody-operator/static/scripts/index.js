@@ -146,7 +146,7 @@ function addAddressCell(row, address) {
     });
     contentWrapper.appendChild(addressTextWrapper);
     copyBtn.setAttribute("class", "button clear icon-only");
-    copyBtn.innerHTML = '<img src="https://icongr.am/feather/copy.svg?size=18"></img>';
+    copyBtn.innerHTML = '<img src="/images/copy.svg?size=18"></img>';
     copyBtn.addEventListener("click", () => {
         navigator.clipboard.writeText(addr).then(function () { }, function (err) {
             console.error('Could not copy text: ', err);
@@ -210,7 +210,7 @@ function addStatusCell(row, status) {
             goToExplorerLink.href = linkToTx;
             goToExplorerLink.target = "_blank"
             goToExplorerLink.setAttribute("class", "button clear icon-only");
-            goToExplorerLink.innerHTML = '<img src="https://icongr.am/feather/corner-right-up.svg?size=18"></img>';
+            goToExplorerLink.innerHTML = '<img src="/images/corner-right-up.svg?size=18"></img>';
             tippy(goToExplorerLink, {
                 content: "View transaction in explorer"
             });
