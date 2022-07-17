@@ -29,7 +29,7 @@ use super::update::{StateUpdate, UpdateBody, results::UpdateResult};
 use hexstody_api::domain::*;
 use hexstody_api::types::WithdrawalRequestDecisionType;
 
-pub const REQUIRED_NUMBER_OF_CONFIRMATIONS: i16 = 2;
+pub const NUMBER_OF_REQUIRED_CONFIRMATIONS: i16 = 2;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct State {
@@ -271,7 +271,7 @@ impl State {
                             .confirmations
                             .push(WithdrawalRequestDecision::from(withdrawal_request_decision));
                         let m = if is_rejected_by_this_key { 2 } else { 1 };
-                        if n == REQUIRED_NUMBER_OF_CONFIRMATIONS - m {
+                        if n == NUMBER_OF_REQUIRED_CONFIRMATIONS - m {
                             withdrawal_request.status = WithdrawalRequestStatus::Confirmed;
                             return Ok(Some(withdrawal_request.id));
                         } else {
@@ -295,7 +295,7 @@ impl State {
                             .rejections
                             .push(WithdrawalRequestDecision::from(withdrawal_request_decision));
                         let m = if is_confirmed_by_this_key { 2 } else { 1 };
-                        if n == m - REQUIRED_NUMBER_OF_CONFIRMATIONS {
+                        if n == m - NUMBER_OF_REQUIRED_CONFIRMATIONS {
                             withdrawal_request.status = WithdrawalRequestStatus::OpRejected;
                         } else {
                             withdrawal_request.status = WithdrawalRequestStatus::InProgress(n - m);

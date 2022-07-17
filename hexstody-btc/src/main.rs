@@ -25,8 +25,8 @@ use api::public::*;
 use state::ScanState;
 use worker::node_worker;
 
-// Should be the same as hexstody-db::state::REQUIRED_NUMBER_OF_CONFIRMATIONS
-pub const REQUIRED_NUMBER_OF_CONFIRMATIONS: i16 = 2;
+// Should be the same as hexstody-db::state::NUMBER_OF_REQUIRED_CONFIRMATIONS
+pub const NUMBER_OF_REQUIRED_CONFIRMATIONS: i16 = 2;
 
 #[derive(Parser, Debug, Clone)]
 #[clap(about, version, author)]
@@ -68,7 +68,7 @@ enum SubCommand {
             env = "HEXSTODY_OPERATOR_PUBLIC_KEYS",
             takes_value = true,
             multiple_values = true,
-            min_values = usize::try_from(REQUIRED_NUMBER_OF_CONFIRMATIONS).unwrap(),
+            min_values = usize::try_from(NUMBER_OF_REQUIRED_CONFIRMATIONS).unwrap(),
             required = true
         )]
         /// List of paths to files containing trusted public keys, which operators use to confirm withdrawal requests
@@ -162,7 +162,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     polling_duration,
                     secret_key.as_deref(),
                     op_public_keys,
-                    REQUIRED_NUMBER_OF_CONFIRMATIONS,
+                    NUMBER_OF_REQUIRED_CONFIRMATIONS,
                     hot_domain.clone()
                 )
                 .await;
