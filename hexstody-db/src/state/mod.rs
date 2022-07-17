@@ -29,6 +29,8 @@ use super::update::{StateUpdate, UpdateBody, results::UpdateResult};
 use hexstody_api::domain::*;
 use hexstody_api::types::WithdrawalRequestDecisionType;
 
+pub const REQUIRED_NUMBER_OF_CONFIRMATIONS: i16 = 2;
+
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct State {
     /// All known users of the system.
