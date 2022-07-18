@@ -132,11 +132,7 @@ async function loadHistoryETH() {
     const histFull = (history.concat(histCRV).concat(histUSDT)).sort(compareHist);
     var hist = {histories: histFull }
     for(var i=0; i<hist.histories.length;i++){
-      console.log("=====DEBUG=====")
-      console.log("=====DEBUG=====")
       console.log(hist.histories[i].tokenName)
-      console.log("=====DEBUG=====")
-      console.log("=====DEBUG=====")
       hist.histories[i].timeStamp=timeStampToTime(parseInt(hist.histories[i].timeStamp));
       hist.histories[i].hashtoshow=hist.histories[i].hash.slice(0, 8)+"...";
       hist.histories[i].fromtoshow=hist.histories[i].from.slice(0, 8)+"...";
