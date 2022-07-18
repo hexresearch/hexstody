@@ -1,5 +1,5 @@
 use figment::Figment;
-use futures::future::{join, AbortHandle, AbortRegistration, Abortable, Aborted};
+use futures::future::{join3, AbortHandle, AbortRegistration, Abortable, Aborted};
 use futures::Future;
 use log::*;
 use p256::pkcs8::DecodePublicKey;
@@ -179,7 +179,8 @@ async fn serve_api(
     api_type: ApiType,
     api_config: Figment,
     abort_reg: AbortRegistration,
-) -> () {
+) -> ()
+{
     let api_enabled: bool = api_config.extract_inner("api_enabled").unwrap();
     if !api_enabled {
         info!("{api_type} API disabled");
@@ -226,14 +227,18 @@ pub async fn serve_apis(
     api_config: ApiConfig,
     api_abort: AbortRegistration,
     update_sender: mpsc::Sender<StateUpdate>,
-    btc_client: BtcClient,
-) -> Result<(), Aborted> {
+    btc_client: BtcClient
+) -> Result<(), Aborted>
+{
+    let public_start = Arc::new(Notify::new());
+    let operator_start = Arc::new(Notify::new());
+
     let (public_handle, public_abort_reg) = AbortHandle::new_pair();
     let public_api_fut = serve_api(
         pool.clone(),
         state_mx.clone(),
         state_notify.clone(),
-        start_notify.clone(),
+        public_start.clone(),
         update_sender.clone(),
         btc_client.clone(),
         ApiType::Public,
@@ -245,14 +250,19 @@ pub async fn serve_apis(
         pool,
         state_mx,
         state_notify,
-        start_notify,
+        operator_start.clone(),
         update_sender.clone(),
         btc_client.clone(),
         ApiType::Operator,
         api_config.operator_api_config,
         operator_abort_reg,
     );
-    let abortable_apis = Abortable::new(join(public_api_fut, operator_api_fut), api_abort);
+    let body_fut = async move {
+        public_start.notified().await;
+        operator_start.notified().await;
+        start_notify.notify_one();
+    };
+    let abortable_apis = Abortable::new(join3(public_api_fut, operator_api_fut, body_fut), api_abort);
     if let Err(Aborted) = abortable_apis.await {
         public_handle.abort();
         operator_handle.abort();
@@ -277,8 +287,9 @@ pub async fn run_hot_wallet(
     args: &Args,
     start_notify: Arc<Notify>,
     btc_client: BtcClient,
-    api_abort_reg: AbortRegistration,
-) -> Result<(), Error> {
+    api_abort_reg: AbortRegistration
+) -> Result<(), Error> 
+{
     info!("Connecting to database");
     let pool = create_db_pool(&args.dbconnect).await?;
     info!("Reconstructing state from database");
@@ -323,7 +334,7 @@ pub async fn run_hot_wallet(
         api_config,
         api_abort_reg,
         update_sender,
-        btc_client,
+        btc_client
     )
     .await
     {
