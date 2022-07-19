@@ -21,6 +21,7 @@ pub async fn node_worker(
             match scan_from(client, old_block).await {
                 Ok((mut events, next_hash)) => {
                     if !events.is_empty() || old_block != next_hash {
+                        debug!("I found something interesting in the block");
                         let height = client
                             .get_block_count()
                             .unwrap_or_else(|_| state_rw.last_height);
@@ -39,6 +40,7 @@ pub async fn node_worker(
                 }
             }
         }
+        debug!("Sleeping for next {:?}", polling_sleep);
         tokio::time::sleep(polling_sleep).await;
     }
 }
@@ -59,6 +61,7 @@ pub async fn scan_from(
             events.push(e);
         }
     }
+    debug!("Scanned events: {:?}, next block: {:?}", events, result.lastblock);
     Ok((events, result.lastblock))
 }
 
