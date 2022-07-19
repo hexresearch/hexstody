@@ -38,6 +38,14 @@ async function importKey(_event) {
     if (response.ok) {
         fileSelectorStatus.className = "text-success";
         fileSelectorStatus.innerText = "Private key imported successfully!";
+        const response = await makeSignedRequest(null, "hotbalance", "POST");
+        if (response.ok) {
+            let data = await response.json();
+            let val = data.balance / 100000000;
+            let txt = "Hot balance: " + val.toString() + " BTC";
+            fileSelectorStatus.className = "text-dark"
+            fileSelectorStatus.innerText = txt;
+        }
         // // Debug fucntion to create request
         // makeSignedRequest({
         //     user: "Bob",

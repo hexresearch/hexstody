@@ -2,7 +2,7 @@ use bitcoin::Amount;
 use bitcoincore_rpc::RpcApi;
 use hexstody_api::domain::CurrencyAddress;
 use hexstody_api::types::{
-    ConfirmationData, ConfirmedWithdrawal, SignatureData,
+    ConfirmationData, ConfirmedWithdrawal, SignatureData, HotBalanceResponse,
 };
 use hexstody_btc_api::bitcoin::*;
 use hexstody_btc_api::events::*;
@@ -684,6 +684,19 @@ async fn get_fees_from_node_test() {
         println!("{:?}", fee);
         assert_eq!(fee.fee_rate, 5, "Fee value is different than expected");
         assert!(fee.block.is_none(), "Block? How?");
+    })
+    .await;
+}
+
+// Request balance
+#[tokio::test]
+async fn get_balance_test() {
+    run_test(|btc, api| async move {
+        let HotBalanceResponse{balance} = api.get_hot_balance().await.expect("Failed to get balance");
+        assert_eq!(balance, 0, "Balance is non-zero!");
+        fund_wallet(&btc);
+        let HotBalanceResponse{balance} = api.get_hot_balance().await.expect("Failed to get balance");
+        assert_eq!(balance, 5000000000, "Balance is not 50 btc!");
     })
     .await;
 }

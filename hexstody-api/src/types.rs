@@ -365,6 +365,12 @@ fn example_block_height() -> Option<i64> {
     Some(12345)
 }
 
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct HotBalanceResponse{
+    /// Total balance of the hot wallet in sat
+    pub balance: u64
+}
+
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy)]
 pub enum WithdrawalRequestDecisionType {
     Confirm,
