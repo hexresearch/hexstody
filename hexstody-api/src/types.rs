@@ -188,7 +188,9 @@ pub enum WithdrawalRequestStatus {
         /// Time when the request was processed
         confirmed_at: NaiveDateTime,
         /// Txid
-        txid: CurrencyTxId
+        txid: CurrencyTxId,
+        /// Fee paid is sats. If an error occured, fee=0
+        fee: u64
     },
     /// Rejected by operators
     OpRejected,
@@ -414,4 +416,6 @@ pub struct WithdrawalResponse {
     pub id: Uuid,
     /// Transaction ID
     pub txid: BtcTxid,
+    /// Fee paid in satoshi
+    pub fee: Option<u64>
 }

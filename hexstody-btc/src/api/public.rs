@@ -149,7 +149,10 @@ async fn withdraw_btc(
                             code: 500,
                         }))
                     })?;
-                let resp = WithdrawalResponse{ id: cw.id.clone(), txid: BtcTxid(txid) };
+                let fee = client
+                    .get_transaction(&txid, None)
+                    .map(|tres| tres.fee.map(|f| f.as_sat() as u64)).ok().flatten();
+                let resp = WithdrawalResponse{ id: cw.id.clone(), txid: BtcTxid(txid), fee: fee };
                 debug!("OK: {:?}", resp);
                 Ok(Json(resp))
             } else {

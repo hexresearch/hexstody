@@ -78,6 +78,14 @@ impl State {
             .map(|(uid, _)| uid.clone())
     }
 
+    pub fn find_withdrawal_by_tx_id(&self, txid: CurrencyTxId) -> Option<WithdrawalRequestId>{
+        self.users
+            .iter()
+            .find_map(|(_, user)| 
+                user.find_completed_request(txid.clone())
+            )
+    }
+
     /// Apply an update event from persistent store
     pub fn apply_update(&mut self, update: StateUpdate) -> Result<Option<UpdateResult>, StateUpdateErr> {
         match update.body {
@@ -352,9 +360,9 @@ impl State {
     /// Apply cancel of BTC transaction
     fn with_btc_tx_cancel(&mut self, tx: BtcTxCancel) -> Result<(), StateUpdateErr> {
         let address = CurrencyAddress::BTC(BtcAddress {
-            addr: tx.address.to_string(),
+            addr: tx.address.0.to_string(),
         });
-        if let Some(user_id) = self.find_user_address(&address) {
+        let res1 = if let Some(user_id) = self.find_user_address(&address) {
             if let Some(user) = self.users.get_mut(&user_id) {
                 if let Some(curr_info) = user.currencies.get_mut(&Currency::BTC) {
                     curr_info.cancel_btc_tx(&tx);
@@ -371,7 +379,21 @@ impl State {
         } else {
             warn!("Unknown deposit address: {address}");
             Ok(())
-        }
+        };
+
+        let txid = CurrencyTxId::BTC(BTCTxid{txid: tx.txid.0.to_string()});
+        let res2 = if let Some(rid) = self.find_withdrawal_by_tx_id(txid){
+            let reject = WithdrawalRejectInfo{
+                id: rid,
+                reason: "Tx canceled".to_owned(),
+            };
+            self.set_withdrawal_request_node_rejected(reject)
+        } else {
+            Ok(())
+        };
+        if res1.is_err() && res2.is_err() {
+            res1
+        } else {Ok(())}
     }
 
     /// Take ordered chain of updates and collect the accumulated state.
@@ -420,7 +442,8 @@ impl State {
                     if req_id.clone() == withdrawal_confirmed_info.id {
                         let stat = WithdrawalRequestStatus::Completed { 
                             confirmed_at: withdrawal_confirmed_info.confirmed_at,
-                            txid: withdrawal_confirmed_info.txid.clone() };
+                            txid: withdrawal_confirmed_info.txid.clone(),
+                            fee:  withdrawal_confirmed_info.fee.unwrap_or(0) };
                         req.status = stat;
                     }
                 }
