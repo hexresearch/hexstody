@@ -333,7 +333,7 @@ async fn setup_api_regtest(
     });
     tokio::spawn({
         let client = make_client();
-        let polling_duration = Duration::from_millis(100);
+        let polling_duration = Duration::from_secs(30);
         let tx_notify = Arc::new(Notify::new());
         async move {
             node_worker(&client, state, state_notify, polling_duration, tx_notify).await;
