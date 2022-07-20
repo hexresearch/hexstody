@@ -51,7 +51,7 @@ enum SubCommand {
         address: IpAddr,
         #[clap(
             long,
-            default_value = "http://127.0.0.1:8332",
+            default_value = "http://127.0.0.1:8332/wallet/default",
             env = "HEXSTODY_BTC_NODE_URL"
         )]
         node_url: String,

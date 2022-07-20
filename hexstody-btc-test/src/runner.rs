@@ -53,7 +53,7 @@ fn teardown_node(mut node_handle: Child) {
 async fn setup_node_ready(port: u16, rpc_port: u16) -> (Child, Client, TempDir) {
     let (node_handle, temp_dir) = setup_node(port, rpc_port);
 
-    let rpc_url = format!("http://127.0.0.1:{rpc_port}");
+    let rpc_url = format!("http://127.0.0.1:{rpc_port}/wallet/default");
     let client = Client::new(
         &rpc_url,
         Auth::UserPass("regtest".to_owned(), "regtest".to_owned()),
@@ -61,8 +61,9 @@ async fn setup_node_ready(port: u16, rpc_port: u16) -> (Child, Client, TempDir) 
     .expect("Node client");
     wait_for_node(&client).await;
     client
-        .create_wallet("", None, None, None, None)
-        .expect("create default wallet");
+        .create_wallet("default", None, None, None, None)
+        .map(|_| ())
+        .unwrap_or_else(|e| warn!("Cannot create default wallet: {}", e));
     (node_handle, client, temp_dir)
 }
 
@@ -290,6 +291,7 @@ async fn setup_api_regtest(
     operator_public_keys: Vec<PublicKey>,
     rpc_port: u16,
     api_port: u16,
+    polling_duration: Duration,
 ) -> () {
     info!("Running API server on port {api_port}");
     let address = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
@@ -298,7 +300,7 @@ async fn setup_api_regtest(
     let state = Arc::new(Mutex::new(ScanState::new(Network::Regtest)));
 
     let make_client = || {
-        let rpc_url = format!("http://127.0.0.1:{rpc_port}");
+        let rpc_url = format!("http://127.0.0.1:{rpc_port}/wallet/default");
         Client::new(
             &rpc_url,
             Auth::UserPass("regtest".to_owned(), "regtest".to_owned()),
@@ -310,7 +312,6 @@ async fn setup_api_regtest(
         let start_notify = start_notify.clone();
         let state_notify = state_notify.clone();
         let state = state.clone();
-        let polling_duration = Duration::from_secs(1);
         let client = make_client();
         async move {
             serve_public_api(
@@ -351,7 +352,7 @@ pub async fn run_regtest<F, Fut>(
     operator_public_key_paths: Vec<PathBuf>,
     body: F,
 ) where
-    F: FnOnce(Client, Client, BtcClient) -> Fut,
+    F: FnOnce((u16, Client), (u16, Client), (String, BtcClient)) -> Fut,
     Fut: Future<Output = ()>,
 {
     // Start 1st BTC node
@@ -367,7 +368,7 @@ pub async fn run_regtest<F, Fut>(
     // Connect them together
     client_1
         .add_node(&format!("127.0.0.1:{node_2_port}"))
-        .unwrap();
+        .unwrap_or_else(|e| info!("Failed to connect nodes: {}!", e));
 
     // Parse operator API args
     let operator_api_domain = operator_api_domain.unwrap_or("http://127.0.0.1:9801".to_owned());
@@ -381,16 +382,19 @@ pub async fn run_regtest<F, Fut>(
     }
     // Start hexstody-btc API and connect it to 1st BTC node.
     let api_port = 9802;
+    let polling_duration = Duration::from_secs(300);
     setup_api_regtest(
         operator_api_domain,
         operator_public_keys,
         node_1_rpc_port,
         api_port,
+        polling_duration,
     )
     .await;
-    let api_client = BtcClient::new(&format!("http://127.0.0.1:{api_port}"));
+    let api_url = format!("http://127.0.0.1:{api_port}");
+    let api_client = BtcClient::new(&api_url);
 
-    body(client_1, client_2, api_client).await;
+    body((node_1_rpc_port, client_1), (node_2_rpc_port, client_2), (api_url, api_client)).await;
     teardown_node(node_1_handle);
     teardown_node(node_2_handle);
 }
