@@ -6,11 +6,12 @@ mod constants;
 use bitcoin::network::constants::Network;
 use bitcoincore_rpc::{Auth, Client, RpcApi};
 use clap::Parser;
-use futures::future::try_join;
+use futures::future::try_join3;
 use futures::future::{AbortHandle, Abortable, Aborted};
 use log::*;
 use std::error::Error;
 use std::net::IpAddr;
+use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 use std::path::PathBuf;
@@ -23,7 +24,7 @@ use p256::pkcs8::DecodePublicKey;
 
 use api::public::*;
 use state::ScanState;
-use worker::node_worker;
+use worker::{node_worker, cold_wallet_worker};
 
 // Should be the same as hexstody-db::state::REQUIRED_NUMBER_OF_CONFIRMATIONS
 pub const REQUIRED_NUMBER_OF_CONFIRMATIONS: i16 = 2;
@@ -75,6 +76,10 @@ enum SubCommand {
         operator_public_keys: Vec<PathBuf>,
         #[clap(long, env="HEXSTODY_BTC_HOT_DOMAIN")]
         hot_domain: String,
+        #[clap(long, env="HEXSTODY_BTC_COLD_ADDR")]
+        cold_address: String,
+        #[clap(long, env="HEXSTODY_BTC_COLD_VALUE_SAT")]
+        cold_sat: u64
     },
 }
 
@@ -102,8 +107,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
             secret_key,
             operator_public_keys,
             hot_domain,
+            cold_address,
+            cold_sat
         } => loop {
-            let mut op_public_keys = vec![]; //args.op_public_keys.clone()
+            let mut op_public_keys = vec![];
             for p in &operator_public_keys {
                 let full_path = fs::canonicalize(&p).expect("Something went wrong reading the file");
                 let key_str =
@@ -127,6 +134,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             };
             let state = Arc::new(Mutex::new(ScanState::new(network)));
             let state_notify = Arc::new(Notify::new());
+            let tx_notify = Arc::new(Notify::new());
             let polling_duration = Duration::from_secs(30);
             let worker_fut = async {
                 let client = make_client();
@@ -135,8 +143,22 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     state.clone(),
                     state_notify.clone(),
                     polling_duration,
+                    tx_notify.clone()
                 )
                 .await;
+                Ok(res)
+            };
+
+            let cold_amount = bitcoin::Amount::from_sat(cold_sat);
+            let cold_address = bitcoin::Address::from_str(cold_address.as_str()).expect("Failed to parse cold address");
+            let cold_storage_fut = async {
+                let client = make_client();
+                let res = cold_wallet_worker(
+                    &client, 
+                    tx_notify.clone(), 
+                    cold_amount, 
+                    cold_address
+                ).await;
                 Ok(res)
             };
 
@@ -169,7 +191,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 res.map_err(|err| LogicError::from(err))
             };
 
-            let joined_fut = try_join(worker_fut, public_api_fut);
+            let joined_fut = try_join3(worker_fut, public_api_fut, cold_storage_fut);
             match Abortable::new(joined_fut, abort_reg).await {
                 Ok(Ok(_)) => {}
                 Ok(Err(e)) => {
