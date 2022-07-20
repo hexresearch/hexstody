@@ -19,9 +19,21 @@ async function getHistoryERC20(tokenAddr) {
   return fetch("/historyerc20/" + tokenAddr).then(r => r.json());
 }
 
+async function getUserData() {
+  return fetch("/userdata/").then(r => r.json());
+}
+
 async function getHistoryETH() {
     return fetch("/historyeth").then(r => r.json());
 }
+
+async function getCourseForBTC(currency) {
+    return await fetch("/btcticker",
+    {
+        method: "POST",
+        body: JSON.stringify(currency)
+    }).then(r => r.json());
+};
 
 async function getCourseForETH(currency) {
     return await fetch("/ethticker",
@@ -127,6 +139,8 @@ function compareHist( a, b ) {
 
 async function loadHistoryETH() {
     const histUSDT = await getHistoryERC20("0xdAC17F958D2ee523a2206206994597C13D831ec7");
+    const userData = await getUserData();
+    console.log(userData);
     const histCRV = await getHistoryERC20("0xD533a949740bb3306d119CC777fa900bA034cd52");
     const history = await getHistoryETH();
     const histFull = (history.concat(histCRV).concat(histUSDT)).sort(compareHist);
@@ -185,6 +199,13 @@ async function loadMoreHistory() {
 
 async function updateLoop() {
     await Promise.allSettled([loadBalance(), loadHistoryETH()]);
+    const jsonresBTC = await getCourseForETH("BTC")
+    const usdToBtc = document.getElementById("usd-BTC");
+    let currValBtcPre = document.getElementById("curr-val-BTC").textContent;
+    const currValBtc = currValBtcPre.replace(",", "")*0.00000001;
+    document.getElementById("curr-val-BTC").textContent = currValBtc;
+    usdToBtc.textContent = "$"+(currValBtc*jsonresBTC.USD).toFixed(2);
+
     const jsonres = await getCourseForETH("ETH")
     const usdToEth = document.getElementById("usd-ETH");
     const currValEth = document.getElementById("curr-val-ETH").textContent;
@@ -199,8 +220,8 @@ async function updateLoop() {
     const currValCRV = document.getElementById("curr-val-CRV").textContent;
     usdToCRV.textContent = "$"+(currValCRV*jsonresCRV.USD).toFixed(2);
 
-    const awBal = await (currValCRV*jsonresCRV.USD + parseFloat(currValUSDT) + currValEth*jsonres.USD)
-    const awBalRub = await (currValCRV*jsonresCRV.RUB + currValUSDT*jsonresUSDT.RUB + currValEth*jsonres.RUB)
+    const awBal = await (currValCRV*jsonresCRV.USD + parseFloat(currValUSDT) + currValEth*jsonres.USD + currValBtc*jsonresBTC.USD)
+    const awBalRub = await (currValCRV*jsonresCRV.RUB + currValUSDT*jsonresUSDT.RUB + currValEth*jsonres.RUB + currValBtc*jsonresBTC.RUB)
 
     const totalUsd = document.getElementById("total-bal-usd");
     const totalRub = document.getElementById("total-bal-rub");

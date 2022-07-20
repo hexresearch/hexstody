@@ -83,19 +83,6 @@ pub async fn get_balance(
                                                                                             .await
                                                                                             .unwrap();
                 let balCRV : BalResp = (serde_json::from_str(&balanceCRV)).unwrap();
-                println!("==========BALANCES==DEBUG================");
-                println!("==========BALANCES==DEBUG================");
-                println!("==========BALANCES==DEBUG================");
-                println!("==========BALANCES==DEBUG================");
-                println!("==========BALANCES==DEBUG================");
-                println!("User: {:?}",user.username);
-                println!("userETH = {:?}", userETH);
-                println!("body = {:?}", bal.result);
-                println!("==========BALANCES==DEBUG================");
-                println!("==========BALANCES==DEBUG================");
-                println!("==========BALANCES==DEBUG================");
-                println!("==========BALANCES==DEBUG================");
-                println!("==========BALANCES==DEBUG================");
                 let brf = bal.result.parse::<u64>().unwrap();
                 let bUSDTrf = balUSDT.result.parse::<u64>().unwrap();
                 let bCRVTrf = balCRV.result.parse::<u64>().unwrap();
@@ -130,22 +117,6 @@ pub async fn get_balance(
                                            ,contract:"0xD533a949740bb3306d119CC777fa900bA034cd52".to_string()
                                            }),
                      value: bCRVTrf};
-                println!("==========BALANCES==DEBUG================");
-                println!("==========BALANCES==DEBUG================");
-                println!("==========BALANCES==DEBUG================");
-                println!("==========BALANCES==DEBUG================");
-                println!("==========BALANCES==DEBUG================");
-                println!("User: {:?}",user.username);
-                println!("userETH = {:?}", userETH);
-                println!("body = {:?}", bal.result);
-                println!("brf = {:?}", brf);
-                println!("ethindex = {:?}", ethindex);
-                println!("balances = {:?}", balances);
-                println!("==========BALANCES==DEBUG================");
-                println!("==========BALANCES==DEBUG================");
-                println!("==========BALANCES==DEBUG================");
-                println!("==========BALANCES==DEBUG================");
-                println!("==========BALANCES==DEBUG================");
                 Ok(Json(api::Balance { balances }))
             } else {
                 Err(error::Error::NoUserFound.into())
@@ -212,18 +183,6 @@ pub async fn get_deposit_eth(
                                                                                     .await
                                                                                     .unwrap();
         let userETH : UserETH = (serde_json::from_str(&userETHstr)).unwrap();
-        println!("==========DEPOSIT==DEBUG================");
-        println!("==========DEPOSIT==DEBUG================");
-        println!("==========DEPOSIT==DEBUG================");
-        println!("==========DEPOSIT==DEBUG================");
-        println!("==========DEPOSIT==DEBUG================");
-        println!("User: {:?}",user_id);
-        println!("userETHstr: {:?}",userETH.address);
-        println!("==========DEPOSIT==DEBUG================");
-        println!("==========DEPOSIT==DEBUG================");
-        println!("==========DEPOSIT==DEBUG================");
-        println!("==========DEPOSIT==DEBUG================");
-        println!("==========DEPOSIT==DEBUG================");
         Ok(Json(api::DepositInfo {
             address: format!("{}", &userETH.address),
         }))
@@ -249,18 +208,57 @@ pub async fn eth_ticker(
                                                                                     .await
                                                                                     .unwrap();
         let tETH : api::TickerETH = (serde_json::from_str(&tickETHstr)).unwrap();
-        println!("==========TICKER==DEBUG================");
-        println!("==========TICKER==DEBUG================");
-        println!("==========TICKER==DEBUG================");
-        println!("==========TICKER==DEBUG================");
-        println!("==========TICKER==DEBUG================");
-        println!("TickerETH: {:?}",tETH);
-        println!("==========TICKER==DEBUG================");
-        println!("==========TICKER==DEBUG================");
-        println!("==========TICKER==DEBUG================");
-        println!("==========TICKER==DEBUG================");
-        println!("==========TICKER==DEBUG================");
         Ok(Json(tETH))
+    })
+    .await
+}
+
+#[openapi(tag = "wallet")]
+#[post("/btcticker", data = "<currency>")]
+pub async fn btc_ticker(
+    cookies: &CookieJar<'_>,
+    state: &State<Arc<Mutex<DbState>>>,
+    updater: &State<mpsc::Sender<StateUpdate>>,
+    btc: &State<BtcClient>,
+    currency: Json<Currency>,
+) -> error::Result<Json<api::TickerETH>> {
+    require_auth(cookies, |cookie| async move {
+        let tickETHstr = reqwest::get("https://min-api.cryptocompare.com/data/price?fsym=BTC&tsyms=USD,RUB")
+                                                                                    .await
+                                                                                    .unwrap()
+                                                                                    .text()
+                                                                                    .await
+                                                                                    .unwrap();
+        let tETH : api::TickerETH = (serde_json::from_str(&tickETHstr)).unwrap();
+        Ok(Json(tETH))
+    })
+    .await
+}
+
+#[openapi(tag = "wallet")]
+#[get("/userdata")]
+pub async fn get_user_data(
+    cookies: &CookieJar<'_>,
+    state: &State<Arc<Mutex<DbState>>>,
+) -> error::Result<Json<api::UserEth>> {
+    require_auth(cookies, |cookie| async move {
+        let user_id = cookie.value();
+        {
+            let state = state.lock().await;
+            if let Some(user) = state.users.get(user_id) {
+                let user_data_str = reqwest::get(&("http://localhost:8000/userdata/".to_owned()+&user.username))
+                                                                                            .await
+                                                                                            .unwrap()
+                                                                                            .text()
+                                                                                            .await
+                                                                                            .unwrap();
+
+                let user_data : api::UserEth = (serde_json::from_str(&user_data_str)).unwrap();
+                Ok(Json(user_data))}
+            else {
+                   Err(error::Error::NoUserFound.into())
+               }
+        }
     })
     .await
 }
@@ -281,17 +279,6 @@ pub async fn erc20_ticker(
                                         .await
                                         .unwrap();
         let tETH : api::TickerETH = (serde_json::from_str(&tickETHstr)).unwrap();
-        println!("==========TICKER==DEBUG================");
-        println!("==========TICKER==DEBUG================");
-        println!("==========TICKER==DEBUG================");
-        println!("==========TICKER==DEBUG================");
-        println!("==========TICKER==DEBUG================");
-        println!("TickerETH: {:?}",tETH);
-        println!("==========TICKER==DEBUG================");
-        println!("==========TICKER==DEBUG================");
-        println!("==========TICKER==DEBUG================");
-        println!("==========TICKER==DEBUG================");
-        println!("==========TICKER==DEBUG================");
         Ok(Json(tETH))
     })
     .await
@@ -305,7 +292,7 @@ pub async fn ethfee(
     state: &State<Arc<Mutex<DbState>>>,
 ) -> error::Result<Json<api::EthGasPrice>> {
     require_auth(cookies, |cookie| async move {
-        let resurl = ("https://api.etherscan.io/api?module=gastracker&action=gasoracle&apikey=P8AXZC7V71IJA4XPMFEIIYX9S2S4D8U3T6");
+        let resurl = "https://api.etherscan.io/api?module=gastracker&action=gasoracle&apikey=P8AXZC7V71IJA4XPMFEIIYX9S2S4D8U3T6";
 
         let feeETHres = reqwest::get(resurl)
                                             .await
@@ -315,16 +302,6 @@ pub async fn ethfee(
                                             .unwrap();
 
         let feeETH : api::EthFeeResp = (serde_json::from_str(&feeETHres)).unwrap();
-        println!("==========FEE==DEBUG================");
-        println!("==========FEE==DEBUG================");
-        println!("==========FEE==DEBUG================");
-        println!("==========FEE==DEBUG================");
-        println!("Fee ETH: {:?}",feeETH.result);
-        println!("==========FEE==DEBUG================");
-        println!("==========FEE==DEBUG================");
-        println!("==========FEE==DEBUG================");
-        println!("==========FEE==DEBUG================");
-        println!("==========FEE==DEBUG================");
         Ok(Json(feeETH.result))
     })
     .await
@@ -378,9 +355,9 @@ pub async fn get_history(
                 let userETH : UserETH = (serde_json::from_str(&userETHstr)).unwrap();
 
 
-                let resurl = ("https://api.etherscan.io/api?module=account&action=txlist&address=".to_owned() +
+                let resurl = "https://api.etherscan.io/api?module=account&action=txlist&address=".to_owned() +
                              &userETH.address +
-                             "&startblock=0&endblock=99999999&page=1&offset=10&sort=desc&apikey=P8AXZC7V71IJA4XPMFEIIYX9S2S4D8U3T6");
+                             "&startblock=0&endblock=99999999&page=1&offset=10&sort=desc&apikey=P8AXZC7V71IJA4XPMFEIIYX9S2S4D8U3T6";
 
                 let userETHHistStr = reqwest::get(resurl)
                                                         .await
@@ -390,19 +367,6 @@ pub async fn get_history(
                                                         .unwrap();
 
                 let ethHistList: api::EthHistResp = (serde_json::from_str(&userETHHistStr)).unwrap();
-                println!("==========HISTORY==DEBUG================");
-                println!("==========HISTORY==DEBUG================");
-                println!("==========HISTORY==DEBUG================");
-                println!("==========HISTORY==DEBUG================");
-                println!("==========HISTORY==DEBUG================");
-                println!("UserAddress: {:?}",&userETH.address);
-                println!("UserHistStr: {:?}",ethHistList);
-                println!("==========HISTORY==DEBUG================");
-                println!("==========HISTORY==DEBUG================");
-                println!("==========HISTORY==DEBUG================");
-                println!("==========HISTORY==DEBUG================");
-                println!("==========HISTORY==DEBUG================");
-
                 let mut history = user
                     .currencies
                     .iter()
@@ -458,9 +422,9 @@ pub async fn get_history_eth(
                 let userETH : UserETH = (serde_json::from_str(&userETHstr)).unwrap();
 
 
-                let resurl = ("https://api.etherscan.io/api?module=account&action=txlist&address=".to_owned() +
+                let resurl = "https://api.etherscan.io/api?module=account&action=txlist&address=".to_owned() +
                              &userETH.address +
-                             "&startblock=0&endblock=99999999&page=1&offset=20&sort=desc&apikey=P8AXZC7V71IJA4XPMFEIIYX9S2S4D8U3T6");
+                             "&startblock=0&endblock=99999999&page=1&offset=20&sort=desc&apikey=P8AXZC7V71IJA4XPMFEIIYX9S2S4D8U3T6";
 
                 let userETHHistStr = reqwest::get(resurl)
                                                         .await
@@ -549,11 +513,11 @@ pub async fn get_history_erc20(
                 let userETH : UserETH = (serde_json::from_str(&userETHstr)).unwrap();
 
 
-                let resurl = ("https://api.etherscan.io/api?module=account&action=tokentx&address=".to_owned() +
+                let resurl = "https://api.etherscan.io/api?module=account&action=tokentx&address=".to_owned() +
                              &userETH.address +
                              "&contractaddress=" +
                              &token +
-                             "&startblock=0&endblock=99999999&page=1&offset=20&sort=desc&apikey=P8AXZC7V71IJA4XPMFEIIYX9S2S4D8U3T6");
+                             "&startblock=0&endblock=99999999&page=1&offset=20&sort=desc&apikey=P8AXZC7V71IJA4XPMFEIIYX9S2S4D8U3T6";
 
                 let userETHHistStr = reqwest::get(resurl)
                                                         .await

@@ -119,6 +119,34 @@ pub struct Erc20HistUnitU {
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct UserEth{
+  pub login   : String
+ ,pub address : String
+ ,pub data    : Option<serde_json::Value>
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct UserData{
+    pub tokens: Vec<Erc20Token>,
+    pub historyEth: Vec<Erc20HistUnitU>,
+    pub historyTokens: Vec<Vec<Erc20HistUnitU>>,
+    pub balanceEth: String,
+    pub balanceTokens: Vec<Erc20TokenBalance>
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct Erc20Token{
+    pub tokenName: String,
+    pub tokenAddr: String
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct Erc20TokenBalance{
+    pub tokenName: String,
+    pub tokenBalace: String
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct EthFeeResp {
     pub status: String,
     pub message: String,
