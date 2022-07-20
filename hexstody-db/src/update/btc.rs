@@ -7,21 +7,4 @@ pub struct BestBtcBlock {
     pub block_hash: String,
 }
 
-// #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
-// pub struct BtcTxCancel {
-//     pub txid: String,
-//     pub vout: u32,
-//     pub address: String,
-// }
-
 pub type BtcTxCancel = TxCancel;
-
-// impl From<TxCancel> for BtcTxCancel {
-//     fn from(val: TxCancel) -> BtcTxCancel {
-//         BtcTxCancel {
-//             txid: val.txid.0.to_string(),
-//             vout: val.vout,
-//             address: val.address.0.to_string(),
-//         }
-//     }
-// }

@@ -46,18 +46,6 @@ async function importKey(_event) {
             fileSelectorStatus.className = "text-dark"
             fileSelectorStatus.innerText = txt;
         }
-        // // Debug fucntion to create request
-        // makeSignedRequest({
-        //     user: "Bob",
-        //     address: {
-        //         type: "BTC",
-        //         addr: "1BNwxHGaFbeUBitpjy2AsKpJ29Ybxntqvb"
-        //     },
-        //     amount: 42
-        // },
-        //     "request",
-        //     "POST"
-        // )
     } else {
         if (response.status == 403) {
             fileSelectorStatus.className = "text-error";
