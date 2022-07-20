@@ -3,3 +3,4 @@ result
 *.dia~
 docker-image-hexstody.tar.gz
 .vscode
+*.pem

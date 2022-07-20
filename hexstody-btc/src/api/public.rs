@@ -4,7 +4,7 @@ use bitcoin::{Address, Amount};
 use bitcoincore_rpc::{Client, RpcApi};
 use bitcoincore_rpc_json::AddressType;
 use hexstody_api::domain::CurrencyAddress;
-use hexstody_api::types::FeeResponse;
+use hexstody_api::types::{FeeResponse, HotBalanceResponse};
 use hexstody_api::types::{
     ConfirmationData, ConfirmedWithdrawal, SignatureData, WithdrawalResponse,
 };
@@ -172,10 +172,10 @@ async fn withdraw_btc(
                             }),
                         )
                     })?;
-                let resp = WithdrawalResponse {
-                    id: cw.id.clone(),
-                    txid: BtcTxid(txid),
-                };
+                let fee = client
+                    .get_transaction(&txid, None)
+                    .map(|tres| tres.fee.map(|f| f.as_sat() as u64)).ok().flatten();
+                let resp = WithdrawalResponse{ id: cw.id.clone(), txid: BtcTxid(txid), fee: fee };
                 debug!("OK: {:?}", resp);
                 Ok(Json(resp))
             } else {
@@ -205,6 +205,20 @@ async fn withdraw_btc(
             }),
         ))
     }
+}
+
+#[openapi(tag = "hotbalance")]
+#[post("/hotbalance")]
+async fn get_hot_balance(client: &State<Client>) -> error::Result<HotBalanceResponse> {
+    client
+    .get_balance(None, None)
+    .map_err(|e| { (
+            Status::InternalServerError,
+            Json(crate::api::error::ErrorMessage {
+                message: format!("Failed get the balance: {:?}", e),
+                code: 500})
+            )})
+    .map(|a| Json(HotBalanceResponse{balance: a.as_sat()}))
 }
 
 async fn guard_regtest(client: &Client) -> error::Result<()> {
@@ -315,6 +329,7 @@ pub async fn serve_public_api(
                 generate_blocks,
                 new_address,
                 send_to_address,
+                get_hot_balance,
             ],
         )
         .mount(
