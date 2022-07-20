@@ -138,12 +138,46 @@ function compareHist( a, b ) {
 }
 
 async function loadHistoryETH() {
-    const histUSDT = await getHistoryERC20("0xdAC17F958D2ee523a2206206994597C13D831ec7");
     const userData = await getUserData();
-    console.log(userData);
-    const histCRV = await getHistoryERC20("0xD533a949740bb3306d119CC777fa900bA034cd52");
-    const history = await getHistoryETH();
-    const histFull = (history.concat(histCRV).concat(histUSDT)).sort(compareHist);
+    const histFull = userData.data.historyEth
+    for (var i=0; i<userData.data.tokens.length;i++){
+      histFull.concat(userData.data.historyTokens[i])
+    }
+/*
+currency: "BTC"
+​​​
+date: "2022-07-18T14:37:13"
+​​​
+number_of_confirmations: 5
+​​​
+type: "deposit"
+​​​
+value: 400
+*/
+    const historyBTCpred = await getHistory(0, 20);
+    let histBTCready = [];
+    for(var i=0; i<historyBTCpred.history_items.length;i++){
+      console.log("test "+ i+ " " + historyBTCpred.history_items.length )
+      let htb = historyBTCpred.history_items[i];
+      htb.addr = "addrbtc";
+      htb.arrow = "mdi-arrow-collapse-down";
+      htb.blockNumber = "blockbtc";
+      htb.confirmations = historyBTCpred.history_items[i].number_of_confirmations;
+      htb.contractAddress = "";
+      htb.fee = "250Sat";
+      htb.flowType = "Deposit";
+      htb.fromtoshow = "genesis";
+      htb.fromtoshow = "0x9297db...";
+      htb.gas = "0";
+      htb.gasPrice = "0";
+      htb.hashtoshow = "hashbtc";
+      htb.timeStamp = historyBTCpred.history_items[i].date;
+      htb.totoshow = "ownbtc";
+      htb.tokenName = "BTC";
+      htb.valuetoshow = (historyBTCpred.history_items[i].value*0.00000001).toFixed(8) + " BTC";
+      histBTCready.push(htb);
+    }
+
     var hist = {histories: histFull }
     for(var i=0; i<hist.histories.length;i++){
       console.log(hist.histories[i].tokenName)
@@ -162,6 +196,10 @@ async function loadHistoryETH() {
         hist.histories[i].flowType = "Deposit"
       }
     };
+    hist.histories = histBTCready.concat(hist.histories)
+    console.log("====DEBUG====")
+    console.log(hist)
+    console.log("====DEBUG====")
     const historyDrawUpdate = historyTemplate(hist);
     const historyElem = document.getElementById("history");
     historyElem.innerHTML = historyDrawUpdate;
@@ -203,7 +241,7 @@ async function updateLoop() {
     const usdToBtc = document.getElementById("usd-BTC");
     let currValBtcPre = document.getElementById("curr-val-BTC").textContent;
     const currValBtc = currValBtcPre.replace(",", "")*0.00000001;
-    document.getElementById("curr-val-BTC").textContent = currValBtc;
+    document.getElementById("curr-val-BTC").textContent = currValBtc.toFixed(8);
     usdToBtc.textContent = "$"+(currValBtc*jsonresBTC.USD).toFixed(2);
 
     const jsonres = await getCourseForETH("ETH")
