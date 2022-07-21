@@ -38,18 +38,14 @@ async function importKey(_event) {
     if (response.ok) {
         fileSelectorStatus.className = "text-success";
         fileSelectorStatus.innerText = "Private key imported successfully!";
-        // // Debug fucntion to create request
-        // makeSignedRequest({
-        //     user: "Bob",
-        //     address: {
-        //         type: "BTC",
-        //         addr: "1BNwxHGaFbeUBitpjy2AsKpJ29Ybxntqvb"
-        //     },
-        //     amount: 42
-        // },
-        //     "request",
-        //     "POST"
-        // )
+        const response = await makeSignedRequest(null, "hotbalance", "POST");
+        if (response.ok) {
+            let data = await response.json();
+            let val = data.balance / 100000000;
+            let txt = "Hot balance: " + val.toString() + " BTC";
+            fileSelectorStatus.className = "text-dark"
+            fileSelectorStatus.innerText = txt;
+        }
     } else {
         if (response.status == 403) {
             fileSelectorStatus.className = "text-error";
@@ -146,7 +142,7 @@ function addAddressCell(row, address) {
     });
     contentWrapper.appendChild(addressTextWrapper);
     copyBtn.setAttribute("class", "button clear icon-only");
-    copyBtn.innerHTML = '<img src="https://icongr.am/feather/copy.svg?size=18"></img>';
+    copyBtn.innerHTML = '<img src="/images/copy.svg?size=18"></img>';
     copyBtn.addEventListener("click", () => {
         navigator.clipboard.writeText(addr).then(function () { }, function (err) {
             console.error('Could not copy text: ', err);
@@ -196,7 +192,29 @@ function addStatusCell(row, status) {
             cellText = document.createTextNode("Rejected by node (" + status.reason + ")");
             break;
         case "Completed":
-            cellText = document.createTextNode("Completed");
+            let linkToTx;
+            switch (status.txid.type) {
+                case "BTC":
+                    linkToTx = `https://mempool.space/tx/${status.txid.txid}`
+                    break;
+                default:
+                    console.error('undefined link for: ', status.txid.type);
+                    break;
+            }
+
+            const goToExplorerLink = document.createElement("a");
+            goToExplorerLink.href = linkToTx;
+            goToExplorerLink.target = "_blank"
+            goToExplorerLink.setAttribute("class", "button clear icon-only");
+            goToExplorerLink.innerHTML = '<img src="/images/corner-right-up.svg?size=18"></img>';
+            tippy(goToExplorerLink, {
+                content: "View transaction in explorer"
+            });
+            statusText = document.createTextNode("Completed");
+            const contentWrapper = document.createElement("div");
+            contentWrapper.appendChild(statusText);
+            contentWrapper.appendChild(goToExplorerLink);
+            cellText = contentWrapper;
             break;
         default:
             cellText = document.createTextNode("Unknown");

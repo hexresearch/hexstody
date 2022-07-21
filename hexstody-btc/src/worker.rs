@@ -1,10 +1,10 @@
 use crate::state::ScanState;
-use bitcoin::hash_types::BlockHash;
+use bitcoin::{hash_types::BlockHash, Address, Amount};
 use bitcoincore_rpc::{Client, RpcApi};
 use bitcoincore_rpc_json::{GetTransactionResultDetailCategory, ListTransactionResult};
 use hexstody_btc_api::events::*;
 use log::*;
-use std::sync::Arc;
+use std::{sync::Arc};
 use std::time::Duration;
 use tokio::sync::{Mutex, Notify};
 
@@ -13,6 +13,7 @@ pub async fn node_worker(
     state: Arc<Mutex<ScanState>>,
     state_notify: Arc<Notify>,
     polling_sleep: Duration,
+    tx_notify: Arc<Notify>
 ) -> () {
     loop {
         {
@@ -21,6 +22,7 @@ pub async fn node_worker(
             match scan_from(client, old_block).await {
                 Ok((mut events, next_hash)) => {
                     if !events.is_empty() || old_block != next_hash {
+                        debug!("I found something interesting in the block");
                         let height = client
                             .get_block_count()
                             .unwrap_or_else(|_| state_rw.last_height);
@@ -31,6 +33,7 @@ pub async fn node_worker(
                             state_rw.events.append(&mut events);
                         }
                         state_notify.notify_one();
+                        tx_notify.notify_one();
                     }
                 }
                 Err(e) => {
@@ -39,8 +42,29 @@ pub async fn node_worker(
                 }
             }
         }
+        debug!("Sleeping for next {:?}", polling_sleep);
         tokio::time::sleep(polling_sleep).await;
     }
+}
+
+pub async fn cold_wallet_worker(
+    client: &Client,
+    tx_notify: Arc<Notify>,
+    cold_amount: Amount,
+    cold_address: Address
+) -> (){
+    loop {
+        tx_notify.notified().await;
+        if let Ok(bal) = client.get_balance(Some(3), None){
+            if bal > cold_amount {
+                let amount = if bal > (cold_amount + cold_amount) { bal - cold_amount } else {cold_amount};
+                match client.send_to_address(&cold_address, amount, None, None, Some(true), None, None, None){
+                    Ok(txid) => info!("Dumped {} to cold wallet. Txid: {}", amount, txid),
+                    Err(e) => error!("Failed to dump to cold wallet. {}", e),
+                }
+            }
+        }
+    }    
 }
 
 pub async fn scan_from(
@@ -59,6 +83,7 @@ pub async fn scan_from(
             events.push(e);
         }
     }
+    debug!("Scanned events: {:?}, next block: {:?}", events, result.lastblock);
     Ok((events, result.lastblock))
 }
 

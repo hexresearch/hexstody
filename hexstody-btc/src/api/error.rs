@@ -8,18 +8,26 @@ use thiserror::Error;
 pub enum Error {
     #[error("Failed to query BTC node: {0}")]
     NodeRpc(#[from] bitcoincore_rpc::Error),
+    #[error("Debug endpoints are enabled only for regtest")]
+    DebugNotEnabled,
+    #[error("Failed to parse address: {0}")]
+    AddressParse(#[from] bitcoin::util::address::Error),
 }
 
 impl Error {
     pub fn code(&self) -> u16 {
         match self {
             Error::NodeRpc(_) => 0,
+            Error::DebugNotEnabled => 1,
+            Error::AddressParse(_) => 2,
         }
     }
 
     pub fn status(&self) -> Status {
         match self {
             Error::NodeRpc(_) => Status::from_code(500).unwrap(),
+            Error::DebugNotEnabled => Status::from_code(500).unwrap(),
+            Error::AddressParse(_) => Status::from_code(400).unwrap(),
         }
     }
 }

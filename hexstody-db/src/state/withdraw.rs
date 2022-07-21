@@ -24,7 +24,9 @@ pub enum WithdrawalRequestStatus {
         /// Time when the request was processed
         confirmed_at: NaiveDateTime,
         /// Txid
-        txid: CurrencyTxId
+        txid: CurrencyTxId,
+        /// Fee paid in sats. If an error occured, fee=0
+        fee: u64
     },
     /// Rejected by operators
     OpRejected,
@@ -40,7 +42,7 @@ impl Into<WithdrawalRequestStatusApi> for WithdrawalRequestStatus {
         match self {
             WithdrawalRequestStatus::InProgress(n) => WithdrawalRequestStatusApi::InProgress { confirmations: n },
             WithdrawalRequestStatus::Confirmed => WithdrawalRequestStatusApi::Confirmed,
-            WithdrawalRequestStatus::Completed { confirmed_at, txid } => WithdrawalRequestStatusApi::Completed { confirmed_at, txid},
+            WithdrawalRequestStatus::Completed { confirmed_at, txid, fee} => WithdrawalRequestStatusApi::Completed { confirmed_at, txid, fee},
             WithdrawalRequestStatus::OpRejected => WithdrawalRequestStatusApi::OpRejected,
             WithdrawalRequestStatus::NodeRejected{reason} => WithdrawalRequestStatusApi::NodeRejected{reason}
         }
@@ -103,6 +105,14 @@ impl WithdrawalRequest {
             WithdrawalRequestStatus::OpRejected => true,
             WithdrawalRequestStatus::NodeRejected{..} => true,
             _ => false
+        }
+    }
+
+    /// Get fee for completed withdrawals, 0 for others
+    pub fn fee(&self) -> u64 {
+        match self.status {
+            WithdrawalRequestStatus::Completed{fee, ..} => fee,
+            _ => 0
         }
     }
 }

@@ -188,7 +188,9 @@ pub enum WithdrawalRequestStatus {
         /// Time when the request was processed
         confirmed_at: NaiveDateTime,
         /// Txid
-        txid: CurrencyTxId
+        txid: CurrencyTxId,
+        /// Fee paid is sats. If an error occured, fee=0
+        fee: u64
     },
     /// Rejected by operators
     OpRejected,
@@ -363,6 +365,12 @@ fn example_block_height() -> Option<i64> {
     Some(12345)
 }
 
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct HotBalanceResponse{
+    /// Total balance of the hot wallet in sat
+    pub balance: u64
+}
+
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy)]
 pub enum WithdrawalRequestDecisionType {
     Confirm,
@@ -414,4 +422,6 @@ pub struct WithdrawalResponse {
     pub id: Uuid,
     /// Transaction ID
     pub txid: BtcTxid,
+    /// Fee paid in satoshi
+    pub fee: Option<u64>
 }

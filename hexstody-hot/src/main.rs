@@ -4,19 +4,16 @@ mod tests;
 mod worker;
 
 use clap::Parser;
-use futures::future::AbortHandle;
-use log::*;
-use std::error::Error;
-use std::path::PathBuf;
-use std::sync::Arc;
-use std::time::Duration;
-use tokio::sync::Notify;
-use tokio::time::sleep;
-
+use futures::future::{join, AbortHandle};
 use hexstody_btc_client::client::BtcClient;
 use hexstody_btc_test::runner::run_regtest;
 use hexstody_db::state::{Network, NUMBER_OF_REQUIRED_CONFIRMATIONS};
-use runner::run_hot_wallet;
+use log::*;
+use runner::{ApiConfig, run_hot_wallet};
+use std::error::Error;
+use std::path::PathBuf;
+use std::sync::Arc;
+use tokio::sync::Notify;
 
 #[derive(Parser, Debug, Clone)]
 #[clap(about, version, author)]
@@ -86,27 +83,20 @@ enum SubCommand {
     Serve,
 }
 
-async fn run(btc_client: BtcClient, args: &Args) {
-    loop {
-        let start_notify = Arc::new(Notify::new());
-        let (api_abort_handle, api_abort_reg) = AbortHandle::new_pair();
-        // TODO: On second loop iteration `MultipleHandlers` error occures
-        ctrlc::set_handler(move || {
-            api_abort_handle.abort();
-        })
-        .expect("Error setting Ctrl-C handler: {e}");
-        match run_hot_wallet(args, start_notify, btc_client.clone(), api_abort_reg).await {
-            Ok(_) | Err(runner::Error::Aborted) => {
-                info!("Terminated gracefully!");
-                return ();
-            }
-            Err(e) => {
-                error!("API error: {e}");
-            }
+async fn run(btc_client: BtcClient, args: &Args, start_notify: Arc<Notify>) {
+    let (api_abort_handle, api_abort_reg) = AbortHandle::new_pair();
+    ctrlc::set_handler(move || {
+        api_abort_handle.abort();
+    })
+    .expect("Error setting Ctrl-C handler: {e}");
+    match run_hot_wallet(args, start_notify, btc_client.clone(), api_abort_reg).await {
+        Ok(_) | Err(runner::Error::Aborted) => {
+            info!("Terminated gracefully!");
+            return ();
         }
-        let restart_dt = Duration::from_secs(5);
-        info!("Adding {:?} delay before restarting logic", restart_dt);
-        sleep(restart_dt).await;
+        Err(e) => {
+            error!("API error: {e}");
+        }
     }
 }
 
@@ -122,16 +112,39 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 run_regtest(
                     args.operator_api_domain.clone(),
                     args.operator_public_keys.clone(),
-                    |_node_1_client, _node_2_client, btc_client| {
+                    |(node1_port, _), (node2_port, _), (hbtc_url, btc_client)| {
                         let mut args = args.clone();
                         args.network = Network::Regtest;
-                        async move { run(btc_client, &args).await }
+                        let start_notify = Arc::new(Notify::new());
+                        async move {
+                            let run_fut = run(btc_client, &args, start_notify);
+                            let msg_fut = {
+                                let args = args.clone();
+                                async move {
+                                    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                                    let api_config = ApiConfig::parse_figment(&args);
+                                    let op_port: u16 = api_config.operator_api_config.extract_inner("port").expect("operators API port");
+                                    let pub_port: u16 = api_config.public_api_config.extract_inner("port").expect("public API port");
+                                    println!("======================== Regtest started ========================");
+                                    println!("First bitcoin node: http://127.0.0.1:{}/wallet/default", node1_port);
+                                    println!("Second bitcoin node: http://127.0.0.1:{}/wallet/default", node2_port);
+                                    println!("Hexstody BTC adapter API docs: {}/rapidoc", hbtc_url);
+                                    println!("Hexstody operator API docs: http://127.0.0.1:{}/rapidoc", op_port);
+                                    println!("Hexstody public API docs: http://127.0.0.1:{}/rapidoc", pub_port);
+                                    println!("Hexstody operator GUI: http://127.0.0.1:{}", op_port);
+                                    println!("Hexstody public GUI: http://127.0.0.1:{}", pub_port);
+                                }
+                            };
+                            join(run_fut, msg_fut).await;
+                            ()
+                        }
                     },
                 )
                 .await
             } else {
                 let btc_client = BtcClient::new(&args.btc_module);
-                run(btc_client, &args).await
+                let start_notify = Arc::new(Notify::new());
+                run(btc_client, &args, start_notify).await
             }
         }
     }

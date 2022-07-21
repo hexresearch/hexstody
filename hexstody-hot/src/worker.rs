@@ -46,7 +46,8 @@ pub async fn update_results_worker(
                                 let bod = UpdateBody::WithdrawalRequestComplete(WithdrawCompleteInfo{
                                     id: resp.id,
                                     confirmed_at: Utc::now().naive_utc(),
-                                    txid: CurrencyTxId::BTC(BTCTxid{txid})
+                                    txid: CurrencyTxId::BTC(BTCTxid{txid}),
+                                    fee: resp.fee
                                 });
                                 if let Err(e) = update_sender.send(StateUpdate::new(bod)).await{
                                     debug!("Failed to send update with confirmation: {}", e);

@@ -74,7 +74,7 @@ impl SameBtcTx<BtcTransaction> for BtcTransaction {
 
 impl SameBtcTx<BtcTxCancel> for BtcTransaction {
     fn is_same_btc_tx(&self, other: &BtcTxCancel) -> bool {
-        self.txid.to_string() == other.txid && self.vout == other.vout
+        self.txid == other.txid.0 && self.vout == other.vout
     }
 }
 

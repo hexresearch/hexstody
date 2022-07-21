@@ -12,6 +12,7 @@ use std::net::{IpAddr, Ipv4Addr};
 use std::panic::AssertUnwindSafe;
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
+use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 use tempdir::TempDir;
@@ -19,7 +20,7 @@ use tokio::sync::{Mutex, Notify};
 
 use hexstody_btc::api::public::serve_public_api;
 use hexstody_btc::state::ScanState;
-use hexstody_btc::worker::node_worker;
+use hexstody_btc::worker::{node_worker, cold_wallet_worker};
 use hexstody_btc_client::client::BtcClient;
 
 fn setup_node(port: u16, rpc_port: u16) -> (Child, TempDir) {
@@ -52,7 +53,7 @@ fn teardown_node(mut node_handle: Child) {
 async fn setup_node_ready(port: u16, rpc_port: u16) -> (Child, Client, TempDir) {
     let (node_handle, temp_dir) = setup_node(port, rpc_port);
 
-    let rpc_url = format!("http://127.0.0.1:{rpc_port}");
+    let rpc_url = format!("http://127.0.0.1:{rpc_port}/wallet/default");
     let client = Client::new(
         &rpc_url,
         Auth::UserPass("regtest".to_owned(), "regtest".to_owned()),
@@ -60,8 +61,9 @@ async fn setup_node_ready(port: u16, rpc_port: u16) -> (Child, Client, TempDir) 
     .expect("Node client");
     wait_for_node(&client).await;
     client
-        .create_wallet("", None, None, None, None)
-        .expect("create default wallet");
+        .create_wallet("default", None, None, None, None)
+        .map(|_| ())
+        .unwrap_or_else(|e| warn!("Cannot create default wallet: {}", e));
     (node_handle, client, temp_dir)
 }
 
@@ -139,13 +141,96 @@ async fn setup_api(rpc_port: u16) -> u16 {
     tokio::spawn({
         let client = make_client();
         let polling_duration = Duration::from_millis(100);
+        let tx_notify = Arc::new(Notify::new());
         async move {
-            node_worker(&client, state, state_notify, polling_duration).await;
+            node_worker(&client, state, state_notify, polling_duration, tx_notify).await;
         }
     });
 
     start_notify.notified().await;
     port
+}
+
+async fn setup_cold_api(cold_amount: u64, rpc_port: u16) -> u16{
+    let port: u16 = random_free_tcp_port().expect("available port");
+    info!("Running API server on port {port}");
+    let address = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
+    let start_notify = Arc::new(Notify::new());
+    let state_notify = Arc::new(Notify::new());
+    let state = Arc::new(Mutex::new(ScanState::new(Network::Regtest)));
+    
+    let make_client = || {
+        let rpc_url = format!("http://127.0.0.1:{rpc_port}");
+        Client::new(
+            &rpc_url,
+            Auth::UserPass("regtest".to_owned(), "regtest".to_owned()),
+        )
+        .expect("Node client")
+    };
+
+    tokio::spawn({
+        let start_notify = start_notify.clone();
+        let state_notify = state_notify.clone();
+        let state = state.clone();
+        let polling_duration = Duration::from_secs(1);
+        let client = make_client();
+        async move {
+            serve_public_api(
+                client,
+                address,
+                port,
+                start_notify,
+                state,
+                state_notify,
+                polling_duration,
+                None,
+                vec![],
+                1,
+                "http://127.0.0.1:8080".to_owned(),
+            )
+            .await
+            .expect("start api");
+        }
+    });
+    let tx_notify = Arc::new(Notify::new());
+    tokio::spawn({
+        let client = make_client();
+        let polling_duration = Duration::from_millis(100);
+        let tx_notify = tx_notify.clone();
+        async move {
+            node_worker(&client, state, state_notify, polling_duration, tx_notify).await;
+        }
+    });
+    tokio::spawn({
+        let client = make_client();
+        let cold_amount = bitcoin::Amount::from_sat(cold_amount);
+        let cold_address = bitcoin::Address::from_str("bcrt1qtunasj84306suy56cts988hc0rdnrmuvqgs2ee").expect("Failed to parse cold address");
+        async move {
+            cold_wallet_worker(&client, tx_notify.clone(), cold_amount, cold_address).await;
+        }
+    });
+
+    start_notify.notified().await;
+    port
+}
+
+pub async fn run_cold_test<F, Fut>(cold_amount: u64, test_body: F)
+where
+    F: FnOnce(Client, BtcClient) -> Fut,
+    Fut: Future<Output = ()>,
+{
+    let _ = env_logger::builder().is_test(true).try_init();
+    let node_port = random_free_tcp_port().expect("available port");
+    let node_rpc_port = random_free_tcp_port().expect("available port");
+    let (node_handle, client, _tmp_dir) = setup_node_ready(node_port, node_rpc_port).await;
+    let api_port = setup_cold_api(cold_amount, node_rpc_port).await;
+    info!("Running API server on {api_port}");
+    let api_client = BtcClient::new(&format!("http://127.0.0.1:{api_port}"));
+    let res = AssertUnwindSafe(test_body(client, api_client))
+        .catch_unwind()
+        .await;
+    teardown_node(node_handle);
+    assert!(res.is_ok());
 }
 
 pub async fn run_test<F, Fut>(test_body: F)
@@ -206,6 +291,7 @@ async fn setup_api_regtest(
     operator_public_keys: Vec<PublicKey>,
     rpc_port: u16,
     api_port: u16,
+    polling_duration: Duration,
 ) -> () {
     info!("Running API server on port {api_port}");
     let address = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
@@ -214,7 +300,7 @@ async fn setup_api_regtest(
     let state = Arc::new(Mutex::new(ScanState::new(Network::Regtest)));
 
     let make_client = || {
-        let rpc_url = format!("http://127.0.0.1:{rpc_port}");
+        let rpc_url = format!("http://127.0.0.1:{rpc_port}/wallet/default");
         Client::new(
             &rpc_url,
             Auth::UserPass("regtest".to_owned(), "regtest".to_owned()),
@@ -226,7 +312,6 @@ async fn setup_api_regtest(
         let start_notify = start_notify.clone();
         let state_notify = state_notify.clone();
         let state = state.clone();
-        let polling_duration = Duration::from_secs(1);
         let client = make_client();
         async move {
             serve_public_api(
@@ -248,9 +333,10 @@ async fn setup_api_regtest(
     });
     tokio::spawn({
         let client = make_client();
-        let polling_duration = Duration::from_millis(100);
+        let polling_duration = Duration::from_secs(30);
+        let tx_notify = Arc::new(Notify::new());
         async move {
-            node_worker(&client, state, state_notify, polling_duration).await;
+            node_worker(&client, state, state_notify, polling_duration, tx_notify).await;
         }
     });
 
@@ -266,7 +352,7 @@ pub async fn run_regtest<F, Fut>(
     operator_public_key_paths: Vec<PathBuf>,
     body: F,
 ) where
-    F: FnOnce(Client, Client, BtcClient) -> Fut,
+    F: FnOnce((u16, Client), (u16, Client), (String, BtcClient)) -> Fut,
     Fut: Future<Output = ()>,
 {
     // Start 1st BTC node
@@ -282,7 +368,7 @@ pub async fn run_regtest<F, Fut>(
     // Connect them together
     client_1
         .add_node(&format!("127.0.0.1:{node_2_port}"))
-        .unwrap();
+        .unwrap_or_else(|e| info!("Failed to connect nodes: {}!", e));
 
     // Parse operator API args
     let operator_api_domain = operator_api_domain.unwrap_or("http://127.0.0.1:9801".to_owned());
@@ -296,16 +382,19 @@ pub async fn run_regtest<F, Fut>(
     }
     // Start hexstody-btc API and connect it to 1st BTC node.
     let api_port = 9802;
+    let polling_duration = Duration::from_secs(300);
     setup_api_regtest(
         operator_api_domain,
         operator_public_keys,
         node_1_rpc_port,
         api_port,
+        polling_duration,
     )
     .await;
-    let api_client = BtcClient::new(&format!("http://127.0.0.1:{api_port}"));
+    let api_url = format!("http://127.0.0.1:{api_port}");
+    let api_client = BtcClient::new(&api_url);
 
-    body(client_1, client_2, api_client).await;
+    body((node_1_rpc_port, client_1), (node_2_rpc_port, client_2), (api_url, api_client)).await;
     teardown_node(node_1_handle);
     teardown_node(node_2_handle);
 }
