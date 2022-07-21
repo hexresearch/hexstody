@@ -95,6 +95,7 @@ impl UserCurrencyInfo {
 
     /// Includes unconfirmed transactions
     pub fn balance(&self) -> u64 {
+        //to not double rbf tx
         let mut btc_tx_conflicts: HashSet<Txid> = HashSet::new();
         let tx_sum: i64 = self
             .transactions
