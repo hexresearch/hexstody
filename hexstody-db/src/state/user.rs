@@ -68,7 +68,7 @@ pub struct UserCurrencyInfo {
     /// Users can create withdrawal requests that in some cases require manual confirmation from operators
     pub withdrawal_requests: HashMap<WithdrawalRequestId, WithdrawalRequest>,
 }
-
+use bitcoin::Txid;
 impl UserCurrencyInfo {
     pub fn new(currency: Currency) -> Self {
         UserCurrencyInfo {
@@ -85,21 +85,27 @@ impl UserCurrencyInfo {
             .iter()
             .filter_map(|t| if t.is_conflicted() { None } else { Some(t) })
     }
+
     /// Includes unconfirmed transactions
     pub fn balance(&self) -> u64 {
+        let mut btc_tx_conflicts: HashSet<Txid> = HashSet::new();
         let tx_sum: i64 = self
             .transactions
             .iter()
-            .filter_map(|t| {
-                if t.is_conflicted() {
-                    None
-                } else {
+            .filter_map(|t| match t {
+                Transaction::Btc(tx) if !btc_tx_conflicts.contains(&tx.txid) => {
+                    btc_tx_conflicts.extend(tx.conflicts.to_owned());
                     Some(t.amount())
-                }
+                },
+                _ => None,
             })
             .sum();
         // Do not count rejected withdrawals
-        let pending_withdrawals: u64 = self.withdrawal_requests.iter().map(|(_, w)| if w.is_rejected() {0} else {w.amount}).sum();
+        let pending_withdrawals: u64 = self
+            .withdrawal_requests
+            .iter()
+            .map(|(_, w)| if w.is_rejected() { 0 } else { w.amount })
+            .sum();
 
         // zero to prevent spreading overflow bug when in less then out
         0.max(tx_sum - pending_withdrawals as i64) as u64
@@ -119,7 +125,11 @@ impl UserCurrencyInfo {
             })
             .sum();
         // Do not count rejected withdrawals
-        let pending_withdrawals: u64 = self.withdrawal_requests.iter().map(|(_, w)| if w.is_rejected() {0} else {w.amount}).sum();
+        let pending_withdrawals: u64 = self
+            .withdrawal_requests
+            .iter()
+            .map(|(_, w)| if w.is_rejected() { 0 } else { w.amount })
+            .sum();
 
         // zero to prevent spreading overflow bug when in less then out
         0.max(tx_sum - pending_withdrawals as i64) as u64
