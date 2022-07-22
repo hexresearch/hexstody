@@ -16,7 +16,7 @@ use std::{path::PathBuf, str, sync::Arc};
 use tokio::sync::{mpsc, Mutex, Notify};
 
 use hexstody_api::types::{
-    ConfirmationData, SignatureData, WithdrawalRequest, WithdrawalRequestInfo, WithdrawalRequestDecisionType
+    ConfirmationData, SignatureData, WithdrawalRequest, WithdrawalRequestInfo, WithdrawalRequestDecisionType, HotBalanceResponse
 };
 use hexstody_btc_client::client::BtcClient;
 use hexstody_db::{
@@ -52,6 +52,32 @@ async fn index(state: &RocketState<Arc<Mutex<HexstodyState>>>) -> Template {
         withdrawal_requests,
     };
     Template::render("index", context)
+}
+
+/// # hot wallet balance
+#[openapi(tag = "Hot balance")]
+#[post("/hotbalance")]
+async fn get_hot_balance(
+    signature_data: SignatureData,
+    config: &RocketState<Config>,
+    btc_client: &RocketState<BtcClient>,
+) -> Result<Json<HotBalanceResponse>, (Status, &'static str)> {
+    let url = [config.domain.clone(), uri!(get_hot_balance).to_string()].join("");
+    let signature_verification_data = SignatureVerificationData {
+        url,
+        signature: signature_data.signature,
+        nonce: signature_data.nonce,
+        message: None,
+        public_key: signature_data.public_key,
+    };
+    let _ = signature_verification_data
+        .verify(config.operator_public_keys.clone())
+        .map_err(|_| (Status::Forbidden, "Signature verification failed"))?;
+    let res = btc_client.get_hot_balance()
+        .await
+        .map_err(|_| (Status::InternalServerError, "Internal server error"))
+        .map(|v| Json(v));
+    res
 }
 
 /// # Get all withdrawal requests
@@ -210,7 +236,7 @@ pub async fn serve_api(
     let _ = rocket::custom(api_config)
         .mount("/", FileServer::from(static_path))
         .mount("/", routes![index])
-        .mount("/", openapi_get_routes![list, create, confirm, reject])
+        .mount("/", openapi_get_routes![list, create, confirm, reject, get_hot_balance])
         .mount(
             "/swagger/",
             make_swagger_ui(&SwaggerUIConfig {

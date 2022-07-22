@@ -3,6 +3,7 @@ use super::withdraw::*;
 use crate::update::btc::BtcTxCancel;
 use crate::update::signup::{SignupAuth, SignupInfo, UserId};
 use chrono::prelude::*;
+use hexstody_api::domain::CurrencyTxId;
 use hexstody_api::domain::{Currency, CurrencyAddress};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -46,6 +47,12 @@ impl UserInfo {
         } else {
             false
         }
+    }
+
+    pub fn find_completed_request(&self, txid: CurrencyTxId) -> Option<WithdrawalRequestId> {
+        if let Some(cur_info) = self.currencies.get(&txid.currency()) {
+            cur_info.find_completed_request(&txid)
+        } else {None}
     }
 }
 
@@ -99,7 +106,14 @@ impl UserCurrencyInfo {
             })
             .sum();
         // Do not count rejected withdrawals
-        let pending_withdrawals: u64 = self.withdrawal_requests.iter().map(|(_, w)| if w.is_rejected() {0} else {w.amount}).sum();
+        let pending_withdrawals: u64 = self.withdrawal_requests
+            .iter()
+            .map(|(_, w)| 
+                if w.is_rejected() {0} 
+                else {
+                    w.amount + w.fee()
+                })
+            .sum();
 
         // zero to prevent spreading overflow bug when in less then out
         0.max(tx_sum - pending_withdrawals as i64) as u64
@@ -119,7 +133,14 @@ impl UserCurrencyInfo {
             })
             .sum();
         // Do not count rejected withdrawals
-        let pending_withdrawals: u64 = self.withdrawal_requests.iter().map(|(_, w)| if w.is_rejected() {0} else {w.amount}).sum();
+        let pending_withdrawals: u64 = self.withdrawal_requests
+            .iter()
+            .map(|(_, w)| 
+                if w.is_rejected() {0} 
+                else {
+                    w.amount + w.fee()
+                })
+            .sum();
 
         // zero to prevent spreading overflow bug when in less then out
         0.max(tx_sum - pending_withdrawals as i64) as u64
@@ -129,17 +150,38 @@ impl UserCurrencyInfo {
         self.deposit_info.iter().find(|a| *a == address).is_some()
     }
 
-    pub fn update_btc_tx(&mut self, upd_tx: &BtcTransaction) {
-        for tx in self.transactions.iter_mut() {
-            match tx {
-                Transaction::Btc(btc_tx) if btc_tx.is_same_btc_tx(upd_tx) => {
-                    *btc_tx = upd_tx.clone();
-                    return;
-                }
-                _ => (),
-            }
+    pub fn find_completed_request(&self, req_txid: &CurrencyTxId) -> Option<WithdrawalRequestId>{
+        if req_txid.currency() == self.currency {
+            self.withdrawal_requests
+                .iter()
+                .find_map(|(_, req)| {
+                    match &req.status{
+                        WithdrawalRequestStatus::Completed {txid, ..} => {
+                            if req_txid.clone() == txid.clone() {
+                                Some(req.id)
+                            } else {None}
+                        },
+                        _ => None
+                    }
+                })
         }
-        self.transactions.push(Transaction::Btc(upd_tx.clone()));
+        else {None}
+    }
+
+    pub fn update_btc_tx(&mut self, upd_tx: &BtcTransaction) {
+        // Process only deposit transactions. Withdrawals are handled with WithdrawalRequests
+        if upd_tx.amount >= 0 {
+            for tx in self.transactions.iter_mut() {
+                match tx {
+                    Transaction::Btc(btc_tx) if btc_tx.is_same_btc_tx(upd_tx) => {
+                        *btc_tx = upd_tx.clone();
+                        return;
+                    }
+                    _ => (),
+                }
+            }
+            self.transactions.push(Transaction::Btc(upd_tx.clone()));
+        }
     }
 
     pub fn cancel_btc_tx(&mut self, upd_tx: &BtcTxCancel) {

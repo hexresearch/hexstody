@@ -124,7 +124,8 @@ impl From<WithdrawalRequestDecision> for SignatureData {
 pub struct WithdrawCompleteInfo {
     pub id: WithdrawalRequestId,
     pub confirmed_at: NaiveDateTime,
-    pub txid: CurrencyTxId
+    pub txid: CurrencyTxId,
+    pub fee: Option<u64>
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]

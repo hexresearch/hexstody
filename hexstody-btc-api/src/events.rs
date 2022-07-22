@@ -50,7 +50,7 @@ pub struct TxUpdate {
 }
 
 /// Unconfirmed tx cancel or even reorg cancel
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
 pub struct TxCancel {
     /// Direction of tx (in or out)
     pub direction: TxDirection,

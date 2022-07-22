@@ -38,18 +38,14 @@ async function importKey(_event) {
     if (response.ok) {
         fileSelectorStatus.className = "text-success";
         fileSelectorStatus.innerText = "Private key imported successfully!";
-        // // Debug fucntion to create request
-        // makeSignedRequest({
-        //     user: "Bob",
-        //     address: {
-        //         type: "BTC",
-        //         addr: "1BNwxHGaFbeUBitpjy2AsKpJ29Ybxntqvb"
-        //     },
-        //     amount: 42
-        // },
-        //     "request",
-        //     "POST"
-        // )
+        const response = await makeSignedRequest(null, "hotbalance", "POST");
+        if (response.ok) {
+            let data = await response.json();
+            let val = data.balance / 100000000;
+            let txt = "Hot balance: " + val.toString() + " BTC";
+            fileSelectorStatus.className = "text-dark"
+            fileSelectorStatus.innerText = txt;
+        }
     } else {
         if (response.status == 403) {
             fileSelectorStatus.className = "text-error";

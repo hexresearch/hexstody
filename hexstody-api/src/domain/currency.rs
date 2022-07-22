@@ -145,6 +145,15 @@ pub enum CurrencyTxId {
     ETH(ETHTxid),
 }
 
+impl CurrencyTxId {
+    pub fn currency(&self) -> Currency {
+        match self {
+            CurrencyTxId::BTC(_) => Currency::BTC,
+            CurrencyTxId::ETH(_) => Currency::ETH,
+        }
+    }
+}
+
 impl fmt::Display for CurrencyTxId {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {

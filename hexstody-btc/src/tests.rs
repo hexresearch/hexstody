@@ -2,7 +2,7 @@ use bitcoin::Amount;
 use bitcoincore_rpc::RpcApi;
 use hexstody_api::domain::CurrencyAddress;
 use hexstody_api::types::{
-    ConfirmationData, ConfirmedWithdrawal, SignatureData,
+    ConfirmationData, ConfirmedWithdrawal, SignatureData, HotBalanceResponse,
 };
 use hexstody_btc_api::bitcoin::*;
 use hexstody_btc_api::events::*;
@@ -11,6 +11,7 @@ use hexstody_btc_test::runner::*;
 use p256::ecdsa::signature::Signer;
 use p256::ecdsa::SigningKey;
 use rocket::serde::json;
+use tokio::time::sleep;
 
 // Check that we have node and API operational
 #[tokio::test]
@@ -684,6 +685,34 @@ async fn get_fees_from_node_test() {
         println!("{:?}", fee);
         assert_eq!(fee.fee_rate, 5, "Fee value is different than expected");
         assert!(fee.block.is_none(), "Block? How?");
+    })
+    .await;
+}
+
+// Request balance
+#[tokio::test]
+async fn get_balance_test() {
+    run_test(|btc, api| async move {
+        let HotBalanceResponse{balance} = api.get_hot_balance().await.expect("Failed to get balance");
+        assert_eq!(balance, 0, "Balance is non-zero!");
+        fund_wallet(&btc);
+        let HotBalanceResponse{balance} = api.get_hot_balance().await.expect("Failed to get balance");
+        assert_eq!(balance, 5000000000, "Balance is not 50 btc!");
+    })
+    .await;
+}
+
+// Dump funds to cold storage
+#[tokio::test]
+async fn dump_to_cold_storage() {
+    let cold_amount = 100000000;
+    run_cold_test(cold_amount, |btc, _| async move {
+        let bal0 = btc.get_balance(None, None).expect("Failed to get balance");
+        assert_eq!(bal0.as_sat(), 0, "Non zero balance!");
+        fund_wallet(&btc);
+        sleep(tokio::time::Duration::from_secs(2)).await;
+        let bal1 = btc.get_balance(None, None).expect("Failed to get balance");
+        assert_eq!(bal1.as_sat(), cold_amount, "Remainder is not equal to cold_amount");
     })
     .await;
 }
