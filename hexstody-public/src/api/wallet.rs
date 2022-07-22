@@ -14,7 +14,7 @@ use hexstody_api::error;
 use hexstody_api::types as api;
 use hexstody_btc_client::client::{BtcClient, BTC_BYTES_PER_TRANSACTION};
 use hexstody_db::state::State as DbState;
-use hexstody_db::state::{Transaction, WithdrawalRequest, REQUIRED_NUMBER_OF_CONFIRMATIONS};
+use hexstody_db::state::{Transaction, WithdrawalRequest, NUMBER_OF_REQUIRED_CONFIRMATIONS};
 use hexstody_db::update::deposit::DepositAddress;
 use hexstody_db::update::{StateUpdate, UpdateBody};
 
@@ -99,6 +99,7 @@ pub async fn get_history(
                 date: btc_deposit.timestamp,
                 number_of_confirmations: btc_deposit.confirmations,
                 value: btc_deposit.amount.abs() as u64,
+                is_rbf: !btc_deposit.conflicts.is_empty() && btc_deposit.confirmations == 0
             }),
             Transaction::Eth() => todo!("Eth deposit history mapping"),
         }
@@ -145,7 +146,7 @@ pub async fn get_history(
                 let history_slice = history.iter().skip(skip).take(take).cloned().collect();
 
                 Ok(Json(api::History {
-                    target_number_of_confirmations: REQUIRED_NUMBER_OF_CONFIRMATIONS,
+                    target_number_of_confirmations: NUMBER_OF_REQUIRED_CONFIRMATIONS,
                     history_items: history_slice,
                 }))
             } else {

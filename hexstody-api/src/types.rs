@@ -32,6 +32,7 @@ pub struct DepositHistoryItem {
     pub date: NaiveDateTime,
     pub value: u64,
     pub number_of_confirmations: u64,
+    pub is_rbf: bool,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]

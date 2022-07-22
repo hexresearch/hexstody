@@ -1,3 +1,4 @@
+use crate::NUMBER_OF_REQUIRED_CONFIRMATIONS;
 use crate::update::btc::BtcTxCancel;
 use bitcoin::{Address, Txid};
 use chrono::prelude::*;
@@ -21,7 +22,7 @@ impl Transaction {
 
     pub fn is_finalized(&self) -> bool {
         match self {
-            Transaction::Btc(tx) => tx.confirmations > 3,
+            Transaction::Btc(tx) => tx.confirmations > NUMBER_OF_REQUIRED_CONFIRMATIONS as u64,
             Transaction::Eth() => todo!("Eth confirmations"),
         }
     }

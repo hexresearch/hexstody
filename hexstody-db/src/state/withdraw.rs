@@ -10,8 +10,6 @@ use chrono::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-pub const REQUIRED_NUMBER_OF_CONFIRMATIONS: i16 = 2;
-
 /// It is unique withdrawal request ID whithin the system.
 pub type WithdrawalRequestId = Uuid;
 
