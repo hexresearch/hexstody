@@ -49,6 +49,7 @@ where
                     &Args {
                         dbconnect: dbconnect,
                         btc_module: "http://127.0.0.1:8180".to_owned(),
+                        eth_module: "http://node.desolator.net".to_owned(),
                         network: Network::Regtest,
                         start_regtest: true,
                         operator_public_keys: vec![],
