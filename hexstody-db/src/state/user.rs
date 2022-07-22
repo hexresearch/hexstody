@@ -52,7 +52,9 @@ impl UserInfo {
     pub fn find_completed_request(&self, txid: CurrencyTxId) -> Option<WithdrawalRequestId> {
         if let Some(cur_info) = self.currencies.get(&txid.currency()) {
             cur_info.find_completed_request(&txid)
-        } else {None}
+        } else {
+            None
+        }
     }
 }
 
@@ -88,9 +90,22 @@ impl UserCurrencyInfo {
 
     /// Includes unconfirmed transactions
     pub fn unconfirmed_transactions(&self) -> impl Iterator<Item = &Transaction> {
-        self.transactions
-            .iter()
-            .filter_map(|t| if t.is_conflicted() { None } else { Some(t) })
+        //rbf tx to remove when one is confirmed
+        let mut btc_tx_conflicts: HashSet<Txid> = HashSet::new();
+
+        for t in &self.transactions {
+            match t {
+                Transaction::Btc(tx) if !tx.conflicts.is_empty() && !tx.confirmations > 0 => {
+                    btc_tx_conflicts.extend(tx.conflicts.to_owned());
+                }
+                _ => (),
+            }
+        }
+
+        self.transactions.iter().filter_map(move |t| match t {
+            Transaction::Btc(tx) if !btc_tx_conflicts.contains(&tx.txid) => Some(t),
+            _ => None,
+        })
     }
 
     /// Includes unconfirmed transactions
@@ -104,18 +119,21 @@ impl UserCurrencyInfo {
                 Transaction::Btc(tx) if !btc_tx_conflicts.contains(&tx.txid) => {
                     btc_tx_conflicts.extend(tx.conflicts.to_owned());
                     Some(t.amount())
-                },
+                }
                 _ => None,
             })
             .sum();
         // Do not count rejected withdrawals
-        let pending_withdrawals: u64 = self.withdrawal_requests
+        let pending_withdrawals: u64 = self
+            .withdrawal_requests
             .iter()
-            .map(|(_, w)| 
-                if w.is_rejected() {0} 
-                else {
+            .map(|(_, w)| {
+                if w.is_rejected() {
+                    0
+                } else {
                     w.amount + w.fee()
-                })
+                }
+            })
             .sum();
 
         // zero to prevent spreading overflow bug when in less then out
@@ -136,13 +154,16 @@ impl UserCurrencyInfo {
             })
             .sum();
         // Do not count rejected withdrawals
-        let pending_withdrawals: u64 = self.withdrawal_requests
+        let pending_withdrawals: u64 = self
+            .withdrawal_requests
             .iter()
-            .map(|(_, w)| 
-                if w.is_rejected() {0} 
-                else {
+            .map(|(_, w)| {
+                if w.is_rejected() {
+                    0
+                } else {
                     w.amount + w.fee()
-                })
+                }
+            })
             .sum();
 
         // zero to prevent spreading overflow bug when in less then out
@@ -153,22 +174,23 @@ impl UserCurrencyInfo {
         self.deposit_info.iter().find(|a| *a == address).is_some()
     }
 
-    pub fn find_completed_request(&self, req_txid: &CurrencyTxId) -> Option<WithdrawalRequestId>{
+    pub fn find_completed_request(&self, req_txid: &CurrencyTxId) -> Option<WithdrawalRequestId> {
         if req_txid.currency() == self.currency {
             self.withdrawal_requests
                 .iter()
-                .find_map(|(_, req)| {
-                    match &req.status{
-                        WithdrawalRequestStatus::Completed {txid, ..} => {
-                            if req_txid.clone() == txid.clone() {
-                                Some(req.id)
-                            } else {None}
-                        },
-                        _ => None
+                .find_map(|(_, req)| match &req.status {
+                    WithdrawalRequestStatus::Completed { txid, .. } => {
+                        if req_txid.clone() == txid.clone() {
+                            Some(req.id)
+                        } else {
+                            None
+                        }
                     }
+                    _ => None,
                 })
+        } else {
+            None
         }
-        else {None}
     }
 
     pub fn update_btc_tx(&mut self, upd_tx: &BtcTransaction) {

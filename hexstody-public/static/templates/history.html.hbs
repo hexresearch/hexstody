@@ -6,6 +6,9 @@
       {{else}}
       <span class="text-error"> -{{formatCurrencyValue}}</span>
       {{/if}}
+      {{#if is_rbf}}
+      <span class=" bg-grey text-white">&nbsp; RBFed &nbsp;</span>
+      {{/if}}
    </div>
    <div class="col">
       {{currency}}

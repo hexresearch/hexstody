@@ -99,6 +99,7 @@ pub async fn get_history(
                 date: btc_deposit.timestamp,
                 number_of_confirmations: btc_deposit.confirmations,
                 value: btc_deposit.amount.abs() as u64,
+                is_rbf: !btc_deposit.conflicts.is_empty() && btc_deposit.confirmations == 0
             }),
             Transaction::Eth() => todo!("Eth deposit history mapping"),
         }
