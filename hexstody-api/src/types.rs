@@ -18,7 +18,7 @@ use uuid::Uuid;
 
 use crate::domain::CurrencyTxId;
 
-use super::domain::currency::{BtcAddress, Currency, CurrencyAddress};
+use super::domain::currency::{BtcAddress, Currency, CurrencyAddress, Erc20Token};
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct TickerETH {
@@ -102,7 +102,7 @@ pub struct Erc20HistUnit {
     pub confirmations: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
 pub struct Erc20HistUnitU {
     pub blockNumber: String,
     pub timeStamp: String,
@@ -122,28 +122,30 @@ pub struct Erc20HistUnitU {
 pub struct UserEth{
   pub login   : String
  ,pub address : String
- ,pub data    : Option<serde_json::Value>
+ ,pub data    : UserData
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct UserData{
     pub tokens: Vec<Erc20Token>,
     pub historyEth: Vec<Erc20HistUnitU>,
-    pub historyTokens: Vec<Vec<Erc20HistUnitU>>,
+    pub historyTokens: Vec<Erc20TokenHistory>,
     pub balanceEth: String,
     pub balanceTokens: Vec<Erc20TokenBalance>
 }
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct Erc20Token{
-    pub tokenName: String,
-    pub tokenAddr: String
-}
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct Erc20TokenBalance{
     pub tokenName: String,
-    pub tokenBalace: String
+    pub tokenBalance: String
+}
+
+#[allow(non_snake_case)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
+pub struct Erc20TokenHistory {
+    pub token: Erc20Token,
+    pub history: Vec<Erc20HistUnitU>,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]

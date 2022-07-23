@@ -11,7 +11,7 @@ async function getForBTC(currency) {
 };
 
 async function getForETH(currency) {
-    return await fetch("/depositETH",
+    return await fetch("/deposit_eth",
     {
         method: "POST",
         body: JSON.stringify(currency)
