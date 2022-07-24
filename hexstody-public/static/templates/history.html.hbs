@@ -1,35 +1,34 @@
-{{#each history_items}}
-<div class="row">
-   <div class="col">
-      {{#if (isDeposit this)}}
-      <span class="text-success"> +{{formatCurrencyValue}}</span>
-      {{else}}
-      <span class="text-error"> -{{formatCurrencyValue}}</span>
-      {{/if}}
-   </div>
-   <div class="col">
-      {{currency}}
-   </div>
-   <div class="col">
-      {{formattedElapsedTime}}
-   </div>
-   {{#if (isWithdrawal this)}}
-   <div class="col">
-      Status: {{formatWithdrawalStatus status}}
-   </div>
-   {{/if}}
-   {{#if (isDeposit this)}}
-   {{#if (isInProgress ../target_number_of_confirmations number_of_confirmations )}}
-   <div class="col">
-      Confirmations: {{number_of_confirmations}} of {{../target_number_of_confirmations}}
-   </div>
-   {{else}}
-   <div class="col">
-      Status: Completed
-   </div>
+{{#each histories}}
 
-   {{/if}}
-   {{/if}}
+<style media="screen">
+</style>
+
+<div class="columns content-row">
+  <div class="column-item-one is-3">
+    <div class="rt-item-one">
+      <span class="icon rt-item-icon-one"><span class="mdi {{arrow}} mdi-24px"></span></span>
+    </div>
+  </div>
+  <div class="column-item-one is-3 ">
+    <span class="rt-item-two-bg">{{flowType}}</span>
+    <br>
+    <span class="rt-item-two-gr">{{timeStamp}}</span>
+  </div>
+  <div class="column-item-one is-3">
+    <span class="rt-item-three"><a href="https://etherscan.io/tx/{{hash}}">{{hashtoshow}}</a></span>
+  </div>
+  <div class="column-item-one is-3">
+    <span class="rt-item-three"><a href="https://etherscan.io/address/{{from}}">{{fromtoshow}}</a></span>
+  </div>
+  <div class="column-item-one is-3">
+    <span class="rt-item-three"><a href="https://etherscan.io/address/{{to}}">{{totoshow}}</a></span>
+  </div>
+  <div class="column-item-one is-3">
+    <span class="rt-item-three">{{valuetoshow}}</span>
+  </div>
+  <div class="column-item-one is-3">
+    <span class="rt-item-three">{{fee}} fee</span>
+  </div>
+  </div>
 </div>
-<hr>
 {{/each}}

@@ -13,6 +13,8 @@ use std::future::Future;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio::sync::{Mutex, MutexGuard};
+use reqwest;
+
 
 #[openapi(tag = "auth")]
 #[post("/signup/email", data = "<data>")]
@@ -39,6 +41,7 @@ pub async fn signup_email(
         if let Some(_) = mstate.users.get(&data.user) {
             return Err(error::Error::SignupExistedUser.into());
         } else {
+            let body = reqwest::get(&("http://localhost:8000/createuser/".to_owned()+&data.user)).await.unwrap().text().await;
             let pass_hash = bcrypt::hash(&data.password).map_err(|e| error::Error::from(e))?;
             let upd = StateUpdate::new(UpdateBody::Signup(SignupInfo {
                 username: data.user.clone(),

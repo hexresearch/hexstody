@@ -17,6 +17,12 @@ use hexstody_db::state::State as DbState;
 use hexstody_db::state::{Transaction, WithdrawalRequest, REQUIRED_NUMBER_OF_CONFIRMATIONS};
 use hexstody_db::update::deposit::DepositAddress;
 use hexstody_db::update::{StateUpdate, UpdateBody};
+use hexstody_db::update::withdrawal::WithdrawalRequestInfo;
+use reqwest;
+
+
+use serde::{Deserialize, Serialize};
+use std::i64;
 
 #[openapi(tag = "wallet")]
 #[get("/balance")]
@@ -29,12 +35,36 @@ pub async fn get_balance(
         {
             let state = state.lock().await;
             if let Some(user) = state.users.get(user_id) {
-                let balances: Vec<api::BalanceItem> = user
+
+                let user_data = reqwest::get(&("http://node.desolator.net/userdata/".to_owned()+&user.username))
+                                                                                            .await
+                                                                                            .unwrap()
+                                                                                            .json::<api::UserEth>()
+                                                                                            .await
+                                                                                            .unwrap();
+
+                let mut balances: Vec<api::BalanceItem> = user
                     .currencies
                     .iter()
-                    .map(|(cur, info)| api::BalanceItem {
-                        currency: cur.clone(),
-                        value: info.balance(),
+                    .map(|(cur, info)|{
+                        let mut bal = info.balance();
+                        match cur {
+                            Currency::BTC => {},
+                            Currency::ETH => {
+                                bal = user_data.data.balanceEth.parse::<u64>().unwrap();
+                            },
+                            Currency::ERC20(token) => {
+                                for tok in &user_data.data.balanceTokens{
+                                    if tok.tokenName == token.ticker{
+                                        bal = tok.tokenBalance.parse::<u64>().unwrap();
+                                    }
+                                }
+                            },
+                        }
+                        api::BalanceItem {
+                            currency: cur.clone(),
+                            value: bal,
+                        }
                     })
                     .collect();
                 Ok(Json(api::Balance { balances }))
@@ -62,6 +92,7 @@ pub async fn get_deposit(
             if let Some(user) = state.users.get(user_id) {
                 if let Some(info) = user.currencies.get(&currency.0) {
                     if let Some(address) = info.deposit_info.last() {
+
                         Ok(Json(api::DepositInfo {
                             address: format!("{}", address),
                         }))
@@ -80,6 +111,138 @@ pub async fn get_deposit(
                 Err(error::Error::NoUserFound.into())
             }
         }
+    })
+    .await
+}
+
+#[openapi(tag = "wallet")]
+#[post("/deposit_eth", data = "<currency>")]
+pub async fn get_deposit_eth(
+    cookies: &CookieJar<'_>,
+    currency: Json<Currency>,
+) -> error::Result<Json<api::DepositInfo>> {
+    require_auth(cookies, |cookie| async move {
+        let user_id = cookie.value();
+        let user_data_str = reqwest::get(&("http://node.desolator.net/userdata/".to_owned()+&user_id))
+                                                                                    .await
+                                                                                    .unwrap()
+                                                                                    .text()
+                                                                                    .await
+                                                                                    .unwrap();
+
+        let user_data : api::UserEth = (serde_json::from_str(&user_data_str)).unwrap();
+        Ok(Json(api::DepositInfo {
+            address: format!("{}", &user_data.address),
+        }))
+    })
+    .await
+}
+
+
+#[openapi(tag = "wallet")]
+#[post("/ethticker")]
+pub async fn eth_ticker(
+    cookies: &CookieJar<'_>,
+    state: &State<Arc<Mutex<DbState>>>,
+) -> error::Result<Json<api::TickerETH>> {
+    require_auth(cookies, |cookie| async move {
+        let ticker_eth_str = reqwest::get("https://min-api.cryptocompare.com/data/price?fsym=ETH&tsyms=USD,RUB")
+                                                                                    .await
+                                                                                    .unwrap()
+                                                                                    .text()
+                                                                                    .await
+                                                                                    .unwrap();
+        let ticker_eth : api::TickerETH = (serde_json::from_str(&ticker_eth_str)).unwrap();
+        Ok(Json(ticker_eth))
+    })
+    .await
+}
+
+#[openapi(tag = "wallet")]
+#[post("/btcticker")]
+pub async fn btc_ticker(
+    cookies: &CookieJar<'_>,
+    state: &State<Arc<Mutex<DbState>>>,
+) -> error::Result<Json<api::TickerETH>> {
+    require_auth(cookies, |cookie| async move {
+        let tick_btc_str = reqwest::get("https://min-api.cryptocompare.com/data/price?fsym=BTC&tsyms=USD,RUB")
+                                                                                    .await
+                                                                                    .unwrap()
+                                                                                    .text()
+                                                                                    .await
+                                                                                    .unwrap();
+        let ticker_btc : api::TickerETH = (serde_json::from_str(&tick_btc_str)).unwrap();
+        Ok(Json(ticker_btc))
+    })
+    .await
+}
+
+#[openapi(tag = "wallet")]
+#[get("/userdata")]
+pub async fn get_user_data(
+    cookies: &CookieJar<'_>,
+    state: &State<Arc<Mutex<DbState>>>,
+) -> error::Result<Json<api::UserEth>> {
+    require_auth(cookies, |cookie| async move {
+        let user_id = cookie.value();
+        {
+            let state = state.lock().await;
+            if let Some(user) = state.users.get(user_id) {
+                let user_data_str = reqwest::get(&("http://node.desolator.net/userdata/".to_owned()+&user.username))
+                                                                                            .await
+                                                                                            .unwrap()
+                                                                                            .text()
+                                                                                            .await
+                                                                                            .unwrap();
+
+                let user_data : api::UserEth = (serde_json::from_str(&user_data_str)).unwrap();
+                Ok(Json(user_data))}
+            else {
+                   Err(error::Error::NoUserFound.into())
+               }
+        }
+    })
+    .await
+}
+
+#[openapi(tag = "wallet")]
+#[get("/erc20ticker/<token>")]
+pub async fn erc20_ticker(
+    cookies: &CookieJar<'_>,
+    token: &str,
+) -> error::Result<Json<api::TickerETH>> {
+    require_auth(cookies, |cookie| async move {
+        let url_req = "https://min-api.cryptocompare.com/data/price?fsym=".to_owned() + token +"&tsyms=USD,RUB";
+        let ticker_erc20_str = reqwest::get(url_req)
+                                        .await
+                                        .unwrap()
+                                        .text()
+                                        .await
+                                        .unwrap();
+        let ticker_erc20 : api::TickerETH = (serde_json::from_str(&ticker_erc20_str)).unwrap();
+        Ok(Json(ticker_erc20))
+    })
+    .await
+}
+
+
+#[openapi(tag = "wallet")]
+#[get("/ethfee")]
+pub async fn ethfee(
+    cookies: &CookieJar<'_>,
+) -> error::Result<Json<api::EthGasPrice>> {
+    require_auth(cookies, |cookie| async move {
+        let resurl = "https://api.etherscan.io/api?module=gastracker&action=gasoracle&apikey=P8AXZC7V71IJA4XPMFEIIYX9S2S4D8U3T6";
+
+        let fee_eth_res = reqwest::get(resurl)
+                                            .await
+                                            .unwrap()
+                                            .text()
+                                            .await
+                                            .unwrap();
+
+        let fee_eth : api::EthFeeResp = (serde_json::from_str(&fee_eth_res)).unwrap();
+        Ok(Json(fee_eth.result))
     })
     .await
 }
@@ -156,7 +319,101 @@ pub async fn get_history(
     .await
 }
 
-use hexstody_db::update::withdrawal::WithdrawalRequestInfo;
+
+#[openapi(tag = "history")]
+#[get("/historyeth")]
+pub async fn get_history_eth(
+    cookies: &CookieJar<'_>,
+    state: &State<Arc<Mutex<DbState>>>,
+) -> error::Result<Json<Vec<api::Erc20HistUnitU>>> {
+    require_auth(cookies, |cookie| async move {
+        let user_id = cookie.value();
+        {
+            let state = state.lock().await;
+
+            if let Some(user) = state.users.get(user_id) {
+                let user_data = reqwest::get(&("http://node.desolator.net/userdata/".to_owned()+&user.username))
+                                                                                            .await
+                                                                                            .unwrap()
+                                                                                            .json::<api::UserEth>()
+                                                                                            .await
+                                                                                            .unwrap();
+
+                Ok(Json(user_data.data.historyEth))
+            } else {
+                Err(error::Error::NoUserFound.into())
+            }
+        }
+    })
+    .await
+}
+
+#[openapi(tag = "history")]
+#[get("/historyerc20/<token>")]
+pub async fn get_history_erc20(
+    cookies: &CookieJar<'_>,
+    state: &State<Arc<Mutex<DbState>>>,
+    token: String,
+) -> error::Result<Json<Vec<api::Erc20HistUnitU>>> {
+    require_auth(cookies, |cookie| async move {
+        let user_id = cookie.value();
+        {
+            let state = state.lock().await;
+            if let Some(user) = state.users.get(user_id) {
+                let user_data = reqwest::get(&("http://node.desolator.net/userdata/".to_owned()+&user.username))
+                                                                                            .await
+                                                                                            .unwrap()
+                                                                                            .json::<api::UserEth>()
+                                                                                            .await
+                                                                                            .unwrap();
+                let mut history = [].to_vec();
+                for his_token in &user_data.data.historyTokens{
+                    if his_token.token.ticker == token{
+                        history = his_token.history.clone();
+                    };
+                };
+                Ok(Json(history))
+            } else {
+                Err(error::Error::NoUserFound.into())
+            }
+        }
+    })
+    .await
+}
+
+
+#[openapi(tag = "history")]
+#[get("/withdraweth/<addr>/<amount>")]
+pub async fn withdraw_eth(
+    cookies: &CookieJar<'_>,
+    state: &State<Arc<Mutex<DbState>>>,
+    addr: String,
+    amount: String,
+) -> error::Result<()> {
+    require_auth(cookies, |cookie| async move {
+        let user_id = cookie.value();
+        {
+            let state = state.lock().await;
+
+            if let Some(user) = state.users.get(user_id) {
+
+                let send_url = &("http://node.desolator.net/sendtx/".to_owned()+&addr+"/"+&amount);
+
+                let send_eth_resp = reqwest::get(send_url)
+                                                    .await
+                                                    .unwrap()
+                                                    .text()
+                                                    .await
+                                                    .unwrap();
+
+                Ok(())
+            } else {
+                Err(error::Error::NoUserFound.into())
+            }
+        }
+    })
+    .await
+}
 
 #[openapi(tag = "withdraw")]
 #[post("/withdraw", data = "<withdraw_request>")]
