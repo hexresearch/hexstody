@@ -26,7 +26,7 @@ cargo run --bin operator-keygen -- -o operator-key-2 -p
 
 ## Bitcoin regtest network
 When `--start-regtest` flag is specified, `hexstody-hot` automatically starts 2 connected BTC nodes and the `hexstody-btc` API instance.
-By default BTC nodes use 9804 and 9806 RPC ports. The default RPC password and user is "regtest". The first one is used by the hexstody itself, while you can use the second one for depositing and withdrawing funds.
+By default BTC nodes use 9804 and 9806 RPC ports. The default RPC password and user is "regtest". The first node is used by the hexstody itself, while you can use the second node for depositing and withdrawing funds.
 ```
 cargo run --bin hexstody-hot -- --operator-public-keys operator-key-1.pub.pem operator-key-2.pub.pem --start-regtest serve
 ```
