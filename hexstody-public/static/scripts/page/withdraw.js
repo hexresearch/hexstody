@@ -63,8 +63,8 @@ async function init() {
 
 
 
-    ethBalanceEl.innerText = formattedCurrencyValue("ETH",
-        ethBalanceEl.getAttribute("balance"));
+//    ethBalanceEl.innerText = formattedCurrencyValue("ETH",
+//        ethBalanceEl.getAttribute("balance"));
 /*
     maxBtcAmountBtn.onclick = () => btcSendAmountEl.value =
         Math.max(0, btcBalanceEl.getAttribute("balance") - btcFeeEl.getAttribute("fee"));
@@ -95,14 +95,20 @@ async function getEthFee() {
 
 async function updateBalanceAndFeeLoop() {
     const balancesObj = await getBalances();
+    var balanceEth;
+    for(var i=0;i<balancesObj.balances.length;i++){
+      if (balancesObj.balances[i].currency == 'ETH') {
+        balanceEth = balancesObj.balances[i];
+      }
+    }
+    console.log(balancesObj);
     const feeObj = await getEthFee();
     const tikerObj = await getCourseForETH("ETH")
-    const balancEth = balancesObj.balances[0]
     const withdrawBalanceElem = document.getElementById("withdraw-bal");
     const withdrawFeeElem = document.getElementById("withdraw-fee");
-    const balToUSD = (tikerObj.USD*balancEth.value/1000000000000000000).toFixed(2);
+    const balToUSD = (tikerObj.USD*balanceEth.value/1000000000000000000).toFixed(2);
     const feeToUSD = (tikerObj.USD*21*feeObj.FastGasPrice/1000000).toFixed(2);
-    const txtBal = formattedCurrencyValue("ETH", balancEth.value) + " ETH" + " ($ " + balToUSD + ")"
+    const txtBal = formattedCurrencyValue("ETH", balanceEth.value) + " ETH" + " ($ " + balToUSD + ")"
     const txtFee = formattedCurrencyValueFixed("ETH", 210000*feeObj.FastGasPrice*1000000000,5) + " ETH" + " ($"+ feeToUSD +")";
     withdrawBalanceElem.textContent = txtBal;
     withdrawFeeElem.textContent = txtFee
