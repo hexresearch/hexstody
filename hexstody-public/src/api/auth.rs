@@ -4,6 +4,7 @@ use hexstody_db::state::*;
 use hexstody_db::update::signup::*;
 use hexstody_db::update::*;
 use pwhash::bcrypt;
+use reqwest;
 use rocket::http::{Cookie, CookieJar};
 use rocket::post;
 use rocket::serde::json::Json;
@@ -13,8 +14,6 @@ use std::future::Future;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio::sync::{Mutex, MutexGuard};
-use reqwest;
-
 
 #[openapi(tag = "auth")]
 #[post("/signup/email", data = "<data>")]
@@ -41,7 +40,12 @@ pub async fn signup_email(
         if let Some(_) = mstate.users.get(&data.user) {
             return Err(error::Error::SignupExistedUser.into());
         } else {
-            let body = reqwest::get(&("http://localhost:8000/createuser/".to_owned()+&data.user)).await.unwrap().text().await;
+            reqwest::get("http://localhost:8000/createuser/".to_owned() + &data.user)
+                .await
+                .unwrap()
+                .text()
+                .await
+                .unwrap();
             let pass_hash = bcrypt::hash(&data.password).map_err(|e| error::Error::from(e))?;
             let upd = StateUpdate::new(UpdateBody::Signup(SignupInfo {
                 username: data.user.clone(),
