@@ -8,6 +8,28 @@ export function formattedCurrencyValue(currency, value) {
         case "BTC":
             const nf = new Intl.NumberFormat('en-US');
             return nf.format(value);
+        case "ETH":
+            const newv = value / 1000000000000000000
+            return newv.toFixed(8);
+        case "USDT":
+            const newu = value / 1000000
+            return newu.toFixed(8);
+        case "CRV":
+            const newc = value / 1000000000000000000
+            return newc.toFixed(8);
+        default:
+            return value;
+    }
+}
+
+export function formattedCurrencyValueFixed(currency, value,fixed) {
+    switch (currency) {
+        case "BTC":
+            const nf = new Intl.NumberFormat('en-US');
+            return nf.format(value);
+        case "ETH":
+            const newv = value / 1000000000000000000
+            return newv.toFixed(fixed)
         default:
             return value;
     }
@@ -58,4 +80,18 @@ export function initTabs(tabIds) {
         });
     }
     tabIds.forEach(tab => document.getElementById(tab).onclick = () => tabClicked(tab));
+
+    function openTab(evt, tabName) {
+        var i, x, tablinks;
+        x = document.getElementsByClassName("content-tab");
+        for (i = 0; i < x.length; i++) {
+            x[i].style.display = "none";
+        }
+        tablinks = document.getElementsByClassName("tab");
+        for (i = 0; i < x.length; i++) {
+            tablinks[i].className = tablinks[i].className.replace(" is-active", "");
+        }
+        document.getElementById(tabName).style.display = "block";
+        evt.currentTarget.className += " is-active";
+    }
 }

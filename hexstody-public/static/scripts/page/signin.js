@@ -18,7 +18,7 @@ async function trySubmit() {
 
     } else {
         const validationDisplay = document.getElementById("validationError");
-        validationDisplay.textContent = (await signInResult.json()).message;
+//        validationDisplay.textContent = (await signInResult.json()).message;
         validationDisplay.hidden = false;
     };
 }
@@ -31,7 +31,7 @@ async function init() {
         }
     }
     const submitButton = document.getElementById("submit");
-    
+
     emailEl = document.getElementById("signInEmail");
     passwordEl = document.getElementById("signInPassword");
 

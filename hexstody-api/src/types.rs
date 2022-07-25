@@ -18,7 +18,152 @@ use uuid::Uuid;
 
 use crate::domain::CurrencyTxId;
 
-use super::domain::currency::{BtcAddress, Currency, CurrencyAddress};
+use super::domain::currency::{BtcAddress, Currency, CurrencyAddress, Erc20Token};
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct TickerETH {
+    pub USD: f32,
+    pub RUB: f32
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct EthHistResp {
+    pub status: String,
+    pub message: String,
+    pub result: Vec<EthHistUnit>
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct Erc20HistResp {
+    pub status: String,
+    pub message: String,
+    pub result: Vec<Erc20HistUnit>
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct EthHistUnit {
+    pub blockNumber: String,
+    pub timeStamp: String,
+    pub hash: String,
+    pub nonce: String,
+    pub blockHash: String,
+    pub transactionIndex: String,
+    pub from: String,
+    pub to: String,
+    pub value: String,
+    pub gas: String,
+    pub gasPrice: String,
+    pub isError: String,
+    pub txreceipt_status: String,
+    pub input: String,
+    pub contractAddress: String,
+    pub cumulativeGasUsed: String,
+    pub gasUsed: String,
+    pub confirmations: String,
+    pub methodId: String,
+    pub functionName: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct EthHistUnitU {
+    pub blockNumber: String,
+    pub timeStamp: String,
+    pub hash: String,
+    pub from: String,
+    pub to: String,
+    pub value: String,
+    pub gas: String,
+    pub gasPrice: String,
+    pub contractAddress: String,
+    pub confirmations: String,
+    pub addr: String
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct Erc20HistUnit {
+    pub blockNumber: String,
+    pub timeStamp: String,
+    pub hash: String,
+    pub nonce: String,
+    pub blockHash: String,
+    pub from: String,
+    pub contractAddress: String,
+    pub to: String,
+    pub value: String,
+    pub tokenName: String,
+    pub tokenSymbol: String,
+    pub tokenDecimal: String,
+    pub transactionIndex: String,
+    pub gas: String,
+    pub gasPrice: String,
+    pub gasUsed: String,
+    pub cumulativeGasUsed: String,
+    pub input: String,
+    pub confirmations: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
+pub struct Erc20HistUnitU {
+    pub blockNumber: String,
+    pub timeStamp: String,
+    pub hash: String,
+    pub from: String,
+    pub to: String,
+    pub value: String,
+    pub tokenName: String,
+    pub gas: String,
+    pub gasPrice: String,
+    pub contractAddress: String,
+    pub confirmations: String,
+    pub addr: String
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct UserEth{
+  pub login   : String
+ ,pub address : String
+ ,pub data    : UserData
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct UserData{
+    pub tokens: Vec<Erc20Token>,
+    pub historyEth: Vec<Erc20HistUnitU>,
+    pub historyTokens: Vec<Erc20TokenHistory>,
+    pub balanceEth: String,
+    pub balanceTokens: Vec<Erc20TokenBalance>
+}
+
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct Erc20TokenBalance{
+    pub tokenName: String,
+    pub tokenBalance: String
+}
+
+#[allow(non_snake_case)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
+pub struct Erc20TokenHistory {
+    pub token: Erc20Token,
+    pub history: Vec<Erc20HistUnitU>,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct EthFeeResp {
+    pub status: String,
+    pub message: String,
+    pub result: EthGasPrice
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct EthGasPrice {
+    pub LastBlock: String,
+    pub SafeGasPrice: String,
+    pub ProposeGasPrice: String,
+    pub FastGasPrice: String,
+    pub suggestBaseFee: String,
+    pub gasUsedRatio: String
+}
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct BalanceItem {

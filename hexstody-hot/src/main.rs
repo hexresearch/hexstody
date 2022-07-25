@@ -33,6 +33,13 @@ pub struct Args {
         env = "BTC_MODULE_URL"
     )]
     btc_module: String,
+    #[clap(
+        long,
+        short,
+        default_value = "http://node.desolator.net",
+        env = "ETH_MODULE_URL"
+    )]
+    eth_module: String,
     #[clap(long, default_value = "mainnet", env = "HEXSTODY_NETWORK")]
     network: Network,
     #[clap(long, env = "HEXSTODY_START_REGTEST")]
