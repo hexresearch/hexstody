@@ -58,6 +58,9 @@ pub struct BtcTransaction {
     pub timestamp: NaiveDateTime,
     /// Conflicts with other transactions
     pub conflicts: Vec<Txid>,
+    /// Fee paid in sats.
+    /// Only available for outgoing transactions.
+    pub fee: Option<u64>,
 }
 
 pub trait SameBtcTx<T> {
@@ -90,6 +93,7 @@ impl From<TxUpdate> for BtcTransaction {
             },
             timestamp: NaiveDateTime::from_timestamp(val.timestamp as i64, 0),
             conflicts: val.conflicts.iter().map(|tx| tx.0).collect(),
+            fee: val.fee
         }
     }
 }

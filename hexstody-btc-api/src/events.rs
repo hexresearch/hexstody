@@ -47,6 +47,9 @@ pub struct TxUpdate {
     /// That means that they are RBF transactions and one
     /// eventually will replace the others.
     pub conflicts: Vec<BtcTxid>,
+    /// Fee paid in sats.
+    /// Only available for outgoing transactions.
+    pub fee: Option<u64>,
 }
 
 /// Unconfirmed tx cancel or even reorg cancel

@@ -177,6 +177,8 @@ pub struct DepositHistoryItem {
     pub date: NaiveDateTime,
     pub value: u64,
     pub number_of_confirmations: u64,
+    pub txid: CurrencyTxId,
+    pub to_address: CurrencyAddress,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
@@ -323,9 +325,7 @@ fn example_confirmation_status() -> WithdrawalRequestStatus {
 #[serde(tag = "type")]
 pub enum WithdrawalRequestStatus {
     /// Number of confirmations received
-    InProgress {
-        confirmations: i16,
-    },
+    InProgress { confirmations: i16 },
     /// Confirmed by operators, but not yet sent to the node
     Confirmed,
     /// Tx sent to the node
@@ -334,16 +334,20 @@ pub enum WithdrawalRequestStatus {
         confirmed_at: NaiveDateTime,
         /// Txid
         txid: CurrencyTxId,
-        /// Fee paid is sats. If an error occured, fee=0
-        fee: u64
+        /// Fee paid is sats. If an error occured, fee is None
+        fee: Option<u64>,
+        /// Tx inputs
+        input_addresses: Vec<CurrencyAddress>,
+        /// Tx outputs
+        output_addresses: Vec<CurrencyAddress>,
     },
     /// Rejected by operators
     OpRejected,
     /// Rejected by the node
     NodeRejected {
         /// Node
-        reason: String
-    }
+        reason: String,
+    },
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
@@ -511,9 +515,9 @@ fn example_block_height() -> Option<i64> {
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct HotBalanceResponse{
+pub struct HotBalanceResponse {
     /// Total balance of the hot wallet in sat
-    pub balance: u64
+    pub balance: u64,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy)]
@@ -568,5 +572,9 @@ pub struct WithdrawalResponse {
     /// Transaction ID
     pub txid: BtcTxid,
     /// Fee paid in satoshi
-    pub fee: Option<u64>
+    pub fee: Option<u64>,
+    /// Input addresses
+    pub input_addresses: Vec<CurrencyAddress>,
+    /// Output addresses
+    pub output_addresses: Vec<CurrencyAddress>,
 }

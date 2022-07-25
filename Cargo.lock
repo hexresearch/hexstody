@@ -1186,6 +1186,7 @@ name = "hexstody-api"
 version = "0.1.0"
 dependencies = [
  "base64",
+ "bitcoin",
  "chrono",
  "hexstody-btc-api",
  "okapi",

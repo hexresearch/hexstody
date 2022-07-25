@@ -111,7 +111,7 @@ impl UserCurrencyInfo {
             .map(|(_, w)| 
                 if w.is_rejected() {0} 
                 else {
-                    w.amount + w.fee()
+                    w.amount + w.fee().unwrap_or(0)
                 })
             .sum();
 
@@ -138,7 +138,7 @@ impl UserCurrencyInfo {
             .map(|(_, w)| 
                 if w.is_rejected() {0} 
                 else {
-                    w.amount + w.fee()
+                    w.amount + w.fee().unwrap_or(0)
                 })
             .sum();
 

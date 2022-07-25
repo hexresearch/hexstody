@@ -7,7 +7,8 @@ use crate::state::withdraw::WithdrawalRequestId;
 use crate::update::signup::UserId;
 use hexstody_api::domain::{Currency, CurrencyAddress, CurrencyTxId};
 use hexstody_api::types::{
-    ConfirmationData, SignatureData, WithdrawalRequestInfo as WithdrawalRequestInfoApi, WithdrawalRequestDecisionType
+    ConfirmationData, SignatureData, WithdrawalRequestDecisionType,
+    WithdrawalRequestInfo as WithdrawalRequestInfoApi,
 };
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -125,11 +126,13 @@ pub struct WithdrawCompleteInfo {
     pub id: WithdrawalRequestId,
     pub confirmed_at: NaiveDateTime,
     pub txid: CurrencyTxId,
-    pub fee: Option<u64>
+    pub fee: Option<u64>,
+    pub input_addresses: Vec<CurrencyAddress>,
+    pub output_addresses: Vec<CurrencyAddress>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct WithdrawalRejectInfo {
     pub id: WithdrawalRequestId,
-    pub reason: String
+    pub reason: String,
 }
