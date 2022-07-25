@@ -1,7 +1,7 @@
 mod api;
+mod constants;
 mod state;
 mod worker;
-mod constants;
 
 use bitcoin::network::constants::Network;
 use bitcoincore_rpc::{Auth, Client, RpcApi};
@@ -9,22 +9,22 @@ use clap::Parser;
 use futures::future::try_join3;
 use futures::future::{AbortHandle, Abortable, Aborted};
 use log::*;
+use p256::pkcs8::DecodePublicKey;
+use p256::PublicKey;
 use std::error::Error;
+use std::fs;
 use std::net::IpAddr;
+use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
-use std::path::PathBuf;
-use std::fs;
 use thiserror::Error;
 use tokio::sync::{Mutex, Notify};
 use tokio::time::sleep;
-use p256::PublicKey;
-use p256::pkcs8::DecodePublicKey;
 
 use api::public::*;
 use state::ScanState;
-use worker::{node_worker, cold_wallet_worker};
+use worker::{cold_wallet_worker, node_worker};
 
 // Should be the same as hexstody-db::state::REQUIRED_NUMBER_OF_CONFIRMATIONS
 pub const REQUIRED_NUMBER_OF_CONFIRMATIONS: i16 = 2;
@@ -74,12 +74,12 @@ enum SubCommand {
         )]
         /// List of paths to files containing trusted public keys, which operators use to confirm withdrawal requests
         operator_public_keys: Vec<PathBuf>,
-        #[clap(long, env="HEXSTODY_BTC_HOT_DOMAIN")]
+        #[clap(long, env = "HEXSTODY_BTC_HOT_DOMAIN")]
         hot_domain: String,
-        #[clap(long, env="HEXSTODY_BTC_COLD_ADDR")]
+        #[clap(long, env = "HEXSTODY_BTC_COLD_ADDR")]
         cold_address: String,
-        #[clap(long, env="HEXSTODY_BTC_COLD_VALUE_SAT")]
-        cold_sat: u64
+        #[clap(long, env = "HEXSTODY_BTC_COLD_VALUE_SAT")]
+        cold_sat: u64,
     },
 }
 
@@ -108,11 +108,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
             operator_public_keys,
             hot_domain,
             cold_address,
-            cold_sat
+            cold_sat,
         } => loop {
             let mut op_public_keys = vec![];
             for p in &operator_public_keys {
-                let full_path = fs::canonicalize(&p).expect("Something went wrong reading the file");
+                let full_path =
+                    fs::canonicalize(&p).expect("Something went wrong reading the file");
                 let key_str =
                     fs::read_to_string(full_path).expect("Something went wrong reading the file");
                 let public_key = PublicKey::from_public_key_pem(&key_str)
@@ -143,22 +144,19 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     state.clone(),
                     state_notify.clone(),
                     polling_duration,
-                    tx_notify.clone()
+                    tx_notify.clone(),
                 )
                 .await;
                 Ok(res)
             };
 
             let cold_amount = bitcoin::Amount::from_sat(cold_sat);
-            let cold_address = bitcoin::Address::from_str(cold_address.as_str()).expect("Failed to parse cold address");
+            let cold_address = bitcoin::Address::from_str(cold_address.as_str())
+                .expect("Failed to parse cold address");
             let cold_storage_fut = async {
                 let client = make_client();
-                let res = cold_wallet_worker(
-                    &client, 
-                    tx_notify.clone(), 
-                    cold_amount, 
-                    cold_address
-                ).await;
+                let res =
+                    cold_wallet_worker(&client, tx_notify.clone(), cold_amount, cold_address).await;
                 Ok(res)
             };
 
@@ -166,10 +164,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
             let public_api_fut = async {
                 let client = make_client();
                 if network == bitcoin::Network::Regtest {
-                    let regtestfee: f64 = 0.00005; 
+                    let regtestfee: f64 = 0.00005;
                     let val = serde_json::to_value(regtestfee);
                     if let Ok(v) = val {
-                        if let Err(e) = client.call::<bool>("settxfee", &[v]){
+                        if let Err(e) = client.call::<bool>("settxfee", &[v]) {
                             debug!("Failed to set tx fee! {}", e);
                         }
                     }
@@ -185,7 +183,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     secret_key.as_deref(),
                     op_public_keys,
                     REQUIRED_NUMBER_OF_CONFIRMATIONS,
-                    hot_domain.clone()
+                    hot_domain.clone(),
+                    network,
                 )
                 .await;
                 res.map_err(|err| LogicError::from(err))

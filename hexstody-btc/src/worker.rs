@@ -4,7 +4,7 @@ use bitcoincore_rpc::{Client, RpcApi};
 use bitcoincore_rpc_json::{GetTransactionResultDetailCategory, ListTransactionResult};
 use hexstody_btc_api::events::*;
 use log::*;
-use std::{sync::Arc};
+use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::{Mutex, Notify};
 
@@ -13,7 +13,7 @@ pub async fn node_worker(
     state: Arc<Mutex<ScanState>>,
     state_notify: Arc<Notify>,
     polling_sleep: Duration,
-    tx_notify: Arc<Notify>
+    tx_notify: Arc<Notify>,
 ) -> () {
     loop {
         {
@@ -51,20 +51,33 @@ pub async fn cold_wallet_worker(
     client: &Client,
     tx_notify: Arc<Notify>,
     cold_amount: Amount,
-    cold_address: Address
-) -> (){
+    cold_address: Address,
+) -> () {
     loop {
         tx_notify.notified().await;
-        if let Ok(bal) = client.get_balance(Some(3), None){
+        if let Ok(bal) = client.get_balance(Some(3), None) {
             if bal > cold_amount {
-                let amount = if bal > (cold_amount + cold_amount) { bal - cold_amount } else {cold_amount};
-                match client.send_to_address(&cold_address, amount, None, None, Some(true), None, None, None){
+                let amount = if bal > (cold_amount + cold_amount) {
+                    bal - cold_amount
+                } else {
+                    cold_amount
+                };
+                match client.send_to_address(
+                    &cold_address,
+                    amount,
+                    None,
+                    None,
+                    Some(true),
+                    None,
+                    None,
+                    None,
+                ) {
                     Ok(txid) => info!("Dumped {} to cold wallet. Txid: {}", amount, txid),
                     Err(e) => error!("Failed to dump to cold wallet. {}", e),
                 }
             }
         }
-    }    
+    }
 }
 
 pub async fn scan_from(
@@ -83,7 +96,10 @@ pub async fn scan_from(
             events.push(e);
         }
     }
-    debug!("Scanned events: {:?}, next block: {:?}", events, result.lastblock);
+    debug!(
+        "Scanned events: {:?}, next block: {:?}",
+        events, result.lastblock
+    );
     Ok((events, result.lastblock))
 }
 
@@ -147,6 +163,7 @@ fn to_update_event(tx: ListTransactionResult) -> Option<BtcEvent> {
             .into_iter()
             .map(|v| v.into())
             .collect(),
+        fee: tx.detail.fee.map(|x| x.as_sat().abs() as u64),
     }))
 }
 

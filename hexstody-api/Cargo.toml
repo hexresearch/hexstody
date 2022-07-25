@@ -26,3 +26,4 @@ thiserror = "1.0"
 p256 = { version = "0.11.1", features = ["serde"] }
 base64 = "0.13.0"
 hexstody-btc-api = { path = "../hexstody-btc-api" }
+bitcoin = "0.28.1"

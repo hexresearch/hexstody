@@ -1,3 +1,4 @@
+use bitcoin;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -52,7 +53,6 @@ impl fmt::Display for Erc20Token {
 #[derive(
     Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
 )]
-
 #[serde(tag = "type")]
 pub enum CurrencyAddress {
     BTC(BtcAddress),
@@ -63,9 +63,9 @@ pub enum CurrencyAddress {
 #[derive(
     Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
 )]
-pub struct Erc20{
-   token : Erc20Token,
-   account : EthAccount
+pub struct Erc20 {
+    token: Erc20Token,
+    account: EthAccount,
 }
 
 impl CurrencyAddress {
@@ -88,11 +88,21 @@ impl fmt::Display for CurrencyAddress {
     }
 }
 
+impl From<bitcoin::Address> for CurrencyAddress {
+    fn from(addr: bitcoin::Address) -> Self {
+        CurrencyAddress::BTC(BtcAddress {
+            addr: addr.to_string(),
+        })
+    }
+}
+
 /// Validated bitcoin address
 #[derive(
     Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
 )]
-pub struct BtcAddress{pub addr: String}
+pub struct BtcAddress {
+    pub addr: String,
+}
 
 impl fmt::Display for BtcAddress {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -104,7 +114,9 @@ impl fmt::Display for BtcAddress {
 #[derive(
     Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
 )]
-pub struct EthAccount{pub account: String}
+pub struct EthAccount {
+    pub account: String,
+}
 
 impl fmt::Display for EthAccount {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -115,12 +127,16 @@ impl fmt::Display for EthAccount {
 #[derive(
     Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
 )]
-pub struct BTCTxid {pub txid: String}
+pub struct BTCTxid {
+    pub txid: String,
+}
 
 #[derive(
     Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
 )]
-pub struct ETHTxid {pub txid: String}
+pub struct ETHTxid {
+    pub txid: String,
+}
 
 #[derive(
     Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
@@ -143,8 +159,14 @@ impl CurrencyTxId {
 impl fmt::Display for CurrencyTxId {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            CurrencyTxId::BTC(BTCTxid{txid}) => write!(f, "{}", txid),
-            CurrencyTxId::ETH(ETHTxid{txid}) => write!(f, "{}", txid),
+            CurrencyTxId::BTC(BTCTxid { txid }) => write!(f, "{}", txid),
+            CurrencyTxId::ETH(ETHTxid { txid }) => write!(f, "{}", txid),
         }
+    }
+}
+
+impl From<bitcoin::Txid> for CurrencyTxId {
+    fn from(txid: bitcoin::Txid) -> Self {
+        CurrencyTxId::BTC(BTCTxid { txid: txid.to_string() })
     }
 }
