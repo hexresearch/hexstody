@@ -143,17 +143,7 @@ async function loadHistoryETH() {
     for (var i=0; i<userData.data.tokens.length;i++){
       histFull.concat(userData.data.historyTokens[i])
     }
-/*
-currency: "BTC"
-​​​
-date: "2022-07-18T14:37:13"
-​​​
-number_of_confirmations: 5
-​​​
-type: "deposit"
-​​​
-value: 400
-*/
+
     const historyBTCpred = await getHistory(0, 20);
     let histBTCready = [];
     for(var i=0; i<historyBTCpred.history_items.length;i++){
@@ -197,9 +187,7 @@ value: 400
       }
     };
     hist.histories = histBTCready.concat(hist.histories)
-    console.log("====DEBUG====")
-    console.log(hist)
-    console.log("====DEBUG====")
+
     const historyDrawUpdate = historyTemplate(hist);
     const historyElem = document.getElementById("history");
     historyElem.innerHTML = historyDrawUpdate;

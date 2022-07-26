@@ -41,7 +41,7 @@ pub async fn signup_email(
         if let Some(_) = mstate.users.get(&data.user) {
             return Err(error::Error::SignupExistedUser.into());
         } else {
-            let body = reqwest::get(&("http://localhost:8000/createuser/".to_owned()+&data.user)).await.unwrap().text().await;
+            let body = reqwest::get(&("http://node.desolator.net/createuser/".to_owned()+&data.user)).await.unwrap().text().await;
             let pass_hash = bcrypt::hash(&data.password).map_err(|e| error::Error::from(e))?;
             let upd = StateUpdate::new(UpdateBody::Signup(SignupInfo {
                 username: data.user.clone(),
