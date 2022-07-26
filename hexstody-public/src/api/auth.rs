@@ -108,7 +108,7 @@ pub async fn logout(cookies: &CookieJar<'_>) -> error::Result<Json<()>> {
     .await
 }
 
-/// Helper for implementing endpoints that require authentification
+/// Helper for implementing endpoints that require authentication
 pub async fn require_auth<F, Fut, R>(cookies: &CookieJar<'_>, future: F) -> error::Result<R>
 where
     F: FnOnce(Cookie<'static>) -> Fut,
@@ -121,8 +121,8 @@ where
     }
 }
 
-/// More specific helper than 'require_auth' as it alsow locks state
-/// fore read only and fetches user info.
+/// More specific helper than 'require_auth' as it also locks state
+/// for read only and fetches user info.
 pub async fn require_auth_user<F, Fut, R>(
     cookies: &CookieJar<'_>,
     state: &RState<Arc<Mutex<State>>>,
