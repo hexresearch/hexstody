@@ -1,58 +1,45 @@
+{{#*inline "css"}}
+{{/inline}}
+
+{{#*inline "scripts"}}
+<script type="module" src="/scripts/page/common.js"></script>
+<script type="module" src="/scripts/page/overview.js"></script>
+<script src="/scripts/handlebars.min-v4.7.7.js" defer></script>
+{{/inline}}
+
 {{#*inline "page"}}
+<div class="full-height" style="background-color: #ECEFF4;">
 
-<!DOCTYPE html>
-<html lang="en" style="background-color: #ECEFF4;">
+    <div class="container" style="padding-top: 25px;">
 
-<head>
-    <meta charset='utf-8'>
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <meta name="referrer" content="unsafe-url">
-    <title>Hexstody</title>
-    <link href='https://fonts.googleapis.com/css?family=Inter' rel='stylesheet'>
-    <link rel="stylesheet" href="https://cdn.materialdesignicons.com/5.4.55/css/materialdesignicons.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.3/css/bulma.min.css">
-    <script type="module" src="/scripts/page/common.js"></script>
-    <script type="module" src="/scripts/page/overview.js"></script>
-    <link rel="stylesheet" href="css/style.css">
-
-</head>
-
-<body>
-    <div class="full-height" style="background-color: #ECEFF4;">
-
-        <div class="container" style="padding-top: 25px;">
-
-            <div class="box page-content" style="box-shadow: none !Important;">
-                <div class="content-row">
-                    <span class="balance-label">Total Balance</span>
-                </div>
-                <div class="content-row">
-                    <span id="total-bal-usd" class="balance-val-bg">0 $</span>
-                    <span style="margin-left: 20px" id="total-bal-rub" class="balance-val-gr">(0 P)</span>
-                </div>
-
-                <div class="content-row content-separator my-4"></div>
-                <div class="row is-center" id="balance">
-                </div>
+        <div class="box page-content" style="box-shadow: none !Important;">
+            <div class="content-row">
+                <span class="balance-label">Total Balance</span>
+            </div>
+            <div class="content-row">
+                <span id="total-bal-usd" class="balance-val-bg">0 $</span>
+                <span style="margin-left: 20px" id="total-bal-rub" class="balance-val-gr">(0 P)</span>
             </div>
 
-            <div class="box page-content" style="box-shadow: none !Important;">
-                <div class="content-row">
-                    <span class="balance-label">Recent transactions</span>
-                </div>
-
-                <div class="content-separator my-4"></div>
-                <div id="history">
-                </div>
+            <div class="content-row content-separator my-4"></div>
+            <div class="row is-center" id="balance">
             </div>
-
         </div>
-        <button style="visibility: collapse" id="loadMore">LoadMore</button>
+
+        <div class="box page-content" style="box-shadow: none !Important;">
+            <div class="content-row">
+                <span class="balance-label">Recent transactions</span>
+            </div>
+
+            <div class="content-separator my-4"></div>
+            <div id="history">
+            </div>
+        </div>
 
     </div>
-</body>
+    <button style="visibility: collapse" id="loadMore">LoadMore</button>
 
-</html>
-
+</div>
 {{/inline}}
-{{> base_footer_header}}
+
+{{> base_with_header}}

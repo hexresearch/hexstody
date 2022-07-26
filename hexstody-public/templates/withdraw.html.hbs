@@ -1,9 +1,13 @@
-{{#*inline "page"}}
+{{#*inline "css"}}
+{{/inline}}
 
+{{#*inline "scripts"}}
 <script type="module" src="/scripts/page/common.js"></script>
 <script type="module" src="/scripts/page/withdraw.js"></script>
-<link rel="stylesheet" type="text/css" href="/css/bulma.min.css" />
-<link rel="stylesheet" href="css/style.css">
+<script src="/scripts/handlebars.min-v4.7.7.js" defer></script>
+{{/inline}}
+
+{{#*inline "page"}}
 <style>
     body {
         background-color: #ECEFF4;
@@ -137,4 +141,5 @@
     </div>
 </div>
 {{/inline}}
-{{> base_footer_header}}
+
+{{> base_with_header}}

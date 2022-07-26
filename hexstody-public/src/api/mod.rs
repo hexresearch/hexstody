@@ -44,7 +44,7 @@ fn index() -> Redirect {
 #[openapi(skip)]
 #[get("/overview")]
 fn overview() -> Template {
-    let context = HashMap::from([("title", "Overview"), ("parent", "base_footer_header")]);
+    let context = HashMap::from([("title", "Overview"), ("parent", "base_with_header")]);
     Template::render("overview", context)
 }
 
@@ -65,7 +65,7 @@ fn signin() -> Template {
 #[openapi(skip)]
 #[get("/deposit")]
 fn deposit() -> Template {
-    let context = HashMap::from([("title", "Deposit"), ("parent", "base_footer_header")]);
+    let context = HashMap::from([("title", "Deposit"), ("parent", "base_with_header")]);
     Template::render("deposit", context)
 }
 
@@ -103,7 +103,7 @@ async fn withdraw(
             .to_string();
         let context = HashMap::from([
             ("title", "Withdraw"),
-            ("parent", "base_footer_header"),
+            ("parent", "base_with_header"),
             ("login", "lalala"),
             ("btc_balance", btc_balance),
             ("btc_fee", btc_fee_per_transaction),
