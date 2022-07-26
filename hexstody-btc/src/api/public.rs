@@ -1,13 +1,13 @@
 use crate::constants::{WITHDRAWAL_CONFIRM_URI, WITHDRAWAL_REJECT_URI};
 use crate::state::ScanState;
-use bitcoin::{Address, Amount};
+use bitcoin::{consensus::encode, network::constants::Network, Address, Amount, Transaction};
 use bitcoincore_rpc::{Client, RpcApi};
-use bitcoincore_rpc_json::AddressType;
+use bitcoincore_rpc_json::{AddressType, GetTransactionResultDetailCategory};
 use hexstody_api::domain::CurrencyAddress;
-use hexstody_api::types::{FeeResponse, HotBalanceResponse};
 use hexstody_api::types::{
     ConfirmationData, ConfirmedWithdrawal, SignatureData, WithdrawalResponse,
 };
+use hexstody_api::types::{FeeResponse, HotBalanceResponse};
 use hexstody_btc_api::bitcoin::*;
 use hexstody_btc_api::events::*;
 use hexstody_sig::verify_signature;
@@ -97,6 +97,7 @@ struct WithdrawCfg {
     min_confirmations: i16,
     op_public_keys: Vec<PublicKey>,
     hot_domain: String,
+    network: Network,
 }
 
 #[openapi(tag = "withdraw")]
@@ -111,6 +112,7 @@ async fn withdraw_btc(
         min_confirmations,
         op_public_keys,
         hot_domain,
+        network,
     } = cfg.inner();
     let mut valid_confirms = 0;
     let mut valid_rejections = 0;
@@ -172,10 +174,52 @@ async fn withdraw_btc(
                             }),
                         )
                     })?;
-                let fee = client
-                    .get_transaction(&txid, None)
-                    .map(|tres| tres.fee.map(|f| f.as_sat() as u64)).ok().flatten();
-                let resp = WithdrawalResponse{ id: cw.id.clone(), txid: BtcTxid(txid), fee: fee };
+                let tx = client.get_transaction(&txid, None).map_err(|e| {
+                    (
+                        Status::InternalServerError,
+                        Json(crate::api::error::ErrorMessage {
+                            message: format!("Tx not found: {:?}", e),
+                            code: 500,
+                        }),
+                    )
+                })?;
+                let fee = tx.fee.map(|f| f.as_sat().abs() as u64);
+                let input_addresses = tx
+                    .details
+                    .iter()
+                    .map(|x| match x.category {
+                        GetTransactionResultDetailCategory::Receive
+                        | GetTransactionResultDetailCategory::Generate
+                        | GetTransactionResultDetailCategory::Immature => {
+                            x.address.clone().map(|a| CurrencyAddress::from(a))
+                        }
+                        _ => None,
+                    })
+                    .flatten()
+                    .collect();
+                let deserialized_tx: Transaction = encode::deserialize(&tx.hex).map_err(|e| {
+                    (
+                        Status::InternalServerError,
+                        Json(crate::api::error::ErrorMessage {
+                            message: format!("Failed to deserialize tx: {:?}", e),
+                            code: 500,
+                        }),
+                    )
+                })?;
+                let output_addresses = deserialized_tx
+                    .output
+                    .iter()
+                    .map(|out| Address::from_script(&out.script_pubkey, *network))
+                    .flatten()
+                    .map(|addr| CurrencyAddress::from(addr))
+                    .collect();
+                let resp = WithdrawalResponse {
+                    id: cw.id.clone(),
+                    txid: BtcTxid(txid),
+                    fee,
+                    input_addresses,
+                    output_addresses,
+                };
                 debug!("OK: {:?}", resp);
                 Ok(Json(resp))
             } else {
@@ -211,14 +255,21 @@ async fn withdraw_btc(
 #[post("/hotbalance")]
 async fn get_hot_balance(client: &State<Client>) -> error::Result<HotBalanceResponse> {
     client
-    .get_balance(None, None)
-    .map_err(|e| { (
-            Status::InternalServerError,
-            Json(crate::api::error::ErrorMessage {
-                message: format!("Failed get the balance: {:?}", e),
-                code: 500})
-            )})
-    .map(|a| Json(HotBalanceResponse{balance: a.as_sat()}))
+        .get_balance(None, None)
+        .map_err(|e| {
+            (
+                Status::InternalServerError,
+                Json(crate::api::error::ErrorMessage {
+                    message: format!("Failed get the balance: {:?}", e),
+                    code: 500,
+                }),
+            )
+        })
+        .map(|a| {
+            Json(HotBalanceResponse {
+                balance: a.as_sat(),
+            })
+        })
 }
 
 async fn guard_regtest(client: &Client) -> error::Result<()> {
@@ -294,6 +345,7 @@ pub async fn serve_public_api(
     op_public_keys: Vec<PublicKey>,
     min_confirmations: i16,
     hot_domain: String,
+    network: Network,
 ) -> Result<(), rocket::Error> {
     let zero_key =
         "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==";
@@ -316,6 +368,7 @@ pub async fn serve_public_api(
         min_confirmations,
         op_public_keys,
         hot_domain,
+        network,
     };
     let _ = rocket::custom(figment)
         .mount(

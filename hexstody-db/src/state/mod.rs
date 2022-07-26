@@ -22,10 +22,9 @@ use super::update::btc::BtcTxCancel;
 use super::update::deposit::DepositAddress;
 use super::update::signup::{SignupInfo, UserId};
 use super::update::withdrawal::{
-    WithdrawalRequestDecision, WithdrawalRequestDecisionInfo,
-    WithdrawalRequestInfo,
+    WithdrawalRequestDecision, WithdrawalRequestDecisionInfo, WithdrawalRequestInfo,
 };
-use super::update::{StateUpdate, UpdateBody, results::UpdateResult};
+use super::update::{results::UpdateResult, StateUpdate, UpdateBody};
 use hexstody_api::domain::*;
 use hexstody_api::types::WithdrawalRequestDecisionType;
 
@@ -78,16 +77,17 @@ impl State {
             .map(|(uid, _)| uid.clone())
     }
 
-    pub fn find_withdrawal_by_tx_id(&self, txid: CurrencyTxId) -> Option<WithdrawalRequestId>{
+    pub fn find_withdrawal_by_tx_id(&self, txid: CurrencyTxId) -> Option<WithdrawalRequestId> {
         self.users
             .iter()
-            .find_map(|(_, user)| 
-                user.find_completed_request(txid.clone())
-            )
+            .find_map(|(_, user)| user.find_completed_request(txid.clone()))
     }
 
     /// Apply an update event from persistent store
-    pub fn apply_update(&mut self, update: StateUpdate) -> Result<Option<UpdateResult>, StateUpdateErr> {
+    pub fn apply_update(
+        &mut self,
+        update: StateUpdate,
+    ) -> Result<Option<UpdateResult>, StateUpdateErr> {
         match update.body {
             UpdateBody::Signup(info) => {
                 self.with_signup(update.created, info)?;
@@ -239,7 +239,7 @@ impl State {
             .iter()
             .any(|c| c.public_key == withdrawal_request_decision.public_key);
         match withdrawal_request.status {
-            WithdrawalRequestStatus::Completed{..} => {
+            WithdrawalRequestStatus::Completed { .. } => {
                 return Err(StateUpdateErr::WithdrawalRequestAlreadyConfirmed(
                     withdrawal_request.id,
                 ))
@@ -254,7 +254,7 @@ impl State {
                     withdrawal_request.id,
                 ))
             }
-            WithdrawalRequestStatus::NodeRejected{..} => {
+            WithdrawalRequestStatus::NodeRejected { .. } => {
                 return Err(StateUpdateErr::WithdrawalRequestAlreadyRejected(
                     withdrawal_request.id,
                 ))
@@ -282,7 +282,7 @@ impl State {
                             return Ok(Some(withdrawal_request.id));
                         } else {
                             withdrawal_request.status = WithdrawalRequestStatus::InProgress(n + m);
-                            return Ok(None)
+                            return Ok(None);
                         };
                     }
                     WithdrawalRequestDecisionType::Reject => {
@@ -381,9 +381,11 @@ impl State {
             Ok(())
         };
 
-        let txid = CurrencyTxId::BTC(BTCTxid{txid: tx.txid.0.to_string()});
-        let res2 = if let Some(rid) = self.find_withdrawal_by_tx_id(txid){
-            let reject = WithdrawalRejectInfo{
+        let txid = CurrencyTxId::BTC(BTCTxid {
+            txid: tx.txid.0.to_string(),
+        });
+        let res2 = if let Some(rid) = self.find_withdrawal_by_tx_id(txid) {
+            let reject = WithdrawalRejectInfo {
                 id: rid,
                 reason: "Tx canceled".to_owned(),
             };
@@ -393,7 +395,9 @@ impl State {
         };
         if res1.is_err() && res2.is_err() {
             res1
-        } else {Ok(())}
+        } else {
+            Ok(())
+        }
     }
 
     /// Take ordered chain of updates and collect the accumulated state.
@@ -422,12 +426,12 @@ impl State {
         result
     }
 
-    pub fn get_withdrawal_request(&self, id: WithdrawalRequestId) -> Option<WithdrawalRequest>{
+    pub fn get_withdrawal_request(&self, id: WithdrawalRequestId) -> Option<WithdrawalRequest> {
         for (_, user) in self.users.iter() {
-            for (_, info) in user.currencies.iter(){
-                for (req_id, req) in info.withdrawal_requests.iter(){
+            for (_, info) in user.currencies.iter() {
+                for (req_id, req) in info.withdrawal_requests.iter() {
                     if req_id.clone() == id {
-                        return Some(req.clone())
+                        return Some(req.clone());
                     }
                 }
             }
@@ -435,36 +439,45 @@ impl State {
         None
     }
 
-    pub fn set_withdrawal_request_completed(&mut self, withdrawal_confirmed_info: WithdrawCompleteInfo) -> Result<(), StateUpdateErr>{
+    pub fn set_withdrawal_request_completed(
+        &mut self,
+        withdrawal_confirmed_info: WithdrawCompleteInfo,
+    ) -> Result<(), StateUpdateErr> {
         for (_, user) in self.users.iter_mut() {
-            for (_, info) in user.currencies.iter_mut(){
-                for (req_id, req) in info.withdrawal_requests.iter_mut(){
+            for (_, info) in user.currencies.iter_mut() {
+                for (req_id, req) in info.withdrawal_requests.iter_mut() {
                     if req_id.clone() == withdrawal_confirmed_info.id {
-                        let stat = WithdrawalRequestStatus::Completed { 
+                        let stat = WithdrawalRequestStatus::Completed {
                             confirmed_at: withdrawal_confirmed_info.confirmed_at,
                             txid: withdrawal_confirmed_info.txid.clone(),
-                            fee:  withdrawal_confirmed_info.fee.unwrap_or(0) };
-                        req.status = stat;
-                    }
-                }
-            }
-        };
-        Ok(())
-    }
-
-    pub fn set_withdrawal_request_node_rejected(&mut self, reject_info: WithdrawalRejectInfo) -> Result<(), StateUpdateErr> {
-        for (_, user) in self.users.iter_mut() {
-            for (_, info) in user.currencies.iter_mut(){
-                for (req_id, req) in info.withdrawal_requests.iter_mut(){
-                    if req_id.clone() == reject_info.id {
-                        let stat = WithdrawalRequestStatus::NodeRejected { 
-                            reason: reject_info.reason.clone()
+                            fee: withdrawal_confirmed_info.fee,
+                            input_addresses: withdrawal_confirmed_info.input_addresses.clone(),
+                            output_addresses: withdrawal_confirmed_info.output_addresses.clone(),
                         };
                         req.status = stat;
                     }
                 }
             }
-        };
+        }
+        Ok(())
+    }
+
+    pub fn set_withdrawal_request_node_rejected(
+        &mut self,
+        reject_info: WithdrawalRejectInfo,
+    ) -> Result<(), StateUpdateErr> {
+        for (_, user) in self.users.iter_mut() {
+            for (_, info) in user.currencies.iter_mut() {
+                for (req_id, req) in info.withdrawal_requests.iter_mut() {
+                    if req_id.clone() == reject_info.id {
+                        let stat = WithdrawalRequestStatus::NodeRejected {
+                            reason: reject_info.reason.clone(),
+                        };
+                        req.status = stat;
+                    }
+                }
+            }
+        }
         Ok(())
     }
 }

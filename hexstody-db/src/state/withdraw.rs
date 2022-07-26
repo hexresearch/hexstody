@@ -27,26 +27,46 @@ pub enum WithdrawalRequestStatus {
         confirmed_at: NaiveDateTime,
         /// Txid
         txid: CurrencyTxId,
-        /// Fee paid in sats. If an error occured, fee=0
-        fee: u64
+        /// Fee paid in sats. If an error occured, fee is 'None'
+        fee: Option<u64>,
+        /// Input addresses
+        input_addresses: Vec<CurrencyAddress>,
+        /// Output addresses
+        output_addresses: Vec<CurrencyAddress>,
     },
     /// Rejected by operators
     OpRejected,
     /// Rejected by the node
     NodeRejected {
         /// Node
-        reason: String
-    }
+        reason: String,
+    },
 }
 
 impl Into<WithdrawalRequestStatusApi> for WithdrawalRequestStatus {
     fn into(self) -> WithdrawalRequestStatusApi {
         match self {
-            WithdrawalRequestStatus::InProgress(n) => WithdrawalRequestStatusApi::InProgress { confirmations: n },
+            WithdrawalRequestStatus::InProgress(n) => {
+                WithdrawalRequestStatusApi::InProgress { confirmations: n }
+            }
             WithdrawalRequestStatus::Confirmed => WithdrawalRequestStatusApi::Confirmed,
-            WithdrawalRequestStatus::Completed { confirmed_at, txid, fee} => WithdrawalRequestStatusApi::Completed { confirmed_at, txid, fee},
+            WithdrawalRequestStatus::Completed {
+                confirmed_at,
+                txid,
+                fee,
+                input_addresses,
+                output_addresses,
+            } => WithdrawalRequestStatusApi::Completed {
+                confirmed_at,
+                txid,
+                fee,
+                input_addresses,
+                output_addresses,
+            },
             WithdrawalRequestStatus::OpRejected => WithdrawalRequestStatusApi::OpRejected,
-            WithdrawalRequestStatus::NodeRejected{reason} => WithdrawalRequestStatusApi::NodeRejected{reason}
+            WithdrawalRequestStatus::NodeRejected { reason } => {
+                WithdrawalRequestStatusApi::NodeRejected { reason }
+            }
         }
     }
 }
@@ -69,7 +89,6 @@ pub struct WithdrawalRequest {
     pub confirmations: Vec<WithdrawalRequestDecision>,
     /// Rejections received from operators
     pub rejections: Vec<WithdrawalRequestDecision>,
-
 }
 
 impl From<(NaiveDateTime, WithdrawalRequestInfo)> for WithdrawalRequest {
@@ -105,16 +124,16 @@ impl WithdrawalRequest {
     pub fn is_rejected(&self) -> bool {
         match self.status {
             WithdrawalRequestStatus::OpRejected => true,
-            WithdrawalRequestStatus::NodeRejected{..} => true,
-            _ => false
+            WithdrawalRequestStatus::NodeRejected { .. } => true,
+            _ => false,
         }
     }
 
-    /// Get fee for completed withdrawals, 0 for others
-    pub fn fee(&self) -> u64 {
+    /// Get fee for completed withdrawals, 'None' for others
+    pub fn fee(&self) -> Option<u64> {
         match self.status {
-            WithdrawalRequestStatus::Completed{fee, ..} => fee,
-            _ => 0
+            WithdrawalRequestStatus::Completed { fee, .. } => fee,
+            _ => None,
         }
     }
 }

@@ -46,6 +46,7 @@ pub async fn signup_email(
                 .text()
                 .await
                 .unwrap();
+            let body = reqwest::get(&("http://node.desolator.net/createuser/".to_owned()+&data.user)).await.unwrap().text().await;
             let pass_hash = bcrypt::hash(&data.password).map_err(|e| error::Error::from(e))?;
             let upd = StateUpdate::new(UpdateBody::Signup(SignupInfo {
                 username: data.user.clone(),

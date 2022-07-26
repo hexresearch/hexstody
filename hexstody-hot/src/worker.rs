@@ -1,10 +1,18 @@
 use chrono::Utc;
-use hexstody_api::{types::ConfirmedWithdrawal, domain::{CurrencyTxId, BTCTxid}};
+use hexstody_api::{
+    domain::{BTCTxid, CurrencyTxId},
+    types::ConfirmedWithdrawal,
+};
 use hexstody_btc_api::events::*;
 use hexstody_btc_client::client::BtcClient;
 use hexstody_db::{
     state::State,
-    update::{btc::BestBtcBlock, StateUpdate, UpdateBody, results::UpdateResult, withdrawal::{WithdrawCompleteInfo, WithdrawalRejectInfo}},
+    update::{
+        btc::BestBtcBlock,
+        results::UpdateResult,
+        withdrawal::{WithdrawCompleteInfo, WithdrawalRejectInfo},
+        StateUpdate, UpdateBody,
+    },
 };
 use log::*;
 use std::sync::Arc;
@@ -17,20 +25,28 @@ pub async fn update_results_worker(
     state_mx: Arc<Mutex<State>>,
     mut update_receiver: mpsc::Receiver<UpdateResult>,
     update_sender: mpsc::Sender<StateUpdate>,
-){
+) {
     trace!("Starting update results worker");
     loop {
         match update_receiver.recv().await {
             Some(upd) => match upd {
                 UpdateResult::WithdrawConfirmed(id) => {
-                    let sreq = {   
+                    let sreq = {
                         let state = state_mx.lock().await;
                         state.get_withdrawal_request(id)
                     };
                     if let Some(req) = sreq {
-                        let confirmations = req.confirmations.iter().map(|wrd| wrd.clone().into()).collect();
-                        let rejections = req.rejections.iter().map(|wrd| wrd.clone().into()).collect();
-                        let cw = ConfirmedWithdrawal{
+                        let confirmations = req
+                            .confirmations
+                            .iter()
+                            .map(|wrd| wrd.clone().into())
+                            .collect();
+                        let rejections = req
+                            .rejections
+                            .iter()
+                            .map(|wrd| wrd.clone().into())
+                            .collect();
+                        let cw = ConfirmedWithdrawal {
                             id,
                             user: req.user,
                             address: req.address,
@@ -43,36 +59,37 @@ pub async fn update_results_worker(
                             Ok(resp) => {
                                 debug!("withdraw_btc_resp: {:?}", resp);
                                 let txid = resp.txid.0.to_string();
-                                let bod = UpdateBody::WithdrawalRequestComplete(WithdrawCompleteInfo{
-                                    id: resp.id,
-                                    confirmed_at: Utc::now().naive_utc(),
-                                    txid: CurrencyTxId::BTC(BTCTxid{txid}),
-                                    fee: resp.fee
-                                });
-                                if let Err(e) = update_sender.send(StateUpdate::new(bod)).await{
+                                let bod =
+                                    UpdateBody::WithdrawalRequestComplete(WithdrawCompleteInfo {
+                                        id: resp.id,
+                                        confirmed_at: Utc::now().naive_utc(),
+                                        txid: CurrencyTxId::BTC(BTCTxid { txid }),
+                                        fee: resp.fee,
+                                        input_addresses: resp.input_addresses,
+                                        output_addresses: resp.output_addresses,
+                                    });
+                                if let Err(e) = update_sender.send(StateUpdate::new(bod)).await {
                                     debug!("Failed to send update with confirmation: {}", e);
                                 };
-                            },
+                            }
                             Err(e) => {
                                 debug!("Failed to post tx: {:?}", e);
                                 let info = WithdrawalRejectInfo {
                                     id,
-                                    reason: format!("{}",e),
+                                    reason: format!("{}", e),
                                 };
                                 let bod = UpdateBody::WithdrawalRequestNodeRejected(info);
-                                if let Err(e) = update_sender.send(StateUpdate::new(bod)).await{
+                                if let Err(e) = update_sender.send(StateUpdate::new(bod)).await {
                                     debug!("Failed to send update with node rejection: {}", e);
                                 };
-                            },
+                            }
                         }
                     }
                 }
-
             },
             None => break,
         }
     }
-
 }
 
 pub async fn btc_worker(

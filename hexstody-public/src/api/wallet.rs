@@ -9,8 +9,8 @@ use rocket::serde::json::Json;
 use rocket::{get, post, State};
 use rocket_okapi::openapi;
 
+use hexstody_api::domain::{BtcAddress, Currency, CurrencyAddress, CurrencyTxId};
 use super::auth::{require_auth, require_auth_user};
-use hexstody_api::domain::{BtcAddress, Currency, CurrencyAddress};
 use hexstody_api::error;
 use hexstody_api::types as api;
 use hexstody_btc_client::client::{BtcClient, BTC_BYTES_PER_TRANSACTION};
@@ -234,6 +234,8 @@ pub async fn get_history(
                 date: btc_deposit.timestamp,
                 number_of_confirmations: btc_deposit.confirmations,
                 value: btc_deposit.amount.abs() as u64,
+                to_address: CurrencyAddress::from(btc_deposit.address.clone()),
+                txid: CurrencyTxId::from(btc_deposit.txid),
             }),
             Transaction::Eth() => todo!("Eth deposit history mapping"),
         }
