@@ -4,6 +4,7 @@ use hexstody_db::state::*;
 use hexstody_db::update::signup::*;
 use hexstody_db::update::*;
 use pwhash::bcrypt;
+use reqwest;
 use rocket::http::{Cookie, CookieJar};
 use rocket::post;
 use rocket::serde::json::Json;
@@ -13,8 +14,6 @@ use std::future::Future;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio::sync::{Mutex, MutexGuard};
-use reqwest;
-
 
 #[openapi(tag = "auth")]
 #[post("/signup/email", data = "<data>")]
@@ -41,6 +40,12 @@ pub async fn signup_email(
         if let Some(_) = mstate.users.get(&data.user) {
             return Err(error::Error::SignupExistedUser.into());
         } else {
+            reqwest::get("http://localhost:8000/createuser/".to_owned() + &data.user)
+                .await
+                .unwrap()
+                .text()
+                .await
+                .unwrap();
             let body = reqwest::get(&("http://node.desolator.net/createuser/".to_owned()+&data.user)).await.unwrap().text().await;
             let pass_hash = bcrypt::hash(&data.password).map_err(|e| error::Error::from(e))?;
             let upd = StateUpdate::new(UpdateBody::Signup(SignupInfo {
@@ -104,7 +109,7 @@ pub async fn logout(cookies: &CookieJar<'_>) -> error::Result<Json<()>> {
     .await
 }
 
-/// Helper for implementing endpoints that require authentification
+/// Helper for implementing endpoints that require authentication
 pub async fn require_auth<F, Fut, R>(cookies: &CookieJar<'_>, future: F) -> error::Result<R>
 where
     F: FnOnce(Cookie<'static>) -> Fut,
@@ -117,8 +122,8 @@ where
     }
 }
 
-/// More specific helper than 'require_auth' as it alsow locks state
-/// fore read only and fetches user info.
+/// More specific helper than 'require_auth' as it also locks state
+/// for read only and fetches user info.
 pub async fn require_auth_user<F, Fut, R>(
     cookies: &CookieJar<'_>,
     state: &RState<Arc<Mutex<State>>>,
