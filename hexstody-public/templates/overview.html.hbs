@@ -2,7 +2,8 @@
 
 <!DOCTYPE html>
 <html lang="en" style="background-color: #ECEFF4;">
-  <head>
+
+<head>
     <meta charset='utf-8'>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="referrer" content="unsafe-url">
@@ -14,41 +15,43 @@
     <script type="module" src="/scripts/page/overview.js"></script>
     <link rel="stylesheet" href="css/style.css">
 
-  </head>
-  <body>
+</head>
+
+<body>
     <div class="full-height" style="background-color: #ECEFF4;">
 
-      <div class="container" style="padding-top: 25px;">
+        <div class="container" style="padding-top: 25px;">
 
-        <div class="box page-content" style="box-shadow: none !Important;">
-          <div class="content-row">
-            <span class="balance-label">Total Balance</span>
-          </div>
-          <div class="content-row">
-            <span id="total-bal-usd" class="balance-val-bg">0 $</span>
-            <span style="margin-left: 20px" id="total-bal-rub" class="balance-val-gr">(0 P)</span>
-          </div>
+            <div class="box page-content" style="box-shadow: none !Important;">
+                <div class="content-row">
+                    <span class="balance-label">Total Balance</span>
+                </div>
+                <div class="content-row">
+                    <span id="total-bal-usd" class="balance-val-bg">0 $</span>
+                    <span style="margin-left: 20px" id="total-bal-rub" class="balance-val-gr">(0 P)</span>
+                </div>
 
-          <div class="content-row content-separator my-4"></div>
-          <div class="row is-center" id="balance">
-          </div>
+                <div class="content-row content-separator my-4"></div>
+                <div class="row is-center" id="balance">
+                </div>
+            </div>
+
+            <div class="box page-content" style="box-shadow: none !Important;">
+                <div class="content-row">
+                    <span class="balance-label">Recent transactions</span>
+                </div>
+
+                <div class="content-separator my-4"></div>
+                <div id="history">
+                </div>
+            </div>
+
         </div>
-
-        <div class="box page-content" style="box-shadow: none !Important;">
-          <div class="content-row">
-            <span class="balance-label">Recent transactions</span>
-          </div>
-
-          <div class="content-separator my-4"></div>
-          <div id="history">
-          </div>
-        </div>
-
-      </div>
-      <button style="visibility: collapse"  id="loadMore">LoadMore</button>
+        <button style="visibility: collapse" id="loadMore">LoadMore</button>
 
     </div>
-  </body>
+</body>
+
 </html>
 
 {{/inline}}

@@ -14,7 +14,7 @@ async function trySubmit() {
     const password = passwordEl.value;
     const signUpResult = await postSignUp(email, password);
     if (signUpResult.ok) {
-      window.location.href = "/signin";
+        window.location.href = "/signin";
 
     } else {
         const validationDisplay = document.getElementById("validationError");
@@ -24,7 +24,7 @@ async function trySubmit() {
 }
 
 async function init() {
-    function trySubmitOnEnter(e){
+    function trySubmitOnEnter(e) {
         if (e.key === "Enter") {
             e.preventDefault();
             trySubmit();
@@ -35,7 +35,7 @@ async function init() {
     passwordEl = document.getElementById("signUpPassword");
 
     submitButton.onclick = trySubmit;
-    emailEl.addEventListener("keyup",trySubmitOnEnter);
+    emailEl.addEventListener("keyup", trySubmitOnEnter);
     passwordEl.addEventListener("keyup", trySubmitOnEnter);
 }
 

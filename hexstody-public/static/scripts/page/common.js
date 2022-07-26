@@ -22,7 +22,7 @@ export function formattedCurrencyValue(currency, value) {
     }
 }
 
-export function formattedCurrencyValueFixed(currency, value,fixed) {
+export function formattedCurrencyValueFixed(currency, value, fixed) {
     switch (currency) {
         case "BTC":
             const nf = new Intl.NumberFormat('en-US');
