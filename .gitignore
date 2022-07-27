@@ -4,3 +4,4 @@ result
 docker-image-hexstody.tar.gz
 .vscode
 *.pem
+.sass-cache/
