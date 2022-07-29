@@ -18,13 +18,13 @@ async function trySubmit() {
 
     } else {
         const validationDisplay = document.getElementById("validationError");
-//        validationDisplay.textContent = (await signInResult.json()).message;
+        //        validationDisplay.textContent = (await signInResult.json()).message;
         validationDisplay.hidden = false;
     };
 }
 
 async function init() {
-    function trySubmitOnEnter(e){
+    function trySubmitOnEnter(e) {
         if (e.key === "Enter") {
             e.preventDefault();
             trySubmit();
@@ -36,7 +36,7 @@ async function init() {
     passwordEl = document.getElementById("signInPassword");
 
     submitButton.onclick = trySubmit;
-    emailEl.addEventListener("keyup",trySubmitOnEnter);
+    emailEl.addEventListener("keyup", trySubmitOnEnter);
     passwordEl.addEventListener("keyup", trySubmitOnEnter);
 };
 

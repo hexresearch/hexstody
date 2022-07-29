@@ -6,8 +6,10 @@ export async function loadTemplate(path) {
 export function formattedCurrencyValue(currency, value) {
     switch (currency) {
         case "BTC":
-            const nf = new Intl.NumberFormat('en-US');
-            return nf.format(value);
+            // const nf = new Intl.NumberFormat('en-US');
+            // return nf.format(value);
+            const v = value / 100000000
+            return v.toFixed(8)
         case "ETH":
             const newv = value / 1000000000000000000
             return newv.toFixed(8);
@@ -22,11 +24,13 @@ export function formattedCurrencyValue(currency, value) {
     }
 }
 
-export function formattedCurrencyValueFixed(currency, value,fixed) {
+export function formattedCurrencyValueFixed(currency, value, fixed) {
     switch (currency) {
         case "BTC":
-            const nf = new Intl.NumberFormat('en-US');
-            return nf.format(value);
+            // const nf = new Intl.NumberFormat('en-US');
+            // return nf.format(value);
+            const v = value / 100000000
+            return v.toFixed(fixed)
         case "ETH":
             const newv = value / 1000000000000000000
             return newv.toFixed(fixed)

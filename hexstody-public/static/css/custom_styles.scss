@@ -1,0 +1,267 @@
+html,
+body {
+    height: 100%;
+}
+
+.full-height {
+    height: 100%;
+}
+
+.page-content {
+    margin-left: 15%;
+    margin-right: 15%;
+    font-weight: 700;
+}
+
+.nav-logo {
+    font-weight: 700;
+    font-size: 24px;
+    line-height: 32px;
+    letter-spacing: 0.02em;
+}
+
+.nav-lang {
+    font-weight: 500;
+    font-size: 14px;
+    line-height: 20px;
+}
+
+.nav-account {
+    font-weight: 500;
+    font-size: 16px;
+    line-height: 120%;
+
+}
+
+.content-row {
+    margin-left: 40px;
+    margin-right: 40px;
+}
+
+.balance-label {
+    font-weight: 600;
+    font-size: 20px;
+    line-height: 28px;
+
+}
+
+.balance-val-bg {
+    font-weight: 600;
+    font-size: 36px;
+    line-height: 48px;
+    letter-spacing: 0.02em;
+
+}
+
+.balance-val-gr {
+    font-weight: 600;
+    font-size: 36px;
+    line-height: 48px;
+    letter-spacing: 0.02em;
+    color: #77778C;
+}
+
+
+
+.item-label {
+    font-weight: 600;
+    font-size: 16px;
+    line-height: 24px;
+}
+
+.item-val-bg {
+    font-weight: 600;
+    font-size: 28px;
+    line-height: 36px;
+
+}
+
+.item-val-gr {
+    font-weight: 600;
+    font-size: 16px;
+    line-height: 24px;
+    color: #77778C;
+}
+
+.item-buttom-w {
+    float: right;
+    font-weight: 500;
+}
+
+.item-buttom-d {
+    float: right;
+    background-color: #409EFF !Important;
+    font-weight: 500;
+    color: #FFFFFF;
+}
+
+.column-item-one {
+    padding: 12px;
+}
+
+
+
+.rt-item-two-bg {
+    font-weight: 600;
+    font-size: 16px;
+    line-height: 24px;
+
+}
+
+.rt-item-two-gr {
+    font-weight: 500;
+    font-size: 16px;
+    line-height: 24px;
+    color: #77778C;
+}
+
+
+
+.rt-item-four {
+    font-weight: 600;
+    font-size: 16px;
+    line-height: 24px;
+    color: #77778C;
+}
+
+.column-item-four {
+    text-align: right;
+}
+
+// ------------------------------
+
+.history-box {
+    padding: 0;
+}
+
+.history-header {
+    font-weight: 600;
+    font-size: 20px;
+    line-height: 28px;
+    padding: 24px 40px;
+}
+
+.content-separator {
+    background-color: $custom-grey-lighter;
+    border: none;
+    display: block;
+    height: 1px;
+}
+
+#history-table {
+    padding: 0px 40px;
+
+    td {
+        padding-top: 24px;
+        padding-bottom: 24px;
+        vertical-align: middle;
+    }
+
+    .history-col-1 {
+        padding-left: 0;
+        padding-right: 12px;
+        width: 20%;
+
+        >div {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .history-col-1-icon {
+            min-width: 40px;
+            width: 40px;
+            height: 40px;
+            background-color: $custom-grey-lightest;
+            border-radius: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+
+            .icon {
+                color: $primary;
+                font-size: 20px;
+            }
+        }
+
+        .history-col-1-info {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .history-col-1-info-1 {
+            font-weight: 600;
+            color: $custom-grey-dark;
+            white-space: nowrap;
+        }
+
+        .history-col-1-info-2 {
+            font-weight: 500;
+            color: $custom-grey-light;
+            white-space: nowrap;
+        }
+
+    }
+
+    .history-col-2 {
+        padding-left: 12px;
+        padding-right: 12px;
+        max-width: 100px;
+
+        >div {
+            display: flex;
+            align-items: center;
+            font-weight: 500;
+            font-size: 16px;
+            line-height: 24px;
+        }
+
+        button {
+            .icon {
+                color: $custom-grey-light;
+                font-size: 20px;
+            }
+        }
+
+        button:hover {
+            .icon {
+                color: $primary;
+            }
+        }
+
+        button:focus {
+            box-shadow: none !important;
+        }
+
+        a, span {
+            color: $custom-grey-light;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        a:hover {
+            color: $primary;
+        }
+    }
+
+    .history-col-3 {
+        padding-left: 12px;
+        padding-right: 0px;
+        width: 20%;
+        font-weight: 600;
+        color: $custom-grey-light;
+
+        >div {
+            text-align: right;
+            white-space: nowrap;
+
+            .is-deposit {
+                color: $primary;
+            }
+
+        }
+
+    }
+}

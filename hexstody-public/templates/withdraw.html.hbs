@@ -1,22 +1,25 @@
-{{#*inline "page"}}
+{{#*inline "css"}}
+{{/inline}}
 
+{{#*inline "scripts"}}
 <script type="module" src="/scripts/page/common.js"></script>
 <script type="module" src="/scripts/page/withdraw.js"></script>
-<link rel="stylesheet" type="text/css" href="/css/bulma.min.css" />
-<link rel="stylesheet" href="css/style.css">
+<script src="/scripts/handlebars.min-v4.7.7.js" defer></script>
+{{/inline}}
+
+{{#*inline "page"}}
 <style>
-body {
-  background-color: #ECEFF4;
-}
+    body {
+        background-color: #ECEFF4;
+    }
 
-.is-horizontal-center {
-  justify-content: center;
-}
-
+    .is-horizontal-center {
+        justify-content: center;
+    }
 </style>
 <div class="tabs is-large is-centered">
-  <ul>
-    <li class="is-active" id="btc-tab" onclick="
+    <ul>
+        <li class="is-active" id="btc-tab" onclick="
     (function(){
     ethTabBody = document.getElementById('ETH-tab-body');
     ethTab = document.getElementById('eth-tab');
@@ -27,8 +30,8 @@ body {
     btcTabBody.style.display = 'block';
     btcTab.classList.add('is-active');
     })();
-    ">  <a>BTC</a></li>
-    <li id="eth-tab" class="" onclick="
+    "> <a>BTC</a></li>
+        <li id="eth-tab" class="" onclick="
     (function(){
     ethTabBody = document.getElementById('ETH-tab-body');
     ethTab = document.getElementById('eth-tab');
@@ -42,104 +45,101 @@ body {
     btcTab.classList.remove('is-active');
     })();
     "><a>ETH</a></li>
-  </ul>
+    </ul>
 </div>
 
 <div id="eth-tab-body" style="display:none">
-  <div class="card column is-half is-offset-one-quarter">
-    <div class='card-content'>
-      <div class="columns is-center">
-        <div class="column">
-          Available: <span id="withdraw-bal"></span>
-        </div>
-        <div class="column has-text-right">
-          Fee: <span id="withdraw-fee"></span>
-        </div>
-      </div>
-      <div class="columns is-center">
-        <div class="column">
-            Address:
-        </div>
-        <div class="column is-8">
-            <input class="input is-fullwidth" id="btc_address" type="text">
-        </div>
-      </div>
-      <div class="columns is-center">
-        <div class="column is-4">
-            Amount:
-        </div>
-        <div class="column is-6">
-            <input class="input" id="btc_send_amount" type="text">
-        </div>
-        <div class="column">
-          <button id="max_btc"
-           type="button" class="button is-fullwidth">
-            Max
-          </button>
-        </div>
-      </div>
+    <div class="card column is-half is-offset-one-quarter">
+        <div class='card-content'>
+            <div class="columns is-center">
+                <div class="column">
+                    Available: <span id="withdraw-bal"></span>
+                </div>
+                <div class="column has-text-right">
+                    Fee: <span id="withdraw-fee"></span>
+                </div>
+            </div>
+            <div class="columns is-center">
+                <div class="column">
+                    Address:
+                </div>
+                <div class="column is-8">
+                    <input class="input is-fullwidth" id="eth_address" type="text">
+                </div>
+            </div>
+            <div class="columns is-center">
+                <div class="column is-4">
+                    Amount:
+                </div>
+                <div class="column is-6">
+                    <input class="input" id="eth_send_amount" type="text">
+                </div>
+                <div class="column">
+                    <button id="max_btc" type="button" class="button is-fullwidth">
+                        Max
+                    </button>
+                </div>
+            </div>
 
-      <div class="columns is-center">
-        <div class="column">
-          <button id="send_btc_eth" onclick="
+            <div class="columns is-center">
+                <div class="column">
+                    <button id="send_eth" onclick="
           (function(){alert('sended')})
-          "
-           type="button" class="button is-info is-fullwidth item-buttom-d">
-            Send
-          </button>
+          " type="button" class="button is-info is-fullwidth item-buttom-d">
+                        Send
+                    </button>
+                </div>
+            </div>
         </div>
-      </div>
     </div>
-  </div>
 </div>
 
 <div id="btc-tab-body">
-  <div class="card column is-half is-offset-one-quarter">
-    <div class='card-content'>
-      <div class="columns is-center">
-        <div class="column">
-          Available: <span id="withdraw-bal"></span>
-        </div>
-        <div class="column has-text-right">
-          Fee: <span id="withdraw-fee"></span>
-        </div>
-      </div>
-      <div class="columns is-center">
-        <div class="column">
-            Address:
-        </div>
-        <div class="column is-8">
-            <input class="input is-fullwidth" id="btc_address" type="text">
-        </div>
-      </div>
-      <div class="columns is-center">
-        <div class="column is-4">
-            Amount:
-        </div>
-        <div class="column is-6">
-            <input class="input" id="btc_send_amount" type="text">
-        </div>
-        <div class="column">
-          <button id="max_btc"
-           type="button" class="button is-fullwidth">
-            Max
-          </button>
-        </div>
-      </div>
+    <div class="card column is-half is-offset-one-quarter">
+        <div class='card-content'>
+            <div class="columns is-center">
+                <div class="column">
+                    Available: <span id="withdraw-bal"></span>
+                </div>
+                <div class="column has-text-right">
+                    Fee: <span id="withdraw-fee"></span>
+                </div>
+            </div>
+            <div class="columns is-center">
+                <div class="column">
+                    Address:
+                </div>
+                <div class="column is-8">
+                    <input class="input is-fullwidth" id="btc_address" type="text">
+                </div>
+            </div>
+            <div class="columns is-center">
+                <div class="column is-4">
+                    Amount:
+                </div>
+                <div class="column is-6">
+                    <input class="input" id="btc_send_amount" type="text">
+                </div>
+                <div class="column">
+                    <button id="max_btc" type="button" class="button is-fullwidth">
+                        Max
+                    </button>
+                </div>
+            </div>
 
-      <div class="columns is-center">
-        <div class="column">
-          <button id="send_btc_eth" onclick="
+            <div class="columns is-center">
+                <div class="column">
+                    <button id="send_btc" onclick="
           (function(){alert('sended')})
-          "
-           type="button" class="button is-info is-fullwidth item-buttom-d">
-            Send
-          </button>
-        </div>
+          " type="button" class="button is-info is-fullwidth item-buttom-d">
+                        Send
+                    </button>
+                </div>
 
-      </div>
+            </div>
+        </div>
     </div>
-  </div>
 </div>
 {{/inline}}
-{{> base_footer_header}}
+
+{{> base_with_header}}

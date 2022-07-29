@@ -1,7 +1,9 @@
-import { initTabs,
-         formattedCurrencyValue,
-        formattedCurrencyValueFixed }
-         from "./common.js";
+import {
+    initTabs,
+    formattedCurrencyValue,
+    formattedCurrencyValueFixed
+}
+    from "./common.js";
 
 
 
@@ -18,32 +20,38 @@ const ethSendAmountEl = document.getElementById("eth_send_amount");
 const maxBtcAmountBtn = document.getElementById("max_btc");
 const maxEthAmountBtn = document.getElementById("max_eth");
 
-const sendBtcBtn = document.getElementById("send_btc_eth");
+const sendBtcBtn = document.getElementById("send_btc");
 const sendEthBtn = document.getElementById("send_eth");
 
 const btcAddressEl = document.getElementById("btc_address");
-const ethAddressEl = document.getElementById("btc_address");
+const ethAddressEl = document.getElementById("eth_address");
 
 const btcValidationDisplayEl = document.getElementById("btc_validation");
 const ethValidationDisplayEl = document.getElementById("eth_validation");
 
 async function postWithdrawRequest(currency, address, amount) {
     let body;
+    let res;
     switch (currency) {
         case "BTC":
             body = { address: { type: "BTC", addr: address }, amount: amount }
+            res = await fetch("/withdraw",
+            {
+                method: "POST",
+                body: JSON.stringify(body)
+            });
+
+        return res;
             break;
         case "ETH":
-            body = { address: { type: "ETH", account: address }, amount: amount }
-            break;
+            body = { address: { type: "ETH", account: address }, amount: amount };
+            res = await fetch("/withdraweth/" + address + "/" + amount,
+                {
+                    method: "GET"
+                });
+
+            return res;
     }
-
-    const res = await fetch("/withdraweth/"+address+"/"+amount,
-        {
-            method: "GET"
-        });
-
-    return res;
 };
 
 async function trySubmit(currency, address, amount, validationDisplayEl) {
@@ -63,15 +71,15 @@ async function init() {
 
 
 
-//    ethBalanceEl.innerText = formattedCurrencyValue("ETH",
-//        ethBalanceEl.getAttribute("balance"));
-/*
-    maxBtcAmountBtn.onclick = () => btcSendAmountEl.value =
-        Math.max(0, btcBalanceEl.getAttribute("balance") - btcFeeEl.getAttribute("fee"));
-
-    maxEthAmountBtn.onclick = () => ethSendAmountEl.value =
-        Math.max(0, ethBalanceEl.getAttribute("balance") - ethFeeEl.getAttribute("fee"));
-*/
+    //    ethBalanceEl.innerText = formattedCurrencyValue("ETH",
+    //        ethBalanceEl.getAttribute("balance"));
+    /*
+        maxBtcAmountBtn.onclick = () => btcSendAmountEl.value =
+            Math.max(0, btcBalanceEl.getAttribute("balance") - btcFeeEl.getAttribute("fee"));
+    
+        maxEthAmountBtn.onclick = () => ethSendAmountEl.value =
+            Math.max(0, ethBalanceEl.getAttribute("balance") - ethFeeEl.getAttribute("fee"));
+    */
     sendBtcBtn.onclick = () => trySubmit(
         "BTC",
         btcAddressEl.value,
@@ -96,20 +104,19 @@ async function getEthFee() {
 async function updateBalanceAndFeeLoop() {
     const balancesObj = await getBalances();
     var balanceEth;
-    for(var i=0;i<balancesObj.balances.length;i++){
-      if (balancesObj.balances[i].currency == 'ETH') {
-        balanceEth = balancesObj.balances[i];
-      }
+    for (var i = 0; i < balancesObj.balances.length; i++) {
+        if (balancesObj.balances[i].currency == 'ETH') {
+            balanceEth = balancesObj.balances[i];
+        }
     }
-    console.log(balancesObj);
     const feeObj = await getEthFee();
     const tikerObj = await getCourseForETH("ETH")
     const withdrawBalanceElem = document.getElementById("withdraw-bal");
     const withdrawFeeElem = document.getElementById("withdraw-fee");
-    const balToUSD = (tikerObj.USD*balanceEth.value/1000000000000000000).toFixed(2);
-    const feeToUSD = (tikerObj.USD*21*feeObj.FastGasPrice/1000000).toFixed(2);
+    const balToUSD = (tikerObj.USD * balanceEth.value / 1000000000000000000).toFixed(2);
+    const feeToUSD = (tikerObj.USD * 21 * feeObj.FastGasPrice / 1000000).toFixed(2);
     const txtBal = formattedCurrencyValue("ETH", balanceEth.value) + " ETH" + " ($ " + balToUSD + ")"
-    const txtFee = formattedCurrencyValueFixed("ETH", 210000*feeObj.FastGasPrice*1000000000,5) + " ETH" + " ($"+ feeToUSD +")";
+    const txtFee = formattedCurrencyValueFixed("ETH", 210000 * feeObj.FastGasPrice * 1000000000, 5) + " ETH" + " ($" + feeToUSD + ")";
     withdrawBalanceElem.textContent = txtBal;
     withdrawFeeElem.textContent = txtFee
 }
@@ -124,10 +131,10 @@ async function updateLoop() {
 
 async function getCourseForETH(currency) {
     return await fetch("/ethticker",
-    {
-        method: "POST",
-        body: JSON.stringify(currency)
-    }).then(r => r.json());
+        {
+            method: "POST",
+            body: JSON.stringify(currency)
+        }).then(r => r.json());
 };
 
 document.addEventListener("DOMContentLoaded", init);
