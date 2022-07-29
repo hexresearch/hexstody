@@ -20,32 +20,38 @@ const ethSendAmountEl = document.getElementById("eth_send_amount");
 const maxBtcAmountBtn = document.getElementById("max_btc");
 const maxEthAmountBtn = document.getElementById("max_eth");
 
-const sendBtcBtn = document.getElementById("send_btc_eth");
+const sendBtcBtn = document.getElementById("send_btc");
 const sendEthBtn = document.getElementById("send_eth");
 
 const btcAddressEl = document.getElementById("btc_address");
-const ethAddressEl = document.getElementById("btc_address");
+const ethAddressEl = document.getElementById("eth_address");
 
 const btcValidationDisplayEl = document.getElementById("btc_validation");
 const ethValidationDisplayEl = document.getElementById("eth_validation");
 
 async function postWithdrawRequest(currency, address, amount) {
     let body;
+    let res;
     switch (currency) {
         case "BTC":
             body = { address: { type: "BTC", addr: address }, amount: amount }
+            res = await fetch("/withdraw",
+            {
+                method: "POST",
+                body: JSON.stringify(body)
+            });
+
+        return res;
             break;
         case "ETH":
-            body = { address: { type: "ETH", account: address }, amount: amount }
-            break;
+            body = { address: { type: "ETH", account: address }, amount: amount };
+            res = await fetch("/withdraweth/" + address + "/" + amount,
+                {
+                    method: "GET"
+                });
+
+            return res;
     }
-
-    const res = await fetch("/withdraweth/" + address + "/" + amount,
-        {
-            method: "GET"
-        });
-
-    return res;
 };
 
 async function trySubmit(currency, address, amount, validationDisplayEl) {
@@ -103,7 +109,6 @@ async function updateBalanceAndFeeLoop() {
             balanceEth = balancesObj.balances[i];
         }
     }
-    console.log(balancesObj);
     const feeObj = await getEthFee();
     const tikerObj = await getCourseForETH("ETH")
     const withdrawBalanceElem = document.getElementById("withdraw-bal");

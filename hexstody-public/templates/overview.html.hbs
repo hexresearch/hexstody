@@ -5,6 +5,8 @@
 <script type="module" src="/scripts/page/common.js"></script>
 <script type="module" src="/scripts/page/overview.js"></script>
 <script src="/scripts/handlebars.min-v4.7.7.js" defer></script>
+<script src="https://unpkg.com/@popperjs/core@2" defer></script>
+<script src="https://unpkg.com/tippy.js@6" defer></script>
 {{/inline}}
 
 {{#*inline "page"}}
@@ -12,13 +14,14 @@
 
     <div class="container" style="padding-top: 25px;">
 
-        <div class="box page-content" style="box-shadow: none !Important;">
+        <div class="box balance-box">
             <div class="content-row">
                 <span class="balance-label">Total Balance</span>
             </div>
             <div class="content-row">
-                <span id="total-bal-usd" class="balance-val-bg">0 $</span>
-                <span style="margin-left: 20px" id="total-bal-rub" class="balance-val-gr">(0 P)</span>
+                <span id="total-bal-usd" class="balance-val-bg"></span>
+                 
+                <span style="margin-left: 20px" id="total-bal-rub" class="balance-val-gr"></span>
             </div>
 
             <div class="content-row content-separator my-4"></div>
@@ -26,13 +29,10 @@
             </div>
         </div>
 
-        <div class="box page-content" style="box-shadow: none !Important;">
-            <div class="content-row">
-                <span class="balance-label">Recent transactions</span>
-            </div>
-
-            <div class="content-separator my-4"></div>
-            <div id="history">
+        <div class="box history-box">
+            <div class="history-header">Recent transactions</div>
+            <div class="content-separator"></div>
+            <div id="history-table">
             </div>
         </div>
 
