@@ -7,10 +7,11 @@ import { initTabs,
 
 const refreshInterval = 10000;
 
+const btcBalanceEl = document.getElementById("btc_balance");
 const ethBalanceEl = document.getElementById("eth_balance");
 
 const btcFeeEl = document.getElementById("btc_fee");
-const ethFeeEl = document.getElementById("ethfee");
+const ethFeeEl = document.getElementById("eth_fee");
 
 const btcSendAmountEl = document.getElementById("btc_send_amount");
 const ethSendAmountEl = document.getElementById("eth_send_amount");
@@ -18,7 +19,7 @@ const ethSendAmountEl = document.getElementById("eth_send_amount");
 const maxBtcAmountBtn = document.getElementById("max_btc");
 const maxEthAmountBtn = document.getElementById("max_eth");
 
-const sendBtcBtn = document.getElementById("send_btc_eth");
+const sendBtcBtn = document.getElementById("send_btc");
 const sendEthBtn = document.getElementById("send_eth");
 
 const btcAddressEl = document.getElementById("btc_address");
@@ -61,16 +62,18 @@ async function init() {
     initTabs(tabs);
     updateLoop();
 
+   /* maxBtcAmountBtn.onclick = () => btcSendAmountEl.value =
+        Math.max(0, btcBalanceEl.getAttribute("balance") - btcFeeEl.getAttribute("fee"));*/
 
+    maxEthAmountBtn.onclick = () => ethSendAmountEl.value =
+        Math.max(0, ethBalanceEl.getAttribute("balance") - ethFeeEl.getAttribute("fee"));
 
 //    ethBalanceEl.innerText = formattedCurrencyValue("ETH",
 //        ethBalanceEl.getAttribute("balance"));
 /*
-    maxBtcAmountBtn.onclick = () => btcSendAmountEl.value =
-        Math.max(0, btcBalanceEl.getAttribute("balance") - btcFeeEl.getAttribute("fee"));
+    
 
-    maxEthAmountBtn.onclick = () => ethSendAmountEl.value =
-        Math.max(0, ethBalanceEl.getAttribute("balance") - ethFeeEl.getAttribute("fee"));
+   
 */
     sendBtcBtn.onclick = () => trySubmit(
         "BTC",
@@ -94,24 +97,29 @@ async function getEthFee() {
 };
 
 async function updateBalanceAndFeeLoop() {
+
     const balancesObj = await getBalances();
     var balanceEth;
-    for(var i=0;i<balancesObj.balances.length;i++){
-      if (balancesObj.balances[i].currency == 'ETH') {
-        balanceEth = balancesObj.balances[i];
-      }
-    }
+    balancesObj.balances.forEach(balance => {
+        if(balance.currency === "ETH"){
+            balanceEth = balance.value;
+        }
+    });
+
+
     console.log(balancesObj);
     const feeObj = await getEthFee();
     const tikerObj = await getCourseForETH("ETH")
-    const withdrawBalanceElem = document.getElementById("withdraw-bal");
-    const withdrawFeeElem = document.getElementById("withdraw-fee");
-    const balToUSD = (tikerObj.USD*balanceEth.value/1000000000000000000).toFixed(2);
+
+    ethBalanceEl.setAttribute("balance", balanceEth);
+    const balToUSD = (tikerObj.USD*balanceEth/1000000000000000000).toFixed(2);
+    const txtBal = formattedCurrencyValue("ETH", balanceEth) + " ETH" + " ($ " + balToUSD + ")"
+    ethBalanceEl.textContent = txtBal;
+
+    ethFeeEl.setAttribute("fee", feeObj.FastGasPrice);
     const feeToUSD = (tikerObj.USD*21*feeObj.FastGasPrice/1000000).toFixed(2);
-    const txtBal = formattedCurrencyValue("ETH", balanceEth.value) + " ETH" + " ($ " + balToUSD + ")"
     const txtFee = formattedCurrencyValueFixed("ETH", 210000*feeObj.FastGasPrice*1000000000,5) + " ETH" + " ($"+ feeToUSD +")";
-    withdrawBalanceElem.textContent = txtBal;
-    withdrawFeeElem.textContent = txtFee
+    ethFeeEl.textContent = txtFee;
 }
 
 
