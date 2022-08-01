@@ -1,4 +1,3 @@
-use hexstody_api::domain::Currency;
 use hexstody_api::error;
 use hexstody_api::types as api;
 use hexstody_db::state::*;
