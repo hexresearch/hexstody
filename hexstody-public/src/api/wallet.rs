@@ -12,9 +12,9 @@ use rocket_okapi::openapi;
 use hexstody_api::domain::{BtcAddress, Currency, CurrencyAddress, CurrencyTxId};
 use super::auth::{require_auth, require_auth_user};
 use hexstody_api::error;
-use hexstody_api::types as api;
+use hexstody_api::types::{self as api, TokenInfo};
 use hexstody_btc_client::client::{BtcClient, BTC_BYTES_PER_TRANSACTION};
-use hexstody_db::state::State as DbState;
+use hexstody_db::state::{State as DbState, UserCurrencyInfo};
 use hexstody_db::state::{Transaction, WithdrawalRequest, REQUIRED_NUMBER_OF_CONFIRMATIONS};
 use hexstody_db::update::deposit::DepositAddress;
 use hexstody_db::update::withdrawal::WithdrawalRequestInfo;
@@ -425,4 +425,30 @@ async fn allocate_btc_address(
         .unwrap();
 
     Ok(packed_address)
+}
+
+#[openapi(tag = "withdraw")]
+#[get("/gettokens")]
+pub async fn get_tokens(
+    cookies: &CookieJar<'_>,
+    state: &State<Arc<Mutex<DbState>>>,
+) -> error::Result<Json<Vec<TokenInfo>>> {
+    require_auth_user(cookies, state, |_, user| async move {
+        let info : Vec<TokenInfo> = user.currencies
+            .values()
+            .filter_map(|v| 
+                match &v.currency {
+                    Currency::ERC20(token) => {
+                        Some(TokenInfo{
+                            token: token.clone(),
+                            balance: v.balance(),
+                            finalized_balance: v.finalized_balance(),
+                        })
+                    },
+                    _ => None
+                }
+            ).collect();
+        Ok(Json(info))
+    })
+    .await
 }

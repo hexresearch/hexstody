@@ -42,6 +42,14 @@ impl Currency {
                                     })
             ]
     }
+
+    /// Check if the currency is a token
+    pub fn is_token(&self) -> bool {
+        match self {
+            Currency::ERC20(_) => true,
+            _ => false,
+        }
+    }
 }
 
 /// Description of ERC20 token that allows to distinguish them between each other
