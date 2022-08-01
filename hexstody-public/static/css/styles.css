@@ -7739,22 +7739,6 @@ body {
   margin-right: 15%;
   font-weight: 700; }
 
-.nav-logo {
-  font-weight: 700;
-  font-size: 24px;
-  line-height: 32px;
-  letter-spacing: 0.02em; }
-
-.nav-lang {
-  font-weight: 500;
-  font-size: 14px;
-  line-height: 20px; }
-
-.nav-account {
-  font-weight: 500;
-  font-size: 16px;
-  line-height: 120%; }
-
 .content-row {
   margin-left: 40px;
   margin-right: 40px; }
@@ -7896,7 +7880,8 @@ body {
       color: #409EFF; }
     #history-table .history-col-2 button:focus {
       box-shadow: none !important; }
-    #history-table .history-col-2 a, #history-table .history-col-2 span {
+    #history-table .history-col-2 a,
+    #history-table .history-col-2 span {
       color: #77778C;
       white-space: nowrap;
       overflow: hidden;
@@ -7914,3 +7899,41 @@ body {
       white-space: nowrap; }
       #history-table .history-col-3 > div .is-deposit {
         color: #409EFF; }
+
+.header {
+  background-color: #ECEFF4 !important;
+  padding: 12px 20px;
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center; }
+  .header .header-start {
+    display: flex;
+    align-items: center; }
+  .header .header-logo {
+    color: #282143;
+    font-weight: 700;
+    font-size: 24px;
+    line-height: 32px;
+    letter-spacing: 0.02em;
+    margin-right: 20px; }
+  .header .dropdown-menu {
+    min-width: 8rem; }
+  .header .header-dropdown {
+    font-weight: 500;
+    background-color: transparent; }
+    .header .header-dropdown .icon {
+      font-size: 24px;
+      margin-left: 0px !important; }
+  .header .header-lang {
+    font-size: 14px;
+    line-height: 20px;
+    margin-right: 20px; }
+  .header .header-email {
+    font-size: 16px;
+    line-height: 120%;
+    border: none; }
+  .header .header-account {
+    font-weight: 500;
+    font-size: 16px;
+    line-height: 120%; }
