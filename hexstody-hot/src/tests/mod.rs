@@ -146,7 +146,7 @@ async fn test_btc_rbf_0conf_deposit() {
 
         let balances = env.hot_client.get_balance().await.expect("Balances");
         assert_eq!(
-            Some(amount),
+            Some(Amount::from_sat(0)),
             balances
                 .by_currency(&Currency::BTC)
                 .map(|i| Amount::from_sat(i.value.try_into().expect("Positive balance")))

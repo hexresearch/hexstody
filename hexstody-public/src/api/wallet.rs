@@ -14,7 +14,7 @@ use super::auth::{require_auth, require_auth_user};
 use hexstody_api::error;
 use hexstody_api::types::{self as api, TokenInfo};
 use hexstody_btc_client::client::{BtcClient, BTC_BYTES_PER_TRANSACTION};
-use hexstody_db::state::{State as DbState, UserCurrencyInfo};
+use hexstody_db::state::{State as DbState};
 use hexstody_db::state::{Transaction, WithdrawalRequest, REQUIRED_NUMBER_OF_CONFIRMATIONS};
 use hexstody_db::update::deposit::DepositAddress;
 use hexstody_db::update::withdrawal::WithdrawalRequestInfo;

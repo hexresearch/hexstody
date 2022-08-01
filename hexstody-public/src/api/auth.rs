@@ -1,3 +1,4 @@
+use hexstody_api::domain::Currency;
 use hexstody_api::error;
 use hexstody_api::types as api;
 use hexstody_db::state::*;
@@ -35,25 +36,20 @@ pub async fn signup_email(
         return Err(error::Error::UserPasswordTooLong.into());
     }
 
-    {
-        let mstate = state.lock().await;
-        if let Some(_) = mstate.users.get(&data.user) {
-            return Err(error::Error::SignupExistedUser.into());
-        } else {
-            reqwest::get("http://localhost:8000/createuser/".to_owned() + &data.user)
-                .await
-                .unwrap()
-                .text()
-                .await
-                .unwrap();
-            let body = reqwest::get(&("http://node.desolator.net/createuser/".to_owned()+&data.user)).await.unwrap().text().await;
-            let pass_hash = bcrypt::hash(&data.password).map_err(|e| error::Error::from(e))?;
-            let upd = StateUpdate::new(UpdateBody::Signup(SignupInfo {
-                username: data.user.clone(),
-                auth: SignupAuth::Password(pass_hash),
-            }));
-            updater.send(upd).await.unwrap();
-        }
+    let user_exists = state.lock().await.users.contains_key(&data.user);
+    if user_exists {
+        return Err(error::Error::SignupExistedUser.into());
+    } else {
+        let body = reqwest::get(&("http://node.desolator.net/createuser/".to_owned()+&data.user)).await.unwrap().text().await;
+        if let Err(e) = body {
+            return Err(error::Error::FailedETHConnection(e.to_string()).into())
+        };
+        let pass_hash = bcrypt::hash(&data.password).map_err(|e| error::Error::from(e))?;
+        let upd = StateUpdate::new(UpdateBody::Signup(SignupInfo {
+            username: data.user.clone(),
+            auth: SignupAuth::Password(pass_hash),
+        }));
+        updater.send(upd).await.unwrap();
     }
     Ok(Json(()))
 }

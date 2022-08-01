@@ -42,6 +42,8 @@ pub enum Error {
     FailedGetFee(Currency),
     #[error("Not enough {0}!")]
     InsufficientFunds(Currency),
+    #[error("Failed to connect to ETH node: {0}")]
+    FailedETHConnection(String)
 }
 
 impl Error {
@@ -60,6 +62,7 @@ impl Error {
             Error::FailedGenAddress(_) => 10,
             Error::FailedGetFee(_) => 11,
             Error::InsufficientFunds(_) => 12,
+            Error::FailedETHConnection(_) => 13,
         }
     }
 
@@ -78,6 +81,7 @@ impl Error {
             Error::FailedGenAddress(_) => Status::from_code(500).unwrap(),
             Error::FailedGetFee(_) => Status::from_code(500).unwrap(),
             Error::InsufficientFunds(_) =>  Status::from_code(500).unwrap(),
+            Error::FailedETHConnection(_) => Status::from_code(500).unwrap(),
         }
     }
 }

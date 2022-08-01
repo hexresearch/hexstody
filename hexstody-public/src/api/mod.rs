@@ -151,7 +151,8 @@ pub async fn serve_api(
                 post_withdraw,
                 signup_email,
                 signin_email,
-                logout
+                logout,
+                get_tokens
             ],
         )
         .mount(
