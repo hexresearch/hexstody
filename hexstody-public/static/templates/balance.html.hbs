@@ -1,22 +1,24 @@
 {{#each balances}}
-<div class="content-row mt-5">
-    <div>
-        <span id="bal-curr-label" class="item-label">
-            {{formatCurrencyName}}
-        </span>
+<div class="balances-item">
+    <div class="balances-item-label">
+        {{currencyFullName (formatCurrencyName)}}
     </div>
-    <div>
-        <span id="curr-val-{{formatCurrencyName}}" class="item-val-bg">
-            {{formatCurrencyValue}}
-        </span>
-        <span id="usd-{{formatCurrencyName}}" class="item-val-gr">
-        </span>
-        <button onclick="location.href='/withdraw'" type="button" class="button item-buttom-w">
-            Withdraw
-        </button>
-        <button onclick="location.href='/deposit'" type="button" class="button is-info mr-2 item-buttom-d">
-            Deposit
-        </button>
+    <div class="columns is-gapless is-vcentered">
+        <div class="column">
+            <div class="balances-item-value">
+                <span id="curr-val-{{formatCurrencyName}}" class="balance-value">
+                    {{formatCurrencyValue}}
+                </span><span id="usd-{{formatCurrencyName}}" class="balance-value-fiat"></span>
+            </div>
+        </div>
+        <div class="column is-narrow">
+            <button type="button" class="button is-primary deposit-button">
+                Deposit
+            </button>
+            <button type="button" class="button withdraw-button">
+                Withdraw
+            </button>
+        </div>
     </div>
 </div>
 {{/each}}
