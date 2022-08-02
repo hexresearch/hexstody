@@ -588,9 +588,19 @@ pub struct WithdrawalResponse {
 
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct GetTokensResponse {
+    pub tokens: Vec<TokenInfo>
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct TokenInfo {
     pub token: Erc20Token,
     pub balance: u64,
     pub finalized_balance: u64,
-    
+    pub is_active: bool
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct TokenActionRequest{
+    pub token: Erc20Token
 }

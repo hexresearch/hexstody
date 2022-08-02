@@ -12,12 +12,12 @@ use rocket_okapi::openapi;
 use hexstody_api::domain::{BtcAddress, Currency, CurrencyAddress, CurrencyTxId};
 use super::auth::{require_auth, require_auth_user};
 use hexstody_api::error;
-use hexstody_api::types::{self as api, TokenInfo};
+use hexstody_api::types::{self as api, TokenInfo, GetTokensResponse, TokenActionRequest};
 use hexstody_btc_client::client::{BtcClient, BTC_BYTES_PER_TRANSACTION};
 use hexstody_db::state::{State as DbState};
 use hexstody_db::state::{Transaction, WithdrawalRequest, REQUIRED_NUMBER_OF_CONFIRMATIONS};
 use hexstody_db::update::deposit::DepositAddress;
-use hexstody_db::update::withdrawal::WithdrawalRequestInfo;
+use hexstody_db::update::withdrawal::{WithdrawalRequestInfo, TokenUpdate, TokenAction};
 use hexstody_db::update::{StateUpdate, UpdateBody};
 
 #[openapi(tag = "wallet")]
@@ -427,28 +427,91 @@ async fn allocate_btc_address(
     Ok(packed_address)
 }
 
-#[openapi(tag = "withdraw")]
-#[get("/gettokens")]
-pub async fn get_tokens(
+#[openapi(tag = "tokens")]
+#[get("/tokens/list")]
+pub async fn list_tokens(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
-) -> error::Result<Json<Vec<TokenInfo>>> {
+) -> error::Result<Json<GetTokensResponse>> {
     require_auth_user(cookies, state, |_, user| async move {
-        let info : Vec<TokenInfo> = user.currencies
-            .values()
-            .filter_map(|v| 
-                match &v.currency {
-                    Currency::ERC20(token) => {
-                        Some(TokenInfo{
-                            token: token.clone(),
-                            balance: v.balance(),
-                            finalized_balance: v.finalized_balance(),
-                        })
-                    },
-                    _ => None
-                }
-            ).collect();
-        Ok(Json(info))
+        let info = Currency::supported_tokens().into_iter().map(|token| 
+            match user.currencies.get(&Currency::ERC20(token.clone())) {
+                Some(c) => TokenInfo{ 
+                    token: token.clone(), 
+                    balance: c.balance(), 
+                    finalized_balance: c.finalized_balance(), 
+                    is_active: true 
+                },
+                None => TokenInfo{ 
+                    token: token.clone(), 
+                    balance: 0, 
+                    finalized_balance: 0, 
+                    is_active: false 
+                },
+        }).collect();
+        Ok(Json(GetTokensResponse{tokens: info}))
     })
     .await
+}
+
+#[openapi(tag = "tokens")]
+#[post("/tokens/enable", data = "<req>")]
+pub async fn enable_token(
+    cookies: &CookieJar<'_>,
+    state: &State<Arc<Mutex<DbState>>>,
+    updater: &State<mpsc::Sender<StateUpdate>>,
+    req: Json<TokenActionRequest>
+) -> error::Result<()>{
+    require_auth_user(cookies, state, |_, user| async move {
+        let token = req.into_inner().token;
+        let c = Currency::ERC20(token.clone());
+        match user.currencies.get(&c) {
+            Some(_) => Err(error::Error::TokenAlreadyEnabled(token).into()),
+            None => {
+                let state_update = StateUpdate::new(UpdateBody::UpdateTokens(
+                    TokenUpdate{ 
+                        user: user.username,
+                        token,
+                        action: TokenAction::Enable 
+                    }));
+                updater
+                    .send(state_update)
+                    .await
+                    .map_err(|e| error::Error::TokenActionFailed(e.to_string()).into())
+            }
+        }
+    }).await
+}
+
+#[openapi(tag = "tokens")]
+#[post("/tokens/disable", data = "<req>")]
+pub async fn disable_token(
+    cookies: &CookieJar<'_>,
+    state: &State<Arc<Mutex<DbState>>>,
+    updater: &State<mpsc::Sender<StateUpdate>>,
+    req: Json<TokenActionRequest>
+) -> error::Result<()>{
+    require_auth_user(cookies, state, |_, user| async move {
+        let token = req.into_inner().token;
+        let c = Currency::ERC20(token.clone());
+        match user.currencies.get(&c) {
+            None => Err(error::Error::TokenAlreadyDisabled(token).into()),
+            Some(info) => {
+                if info.balance() > 0 {
+                    Err(error::Error::TokenNonZeroBalance(token).into())
+                } else {
+                    let state_update = StateUpdate::new(UpdateBody::UpdateTokens(
+                        TokenUpdate{ 
+                            user: user.username,
+                            token,
+                            action: TokenAction::Disable 
+                        }));
+                    updater
+                        .send(state_update)
+                        .await
+                        .map_err(|e| error::Error::TokenActionFailed(e.to_string()).into())
+                }
+            }
+        }
+    }).await
 }

@@ -50,6 +50,13 @@ impl Currency {
             _ => false,
         }
     }
+
+    pub fn supported_tokens() -> Vec<Erc20Token> {
+        Currency::supported().into_iter().filter_map(|c| match c {
+            Currency::ERC20(token) => Some(token),
+            _ => None
+        }).collect()
+    }
 }
 
 /// Description of ERC20 token that allows to distinguish them between each other
