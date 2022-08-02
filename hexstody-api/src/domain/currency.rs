@@ -1,7 +1,7 @@
 use bitcoin;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::fmt;
+use std::{fmt, vec};
 
 /// A currency that custody understands. Can be extended in future.
 #[derive(
@@ -57,7 +57,31 @@ impl Currency {
             _ => None
         }).collect()
     }
+
+    pub fn default_tokens() -> Vec<Erc20Token> {
+        let supported_tickers = vec!["USDT".to_string(), "GTECH".to_string()];
+        Currency::supported().into_iter().filter_map(|c| match c {
+            Currency::ERC20(token) => if supported_tickers.contains(&token.ticker) {Some(token)} else {None},
+            _ => None
+        }).collect()
+    }
+
+    /// List of currencies active by default for a new user
+    pub fn default_currencies() -> Vec<Currency> {
+        Currency::supported().into_iter().filter_map(|c| match c.clone() {
+            Currency::ERC20(token) => if token.ticker == "CRV" {None} else {Some(c)},
+            _ => Some(c)
+        }).collect()
+    }
 }
+
+pub fn filter_tokens(curs: Vec<Currency>) -> Vec<Erc20Token> {
+    curs.into_iter().filter_map(|c| match c {
+        Currency::ERC20(token) => Some(token),
+        _ => None
+    }).collect()
+}
+
 
 /// Description of ERC20 token that allows to distinguish them between each other
 #[derive(

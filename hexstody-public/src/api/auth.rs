@@ -1,3 +1,4 @@
+use hexstody_api::domain::Currency;
 use hexstody_api::error;
 use hexstody_api::types as api;
 use hexstody_db::state::*;
@@ -8,6 +9,7 @@ use reqwest;
 use rocket::http::{Cookie, CookieJar};
 use rocket::post;
 use rocket::serde::json::Json;
+use rocket::serde::json;
 use rocket::State as RState;
 use rocket_okapi::openapi;
 use std::future::Future;
@@ -39,10 +41,20 @@ pub async fn signup_email(
     if user_exists {
         return Err(error::Error::SignupExistedUser.into());
     } else {
-        let body = reqwest::get(&("http://node.desolator.net/createuser/".to_owned()+&data.user)).await.unwrap().text().await;
+        // Create user
+        let body = reqwest::get(&("http://node.desolator.net/createuser/".to_owned()+&data.user)).await;
+
+        // Set user's default tokens
+        let default_tokens = json::to_string(&Currency::default_tokens()).unwrap();
+        let client = reqwest::Client::new();
+        let res = client.post(&("http://node.desolator.net/tokens/".to_owned()+&data.user)).body(default_tokens).send().await;
         if let Err(e) = body {
             return Err(error::Error::FailedETHConnection(e.to_string()).into())
         };
+        if let Err(e) = res {
+            return Err(error::Error::FailedETHConnection(e.to_string()).into())
+        };
+        
         let pass_hash = bcrypt::hash(&data.password).map_err(|e| error::Error::from(e))?;
         let upd = StateUpdate::new(UpdateBody::Signup(SignupInfo {
             username: data.user.clone(),
