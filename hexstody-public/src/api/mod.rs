@@ -29,6 +29,11 @@ use hexstody_db::update::*;
 use hexstody_db::Pool;
 use wallet::*;
 
+/// Redirect to signin page
+fn goto_signin() -> Redirect{
+    Redirect::to(uri!(signin))
+}
+
 #[openapi(tag = "ping")]
 #[get("/ping")]
 fn ping() -> Json<()> {
@@ -37,8 +42,12 @@ fn ping() -> Json<()> {
 
 #[openapi(skip)]
 #[get("/")]
-fn index() -> Redirect {
-    Redirect::to(uri!(signin))
+async fn index(
+    cookies: &CookieJar<'_>,
+) -> Redirect {
+    require_auth(cookies, |_| async {Ok(())})
+        .await
+        .map_or(goto_signin(), |_| Redirect::to(uri!(overview)))
 }
 
 #[openapi(skip)]
@@ -50,7 +59,7 @@ async fn overview(
     require_auth_user(cookies, state, |_, user| async move {
         let context = HashMap::from([("title", "Overview"), ("username", &user.username), ("parent", "base_with_header")]);
         Ok(Template::render("overview", context))
-    }).await.map_err(|_| index())
+    }).await.map_err(|_| goto_signin())
 }
 
 #[openapi(skip)]
@@ -62,7 +71,7 @@ async fn tokens(
     require_auth_user(cookies, state, |_, user| async move {
         let context = HashMap::from([("title", "Token settings"), ("username", &user.username), ("parent", "base_with_header")]);
         Ok(Template::render("tokens", context))
-    }).await.map_err(|_| index())
+    }).await.map_err(|_| goto_signin())
 }
 
 #[openapi(skip)]
@@ -88,10 +97,10 @@ pub async fn logout(cookies: &CookieJar<'_>)
         Ok(Json(()))
     }).await;
     match resp {
-        Ok(_) => Ok(index()),
+        Ok(_) => Ok(goto_signin()),
         // Error code 8 => NoUserFound (not logged in). 7 => Requires auth
         Err(err) => if err.1.code == 8 || err.1.code == 7 {
-            Ok(index())
+            Ok(goto_signin())
         } else {
             Err(err)
         },
@@ -107,7 +116,7 @@ async fn deposit(
     require_auth_user(cookies, state, |_, user| async move {
         let context = HashMap::from([("title", "Deposit"), ("username", &user.username), ("parent", "base_with_header")]);
         Ok(Template::render("deposit", context))
-    }).await.map_err(|_| index())
+    }).await.map_err(|_| goto_signin())
 }
 
 #[openapi(skip)]
@@ -158,7 +167,7 @@ async fn withdraw(
         Ok(v) => Ok(Ok(v)),
         // Error code 8 => NoUserFound (not logged in). 7 => Requires auth
         Err(err) => if err.1.code == 8 || err.1.code == 7 {
-            Err(index())
+            Err(goto_signin())
         } else {
             Ok(Err(err))
         },
