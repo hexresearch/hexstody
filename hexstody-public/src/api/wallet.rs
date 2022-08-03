@@ -5,20 +5,21 @@ use tokio::sync::{mpsc, Mutex};
 use uuid::Uuid;
 
 use rocket::http::CookieJar;
-use rocket::serde::json::{Json, self};
+use rocket::serde::json::{self, Json};
 use rocket::{get, post, State};
 use rocket_okapi::openapi;
 
-use hexstody_api::domain::{BtcAddress, Currency, CurrencyAddress, CurrencyTxId, Erc20Token, filter_tokens};
 use super::auth::{require_auth, require_auth_user};
-use hexstody_api::domain::{BtcAddress, Currency, CurrencyAddress, CurrencyTxId};
+use hexstody_api::domain::{
+    filter_tokens, BtcAddress, Currency, CurrencyAddress, CurrencyTxId, Erc20Token,
+};
 use hexstody_api::error;
-use hexstody_api::types::{self as api, TokenInfo, GetTokensResponse, TokenActionRequest};
+use hexstody_api::types::{self as api, GetTokensResponse, TokenActionRequest, TokenInfo};
 use hexstody_btc_client::client::{BtcClient, BTC_BYTES_PER_TRANSACTION};
-use hexstody_db::state::{State as DbState};
+use hexstody_db::state::State as DbState;
 use hexstody_db::state::{Transaction, WithdrawalRequest, REQUIRED_NUMBER_OF_CONFIRMATIONS};
 use hexstody_db::update::deposit::DepositAddress;
-use hexstody_db::update::withdrawal::{WithdrawalRequestInfo, TokenUpdate, TokenAction};
+use hexstody_db::update::withdrawal::{TokenAction, TokenUpdate, WithdrawalRequestInfo};
 use hexstody_db::update::{StateUpdate, UpdateBody};
 
 #[openapi(tag = "wallet")]
@@ -348,34 +349,36 @@ pub async fn post_withdraw(
             reqwest::get(send_url).await.unwrap().text().await.unwrap();
             Ok(())
         } else {
-        let btc_fee_per_byte = &btc
-            .get_fees()
-            .await
-            .map_err(|_| error::Error::FailedGetFee(Currency::BTC))?
-            .fee_rate;
-
-        let btc_balance = &user
-            .currencies
-            .get(&Currency::BTC)
-            .ok_or(error::Error::NoUserCurrency(Currency::BTC))?
-            .finalized_balance();
-        let max_btc_amount_to_spend = btc_balance - btc_fee_per_byte * BTC_BYTES_PER_TRANSACTION;
-        if max_btc_amount_to_spend >= withdraw_request.amount {
-            let withdrawal_request = WithdrawalRequestInfo {
-                id: Uuid::new_v4(),
-                user: user.username,
-                address: withdraw_request.address.to_owned(),
-                amount: withdraw_request.amount,
-            };
-            let state_update =
-                StateUpdate::new(UpdateBody::CreateWithdrawalRequest(withdrawal_request));
-            updater
-                .send(state_update)
+            let btc_fee_per_byte = &btc
+                .get_fees()
                 .await
-                .map_err(|_| error::Error::NoUserFound.into())
-        } else {
-            Err(error::Error::InsufficientFunds(Currency::BTC).into())
-        }}
+                .map_err(|_| error::Error::FailedGetFee(Currency::BTC))?
+                .fee_rate;
+
+            let btc_balance = &user
+                .currencies
+                .get(&Currency::BTC)
+                .ok_or(error::Error::NoUserCurrency(Currency::BTC))?
+                .finalized_balance();
+            let max_btc_amount_to_spend =
+                btc_balance - btc_fee_per_byte * BTC_BYTES_PER_TRANSACTION;
+            if max_btc_amount_to_spend >= withdraw_request.amount {
+                let withdrawal_request = WithdrawalRequestInfo {
+                    id: Uuid::new_v4(),
+                    user: user.username,
+                    address: withdraw_request.address.to_owned(),
+                    amount: withdraw_request.amount,
+                };
+                let state_update =
+                    StateUpdate::new(UpdateBody::CreateWithdrawalRequest(withdrawal_request));
+                updater
+                    .send(state_update)
+                    .await
+                    .map_err(|_| error::Error::NoUserFound.into())
+            } else {
+                Err(error::Error::InsufficientFunds(Currency::BTC).into())
+            }
+        }
     })
     .await
 }
@@ -427,22 +430,26 @@ pub async fn list_tokens(
     state: &State<Arc<Mutex<DbState>>>,
 ) -> error::Result<Json<GetTokensResponse>> {
     require_auth_user(cookies, state, |_, user| async move {
-        let info = Currency::supported_tokens().into_iter().map(|token| 
-            match user.currencies.get(&Currency::ERC20(token.clone())) {
-                Some(c) => TokenInfo{ 
-                    token: token.clone(), 
-                    balance: c.balance(), 
-                    finalized_balance: c.finalized_balance(), 
-                    is_active: true 
+        let info = Currency::supported_tokens()
+            .into_iter()
+            .map(
+                |token| match user.currencies.get(&Currency::ERC20(token.clone())) {
+                    Some(c) => TokenInfo {
+                        token: token.clone(),
+                        balance: c.balance(),
+                        finalized_balance: c.finalized_balance(),
+                        is_active: true,
+                    },
+                    None => TokenInfo {
+                        token: token.clone(),
+                        balance: 0,
+                        finalized_balance: 0,
+                        is_active: false,
+                    },
                 },
-                None => TokenInfo{ 
-                    token: token.clone(), 
-                    balance: 0, 
-                    finalized_balance: 0, 
-                    is_active: false 
-                },
-        }).collect();
-        Ok(Json(GetTokensResponse{tokens: info}))
+            )
+            .collect();
+        Ok(Json(GetTokensResponse { tokens: info }))
     })
     .await
 }
@@ -453,20 +460,19 @@ pub async fn enable_token(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
     updater: &State<mpsc::Sender<StateUpdate>>,
-    req: Json<TokenActionRequest>
-) -> error::Result<()>{
+    req: Json<TokenActionRequest>,
+) -> error::Result<()> {
     require_auth_user(cookies, state, |_, user| async move {
         let token = req.into_inner().token;
         let c = Currency::ERC20(token.clone());
         match user.currencies.get(&c) {
             Some(_) => Err(error::Error::TokenAlreadyEnabled(token).into()),
             None => {
-                let state_update = StateUpdate::new(UpdateBody::UpdateTokens(
-                    TokenUpdate{ 
-                        user: user.username.clone(),
-                        token: token.clone(),
-                        action: TokenAction::Enable 
-                    }));
+                let state_update = StateUpdate::new(UpdateBody::UpdateTokens(TokenUpdate {
+                    user: user.username.clone(),
+                    token: token.clone(),
+                    action: TokenAction::Enable,
+                }));
                 let upd = updater.send(state_update).await;
                 match upd {
                     Ok(_) => {
@@ -474,18 +480,21 @@ pub async fn enable_token(
                         tokens.push(token);
                         let body = json::to_string(&tokens).unwrap();
                         reqwest::Client::new()
-                            .post(&("http://node.desolator.net/tokens/".to_owned()+&user.username))
+                            .post(
+                                &("http://node.desolator.net/tokens/".to_owned() + &user.username),
+                            )
                             .body(body)
                             .send()
                             .await
                             .map_err(|e| error::Error::FailedETHConnection(e.to_string()).into())
                             .map(|_| ())
-                    },
+                    }
                     Err(e) => Err(error::Error::TokenActionFailed(e.to_string()).into()),
                 }
             }
         }
-    }).await
+    })
+    .await
 }
 
 #[openapi(tag = "profile")]
@@ -494,8 +503,8 @@ pub async fn disable_token(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
     updater: &State<mpsc::Sender<StateUpdate>>,
-    req: Json<TokenActionRequest>
-) -> error::Result<()>{
+    req: Json<TokenActionRequest>,
+) -> error::Result<()> {
     require_auth_user(cookies, state, |_, user| async move {
         let token = req.into_inner().token;
         let cur = Currency::ERC20(token.clone());
@@ -505,32 +514,48 @@ pub async fn disable_token(
                 if info.balance() > 0 {
                     Err(error::Error::TokenNonZeroBalance(token).into())
                 } else {
-                    let state_update = StateUpdate::new(UpdateBody::UpdateTokens(
-                        TokenUpdate{ 
-                            user: user.username.clone(),
-                            token: token.clone(),
-                            action: TokenAction::Disable 
-                        }));
-                let upd = updater.send(state_update).await;
-                match upd {
-                    Ok(_) => {
-                        let tokens : Vec<Erc20Token> = user.currencies.keys().into_iter().filter_map(|c| match c {
-                            Currency::ERC20(tok) => if tok.ticker == token.ticker {None} else {Some(token.clone())},
-                            _ => None
-                        }).collect();
-                        let body = json::to_string(&tokens).unwrap();
-                        reqwest::Client::new()
-                            .post(&("http://node.desolator.net/tokens/".to_owned()+&user.username))
-                            .body(body)
-                            .send()
-                            .await
-                            .map_err(|e| error::Error::FailedETHConnection(e.to_string()).into())
-                            .map(|_| ())
-                    },
-                    Err(e) => Err(error::Error::TokenActionFailed(e.to_string()).into()),
-                }
+                    let state_update = StateUpdate::new(UpdateBody::UpdateTokens(TokenUpdate {
+                        user: user.username.clone(),
+                        token: token.clone(),
+                        action: TokenAction::Disable,
+                    }));
+                    let upd = updater.send(state_update).await;
+                    match upd {
+                        Ok(_) => {
+                            let tokens: Vec<Erc20Token> = user
+                                .currencies
+                                .keys()
+                                .into_iter()
+                                .filter_map(|c| match c {
+                                    Currency::ERC20(tok) => {
+                                        if tok.ticker == token.ticker {
+                                            None
+                                        } else {
+                                            Some(token.clone())
+                                        }
+                                    }
+                                    _ => None,
+                                })
+                                .collect();
+                            let body = json::to_string(&tokens).unwrap();
+                            reqwest::Client::new()
+                                .post(
+                                    &("http://node.desolator.net/tokens/".to_owned()
+                                        + &user.username),
+                                )
+                                .body(body)
+                                .send()
+                                .await
+                                .map_err(|e| {
+                                    error::Error::FailedETHConnection(e.to_string()).into()
+                                })
+                                .map(|_| ())
+                        }
+                        Err(e) => Err(error::Error::TokenActionFailed(e.to_string()).into()),
+                    }
                 }
             }
         }
-    }).await
+    })
+    .await
 }

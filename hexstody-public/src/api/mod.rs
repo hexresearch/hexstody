@@ -31,7 +31,7 @@ use hexstody_db::Pool;
 use wallet::*;
 
 /// Redirect to signin page
-fn goto_signin() -> Redirect{
+fn goto_signin() -> Redirect {
     Redirect::to(uri!(signin))
 }
 
@@ -43,10 +43,8 @@ fn ping() -> Json<()> {
 
 #[openapi(skip)]
 #[get("/")]
-async fn index(
-    cookies: &CookieJar<'_>,
-) -> Redirect {
-    require_auth(cookies, |_| async {Ok(())})
+async fn index(cookies: &CookieJar<'_>) -> Redirect {
+    require_auth(cookies, |_| async { Ok(()) })
         .await
         .map_or(goto_signin(), |_| Redirect::to(uri!(overview)))
 }
@@ -58,9 +56,15 @@ async fn overview(
     state: &State<Arc<Mutex<DbState>>>,
 ) -> Result<Template, Redirect> {
     require_auth_user(cookies, state, |_, user| async move {
-        let context = HashMap::from([("title", "Overview"), ("username", &user.username), ("parent", "base_with_header")]);
+        let context = HashMap::from([
+            ("title", "Overview"),
+            ("username", &user.username),
+            ("parent", "base_with_header"),
+        ]);
         Ok(Template::render("overview", context))
-    }).await.map_err(|_| goto_signin())
+    })
+    .await
+    .map_err(|_| goto_signin())
 }
 
 #[openapi(skip)]
@@ -70,9 +74,15 @@ async fn profile(
     state: &State<Arc<Mutex<DbState>>>,
 ) -> Result<Template, Redirect> {
     require_auth_user(cookies, state, |_, user| async move {
-        let context = HashMap::from([("title", "Profile"), ("username", &user.username), ("parent", "base_with_header")]);
+        let context = HashMap::from([
+            ("title", "Profile"),
+            ("username", &user.username),
+            ("parent", "base_with_header"),
+        ]);
         Ok(Template::render("profile", context))
-    }).await.map_err(|_| goto_signin())
+    })
+    .await
+    .map_err(|_| goto_signin())
 }
 
 #[openapi(skip)]
@@ -91,20 +101,22 @@ fn signin() -> Template {
 
 #[openapi(tag = "auth")]
 #[get("/logout")]
-pub async fn logout(cookies: &CookieJar<'_>) 
--> Result<Redirect, (Status, Json<ErrorMessage>)> {
+pub async fn logout(cookies: &CookieJar<'_>) -> Result<Redirect, (Status, Json<ErrorMessage>)> {
     let resp = require_auth(cookies, |cookie| async move {
         cookies.remove(cookie);
         Ok(Json(()))
-    }).await;
+    })
+    .await;
     match resp {
         Ok(_) => Ok(goto_signin()),
         // Error code 8 => NoUserFound (not logged in). 7 => Requires auth
-        Err(err) => if err.1.code == 8 || err.1.code == 7 {
-            Ok(goto_signin())
-        } else {
-            Err(err)
-        },
+        Err(err) => {
+            if err.1.code == 8 || err.1.code == 7 {
+                Ok(goto_signin())
+            } else {
+                Err(err)
+            }
+        }
     }
 }
 
@@ -115,35 +127,32 @@ async fn deposit(
     state: &State<Arc<Mutex<DbState>>>,
 ) -> Result<Template, Redirect> {
     require_auth_user(cookies, state, |_, user| async move {
-        let context = HashMap::from([("title", "Deposit"), ("username", &user.username), ("parent", "base_with_header")]);
+        let context = HashMap::from([
+            ("title", "Deposit"),
+            ("username", &user.username),
+            ("parent", "base_with_header"),
+        ]);
         Ok(Template::render("deposit", context))
-    }).await.map_err(|_| goto_signin())
+    })
+    .await
+    .map_err(|_| goto_signin())
 }
 
 #[openapi(skip)]
 #[get("/withdraw")]
 async fn withdraw(
-    btc: &State<BtcClient>,
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
 ) -> error::Result<Template> {
-    require_auth_user(cookies, state, |_, _| async move {
+    require_auth_user(cookies, state, |_, user| async move {
         let context = json!({
             "title" : "Withdraw",
             "parent": "base_footer_header",
             "tabs"   : ["btc", "eth"]}
         );
         Ok(Template::render("withdraw", context))
-    }).await;
-    match resp {
-        Ok(v) => Ok(Ok(v)),
-        // Error code 8 => NoUserFound (not logged in). 7 => Requires auth
-        Err(err) => if err.1.code == 8 || err.1.code == 7 {
-            Err(goto_signin())
-        } else {
-            Ok(Err(err))
-        },
-    }
+    })
+    .await
 }
 
 pub async fn serve_api(
