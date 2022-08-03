@@ -23,7 +23,7 @@ const sendBtcBtn = document.getElementById("send_btc");
 const sendEthBtn = document.getElementById("send_eth");
 
 const btcAddressEl = document.getElementById("btc_address");
-const ethAddressEl = document.getElementById("btc_address");
+const ethAddressEl = document.getElementById("eth_address");
 
 const btcValidationDisplayEl = document.getElementById("btc_validation");
 const ethValidationDisplayEl = document.getElementById("eth_validation");
@@ -109,7 +109,6 @@ async function updateBalanceAndFeeLoop() {
     });
 
 
-    console.log(balancesObj);
     const feeObj = await getEthFee();
     const tikerObj = await getCourseForETH("ETH")
 

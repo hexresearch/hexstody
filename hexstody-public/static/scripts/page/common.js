@@ -80,4 +80,5 @@ export function initTabs(tabIds) {
         });
     }
     tabIds.forEach(tab => document.getElementById(tab).onclick = () => tabClicked(tab));
+    tabClicked(tabIds[0]);
 }
