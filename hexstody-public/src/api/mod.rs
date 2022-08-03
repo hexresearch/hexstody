@@ -63,14 +63,14 @@ async fn overview(
 }
 
 #[openapi(skip)]
-#[get("/tokens")]
-async fn tokens(
+#[get("/profile")]
+async fn profile(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
 ) -> Result<Template, Redirect> {
     require_auth_user(cookies, state, |_, user| async move {
-        let context = HashMap::from([("title", "Token settings"), ("username", &user.username), ("parent", "base_with_header")]);
-        Ok(Template::render("tokens", context))
+        let context = HashMap::from([("title", "Profile"), ("username", &user.username), ("parent", "base_with_header")]);
+        Ok(Template::render("profile", context))
     }).await.map_err(|_| goto_signin())
 }
 
@@ -218,7 +218,7 @@ pub async fn serve_api(
         )
         .mount(
             "/",
-            routes![index, overview, tokens, signup, signin, deposit, withdraw],
+            routes![index, overview, profile, signup, signin, deposit, withdraw],
         )
         .mount(
             "/swagger/",
