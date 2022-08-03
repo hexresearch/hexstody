@@ -1,15 +1,11 @@
-pub mod auth;
-pub mod wallet;
-
-use auth::*;
 use figment::Figment;
-use log::*;
 use serde_json::json;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio::sync::{Mutex, Notify};
+use wallet::*;
 
 use rocket::fairing::AdHoc;
 use rocket::fs::FileServer;
@@ -21,14 +17,16 @@ use rocket::{get, routes, State};
 use rocket_dyn_templates::Template;
 use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
 
-use hexstody_api::domain::Currency;
+
 use hexstody_api::error::{self, ErrorMessage};
 use hexstody_btc_client::client::BtcClient;
-use hexstody_btc_client::client::BTC_BYTES_PER_TRANSACTION;
 use hexstody_db::state::State as DbState;
 use hexstody_db::update::*;
 use hexstody_db::Pool;
-use wallet::*;
+
+pub mod auth;
+pub mod wallet;
+use auth::*;
 
 /// Redirect to signin page
 fn goto_signin() -> Redirect {
@@ -144,7 +142,7 @@ async fn withdraw(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
 ) -> error::Result<Template> {
-    require_auth_user(cookies, state, |_, user| async move {
+    require_auth_user(cookies, state, |_, _| async move {
         let context = json!({
             "title" : "Withdraw",
             "parent": "base_footer_header",
