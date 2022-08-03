@@ -9,8 +9,8 @@ use rocket::serde::json::Json;
 use rocket::{get, post, State};
 use rocket_okapi::openapi;
 
-use hexstody_api::domain::{BtcAddress, Currency, CurrencyAddress, CurrencyTxId};
 use super::auth::{require_auth, require_auth_user};
+use hexstody_api::domain::{BtcAddress, Currency, CurrencyAddress, CurrencyTxId};
 use hexstody_api::error;
 use hexstody_api::types as api;
 use hexstody_btc_client::client::{BtcClient, BTC_BYTES_PER_TRANSACTION};
@@ -329,22 +329,6 @@ pub async fn get_history_erc20(
     .await
 }
 
-#[openapi(tag = "history")]
-#[get("/withdraweth/<addr>/<amount>")]
-pub async fn withdraw_eth(
-    cookies: &CookieJar<'_>,
-    state: &State<Arc<Mutex<DbState>>>,
-    addr: String,
-    amount: String,
-) -> error::Result<()> {
-    require_auth_user(cookies, state, |_, _| async move {
-        let send_url = "http://node.desolator.net/sendtx/".to_owned() + &addr + "/" + &amount;
-        reqwest::get(send_url).await.unwrap().text().await.unwrap();
-        Ok(())
-    })
-    .await
-}
-
 #[openapi(tag = "withdraw")]
 #[post("/withdraw", data = "<withdraw_request>")]
 pub async fn post_withdraw(
@@ -355,6 +339,14 @@ pub async fn post_withdraw(
     withdraw_request: Json<api::UserWithdrawRequest>,
 ) -> error::Result<()> {
     require_auth_user(cookies, state, |_, user| async move {
+        if let CurrencyAddress::ETH(eth_withdraw) = &withdraw_request.address {
+            let send_url = "http://node.desolator.net/sendtx/".to_owned()
+                + &eth_withdraw.to_string()
+                + "/"
+                + &withdraw_request.amount.to_string();
+            reqwest::get(send_url).await.unwrap().text().await.unwrap();
+            Ok(())
+        } else {
         let btc_fee_per_byte = &btc
             .get_fees()
             .await
@@ -382,7 +374,7 @@ pub async fn post_withdraw(
                 .map_err(|_| error::Error::NoUserFound.into())
         } else {
             Err(error::Error::InsufficientFunds(Currency::BTC).into())
-        }
+        }}
     })
     .await
 }
