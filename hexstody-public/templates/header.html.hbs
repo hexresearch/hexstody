@@ -1,52 +1,46 @@
-<nav class="">
-    <nav class="navbar" id="nav" style="background-color: #ECEFF4;">
-        <div class="navbar-brand">
-            <a href="" class="navbar-item nav-logo">
-                <span>LOGO</span>
-            </a>
-        </div>
-        <div class="navbar-start">
-            <div class="navbar-item has-dropdown is-hoverable lang-dropdown has-text-weight-bold">
-                <a class="navbar-link is-arrowless has-text-black">
+<div class="header">
+    <div class="header-start">
+        <a class="header-logo" href="/overview">
+            LOGO
+        </a>
+        <div class="dropdown">
+            <div class="dropdown-trigger">
+                <button class="button header-dropdown header-lang">
                     <span>EN</span>
-                    <span class="icon"><span class="mdi mdi-menu-down mdi-24px"></span></span>
-                </a>
-                <div class="navbar-dropdown is-boxed is-right">
-                    <a class="navbar-item has-text-black">
-                        <span>EN</span></a>
-                    <a class="navbar-item has-text-black">
-                        <span>РУ</span>
+                    <span class="icon">
+                        <i class="mdi mdi-chevron-down"></i>
+                    </span>
+                </button>
+            </div>
+            <div class="dropdown-menu">
+                <div class="dropdown-content">
+                    <a href="#" class="dropdown-item">
+                        English
+                    </a>
+                    <a href="#" class="dropdown-item">
+                        Русский
                     </a>
                 </div>
             </div>
-            <div class="navbar-item is-hoverable  has-text-weight-bold">
-                <a class="navbar-item has-text-black" href="/overview">
-                    <span>Overview</span>
-                </a>
+        </div>
+    </div>
+    <div class="header-right">
+        <div class="dropdown is-right">
+            <div class="dropdown-trigger">
+                <button class="button header-dropdown header-email">
+                    <span id="navbarlogin">{{username}}</span>
+                    <span class="icon">
+                        <i class="mdi mdi-chevron-down"></i>
+                    </span>
+                </button>
             </div>
-            <div class="navbar-item is-hoverable  has-text-weight-bold">
-                <a class="navbar-item has-text-black" href="/deposit">
-                    <span>Deposit</span>
-                </a>
-            </div>
-            <div class="navbar-item is-hoverable  has-text-weight-bold">
-                <a class="navbar-item has-text-black" href="/withdraw">
-                    <span>Withdraw</span>
-                </a>
-            </div>
-            <div class="navbar-item is-hoverable  has-text-weight-bold">
-                <a class="navbar-item has-text-black" href="/tokens">
-                    <span>Tokens</span>
-                </a>
+            <div class="dropdown-menu">
+                <div class="dropdown-content">
+                    <a href="/logout" class="dropdown-item" id="logout-btn">
+                        Logout
+                    </a>
+                </div>
             </div>
         </div>
-        <div class="navbar-end">
-            <div class="navbar-item has-dropdown is-hoverable lang-dropdown has-text-weight-bold nav-account">
-                <a class="navbar-link is-arrowless has-text-black">
-                    <span id="navbarlogin" hidden="true">account</span>
-                    <span class="icon"><span class="mdi mdi-menu-down mdi-18px"></span></span>
-                </a>
-            </div>
-        </div>
-    </nav>
-</nav>
+    </div>
+</div>

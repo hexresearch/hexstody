@@ -1,36 +1,38 @@
-<table class="table is-fullwidth">
-    <tbody>
-        {{#each histories}}
-        <tr>
-            <td class="history-col-1">
-                <div>
-                    <div class="history-col-1-icon">
-                        <span class="icon">
-                            <i class="mdi {{arrow}}"></i>
-                        </span>
+<div class="table-container">
+    <table class="table is-fullwidth">
+        <tbody>
+            {{#each histories}}
+            <tr>
+                <td class="history-col-1">
+                    <div>
+                        <div class="history-col-1-icon">
+                            <span class="icon">
+                                <i class="mdi {{arrow}}"></i>
+                            </span>
+                        </div>
+                        <div class="history-col-1-info">
+                            <span class="history-col-1-info-1">{{flowType}}</span>
+                            <span class="history-col-1-info-2">{{timeStamp}}</span>
+                        </div>
                     </div>
-                    <div class="history-col-1-info">
-                        <span class="history-col-1-info-1">{{flowType}}</span>
-                        <span class="history-col-1-info-2">{{timeStamp}}</span>
+                </td>
+                <td class="history-col-2">
+                    <div>
+                        <a href="{{explorerLink}}">{{hash}}</a>
+                        <button class="button is-small is-ghost">
+                            <span class="icon">
+                                <i class="mdi mdi-content-copy"></i>
+                            </span>
+                        </button>
                     </div>
-                </div>
-            </td>
-            <td class="history-col-2">
-                <div>
-                    <a href="{{explorerLink}}">{{hash}}</a>
-                    <button class="button is-small is-ghost"> 
-                        <span class="icon">
-                            <i class="mdi mdi-content-copy"></i>
-                        </span>
-                    </button>
-                </div>
-            </td>
-            <td class="history-col-3">
-                <div>
-                    <span class="{{flowClass}}">{{valuetoshow}}</span>
-                </div>
-            </td>
-        </tr>
-        {{/each}}
-    </tbody>
-</table>
+                </td>
+                <td class="history-col-3">
+                    <div>
+                        <span class="{{flowClass}}">{{valuetoshow}}</span>
+                    </div>
+                </td>
+            </tr>
+            {{/each}}
+        </tbody>
+    </table>
+</div>

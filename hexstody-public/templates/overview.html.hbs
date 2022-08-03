@@ -10,36 +10,23 @@
 {{/inline}}
 
 {{#*inline "page"}}
-<div class="full-height" style="background-color: #ECEFF4;">
-
-    <div class="container" style="padding-top: 25px;">
-
-        <div class="box balance-box">
-            <div class="content-row">
-                <span class="balance-label">Total Balance</span>
-            </div>
-            <div class="content-row">
-                <span id="total-bal-usd" class="balance-val-bg"></span>
-                 
-                <span style="margin-left: 20px" id="total-bal-rub" class="balance-val-gr"></span>
-            </div>
-
-            <div class="content-row content-separator my-4"></div>
-            <div class="row is-center" id="balance">
-            </div>
-        </div>
-
-        <div class="box history-box">
-            <div class="history-header">Recent transactions</div>
-            <div class="content-separator"></div>
-            <div id="history-table">
-            </div>
-        </div>
-
+<div class="box balance-box">
+    <div class="total-balance-title">
+        <span>Total Balance</span>
     </div>
-    <button style="visibility: collapse" id="loadMore">LoadMore</button>
-
+    <div class="total-balance">
+        <span id="total-balance-usd"></span><wbr><span id="total-balance-rub"></span>
+    </div>
+    <div class="content-separator"></div>
+    <div id="balances"></div>
 </div>
+<div class="box history-box">
+    <div class="history-header">Recent transactions</div>
+    <div class="content-separator"></div>
+    <div id="history-table">
+    </div>
+</div>
+<button style="visibility: collapse" id="loadMore">LoadMore</button>
 {{/inline}}
 
 {{> base_with_header}}

@@ -12,7 +12,7 @@ use tokio::sync::{Mutex, Notify};
 
 use rocket::fairing::AdHoc;
 use rocket::fs::FileServer;
-use rocket::http::CookieJar;
+use rocket::http::{CookieJar, Status};
 use rocket::response::Redirect;
 use rocket::serde::json::Json;
 use rocket::uri;
@@ -21,7 +21,7 @@ use rocket_dyn_templates::Template;
 use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
 
 use hexstody_api::domain::Currency;
-use hexstody_api::error;
+use hexstody_api::error::{self, ErrorMessage};
 use hexstody_btc_client::client::BtcClient;
 use hexstody_btc_client::client::BTC_BYTES_PER_TRANSACTION;
 use hexstody_db::state::State as DbState;
@@ -43,16 +43,26 @@ fn index() -> Redirect {
 
 #[openapi(skip)]
 #[get("/overview")]
-fn overview() -> Template {
-    let context = HashMap::from([("title", "Overview"), ("parent", "base_with_header")]);
-    Template::render("overview", context)
+async fn overview(
+    cookies: &CookieJar<'_>,
+    state: &State<Arc<Mutex<DbState>>>,
+) -> Result<Template, Redirect> {
+    require_auth_user(cookies, state, |_, user| async move {
+        let context = HashMap::from([("title", "Overview"), ("username", &user.username), ("parent", "base_with_header")]);
+        Ok(Template::render("overview", context))
+    }).await.map_err(|_| index())
 }
 
 #[openapi(skip)]
 #[get("/tokens")]
-fn tokens() -> Template {
-    let context = HashMap::from([("title", "Token settings"), ("parent", "base_with_header")]);
-    Template::render("tokens", context)
+async fn tokens(
+    cookies: &CookieJar<'_>,
+    state: &State<Arc<Mutex<DbState>>>,
+) -> Result<Template, Redirect> {
+    require_auth_user(cookies, state, |_, user| async move {
+        let context = HashMap::from([("title", "Token settings"), ("username", &user.username), ("parent", "base_with_header")]);
+        Ok(Template::render("tokens", context))
+    }).await.map_err(|_| index())
 }
 
 #[openapi(skip)]
@@ -69,11 +79,35 @@ fn signin() -> Template {
     Template::render("signin", context)
 }
 
+#[openapi(tag = "auth")]
+#[get("/logout")]
+pub async fn logout(cookies: &CookieJar<'_>) 
+-> Result<Redirect, (Status, Json<ErrorMessage>)> {
+    let resp = require_auth(cookies, |cookie| async move {
+        cookies.remove(cookie);
+        Ok(Json(()))
+    }).await;
+    match resp {
+        Ok(_) => Ok(index()),
+        // Error code 8 => NoUserFound (not logged in). 7 => Requires auth
+        Err(err) => if err.1.code == 8 || err.1.code == 7 {
+            Ok(index())
+        } else {
+            Err(err)
+        },
+    }
+}
+
 #[openapi(skip)]
 #[get("/deposit")]
-fn deposit() -> Template {
-    let context = HashMap::from([("title", "Deposit"), ("parent", "base_with_header")]);
-    Template::render("deposit", context)
+async fn deposit(
+    cookies: &CookieJar<'_>,
+    state: &State<Arc<Mutex<DbState>>>,
+) -> Result<Template, Redirect> {
+    require_auth_user(cookies, state, |_, user| async move {
+        let context = HashMap::from([("title", "Deposit"), ("username", &user.username), ("parent", "base_with_header")]);
+        Ok(Template::render("deposit", context))
+    }).await.map_err(|_| index())
 }
 
 #[openapi(skip)]
@@ -82,8 +116,8 @@ async fn withdraw(
     btc: &State<BtcClient>,
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
-) -> error::Result<Template> {
-    require_auth_user(cookies, state, |_, user| async move {
+) -> Result<error::Result<Template>, Redirect> {
+    let resp = require_auth_user(cookies, state, |_, user| async move {
         let btc_fee_per_byte = &btc
             .get_fees()
             .await
@@ -116,10 +150,19 @@ async fn withdraw(
             ("btc_fee", btc_fee_per_transaction),
             ("eth_balance", eth_balance),
             ("ethfee", ethfee),
+            ("username", &user.username),
         ]);
         Ok(Template::render("withdraw", context))
-    })
-    .await
+    }).await;
+    match resp {
+        Ok(v) => Ok(Ok(v)),
+        // Error code 8 => NoUserFound (not logged in). 7 => Requires auth
+        Err(err) => if err.1.code == 8 || err.1.code == 7 {
+            Err(index())
+        } else {
+            Ok(Err(err))
+        },
+    }
 }
 
 pub async fn serve_api(

@@ -95,7 +95,16 @@ async function initTemplates() {
             return formattedCurrencyValue(this.currency, this.value);
         }
     });
-
+    Handlebars.registerHelper('currencyFullName', (currencyName) => {
+        switch (currencyName) {
+            case "BTC":
+                return "Bitcoin";
+            case "ETH":
+                return "Ethereum";
+            default:
+                return currencyName;
+        }
+    })
     Handlebars.registerHelper('formatCurrencyName', function () {
         if (
             typeof this.currency === 'object'
@@ -116,8 +125,9 @@ async function initTemplates() {
 async function loadBalance() {
     const balances = await getBalances();
     const balanceDrawUpdate = balanceTemplate(balances);
-    const balanceElem = document.getElementById("balance");
-    balanceElem.innerHTML = balanceDrawUpdate;
+    const balancesElem = document.getElementById("balances");
+    balancesElem.innerHTML = balanceDrawUpdate;
+    enableDepositWithdrawBtns(balancesElem);
 }
 
 async function loadHistory() {
@@ -125,6 +135,7 @@ async function loadHistory() {
     const historyDrawUpdate = historyTemplate(history);
     const historyElem = document.getElementById("history-table");
     historyElem.innerHTML = historyDrawUpdate;
+    enableCopyBtns(historyElem);
 }
 
 function compareHist(a, b) {
@@ -214,6 +225,20 @@ function enableCopyBtns(historyElem) {
     };
 }
 
+function enableDepositWithdrawBtns(balancesElem) {
+    let balanceItems = balancesElem.getElementsByClassName('balances-item');
+    for (var item of balanceItems) {
+        let depositBtn = item.getElementsByTagName('button')[0];
+        let withdrawBtn = item.getElementsByTagName('button')[1];
+        depositBtn.addEventListener("click", () => {
+            window.location.href = "/deposit";
+        });
+        withdrawBtn.addEventListener("click", () => {
+            window.location.href = "/withdraw";
+        });
+    };
+}
+
 function timeStampToTime(unix_timestamp) {
     var date = new Date(unix_timestamp * 1000);
     var dateStr = date.getFullYear()
@@ -230,9 +255,8 @@ async function loadMoreHistory() {
     );
     const historyDrawUpdate = historyTemplate(history);
     const historyElem = document.getElementById("history-table");
-
     historyElem.insertAdjacentHTML('beforeend', historyDrawUpdate);
-
+    enableCopyBtns(historyElem);
     historyPagesToLoad += 1;
 }
 
@@ -261,8 +285,8 @@ async function updateLoop() {
     const awBal = await (currValCRV * jsonresCRV.USD + parseFloat(currValUSDT) + currValEth * jsonres.USD + currValBtc * jsonresBTC.USD)
     const awBalRub = await (currValCRV * jsonresCRV.RUB + currValUSDT * jsonresUSDT.RUB + currValEth * jsonres.RUB + currValBtc * jsonresBTC.RUB)
 
-    const totalUsd = document.getElementById("total-bal-usd");
-    const totalRub = document.getElementById("total-bal-rub");
+    const totalUsd = document.getElementById("total-balance-usd");
+    const totalRub = document.getElementById("total-balance-rub");
     totalUsd.textContent = awBal.toFixed(2) + " $";
     totalRub.textContent = "(" + awBalRub.toFixed(2) + " ₽)";
 
