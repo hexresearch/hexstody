@@ -1,0 +1,26 @@
+{{#*inline "css"}}
+{{/inline}}
+
+{{#*inline "scripts"}}
+<script type="module" src="/scripts/page/common.js"></script>
+<script type="module" src="/scripts/page/tokens.js"></script>
+<script src="/scripts/handlebars.min-v4.7.7.js" defer></script>
+<script src="https://unpkg.com/@popperjs/core@2" defer></script>
+<script src="https://unpkg.com/tippy.js@6" defer></script>
+{{/inline}}
+
+{{#*inline "page"}}
+<div class="full-height" style="background-color: #ECEFF4;">
+
+    <div class="container" style="padding-top: 25px;">
+
+        <div class="box balance-box">
+            <div class="row is-center fit-content" id="tokens">
+            </div>
+        </div>
+    </div>
+
+</div>
+{{/inline}}
+
+{{> base_with_header}}

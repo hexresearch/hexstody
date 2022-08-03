@@ -7904,3 +7904,9 @@ a.has-text-danger-dark:hover, a.has-text-danger-dark:focus {
         margin-top: 8px; } }
   .balance-box #balances .balances-item:last-child {
     margin-bottom: 0px; }
+
+.fit-content {
+  width: fit-content; }
+
+.mr-2em {
+  margin-right: 2em; }

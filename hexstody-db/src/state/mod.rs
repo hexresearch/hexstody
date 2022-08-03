@@ -16,7 +16,7 @@ pub use transaction::*;
 pub use user::*;
 pub use withdraw::*;
 
-use crate::update::withdrawal::{WithdrawCompleteInfo, WithdrawalRejectInfo};
+use crate::update::withdrawal::{WithdrawCompleteInfo, WithdrawalRejectInfo, TokenUpdate, TokenAction};
 
 use super::update::btc::BtcTxCancel;
 use super::update::deposit::DepositAddress;
@@ -58,6 +58,14 @@ pub enum StateUpdateErr {
     WithdrawalRequestAlreadyConfirmed(WithdrawalRequestId),
     #[error("Withdrawal request {0} is already rejected")]
     WithdrawalRequestAlreadyRejected(WithdrawalRequestId),
+    #[error("{0} is already enabled")]
+    TokenAlreadyEnabled(Erc20Token),
+    #[error("{0} is already disabled")]
+    TokenAlreadyDisabled(Erc20Token),
+    #[error("{0} has non-zero balance. Can not disable")]
+    TokenNonZeroBalance(Erc20Token),
+    #[error("Failed to enable token {0} from {1}")]
+    TokenEnableFail(Erc20Token, UserId)
 }
 
 impl State {
@@ -142,6 +150,11 @@ impl State {
                 self.last_changed = update.created;
                 Ok(None)
             }
+            UpdateBody::UpdateTokens(token_update) => {
+                self.update_tokens(token_update)?;
+                self.last_changed = update.created;
+                Ok(None)
+            },
         }
     }
 
@@ -479,6 +492,42 @@ impl State {
             }
         }
         Ok(())
+    }
+
+    pub fn update_tokens(
+        &mut self,
+        token_update: TokenUpdate
+    ) -> Result<(), StateUpdateErr>{
+        let TokenUpdate { user, token, action } = token_update;
+        match self.users.get_mut(&user){
+            None => Err(StateUpdateErr::UserNotFound(user)),
+            Some(user_info) => {
+                let cur = Currency::ERC20(token.clone());
+                match action {
+                    TokenAction::Enable => {
+                        if user_info.currencies.contains_key(&cur) {
+                            Err(StateUpdateErr::TokenAlreadyEnabled(token))
+                        } else {
+                            user_info.currencies.insert(cur.clone(), UserCurrencyInfo::new(cur.clone()));
+                            Ok(())
+                        }
+                    },
+                    TokenAction::Disable => {
+                        match user_info.currencies.get(&cur) {
+                            Some(info) => {
+                                if info.balance() > 0 {
+                                    Err(StateUpdateErr::TokenNonZeroBalance(token))
+                                } else {
+                                    user_info.currencies.remove(&cur);
+                                    Ok(())
+                                }
+                            },
+                            None => Err(StateUpdateErr::TokenAlreadyDisabled(token))
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 

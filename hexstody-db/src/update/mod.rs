@@ -13,7 +13,7 @@ use thiserror::Error;
 use self::btc::{BestBtcBlock, BtcTxCancel};
 use self::deposit::DepositAddress;
 use self::signup::SignupInfo;
-use self::withdrawal::{WithdrawalRequestDecisionInfo, WithdrawalRequestInfo, WithdrawCompleteInfo, WithdrawalRejectInfo};
+use self::withdrawal::{WithdrawalRequestDecisionInfo, WithdrawalRequestInfo, WithdrawCompleteInfo, WithdrawalRejectInfo, TokenUpdate};
 use super::state::transaction::BtcTransaction;
 use super::state::State;
 
@@ -57,6 +57,8 @@ pub enum UpdateBody {
     UpdateBtcTx(BtcTransaction),
     /// Cancel BTC transaction
     CancelBtcTx(BtcTxCancel),
+    /// Update token list
+    UpdateTokens(TokenUpdate),
 }
 
 impl UpdateBody {
@@ -72,6 +74,7 @@ impl UpdateBody {
             UpdateBody::BestBtcBlock(_) => UpdateTag::BestBtcBlock,
             UpdateBody::UpdateBtcTx(_) => UpdateTag::UpdateBtcTx,
             UpdateBody::CancelBtcTx(_) => UpdateTag::CancelBtcTx,
+            UpdateBody::UpdateTokens(_) => UpdateTag::UpdateTokens,
         }
     }
 
@@ -87,6 +90,7 @@ impl UpdateBody {
             UpdateBody::BestBtcBlock(v) => serde_json::to_value(v),
             UpdateBody::UpdateBtcTx(v) => serde_json::to_value(v),
             UpdateBody::CancelBtcTx(v) => serde_json::to_value(v),
+            UpdateBody::UpdateTokens(v) => serde_json::to_value(v),
         }
     }
 }
@@ -103,6 +107,7 @@ pub enum UpdateTag {
     BestBtcBlock,
     UpdateBtcTx,
     CancelBtcTx,
+    UpdateTokens
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -129,6 +134,7 @@ impl fmt::Display for UpdateTag {
             UpdateTag::BestBtcBlock => write!(f, "best btc block"),
             UpdateTag::UpdateBtcTx => write!(f, "update btc tx"),
             UpdateTag::CancelBtcTx => write!(f, "cancel btc tx"),
+            UpdateTag::UpdateTokens => write!(f, "update tokens")
         }
     }
 }
@@ -148,6 +154,7 @@ impl FromStr for UpdateTag {
             "best btc block" => Ok(UpdateTag::BestBtcBlock),
             "update btc tx" => Ok(UpdateTag::UpdateBtcTx),
             "cancel btc tx" => Ok(UpdateTag::CancelBtcTx),
+            "update tokens" => Ok(UpdateTag::UpdateTokens),
             _ => Err(UnknownUpdateTag(s.to_owned())),
         }
     }
@@ -199,6 +206,7 @@ impl UpdateTag {
             UpdateTag::BestBtcBlock => Ok(UpdateBody::BestBtcBlock(serde_json::from_value(value)?)),
             UpdateTag::UpdateBtcTx => Ok(UpdateBody::UpdateBtcTx(serde_json::from_value(value)?)),
             UpdateTag::CancelBtcTx => Ok(UpdateBody::CancelBtcTx(serde_json::from_value(value)?)),
+            UpdateTag::UpdateTokens => Ok(UpdateBody::UpdateTokens(serde_json::from_value(value)?))
         }
     }
 }
