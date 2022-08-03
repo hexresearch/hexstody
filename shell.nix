@@ -15,6 +15,7 @@ in stdenv.mkDerivation rec {
     #podman-compose
     docker-compose
     bitcoin
+    sass
   ];
   shellHook = ''
   export LIBCLANG_PATH="${llvmPackages.libclang}/lib"

@@ -13,7 +13,7 @@ use tokio::sync::{Mutex, Notify};
 
 use rocket::fairing::AdHoc;
 use rocket::fs::FileServer;
-use rocket::http::CookieJar;
+use rocket::http::{CookieJar, Status};
 use rocket::response::Redirect;
 use rocket::serde::json::Json;
 use rocket::uri;
@@ -22,13 +22,18 @@ use rocket_dyn_templates::Template;
 use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
 
 use hexstody_api::domain::Currency;
-use hexstody_api::error;
+use hexstody_api::error::{self, ErrorMessage};
 use hexstody_btc_client::client::BtcClient;
 use hexstody_btc_client::client::BTC_BYTES_PER_TRANSACTION;
 use hexstody_db::state::State as DbState;
 use hexstody_db::update::*;
 use hexstody_db::Pool;
 use wallet::*;
+
+/// Redirect to signin page
+fn goto_signin() -> Redirect{
+    Redirect::to(uri!(signin))
+}
 
 #[openapi(tag = "ping")]
 #[get("/ping")]
@@ -38,15 +43,36 @@ fn ping() -> Json<()> {
 
 #[openapi(skip)]
 #[get("/")]
-fn index() -> Redirect {
-    Redirect::to(uri!(signin))
+async fn index(
+    cookies: &CookieJar<'_>,
+) -> Redirect {
+    require_auth(cookies, |_| async {Ok(())})
+        .await
+        .map_or(goto_signin(), |_| Redirect::to(uri!(overview)))
 }
 
 #[openapi(skip)]
 #[get("/overview")]
-fn overview() -> Template {
-    let context = HashMap::from([("title", "Overview"), ("parent", "base_footer_header")]);
-    Template::render("overview", context)
+async fn overview(
+    cookies: &CookieJar<'_>,
+    state: &State<Arc<Mutex<DbState>>>,
+) -> Result<Template, Redirect> {
+    require_auth_user(cookies, state, |_, user| async move {
+        let context = HashMap::from([("title", "Overview"), ("username", &user.username), ("parent", "base_with_header")]);
+        Ok(Template::render("overview", context))
+    }).await.map_err(|_| goto_signin())
+}
+
+#[openapi(skip)]
+#[get("/profile")]
+async fn profile(
+    cookies: &CookieJar<'_>,
+    state: &State<Arc<Mutex<DbState>>>,
+) -> Result<Template, Redirect> {
+    require_auth_user(cookies, state, |_, user| async move {
+        let context = HashMap::from([("title", "Profile"), ("username", &user.username), ("parent", "base_with_header")]);
+        Ok(Template::render("profile", context))
+    }).await.map_err(|_| goto_signin())
 }
 
 #[openapi(skip)]
@@ -63,11 +89,35 @@ fn signin() -> Template {
     Template::render("signin", context)
 }
 
+#[openapi(tag = "auth")]
+#[get("/logout")]
+pub async fn logout(cookies: &CookieJar<'_>) 
+-> Result<Redirect, (Status, Json<ErrorMessage>)> {
+    let resp = require_auth(cookies, |cookie| async move {
+        cookies.remove(cookie);
+        Ok(Json(()))
+    }).await;
+    match resp {
+        Ok(_) => Ok(goto_signin()),
+        // Error code 8 => NoUserFound (not logged in). 7 => Requires auth
+        Err(err) => if err.1.code == 8 || err.1.code == 7 {
+            Ok(goto_signin())
+        } else {
+            Err(err)
+        },
+    }
+}
+
 #[openapi(skip)]
 #[get("/deposit")]
-fn deposit() -> Template {
-    let context = HashMap::from([("title", "Deposit"), ("parent", "base_footer_header")]);
-    Template::render("deposit", context)
+async fn deposit(
+    cookies: &CookieJar<'_>,
+    state: &State<Arc<Mutex<DbState>>>,
+) -> Result<Template, Redirect> {
+    require_auth_user(cookies, state, |_, user| async move {
+        let context = HashMap::from([("title", "Deposit"), ("username", &user.username), ("parent", "base_with_header")]);
+        Ok(Template::render("deposit", context))
+    }).await.map_err(|_| goto_signin())
 }
 
 #[openapi(skip)]
@@ -84,8 +134,16 @@ async fn withdraw(
             "tabs"   : ["btc", "eth"]}
         );
         Ok(Template::render("withdraw", context))
-    })
-    .await
+    }).await;
+    match resp {
+        Ok(v) => Ok(Ok(v)),
+        // Error code 8 => NoUserFound (not logged in). 7 => Requires auth
+        Err(err) => if err.1.code == 8 || err.1.code == 7 {
+            Err(goto_signin())
+        } else {
+            Ok(Err(err))
+        },
+    }
 }
 
 pub async fn serve_api(
@@ -123,12 +181,15 @@ pub async fn serve_api(
                 post_withdraw,
                 signup_email,
                 signin_email,
-                logout
+                logout,
+                list_tokens,
+                enable_token,
+                disable_token
             ],
         )
         .mount(
             "/",
-            routes![index, overview, signup, signin, deposit, withdraw],
+            routes![index, overview, profile, signup, signin, deposit, withdraw],
         )
         .mount(
             "/swagger/",

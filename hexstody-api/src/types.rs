@@ -20,6 +20,7 @@ use crate::domain::CurrencyTxId;
 
 use super::domain::currency::{BtcAddress, Currency, CurrencyAddress, Erc20Token};
 
+#[allow(non_snake_case)]
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct TickerETH {
     pub USD: f32,
@@ -40,6 +41,7 @@ pub struct Erc20HistResp {
     pub result: Vec<Erc20HistUnit>
 }
 
+#[allow(non_snake_case)]
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct EthHistUnit {
     pub blockNumber: String,
@@ -64,6 +66,7 @@ pub struct EthHistUnit {
     pub functionName: String,
 }
 
+#[allow(non_snake_case)]
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct EthHistUnitU {
     pub blockNumber: String,
@@ -79,6 +82,7 @@ pub struct EthHistUnitU {
     pub addr: String
 }
 
+#[allow(non_snake_case)]
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct Erc20HistUnit {
     pub blockNumber: String,
@@ -102,6 +106,7 @@ pub struct Erc20HistUnit {
     pub confirmations: String,
 }
 
+#[allow(non_snake_case)]
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Clone)]
 pub struct Erc20HistUnitU {
     pub blockNumber: String,
@@ -125,6 +130,7 @@ pub struct UserEth{
  ,pub data    : UserData
 }
 
+#[allow(non_snake_case)]
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct UserData{
     pub tokens: Vec<Erc20Token>,
@@ -134,7 +140,7 @@ pub struct UserData{
     pub balanceTokens: Vec<Erc20TokenBalance>
 }
 
-
+#[allow(non_snake_case)]
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct Erc20TokenBalance{
     pub tokenName: String,
@@ -155,6 +161,7 @@ pub struct EthFeeResp {
     pub result: EthGasPrice
 }
 
+#[allow(non_snake_case)]
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct EthGasPrice {
     pub LastBlock: String,
@@ -577,4 +584,23 @@ pub struct WithdrawalResponse {
     pub input_addresses: Vec<CurrencyAddress>,
     /// Output addresses
     pub output_addresses: Vec<CurrencyAddress>,
+}
+
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct GetTokensResponse {
+    pub tokens: Vec<TokenInfo>
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct TokenInfo {
+    pub token: Erc20Token,
+    pub balance: u64,
+    pub finalized_balance: u64,
+    pub is_active: bool
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct TokenActionRequest{
+    pub token: Erc20Token
 }

@@ -1,0 +1,26 @@
+@charset "utf-8";
+
+// Import a Google Font
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700&display=swap');
+
+// Set your brand colors
+$custom-blue: #409EFF;
+$custom-grey-dark: #282143;
+$custom-grey-light: #77778C;
+$custom-grey-lighter: #D5D7E7;
+$custom-grey-lightest: #ECEFF4;
+
+// Update Bulma's global variables
+$family-sans-serif: "Inter", sans-serif;
+$grey-light: $custom-grey-light;
+
+// Update some of Bulma's component variables
+$primary: $custom-blue;
+$body-background-color: $custom-grey-lightest;
+$text: $custom-grey-dark;
+$border: $custom-grey-lighter;
+$box-shadow: none;
+
+@import "bulma/bulma.sass";
+
+@import "custom_styles.scss";

@@ -1,0 +1,15 @@
+<div class="margin-b-24px">
+    <span class="font-mid-size font-dark-grey">Enable/disable tokens</span>
+</div>
+{{#each tokens}}
+<div class="content-row mt-5 ticker-with-checkbox">
+    <span id="curr-name-{{formatCurrencyName}}" class="item-val-bg mr-2em">
+        {{formatCurrencyName}}
+    </span>
+    {{#if this.is_active}}
+        <input id="checkbox-{{formatCurrencyName}}" class="zoom-1-6" type="checkbox" checked>
+    {{else}}
+        <input id="checkbox-{{formatCurrencyName}}" class="zoom-1-6" type="checkbox">
+    {{/if}}
+</div>
+{{/each}}

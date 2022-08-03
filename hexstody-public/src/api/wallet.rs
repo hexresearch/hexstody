@@ -5,19 +5,20 @@ use tokio::sync::{mpsc, Mutex};
 use uuid::Uuid;
 
 use rocket::http::CookieJar;
-use rocket::serde::json::Json;
+use rocket::serde::json::{Json, self};
 use rocket::{get, post, State};
 use rocket_okapi::openapi;
 
+use hexstody_api::domain::{BtcAddress, Currency, CurrencyAddress, CurrencyTxId, Erc20Token, filter_tokens};
 use super::auth::{require_auth, require_auth_user};
 use hexstody_api::domain::{BtcAddress, Currency, CurrencyAddress, CurrencyTxId};
 use hexstody_api::error;
-use hexstody_api::types as api;
+use hexstody_api::types::{self as api, TokenInfo, GetTokensResponse, TokenActionRequest};
 use hexstody_btc_client::client::{BtcClient, BTC_BYTES_PER_TRANSACTION};
-use hexstody_db::state::State as DbState;
+use hexstody_db::state::{State as DbState};
 use hexstody_db::state::{Transaction, WithdrawalRequest, REQUIRED_NUMBER_OF_CONFIRMATIONS};
 use hexstody_db::update::deposit::DepositAddress;
-use hexstody_db::update::withdrawal::WithdrawalRequestInfo;
+use hexstody_db::update::withdrawal::{WithdrawalRequestInfo, TokenUpdate, TokenAction};
 use hexstody_db::update::{StateUpdate, UpdateBody};
 
 #[openapi(tag = "wallet")]
@@ -417,4 +418,119 @@ async fn allocate_btc_address(
         .unwrap();
 
     Ok(packed_address)
+}
+
+#[openapi(tag = "profile")]
+#[get("/profile/tokens/list")]
+pub async fn list_tokens(
+    cookies: &CookieJar<'_>,
+    state: &State<Arc<Mutex<DbState>>>,
+) -> error::Result<Json<GetTokensResponse>> {
+    require_auth_user(cookies, state, |_, user| async move {
+        let info = Currency::supported_tokens().into_iter().map(|token| 
+            match user.currencies.get(&Currency::ERC20(token.clone())) {
+                Some(c) => TokenInfo{ 
+                    token: token.clone(), 
+                    balance: c.balance(), 
+                    finalized_balance: c.finalized_balance(), 
+                    is_active: true 
+                },
+                None => TokenInfo{ 
+                    token: token.clone(), 
+                    balance: 0, 
+                    finalized_balance: 0, 
+                    is_active: false 
+                },
+        }).collect();
+        Ok(Json(GetTokensResponse{tokens: info}))
+    })
+    .await
+}
+
+#[openapi(tag = "profile")]
+#[post("/profile/tokens/enable", data = "<req>")]
+pub async fn enable_token(
+    cookies: &CookieJar<'_>,
+    state: &State<Arc<Mutex<DbState>>>,
+    updater: &State<mpsc::Sender<StateUpdate>>,
+    req: Json<TokenActionRequest>
+) -> error::Result<()>{
+    require_auth_user(cookies, state, |_, user| async move {
+        let token = req.into_inner().token;
+        let c = Currency::ERC20(token.clone());
+        match user.currencies.get(&c) {
+            Some(_) => Err(error::Error::TokenAlreadyEnabled(token).into()),
+            None => {
+                let state_update = StateUpdate::new(UpdateBody::UpdateTokens(
+                    TokenUpdate{ 
+                        user: user.username.clone(),
+                        token: token.clone(),
+                        action: TokenAction::Enable 
+                    }));
+                let upd = updater.send(state_update).await;
+                match upd {
+                    Ok(_) => {
+                        let mut tokens = filter_tokens(user.currencies.keys().cloned().collect());
+                        tokens.push(token);
+                        let body = json::to_string(&tokens).unwrap();
+                        reqwest::Client::new()
+                            .post(&("http://node.desolator.net/tokens/".to_owned()+&user.username))
+                            .body(body)
+                            .send()
+                            .await
+                            .map_err(|e| error::Error::FailedETHConnection(e.to_string()).into())
+                            .map(|_| ())
+                    },
+                    Err(e) => Err(error::Error::TokenActionFailed(e.to_string()).into()),
+                }
+            }
+        }
+    }).await
+}
+
+#[openapi(tag = "profile")]
+#[post("/profile/tokens/disable", data = "<req>")]
+pub async fn disable_token(
+    cookies: &CookieJar<'_>,
+    state: &State<Arc<Mutex<DbState>>>,
+    updater: &State<mpsc::Sender<StateUpdate>>,
+    req: Json<TokenActionRequest>
+) -> error::Result<()>{
+    require_auth_user(cookies, state, |_, user| async move {
+        let token = req.into_inner().token;
+        let cur = Currency::ERC20(token.clone());
+        match user.currencies.get(&cur) {
+            None => Err(error::Error::TokenAlreadyDisabled(token).into()),
+            Some(info) => {
+                if info.balance() > 0 {
+                    Err(error::Error::TokenNonZeroBalance(token).into())
+                } else {
+                    let state_update = StateUpdate::new(UpdateBody::UpdateTokens(
+                        TokenUpdate{ 
+                            user: user.username.clone(),
+                            token: token.clone(),
+                            action: TokenAction::Disable 
+                        }));
+                let upd = updater.send(state_update).await;
+                match upd {
+                    Ok(_) => {
+                        let tokens : Vec<Erc20Token> = user.currencies.keys().into_iter().filter_map(|c| match c {
+                            Currency::ERC20(tok) => if tok.ticker == token.ticker {None} else {Some(token.clone())},
+                            _ => None
+                        }).collect();
+                        let body = json::to_string(&tokens).unwrap();
+                        reqwest::Client::new()
+                            .post(&("http://node.desolator.net/tokens/".to_owned()+&user.username))
+                            .body(body)
+                            .send()
+                            .await
+                            .map_err(|e| error::Error::FailedETHConnection(e.to_string()).into())
+                            .map(|_| ())
+                    },
+                    Err(e) => Err(error::Error::TokenActionFailed(e.to_string()).into()),
+                }
+                }
+            }
+        }
+    }).await
 }

@@ -32,13 +32,26 @@ const ethValidationDisplayEl = document.getElementById("eth_validation");
 
 async function postWithdrawRequest(currency, address, amount) {
     let body;
+    let res;
     switch (currency) {
         case "BTC":
             body = { address: { type: "BTC", addr: address }, amount: amount }
+            res = await fetch("/withdraw",
+            {
+                method: "POST",
+                body: JSON.stringify(body)
+            });
+
+        return res;
             break;
         case "ETH":
-            body = { address: { type: "ETH", account: address }, amount: amount }
-            break;
+            body = { address: { type: "ETH", account: address }, amount: amount };
+            res = await fetch("/withdraweth/" + address + "/" + amount,
+                {
+                    method: "GET"
+                });
+
+            return res;
     }
 
     return await fetch("/withdraw",

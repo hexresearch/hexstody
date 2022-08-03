@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{title}}</title>
+    <link rel="icon" href="/images/favicon.ico" type="image/x-icon">
+    {{~> css}}
+    <link rel="stylesheet" type="text/css" href="/css/styles.css" />
+    <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/@mdi/font@6.9.96/css/materialdesignicons.min.css">
+    {{~> scripts}}
+    <script type="module" src="/scripts/page/header.js"></script>
+</head>
+
+<body>
+    {{> header}}
+    <div class="container">
+        {{~> page}}
+    </div>
+</body>
+
+</html>

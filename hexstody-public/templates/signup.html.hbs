@@ -1,27 +1,20 @@
-{{#*inline "page"}}
+{{#*inline "css"}}
+{{/inline}}
 
+{{#*inline "scripts"}}
 <script type="module" src="/scripts/page/common.js"></script>
 <script type="module" src="/scripts/page/signup.js"></script>
-<!DOCTYPE html>
-<html lang="en" style="background-color: #ECEFF4;">
-  <head>
-    <meta charset='utf-8'>
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <meta name="referrer" content="unsafe-url">
-    <title>Hexstody</title>
-    <link href='https://fonts.googleapis.com/css?family=Inter' rel='stylesheet'>
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="https://cdn.materialdesignicons.com/5.4.55/css/materialdesignicons.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.3/css/bulma.min.css">
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-    <script>
-    </script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js" defer></script>
+<script src="/scripts/handlebars.min-v4.7.7.js" defer></script>
+{{/inline}}
 
-    <style>
-      body {
+{{#*inline "page"}}
+<style>
+    body {
         background-color: #ECEFF4;
-      }
-      .login-title {
+    }
+
+    .login-title {
         width: 100%;
         height: 64px;
 
@@ -32,8 +25,9 @@
         line-height: 64px;
 
         color: #282143;
-      }
-      .login-field-email {
+    }
+
+    .login-field-email {
         font-family: 'Inter';
         font-style: normal;
         font-weight: 500;
@@ -43,13 +37,15 @@
         align-items: center;
 
         color: #282143;
-      }
-      .form-group-label{
-          top:-1px;
-          left:20px;
-          background-color:white;
-        }
-      .login-field-pswd {
+    }
+
+    .form-group-label {
+        top: -1px;
+        left: 20px;
+        background-color: white;
+    }
+
+    .login-field-pswd {
         font-family: 'Inter';
         font-style: normal;
         font-weight: 500;
@@ -60,8 +56,9 @@
         letter-spacing: 0.1em;
 
         color: #282143;
-      }
-      .login-field-agree {
+    }
+
+    .login-field-agree {
         font-family: 'Inter';
         font-style: normal;
         font-weight: 500;
@@ -69,58 +66,59 @@
         line-height: 20px;
 
         color: #282143;
-      }
-      .login-button-login {
-         width: 100%;
-         height: 56px;
-         background-color: #409EFF !Important;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="full-height" style="background-color: #ECEFF4;">
-      <div class="container" style="padding-top: 15%;">
-        <div class="box" style="box-shadow: none !Important; width: 560px; height: 560px; padding: 85px; margin-left: auto; margin-right: auto;">
+    }
 
-          <div class="field">
-            <h1 class="login-title">Sign up</h1>
-          </div>
+    .login-button-login {
+        width: 100%;
+        height: 56px;
+        background-color: #409EFF !Important;
+    }
+</style>
+<div class="full-height" style="background-color: #ECEFF4;">
+    <div class="container" style="padding-top: 15%;">
+        <div class="box"
+            style="box-shadow: none !Important; width: 560px; height: 560px; padding: 85px; margin-left: auto; margin-right: auto;">
 
-          <div class="field login-field-email" style="margin-top: 25px;">
-            <label for="" class="label form-group-label">E-mail</label>
-            <div class="control has-icons-left">
-              <input id="signUpEmail" type="text" placeholder="т.е. user@mail.ru" class="input" style="height: 50px;" value="" value="">
-              <span class="icon is-small is-left">
-                <i class="fa fa-envelope"></i>
-              </span>
+            <div class="field">
+                <h1 class="login-title">Sign up</h1>
             </div>
-          </div>
 
-          <div class="field login-field-pswd" style="margin-top: 25px;">
-            <div class="control has-icons-left">
-              <input id="signUpPassword" type="password" placeholder="********" class="input" style="height: 50px;" value="">
-              <span class="icon is-small is-left">
-                <i class="fa fa-lock"></i>
-              </span>
+            <div class="field login-field-email" style="margin-top: 25px;">
+                <label for="" class="label form-group-label">E-mail</label>
+                <div class="control has-icons-left">
+                    <input id="signUpEmail" type="text" placeholder="т.е. user@mail.ru" class="input"
+                        style="height: 50px;" value="" value="">
+                    <span class="icon is-small is-left">
+                        <i class="fa fa-envelope"></i>
+                    </span>
+                </div>
             </div>
-          </div>
 
-
-          <div class="field login-field-pswd validationError" hidden="true" style=" margin-top: 25px;">
-            <div class="notification is-danger">
-              Username already taken
+            <div class="field login-field-pswd" style="margin-top: 25px;">
+                <div class="control has-icons-left">
+                    <input id="signUpPassword" type="password" placeholder="********" class="input"
+                        style="height: 50px;" value="">
+                    <span class="icon is-small is-left">
+                        <i class="fa fa-lock"></i>
+                    </span>
+                </div>
             </div>
-          </div>
 
-          <div class="field">
-            <button id="submit" style="margin-top: 25px;" class="button is-info login-button-login">SIGN UP</button>
-          </div>
+
+            <div class="field login-field-pswd validationError" hidden="true" style=" margin-top: 25px;">
+                <div class="notification is-danger">
+                    Username already taken
+                </div>
+            </div>
+
+            <div class="field">
+                <button id="submit" style="margin-top: 25px;" class="button is-info login-button-login">SIGN
+                    UP</button>
+            </div>
 
         </div>
-      </div>
     </div>
-  </body>
-</html>
-
+</div>
 {{/inline}}
+
 {{> base}}
