@@ -33,7 +33,7 @@ impl UserInfo {
             created_at,
             withdrawal_requests: HashSet::new(),
             completed_requests: HashSet::new(),
-            currencies: Currency::supported()
+            currencies: Currency::default_currencies()
                 .into_iter()
                 .map(|c| (c.clone(), UserCurrencyInfo::new(c)))
                 .collect(),

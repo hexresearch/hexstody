@@ -47,3 +47,11 @@ Run vscode with export to allow rust extension to validate sqlx macros
 ```
 (export DATABASE_URL=postgres://hexstody:hexstody@localhost/hexstody; code)
 ```
+
+Run sass watcher to auto-compile hexstody-public/static/css/styles.scss on every change:
+
+```
+sass --watch --sourcemap=none hexstody-public/static/css/styles.scss:hexstody-public/static/css/styles.css
+```
+
+Omit `--watch` to compile once. `sass` is available in nix-shell 

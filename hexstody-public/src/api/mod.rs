@@ -49,6 +49,13 @@ fn overview() -> Template {
 }
 
 #[openapi(skip)]
+#[get("/tokens")]
+fn tokens() -> Template {
+    let context = HashMap::from([("title", "Token settings"), ("parent", "base_with_header")]);
+    Template::render("tokens", context)
+}
+
+#[openapi(skip)]
 #[get("/signup")]
 fn signup() -> Template {
     let context = HashMap::from([("title", "Sign Up"), ("parent", "base")]);
@@ -151,12 +158,15 @@ pub async fn serve_api(
                 post_withdraw,
                 signup_email,
                 signin_email,
-                logout
+                logout,
+                list_tokens,
+                enable_token,
+                disable_token
             ],
         )
         .mount(
             "/",
-            routes![index, overview, signup, signin, deposit, withdraw],
+            routes![index, overview, tokens, signup, signin, deposit, withdraw],
         )
         .mount(
             "/swagger/",

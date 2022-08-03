@@ -7914,3 +7914,9 @@ body {
       white-space: nowrap; }
       #history-table .history-col-3 > div .is-deposit {
         color: #409EFF; }
+
+.fit-content {
+  width: fit-content; }
+
+.mr-2em {
+  margin-right: 2em; }

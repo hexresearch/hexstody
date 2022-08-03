@@ -1,0 +1,16 @@
+{{#each tokens}}
+<div class="content-row mt-5">
+    <span id="curr-name-{{formatCurrencyName}}" class="item-val-bg mr-2em">
+        {{formatCurrencyName}}
+    </span>
+    {{#if this.is_active}}
+    <button id="btn-disable-{{formatCurrencyName}}" type="button" class="button item-buttom-w">
+        Disable
+    </button>
+    {{else}}
+    <button id="btn-enable-{{formatCurrencyName}}" type="button" class="button is-info item-buttom-d">
+        Enable
+    </button>
+    {{/if}}
+</div>
+{{/each}}

@@ -1,4 +1,4 @@
-use crate::domain::currency::Currency;
+use crate::domain::{currency::Currency, Erc20Token};
 use rocket::http::Status;
 use rocket::serde::json::Json;
 use rocket_okapi::okapi::schemars::JsonSchema;
@@ -42,6 +42,16 @@ pub enum Error {
     FailedGetFee(Currency),
     #[error("Not enough {0}!")]
     InsufficientFunds(Currency),
+    #[error("Failed to connect to ETH node: {0}")]
+    FailedETHConnection(String),
+    #[error("{0} is already enabled")]
+    TokenAlreadyEnabled(Erc20Token),
+    #[error("{0} is already disabled")]
+    TokenAlreadyDisabled(Erc20Token),
+    #[error("{0} has non-zero balance. Can not disable")]
+    TokenNonZeroBalance(Erc20Token),
+    #[error("Token action failed: {0}")]
+    TokenActionFailed(String)
 }
 
 impl Error {
@@ -60,6 +70,11 @@ impl Error {
             Error::FailedGenAddress(_) => 10,
             Error::FailedGetFee(_) => 11,
             Error::InsufficientFunds(_) => 12,
+            Error::FailedETHConnection(_) => 13,
+            Error::TokenAlreadyEnabled(_) => 14,
+            Error::TokenAlreadyDisabled(_) => 15,
+            Error::TokenNonZeroBalance(_) => 16,
+            Error::TokenActionFailed(_) => 17,
         }
     }
 
@@ -78,6 +93,11 @@ impl Error {
             Error::FailedGenAddress(_) => Status::from_code(500).unwrap(),
             Error::FailedGetFee(_) => Status::from_code(500).unwrap(),
             Error::InsufficientFunds(_) =>  Status::from_code(500).unwrap(),
+            Error::FailedETHConnection(_) => Status::from_code(500).unwrap(),
+            Error::TokenAlreadyEnabled(_) => Status::from_code(500).unwrap(),
+            Error::TokenAlreadyDisabled(_) => Status::from_code(500).unwrap(),
+            Error::TokenNonZeroBalance(_) => Status::from_code(500).unwrap(),
+            Error::TokenActionFailed(_) => Status::from_code(500).unwrap()
         }
     }
 }
