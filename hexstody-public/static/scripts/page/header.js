@@ -1,3 +1,8 @@
+async function logout() {
+    return await fetch("/logout").then(r => r.json());
+};
+
+
 async function init() {
     // Init dropdowns
 
@@ -35,6 +40,10 @@ async function init() {
     function getAll(selector) {
         return Array.prototype.slice.call(document.querySelectorAll(selector), 0);
     }
+
+    const logoutBtn = document.getElementById("logout-btn");
+
+    logoutBtn.onclick = logout;
 }
 
 document.addEventListener("DOMContentLoaded", init);

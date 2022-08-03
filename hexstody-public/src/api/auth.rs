@@ -106,16 +106,6 @@ pub async fn signin_email(
     }
 }
 
-#[openapi(tag = "auth")]
-#[post("/logout")]
-pub async fn logout(cookies: &CookieJar<'_>) -> error::Result<Json<()>> {
-    require_auth(cookies, |cookie| async move {
-        cookies.remove(cookie);
-        Ok(Json(()))
-    })
-    .await
-}
-
 /// Helper for implementing endpoints that require authentication
 pub async fn require_auth<F, Fut, R>(cookies: &CookieJar<'_>, future: F) -> error::Result<R>
 where
