@@ -4,6 +4,7 @@ pub mod wallet;
 use auth::*;
 use figment::Figment;
 use log::*;
+use serde_json::json;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -76,40 +77,12 @@ async fn withdraw(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
 ) -> error::Result<Template> {
-    require_auth_user(cookies, state, |_, user| async move {
-        let btc_fee_per_byte = &btc
-            .get_fees()
-            .await
-            .map_err(|e| {
-                error!("{}", e);
-                error::Error::FailedGetFee(Currency::BTC)
-            })?
-            .fee_rate;
-
-        let btc_fee_per_transaction = &(btc_fee_per_byte * BTC_BYTES_PER_TRANSACTION).to_string();
-        let btc_balance = &user
-            .currencies
-            .get(&Currency::BTC)
-            .unwrap()
-            .finalized_balance()
-            .to_string();
-
-        let ethfee = &1000.to_string();
-        let eth_balance = &user
-            .currencies
-            .get(&Currency::ETH)
-            .unwrap()
-            .finalized_balance()
-            .to_string();
-        let context = HashMap::from([
-            ("title", "Withdraw"),
-            ("parent", "base_footer_header"),
-            ("login", "lalala"),
-            ("btc_balance", btc_balance),
-            ("btc_fee", btc_fee_per_transaction),
-            ("eth_balance", eth_balance),
-            ("ethfee", ethfee),
-        ]);
+    require_auth_user(cookies, state, |_, _| async move {
+        let context = json!({
+            "title" : "Withdraw",
+            "parent": "base_footer_header",
+            "tabs"   : ["btc", "eth"]}
+        );
         Ok(Template::render("withdraw", context))
     })
     .await

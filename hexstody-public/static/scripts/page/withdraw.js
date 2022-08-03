@@ -62,6 +62,8 @@ async function init() {
     initTabs(tabs);
     updateLoop();
 
+    Handlebars.registerHelper('currencies', () => ["btc", "eth"]);
+
    /* maxBtcAmountBtn.onclick = () => btcSendAmountEl.value =
         Math.max(0, btcBalanceEl.getAttribute("balance") - btcFeeEl.getAttribute("fee"));*/
 
