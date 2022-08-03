@@ -25,7 +25,6 @@ async fn test_auth_email() {
         let user = "aboba@mail.com".to_owned();
         let password = "123456".to_owned();
         let _removed = env.hot_client.test_only_remove_eth_user(&user).await;
-        println!("1");
         let res = env
             .hot_client
             .signin_email(SigninEmail {
@@ -34,7 +33,6 @@ async fn test_auth_email() {
             })
             .await;
         assert!(!res.is_ok());
-        println!("2");
         env.hot_client
             .signup_email(SignupEmail {
                 user: user.clone(),
@@ -42,11 +40,9 @@ async fn test_auth_email() {
             })
             .await
             .expect("Signup");
-        println!("3");
         let res = env.hot_client.logout().await;
         // switched from !res to res.is_ok() since with redirects double logouts return Ok(Redirect) to /
         assert!(res.is_ok(), "Logout before signing");
-        println!("4");
         let res = env
             .hot_client
             .signin_email(SigninEmail {
@@ -55,7 +51,6 @@ async fn test_auth_email() {
             })
             .await;
         assert!(!res.is_ok(), "Wrong password passes");
-        println!("5");
         env.hot_client
             .signin_email(SigninEmail {
                 user: user.clone(),
@@ -63,13 +58,10 @@ async fn test_auth_email() {
             })
             .await
             .expect("Signin");
-        println!("6");
         env.hot_client.logout().await.expect("Logout");
-        println!("7");
         let res = env.hot_client.logout().await;
         // same as with logout before signing
         assert!(res.is_ok(), "Double logout");
-        println!("8");
     })
     .await;
 }
