@@ -76,7 +76,7 @@ impl HexstodyClient {
     pub async fn logout(&self) -> Result<()> {
         let path = "/logout";
         let endpoint = format!("{}{}", self.server, path);
-        let request = self.client.post(endpoint).build()?;
+        let request = self.client.get(endpoint).build()?;
         let response = self
             .client
             .execute(request)
@@ -146,5 +146,21 @@ impl HexstodyClient {
             .await?;
         debug!("Response {path}: {}", response);
         Ok(serde_json::from_str(&response)?)
+    }
+
+    // This function is used for test purposes only
+    pub async fn test_only_remove_eth_user(&self, user: &str) -> Result<()> {
+        let path = "/removeuser";
+        let endpoint = format!("{}{}/{}", self.server, path, user);
+        let request = self.client.get(endpoint).build()?;
+        let response = self
+            .client
+            .execute(request)
+            .await?
+            .error_for_status()?
+            .text()
+            .await?;
+        debug!("Response {path}: {}", response);
+        Ok(())
     }
 }

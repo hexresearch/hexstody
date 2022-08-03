@@ -8,6 +8,7 @@ use futures::future::{join, AbortHandle};
 use hexstody_btc_client::client::BtcClient;
 use hexstody_btc_test::runner::run_regtest;
 use hexstody_db::state::{Network, REQUIRED_NUMBER_OF_CONFIRMATIONS};
+use hexstody_eth_client::client::EthClient;
 use log::*;
 use runner::{ApiConfig, run_hot_wallet};
 use std::error::Error;
@@ -90,13 +91,18 @@ enum SubCommand {
     Serve,
 }
 
-async fn run(btc_client: BtcClient, args: &Args, start_notify: Arc<Notify>) {
+async fn run(
+    btc_client: BtcClient, 
+    eth_client: EthClient,
+    args: &Args, 
+    start_notify: Arc<Notify>
+) {
     let (api_abort_handle, api_abort_reg) = AbortHandle::new_pair();
     ctrlc::set_handler(move || {
         api_abort_handle.abort();
     })
     .expect("Error setting Ctrl-C handler: {e}");
-    match run_hot_wallet(args, start_notify, btc_client.clone(), api_abort_reg).await {
+    match run_hot_wallet(args, start_notify, btc_client.clone(), eth_client.clone(), api_abort_reg, false).await {
         Ok(_) | Err(runner::Error::Aborted) => {
             info!("Terminated gracefully!");
             return ();
@@ -120,11 +126,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     args.operator_api_domain.clone(),
                     args.operator_public_keys.clone(),
                     |(node1_port, _), (node2_port, _), (hbtc_url, btc_client)| {
+                        let eth_client = EthClient::new(&args.eth_module);
                         let mut args = args.clone();
                         args.network = Network::Regtest;
                         let start_notify = Arc::new(Notify::new());
                         async move {
-                            let run_fut = run(btc_client, &args, start_notify);
+                            let run_fut = run(btc_client, eth_client, &args, start_notify);
                             let msg_fut = {
                                 let args = args.clone();
                                 async move {
@@ -150,8 +157,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 .await
             } else {
                 let btc_client = BtcClient::new(&args.btc_module);
+                let eth_client = EthClient::new(&args.eth_module);
                 let start_notify = Arc::new(Notify::new());
-                run(btc_client, &args, start_notify).await
+                run(btc_client, eth_client, &args, start_notify).await
             }
         }
     }

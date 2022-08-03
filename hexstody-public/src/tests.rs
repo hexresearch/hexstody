@@ -2,6 +2,7 @@
 use hexstody_btc_client::client::BtcClient;
 use hexstody_db::state::*;
 use hexstody_db::Pool;
+use hexstody_eth_client::client::EthClient;
 use std::sync::Arc;
 use tokio::sync::{Mutex, Notify};
 
@@ -30,6 +31,7 @@ where
     let (sender, receiver) = tokio::sync::oneshot::channel();
     let (update_sender, _) = tokio::sync::mpsc::channel(1000);
     let btc_client = BtcClient::new("127.0.0.1");
+    let eth_client = EthClient::new("http://node.desolator.net");
     let api_config = rocket::Config::figment()
         .merge(("port", SERVICE_TEST_PORT))
         .merge(("static_path", relative!("static")))
@@ -47,7 +49,9 @@ where
                 start_notify,
                 update_sender,
                 btc_client,
+                eth_client,
                 api_config,
+                true
             );
             futures::pin_mut!(serve_task);
             futures::future::select(serve_task, receiver.map_err(drop)).await;

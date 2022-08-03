@@ -1,3 +1,4 @@
+use hexstody_eth_client::client::EthClient;
 use log::*;
 use reqwest;
 use std::sync::Arc;
@@ -5,7 +6,7 @@ use tokio::sync::{mpsc, Mutex};
 use uuid::Uuid;
 
 use rocket::http::CookieJar;
-use rocket::serde::json::{Json, self};
+use rocket::serde::json::Json;
 use rocket::{get, post, State};
 use rocket_okapi::openapi;
 
@@ -25,16 +26,14 @@ use hexstody_db::update::{StateUpdate, UpdateBody};
 pub async fn get_balance(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
+    eth_client:&State<EthClient>,
 ) -> error::Result<Json<api::Balance>> {
     require_auth_user(cookies, state, |_, user| async move {
-        let user_data =
-            reqwest::get("http://node.desolator.net/userdata/".to_owned() + &user.username)
-                .await
-                .unwrap()
-                .json::<api::UserEth>()
-                .await
-                .unwrap();
-
+        let user_data_resp = eth_client.get_user_data(&user.username).await;
+        if let Err(e) = user_data_resp { 
+            return Err(error::Error::FailedETHConnection(e.to_string()).into()) 
+        };
+        let user_data = user_data_resp.unwrap();
         let balances: Vec<api::BalanceItem> = user
             .currencies
             .iter()
@@ -102,20 +101,16 @@ pub async fn get_deposit(
 pub async fn get_deposit_eth(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
+    eth_client: &State<EthClient>
 ) -> error::Result<Json<api::DepositInfo>> {
     require_auth_user(cookies, state, |_, user| async move {
-        let user_data_str =
-            reqwest::get("http://node.desolator.net/userdata/".to_owned() + &user.username)
-                .await
-                .unwrap()
-                .text()
-                .await
-                .unwrap();
-
-        let user_data: api::UserEth = (serde_json::from_str(&user_data_str)).unwrap();
-        Ok(Json(api::DepositInfo {
-            address: format!("{}", &user_data.address),
-        }))
+        eth_client
+            .get_user_data(&user.username)
+            .await
+            .map_err(|e| error::Error::FailedETHConnection(e.to_string()).into())
+            .map(|user_data| Json(api::DepositInfo {
+                address: format!("{}", &user_data.address),
+            }))
     })
     .await
 }
@@ -159,26 +154,14 @@ pub async fn btc_ticker(cookies: &CookieJar<'_>) -> error::Result<Json<api::Tick
 pub async fn get_user_data(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
+    eth_client: &State<EthClient>
 ) -> error::Result<Json<api::UserEth>> {
-    require_auth(cookies, |cookie| async move {
-        let user_id = cookie.value();
-        {
-            let state = state.lock().await;
-            if let Some(user) = state.users.get(user_id) {
-                let user_data_str =
-                    reqwest::get("http://node.desolator.net/userdata/".to_owned() + &user.username)
-                        .await
-                        .unwrap()
-                        .text()
-                        .await
-                        .unwrap();
-
-                let user_data: api::UserEth = (serde_json::from_str(&user_data_str)).unwrap();
-                Ok(Json(user_data))
-            } else {
-                Err(error::Error::NoUserFound.into())
-            }
-        }
+    require_auth_user(cookies, state, |_, user| async move {
+        eth_client
+            .get_user_data(&user.username)
+            .await
+            .map_err(|e| error::Error::FailedETHConnection(e.to_string()).into())
+            .map(|user_data| Json(user_data))
     })
     .await
 }
@@ -289,16 +272,14 @@ pub async fn get_history(
 pub async fn get_history_eth(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
+    eth_client: &State<EthClient>
 ) -> error::Result<Json<Vec<api::Erc20HistUnitU>>> {
     require_auth_user(cookies, state, |_, user| async move {
-        let user_data =
-            reqwest::get("http://node.desolator.net/userdata/".to_owned() + &user.username)
-                .await
-                .unwrap()
-                .json::<api::UserEth>()
-                .await
-                .unwrap();
-        Ok(Json(user_data.data.historyEth))
+        eth_client
+            .get_user_data(&user.username)
+            .await
+            .map_err(|e| error::Error::FailedETHConnection(e.to_string()).into())
+            .map(|user_data| Json(user_data.data.historyEth))
     })
     .await
 }
@@ -308,16 +289,15 @@ pub async fn get_history_eth(
 pub async fn get_history_erc20(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
+    eth_client: &State<EthClient>,
     token: String,
 ) -> error::Result<Json<Vec<api::Erc20HistUnitU>>> {
     require_auth_user(cookies, state, |_, user| async move {
-        let user_data =
-            reqwest::get("http://node.desolator.net/userdata/".to_owned() + &user.username)
-                .await
-                .unwrap()
-                .json::<api::UserEth>()
-                .await
-                .unwrap();
+        let user_data_resp = eth_client.get_user_data(&user.username).await;
+        if let Err(e) = user_data_resp { 
+            return Err(error::Error::FailedETHConnection(e.to_string()).into()) 
+        };
+        let user_data = user_data_resp.unwrap();
         let mut history = vec![];
         for his_token in &user_data.data.historyTokens {
             if his_token.token.ticker == token {
@@ -334,13 +314,12 @@ pub async fn get_history_erc20(
 pub async fn withdraw_eth(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
+    eth_client: &State<EthClient>,
     addr: String,
     amount: String,
 ) -> error::Result<()> {
     require_auth_user(cookies, state, |_, _| async move {
-        let send_url = "http://node.desolator.net/sendtx/".to_owned() + &addr + "/" + &amount;
-        reqwest::get(send_url).await.unwrap().text().await.unwrap();
-        Ok(())
+        eth_client.send_tx(&addr, &amount).await.map_err(|e| error::Error::FailedETHConnection(e.to_string()).into())
     })
     .await
 }
@@ -460,6 +439,7 @@ pub async fn enable_token(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
     updater: &State<mpsc::Sender<StateUpdate>>,
+    eth_client: &State<EthClient>,
     req: Json<TokenActionRequest>
 ) -> error::Result<()>{
     require_auth_user(cookies, state, |_, user| async move {
@@ -479,14 +459,10 @@ pub async fn enable_token(
                     Ok(_) => {
                         let mut tokens = filter_tokens(user.currencies.keys().cloned().collect());
                         tokens.push(token);
-                        let body = json::to_string(&tokens).unwrap();
-                        reqwest::Client::new()
-                            .post(&("http://node.desolator.net/tokens/".to_owned()+&user.username))
-                            .body(body)
-                            .send()
+                        eth_client
+                            .post_tokens(&user.username, &tokens)
                             .await
                             .map_err(|e| error::Error::FailedETHConnection(e.to_string()).into())
-                            .map(|_| ())
                     },
                     Err(e) => Err(error::Error::TokenActionFailed(e.to_string()).into()),
                 }
@@ -501,6 +477,7 @@ pub async fn disable_token(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
     updater: &State<mpsc::Sender<StateUpdate>>,
+    eth_client: &State<EthClient>,
     req: Json<TokenActionRequest>
 ) -> error::Result<()>{
     require_auth_user(cookies, state, |_, user| async move {
@@ -525,14 +502,10 @@ pub async fn disable_token(
                             Currency::ERC20(tok) => if tok.ticker == token.ticker {None} else {Some(token.clone())},
                             _ => None
                         }).collect();
-                        let body = json::to_string(&tokens).unwrap();
-                        reqwest::Client::new()
-                            .post(&("http://node.desolator.net/tokens/".to_owned()+&user.username))
-                            .body(body)
-                            .send()
+                        eth_client
+                            .post_tokens(&user.username, &tokens)
                             .await
                             .map_err(|e| error::Error::FailedETHConnection(e.to_string()).into())
-                            .map(|_| ())
                     },
                     Err(e) => Err(error::Error::TokenActionFailed(e.to_string()).into()),
                 }

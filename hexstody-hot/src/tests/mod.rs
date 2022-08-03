@@ -4,11 +4,13 @@ use bitcoin::{Address, Amount};
 use hexstody_api::{domain::*, types::*};
 use hexstody_btc_test::helpers::*;
 use runner::*;
+use serial_test::serial;
 use std::str::FromStr;
 use std::time::Duration;
 use tokio::time::sleep;
 
 #[tokio::test]
+#[serial]
 async fn test_simple() {
     run_test(|env| async move {
         env.hot_client.ping().await.expect("Ping finished");
@@ -17,11 +19,13 @@ async fn test_simple() {
 }
 
 #[tokio::test]
+#[serial]
 async fn test_auth_email() {
     run_test(|env| async move {
         let user = "aboba@mail.com".to_owned();
         let password = "123456".to_owned();
-
+        let _removed = env.hot_client.test_only_remove_eth_user(&user).await;
+        println!("1");
         let res = env
             .hot_client
             .signin_email(SigninEmail {
@@ -30,7 +34,7 @@ async fn test_auth_email() {
             })
             .await;
         assert!(!res.is_ok());
-
+        println!("2");
         env.hot_client
             .signup_email(SignupEmail {
                 user: user.clone(),
@@ -38,10 +42,11 @@ async fn test_auth_email() {
             })
             .await
             .expect("Signup");
-
+        println!("3");
         let res = env.hot_client.logout().await;
-        assert!(!res.is_ok(), "Logout before signing");
-
+        // switched from !res to res.is_ok() since with redirects double logouts return Ok(Redirect) to /
+        assert!(res.is_ok(), "Logout before signing");
+        println!("4");
         let res = env
             .hot_client
             .signin_email(SigninEmail {
@@ -50,7 +55,7 @@ async fn test_auth_email() {
             })
             .await;
         assert!(!res.is_ok(), "Wrong password passes");
-
+        println!("5");
         env.hot_client
             .signin_email(SigninEmail {
                 user: user.clone(),
@@ -58,16 +63,19 @@ async fn test_auth_email() {
             })
             .await
             .expect("Signin");
-
+        println!("6");
         env.hot_client.logout().await.expect("Logout");
-
+        println!("7");
         let res = env.hot_client.logout().await;
-        assert!(!res.is_ok(), "Double logout");
+        // same as with logout before signing
+        assert!(res.is_ok(), "Double logout");
+        println!("8");
     })
     .await;
 }
 
 #[tokio::test]
+#[serial]
 async fn test_btc_deposit() {
     run_with_user(|env| async move {
         fund_wallet(&env.btc_node);
@@ -96,6 +104,7 @@ async fn test_btc_deposit() {
 }
 
 #[tokio::test]
+#[serial]
 async fn test_btc_unconfirmed_deposit() {
     run_with_user(|env| async move {
         fund_wallet(&env.btc_node);
@@ -124,6 +133,7 @@ async fn test_btc_unconfirmed_deposit() {
 }
 
 #[tokio::test]
+#[serial]
 async fn test_btc_rbf_0conf_deposit() {
     run_with_user(|env| async move {
         fund_wallet(&env.btc_node);
@@ -156,6 +166,7 @@ async fn test_btc_rbf_0conf_deposit() {
 }
 
 #[tokio::test]
+#[serial]
 async fn test_btc_rbf_1conf_deposit() {
     run_with_user(|env| async move {
         fund_wallet(&env.btc_node);

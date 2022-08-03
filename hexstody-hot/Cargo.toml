@@ -16,6 +16,7 @@ hexstody-db = { path = "../hexstody-db" }
 hexstody-api = { path = "../hexstody-api" }
 hexstody-btc-api = { path = "../hexstody-btc-api" }
 hexstody-btc-client = { path = "../hexstody-btc-client" }
+hexstody-eth-client = { path = "../hexstody-eth-client" }
 hexstody-public = { path = "../hexstody-public" }
 hexstody-operator = { path = "../hexstody-operator" }
 hexstody-btc-test = { path = "../hexstody-btc-test" }
@@ -48,6 +49,7 @@ figment = { version = "0.10", features = ["toml", "env"] }
 p256 = { version = "0.11.1", features = ["serde"] }
 
 [dev-dependencies]
+serial_test = "0.8.0"
 bitcoin = "0.28.1"
 bitcoin_hashes = "0.10.0"
 bitcoincore-rpc = "0.15.0"
