@@ -427,8 +427,8 @@ async fn allocate_btc_address(
     Ok(packed_address)
 }
 
-#[openapi(tag = "tokens")]
-#[get("/tokens/list")]
+#[openapi(tag = "profile")]
+#[get("/profile/tokens/list")]
 pub async fn list_tokens(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
@@ -454,8 +454,8 @@ pub async fn list_tokens(
     .await
 }
 
-#[openapi(tag = "tokens")]
-#[post("/tokens/enable", data = "<req>")]
+#[openapi(tag = "profile")]
+#[post("/profile/tokens/enable", data = "<req>")]
 pub async fn enable_token(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
@@ -495,8 +495,8 @@ pub async fn enable_token(
     }).await
 }
 
-#[openapi(tag = "tokens")]
-#[post("/tokens/disable", data = "<req>")]
+#[openapi(tag = "profile")]
+#[post("/profile/tokens/disable", data = "<req>")]
 pub async fn disable_token(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,

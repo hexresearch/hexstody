@@ -4,12 +4,12 @@ let tokensTemplate = null;
 const refreshInterval = 20000;
 
 async function getTokens() {
-    return await fetch("/tokens/list").then(r => r.json());
+    return await fetch("/profile/tokens/list").then(r => r.json());
 };
 
 async function postEnable(token) {
     const body = {token: token}
-    return await fetch("/tokens/enable",
+    return await fetch("/profile/tokens/enable",
     {
         method: "POST",
         body: JSON.stringify(body)
@@ -18,7 +18,7 @@ async function postEnable(token) {
 
 async function postDisable(token) {
     const body = {token: token}
-    return await fetch("/tokens/disable",
+    return await fetch("/profile/tokens/disable",
     {
         method: "POST",
         body: JSON.stringify(body)
@@ -78,6 +78,16 @@ async function initTemplates() {
 
 }
 
+async function checkboxHandler(event, token) {
+    if (event.currentTarget.checked) {
+        const resp = await postEnable(token);
+        loadTokens();
+    } else {
+        const resp = await postDisable(token);
+        loadTokens();
+    }
+}
+
 async function loadTokens() {
     const tokens = await getTokens();
     const tokensDrawUpdate = tokensTemplate(tokens);
@@ -85,14 +95,8 @@ async function loadTokens() {
     tokensElem.innerHTML = tokensDrawUpdate;
     const tokensArray = tokens.tokens;
     tokensArray.forEach(token => {
-        const ticker = token.token.ticker;
-        if (token.is_active) {
-            const btnDisable = document.getElementById("btn-disable-" + ticker);
-            btnDisable.onclick = buildDisabler(token);
-        } else {
-            const btnEnable = document.getElementById("btn-enable-" + ticker);
-            btnEnable.onclick = buildEnabler(token);
-        }
+        const checkbox = document.getElementById('checkbox-'+token.token.ticker)
+        checkbox.addEventListener('change', (event) => checkboxHandler(event, token.token))
     });
 }
 
