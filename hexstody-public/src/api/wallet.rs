@@ -193,6 +193,20 @@ pub async fn ethfee(cookies: &CookieJar<'_>) -> error::Result<Json<api::EthGasPr
     .await
 }
 
+#[openapi(tag = "wallet")]
+#[get("/btcfee")]
+pub async fn btcfee(cookies: &CookieJar<'_>, btc: &State<BtcClient>) -> error::Result<Json<u64>> {
+    require_auth(cookies, |_| async move {
+        let btc_fee_per_byte = &btc
+            .get_fees()
+            .await
+            .map_err(|_| error::Error::FailedGetFee(Currency::BTC))?
+            .fee_rate;
+        Ok(Json(btc_fee_per_byte * BTC_BYTES_PER_TRANSACTION))
+    })
+    .await
+}
+
 #[openapi(tag = "history")]
 #[get("/history/<skip>/<take>")]
 pub async fn get_history(

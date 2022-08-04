@@ -192,6 +192,7 @@ pub async fn serve_api(
                 get_user_data,
                 erc20_ticker,
                 ethfee,
+                btcfee,
                 get_history,
                 get_history_eth,
                 get_history_erc20,
