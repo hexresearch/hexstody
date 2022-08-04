@@ -124,17 +124,16 @@ pub async fn ticker(
     currency: Json<Currency>,
 ) -> error::Result<Json<api::TickerETH>> {
     require_auth(cookies, |_| async move {
-        let currencyLiteral = match currency.0 {
+        let currency_literal = match currency.0 {
             Currency::BTC => "BTC",
             Currency::ETH => "ETH",
             _ => todo!("ERC20"),
         };
-        let url = "https://min-api.cryptocompare.com/data/price?fsym=".to_owned()
-            + currencyLiteral
-            + "&tsyms=USD,RUB";
-        info!("{}", url);
+        let url = format!(
+            "https://min-api.cryptocompare.com/data/price?fsym={}&tsyms=USD,RUB",
+            currency_literal
+        );
         let tick_btc_str = reqwest::get(url).await.unwrap().text().await.unwrap();
-        info!("{}", tick_btc_str);
         let ticker_btc: api::TickerETH = (serde_json::from_str(&tick_btc_str)).unwrap();
         Ok(Json(ticker_btc))
     })
