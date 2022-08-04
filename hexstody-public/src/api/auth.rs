@@ -4,12 +4,11 @@ use hexstody_api::types as api;
 use hexstody_db::state::*;
 use hexstody_db::update::signup::*;
 use hexstody_db::update::*;
+use hexstody_eth_client::client::EthClient;
 use pwhash::bcrypt;
-use reqwest;
 use rocket::http::{Cookie, CookieJar};
 use rocket::post;
 use rocket::serde::json::Json;
-use rocket::serde::json;
 use rocket::State as RState;
 use rocket_okapi::openapi;
 use std::future::Future;
@@ -17,11 +16,14 @@ use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio::sync::{Mutex, MutexGuard};
 
+pub struct IsTestFlag(pub bool);
+
 #[openapi(tag = "auth")]
 #[post("/signup/email", data = "<data>")]
 pub async fn signup_email(
     state: &RState<Arc<Mutex<State>>>,
     updater: &RState<mpsc::Sender<StateUpdate>>,
+    eth_client:&RState<EthClient>,
     data: Json<api::SignupEmail>,
 ) -> error::Result<Json<()>> {
     if data.user.len() < error::MIN_USER_NAME_LEN {
@@ -42,19 +44,14 @@ pub async fn signup_email(
         return Err(error::Error::SignupExistedUser.into());
     } else {
         // Create user
-        let body = reqwest::get(&("http://node.desolator.net/createuser/".to_owned()+&data.user)).await;
+        if let Err(e) = eth_client.createuser(&data.user).await{
+            return Err(error::Error::FailedETHConnection(e.to_string()).into())
+        }
 
         // Set user's default tokens
-        let default_tokens = json::to_string(&Currency::default_tokens()).unwrap();
-        let client = reqwest::Client::new();
-        let res = client.post(&("http://node.desolator.net/tokens/".to_owned()+&data.user)).body(default_tokens).send().await;
-        if let Err(e) = body {
+        if let Err(e) = eth_client.post_tokens(&data.user, &Currency::default_tokens()).await{
             return Err(error::Error::FailedETHConnection(e.to_string()).into())
-        };
-        if let Err(e) = res {
-            return Err(error::Error::FailedETHConnection(e.to_string()).into())
-        };
-        
+        }
         let pass_hash = bcrypt::hash(&data.password).map_err(|e| error::Error::from(e))?;
         let upd = StateUpdate::new(UpdateBody::Signup(SignupInfo {
             username: data.user.clone(),
@@ -86,7 +83,6 @@ pub async fn signin_email(
     if data.password.len() > error::MAX_USER_PASSWORD_LEN {
         return Err(error::Error::UserPasswordTooLong.into());
     }
-
     {
         let mstate = state.lock().await;
         if let Some(UserInfo {

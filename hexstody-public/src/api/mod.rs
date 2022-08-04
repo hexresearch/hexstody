@@ -3,6 +3,7 @@ pub mod wallet;
 
 use auth::*;
 use figment::Figment;
+use hexstody_eth_client::client::EthClient;
 use log::*;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -174,6 +175,25 @@ async fn withdraw(
     }
 }
 
+#[openapi(skip)]
+#[get("/removeuser/<user>")]
+pub async fn remove_user(
+    eth_client: &State<EthClient>,
+    state: &State<Arc<Mutex<hexstody_db::state::State>>>,
+    is_test: &State<IsTestFlag>,
+    user: &str
+) -> Result<(), Redirect> {
+    if is_test.0 {
+        let _ = eth_client.remove_user(&user).await;
+        let mut mstate = state.lock().await;
+        mstate.users.remove(user);
+        Ok(())
+    } else {
+        Err(Redirect::to(uri!(signin)))
+    }
+
+}
+
 pub async fn serve_api(
     pool: Pool,
     state: Arc<Mutex<DbState>>,
@@ -181,7 +201,9 @@ pub async fn serve_api(
     start_notify: Arc<Notify>,
     update_sender: mpsc::Sender<StateUpdate>,
     btc_client: BtcClient,
+    eth_client: EthClient,
     api_config: Figment,
+    is_test: bool
 ) -> Result<(), rocket::Error> {
     let on_ready = AdHoc::on_liftoff("API Start!", |_| {
         Box::pin(async move {
@@ -213,7 +235,8 @@ pub async fn serve_api(
                 logout,
                 list_tokens,
                 enable_token,
-                disable_token
+                disable_token,
+                remove_user
             ],
         )
         .mount(
@@ -231,6 +254,8 @@ pub async fn serve_api(
         .manage(pool)
         .manage(update_sender)
         .manage(btc_client)
+        .manage(eth_client)
+        .manage(IsTestFlag(is_test))
         .attach(Template::fairing())
         .attach(on_ready)
         .launch()

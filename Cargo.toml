@@ -8,6 +8,7 @@ members = [
     "hexstody-btc",
     "hexstody-client",
     "hexstody-db",
+    "hexstody-eth-client",
     "hexstody-operator",
     "hexstody-public",
     "hexstody-hot",

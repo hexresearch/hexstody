@@ -1,5 +1,6 @@
 use bitcoincore_rpc::Client;
 use futures::{future::AbortHandle, FutureExt};
+use hexstody_eth_client::client::EthClient;
 use log::*;
 use port_selector::random_free_tcp_port;
 use run_script::ScriptOptions;
@@ -33,6 +34,8 @@ where
     Fut: Future<Output = ()>,
 {
     btc_runner::run_two_nodes_test(|btc_node, other_btc_node, btc_client| async move {
+        let eth_module = "http://node.desolator.net".to_owned();
+        let eth_client = EthClient::new(&eth_module); 
         let (db_port, db_dir) = setup_postgres();
         let dbconnect = format!("postgres://hexstody:hexstody@localhost:{db_port}/hexstody");
         info!("Connection to database: {dbconnect}");
@@ -49,7 +52,7 @@ where
                     &Args {
                         dbconnect: dbconnect,
                         btc_module: "http://127.0.0.1:8180".to_owned(),
-                        eth_module: "http://node.desolator.net".to_owned(),
+                        eth_module: eth_module,
                         network: Network::Regtest,
                         start_regtest: true,
                         operator_public_keys: vec![],
@@ -69,7 +72,9 @@ where
                     },
                     start_notify,
                     btc_client,
+                    eth_client,
                     abort_reg,
+                    true
                 )
                 .await
                 {
@@ -176,7 +181,7 @@ where
     run_test(|env| async move {
         let user = "aboba@mail.com".to_owned();
         let password = "123456".to_owned();
-
+        let _removed = env.hot_client.test_only_remove_eth_user(&user).await;
         env.hot_client
             .signup_email(SignupEmail {
                 user: user.clone(),
