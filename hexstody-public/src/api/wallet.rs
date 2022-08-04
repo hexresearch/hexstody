@@ -140,16 +140,17 @@ pub async fn eth_ticker(cookies: &CookieJar<'_>) -> error::Result<Json<api::Tick
 }
 
 #[openapi(tag = "wallet")]
-#[post("/btcticker")]
-pub async fn btc_ticker(cookies: &CookieJar<'_>) -> error::Result<Json<api::TickerETH>> {
+#[post("/ticker", data = "<currency>")]
+pub async fn ticker(
+    cookies: &CookieJar<'_>,
+    currency: Json<Currency>,
+) -> error::Result<Json<api::TickerETH>> {
     require_auth(cookies, |_| async move {
-        let tick_btc_str =
-            reqwest::get("https://min-api.cryptocompare.com/data/price?fsym=BTC&tsyms=USD,RUB")
-                .await
-                .unwrap()
-                .text()
-                .await
-                .unwrap();
+        let url = "https://min-api.cryptocompare.com/data/price?fsym=".to_owned()
+            + &currency.to_string()
+            + "&tsyms=USD,RUB";
+        info!("{}", url);
+        let tick_btc_str = reqwest::get(url).await.unwrap().text().await.unwrap();
         let ticker_btc: api::TickerETH = (serde_json::from_str(&tick_btc_str)).unwrap();
         Ok(Json(ticker_btc))
     })

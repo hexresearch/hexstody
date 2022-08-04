@@ -37,12 +37,12 @@ async function postWithdrawRequest(currency, address, amount) {
         case "BTC":
             body = { address: { type: "BTC", addr: address }, amount: amount }
             res = await fetch("/withdraw",
-            {
-                method: "POST",
-                body: JSON.stringify(body)
-            });
+                {
+                    method: "POST",
+                    body: JSON.stringify(body)
+                });
 
-        return res;
+            return res;
             break;
         case "ETH":
             body = { address: { type: "ETH", account: address }, amount: amount };
@@ -115,26 +115,29 @@ async function getEthFee() {
 async function updateBalanceAndFeeLoop() {
 
     const balancesObj = await getBalances();
-    var balanceEth;
+
     balancesObj.balances.forEach(balance => {
         if (balance.currency === "ETH") {
-            balanceEth = balance.value;
+            const balanceEth = balance.value;
+            const feeObj = await getEthFee();
+            const tikerObj = await getCourseForETH("ETH")
+
+            ethBalanceEl.setAttribute("balance", balanceEth);
+            const balToUSD = (tikerObj.USD * balanceEth / 1000000000000000000).toFixed(2);
+            const txtBal = formattedCurrencyValue("ETH", balanceEth) + " ETH" + " ($ " + balToUSD + ")"
+            ethBalanceEl.textContent = txtBal;
+
+            ethFeeEl.setAttribute("fee", feeObj.FastGasPrice);
+            const feeToUSD = (tikerObj.USD * 21 * feeObj.FastGasPrice / 1000000).toFixed(2);
+            const txtFee = formattedCurrencyValueFixed("ETH", 210000 * feeObj.FastGasPrice * 1000000000, 5) + " ETH" + " ($" + feeToUSD + ")";
+            ethFeeEl.textContent = txtFee;
+        } else if (balance.currency === "BTC"){
+            const balanceBtc = balance.value;
         }
     });
 
 
-    const feeObj = await getEthFee();
-    const tikerObj = await getCourseForETH("ETH")
 
-    ethBalanceEl.setAttribute("balance", balanceEth);
-    const balToUSD = (tikerObj.USD * balanceEth / 1000000000000000000).toFixed(2);
-    const txtBal = formattedCurrencyValue("ETH", balanceEth) + " ETH" + " ($ " + balToUSD + ")"
-    ethBalanceEl.textContent = txtBal;
-
-    ethFeeEl.setAttribute("fee", feeObj.FastGasPrice);
-    const feeToUSD = (tikerObj.USD * 21 * feeObj.FastGasPrice / 1000000).toFixed(2);
-    const txtFee = formattedCurrencyValueFixed("ETH", 210000 * feeObj.FastGasPrice * 1000000000, 5) + " ETH" + " ($" + feeToUSD + ")";
-    ethFeeEl.textContent = txtFee;
 }
 
 
@@ -146,7 +149,7 @@ async function updateLoop() {
 }
 
 async function getCourseForETH(currency) {
-    return await fetch("/ethticker",
+    return await fetch("/ticker",
         {
             method: "POST",
             body: JSON.stringify(currency)
