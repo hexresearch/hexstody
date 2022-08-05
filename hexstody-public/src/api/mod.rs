@@ -4,7 +4,7 @@ pub mod wallet;
 use auth::*;
 use figment::Figment;
 use hexstody_eth_client::client::EthClient;
-use log::*;
+use serde_json::json;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -21,10 +21,8 @@ use rocket::{get, routes, State};
 use rocket_dyn_templates::Template;
 use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
 
-use hexstody_api::domain::Currency;
 use hexstody_api::error::{self, ErrorMessage};
 use hexstody_btc_client::client::BtcClient;
-use hexstody_btc_client::client::BTC_BYTES_PER_TRANSACTION;
 use hexstody_db::state::State as DbState;
 use hexstody_db::update::*;
 use hexstody_db::Pool;
@@ -123,45 +121,15 @@ async fn deposit(
 #[openapi(skip)]
 #[get("/withdraw")]
 async fn withdraw(
-    btc: &State<BtcClient>,
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
 ) -> Result<error::Result<Template>, Redirect> {
-    let resp = require_auth_user(cookies, state, |_, user| async move {
-        let btc_fee_per_byte = &btc
-            .get_fees()
-            .await
-            .map_err(|e| {
-                error!("{}", e);
-                error::Error::FailedGetFee(Currency::BTC)
-            })?
-            .fee_rate;
-
-        let btc_fee_per_transaction = &(btc_fee_per_byte * BTC_BYTES_PER_TRANSACTION).to_string();
-        let btc_balance = &user
-            .currencies
-            .get(&Currency::BTC)
-            .unwrap()
-            .finalized_balance()
-            .to_string();
-
-        let ethfee = &1000.to_string();
-        let eth_balance = &user
-            .currencies
-            .get(&Currency::ETH)
-            .unwrap()
-            .finalized_balance()
-            .to_string();
-        let context = HashMap::from([
-            ("title", "Withdraw"),
-            ("parent", "base_with_header"),
-            ("login", "lalala"),
-            ("btc_balance", btc_balance),
-            ("btc_fee", btc_fee_per_transaction),
-            ("eth_balance", eth_balance),
-            ("ethfee", ethfee),
-            ("username", &user.username),
-        ]);
+    let resp = require_auth_user(cookies, state, |_, _| async move {
+        let context = json!({
+            "title" : "Withdraw",
+            "parent": "base_footer_header",
+            "tabs"   : ["btc", "eth"]}
+        );
         Ok(Template::render("withdraw", context))
     }).await;
     match resp {
@@ -220,11 +188,11 @@ pub async fn serve_api(
                 get_balance,
                 get_deposit,
                 get_deposit_eth,
-                eth_ticker,
-                btc_ticker,
+                ticker,
                 get_user_data,
                 erc20_ticker,
                 ethfee,
+                btcfee,
                 get_history,
                 get_history_eth,
                 get_history_erc20,
