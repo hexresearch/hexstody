@@ -64,8 +64,8 @@ async function init() {
 
     Handlebars.registerHelper('currencies', () => ["btc", "eth"]);
 
-     maxBtcAmountBtn.onclick = () => btcSendAmountEl.value =
-         Math.max(0, btcBalanceEl.getAttribute("balance") - btcFeeEl.getAttribute("fee"));
+    maxBtcAmountBtn.onclick = () => btcSendAmountEl.value =
+        Math.max(0, btcBalanceEl.getAttribute("balance") - btcFeeEl.getAttribute("fee"));
 
     maxEthAmountBtn.onclick = () => ethSendAmountEl.value =
         Math.max(0, ethBalanceEl.getAttribute("balance") - ethFeeEl.getAttribute("fee"));
@@ -106,12 +106,12 @@ async function updateBalanceAndFeeLoop() {
 
             ethBalanceEl.setAttribute("balance", balanceEth);
             const balToUSD = (tikerObj.USD * balanceEth / 100_000_000_000_000_0000).toFixed(2);
-            const txtBal = `${formattedCurrencyValue("ETH", balanceEth)} ETH (${balToUSD})`;
+            const txtBal = `${formattedCurrencyValue("ETH", balanceEth)} ETH ($ ${balToUSD})`;
             ethBalanceEl.textContent = txtBal;
 
             ethFeeEl.setAttribute("fee", feeObj.FastGasPrice);
             const feeToUSD = (tikerObj.USD * 21 * feeObj.FastGasPrice / 1000000).toFixed(2);
-            const txtFee = formattedCurrencyValueFixed("ETH", 210000 * feeObj.FastGasPrice * 1000000000, 5) + " ETH" + " ($" + feeToUSD + ")";
+            const txtFee = `${formattedCurrencyValueFixed("ETH", 210000 * feeObj.FastGasPrice * 1000000000, 5)} ETH ($ ${feeToUSD})`;
             ethFeeEl.textContent = txtFee;
         } else if (balance.currency === "BTC") {
             const feeObj = await getBtcFee();
@@ -120,12 +120,12 @@ async function updateBalanceAndFeeLoop() {
 
             btcBalanceEl.setAttribute("balance", balanceBtc);
             const balToUSD = (tikerObj.USD * balanceBtc / 100_000_000_000).toFixed(2);
-            const txtBal = `${formattedCurrencyValue("BTC", balanceBtc)} BTC (${balToUSD})`;
+            const txtBal = `${formattedCurrencyValue("BTC", balanceBtc)} BTC ($ ${balToUSD})`;
             btcBalanceEl.textContent = txtBal;
-            
+
             btcFeeEl.setAttribute("fee", feeObj);
-            const feeToUSD = (tikerObj.USD  * feeObj / 100_000_000_000).toFixed(2);
-            const txtFee = formattedCurrencyValueFixed("BTC",  feeObj, 5) + " BTC" + " ($" + feeToUSD + ")";
+            const feeToUSD = (tikerObj.USD * feeObj / 100_000_000_000).toFixed(2);
+            const txtFee = `${formattedCurrencyValueFixed("BTC", feeObj, 5)} BTC ($ ${feeToUSD})`;
             btcFeeEl.textContent = txtFee;
         }
     });

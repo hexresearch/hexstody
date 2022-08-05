@@ -350,20 +350,18 @@ pub async fn post_withdraw(
             reqwest::get(send_url).await.unwrap().text().await.unwrap();
             Ok(())
         } else {
+            let btc_balance = user
+                .currencies
+                .get(&Currency::BTC)
+                .ok_or(error::Error::NoUserCurrency(Currency::BTC))?
+                .finalized_balance();
             let btc_fee_per_byte = &btc
                 .get_fees()
                 .await
                 .map_err(|_| error::Error::FailedGetFee(Currency::BTC))?
                 .fee_rate;
-
-            let btc_balance = &user
-                .currencies
-                .get(&Currency::BTC)
-                .ok_or(error::Error::NoUserCurrency(Currency::BTC))?
-                .finalized_balance();
-            let max_btc_amount_to_spend =
-                btc_balance - btc_fee_per_byte * BTC_BYTES_PER_TRANSACTION;
-            if max_btc_amount_to_spend >= withdraw_request.amount {
+            let required_amount = withdraw_request.amount + btc_fee_per_byte * BTC_BYTES_PER_TRANSACTION;
+            if  required_amount <= btc_balance {
                 let withdrawal_request = WithdrawalRequestInfo {
                     id: Uuid::new_v4(),
                     user: user.username,
