@@ -10,18 +10,19 @@ use rocket::{
 };
 use rocket_dyn_templates::{context, Template};
 use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
+use uuid::Uuid;
 use std::{path::PathBuf, str, sync::Arc};
 use tokio::sync::{mpsc, Mutex, Notify};
 
 use hexstody_api::types::{
-    ConfirmationData, SignatureData, WithdrawalRequest, WithdrawalRequestInfo, WithdrawalRequestDecisionType, HotBalanceResponse
+    ConfirmationData, SignatureData, WithdrawalRequest, WithdrawalRequestInfo, WithdrawalRequestDecisionType, HotBalanceResponse, Invite, InviteRequest, InviteResp
 };
 use hexstody_btc_client::client::BtcClient;
 use hexstody_db::{
     state::State as HexstodyState,
-    update::withdrawal::{
+    update::{withdrawal::{
         WithdrawalRequestInfo as WithdrawalRequestInfoDb,
-    },
+    }, misc::InviteRec},
     update::{StateUpdate, UpdateBody},
     Pool,
 };
@@ -41,7 +42,7 @@ async fn index(state: &RocketState<Arc<Mutex<HexstodyState>>>) -> Template {
             .map(|x| x.into()),
     );
     let context = context! {
-        title: "Withdrawal requests".to_owned(),
+        title: "Operator dashboard".to_owned(),
         parent: "base".to_owned(),
         withdrawal_requests,
     };
@@ -160,6 +161,53 @@ async fn reject(
     Ok(())
 }
 
+/// Generate an invite
+#[openapi(tag = "Generate invite")]
+#[post("/invite/generate", format = "json", data="<req>")]
+async fn gen_invite(
+    update_sender: &RocketState<mpsc::Sender<StateUpdate>>,
+    state: &RocketState<Arc<Mutex<HexstodyState>>>,
+    config: &RocketState<Config>,
+    signature_data: SignatureData,
+    req: Json<InviteRequest>
+) -> Result<Json<InviteResp>, (Status, &'static str)> {
+    let label = req.label.clone();
+    guard_op_signature(&config, uri!(gen_invite).to_string(), signature_data, &req.into_inner())?;
+    let invitor = signature_data.public_key.to_string();
+    let mut invite = Invite{invite: Uuid::new_v4()};
+    {
+        let hexstody_state = state.lock().await;
+        while hexstody_state.invites.get(&invite).is_some() {
+            invite = Invite{invite: Uuid::new_v4()};
+        }
+    }
+    let state_update = StateUpdate::new(UpdateBody::GenInvite(InviteRec{ invite, invitor, label: label.clone()}));
+    update_sender
+        .send(state_update)
+        .await
+        .map_err(|_| (Status::InternalServerError, "Internal server error"))
+        .map(|_| Json(InviteResp{invite, label}))
+}
+
+/// List operator's invites
+#[openapi(tag = "Generate invite")]
+#[get("/invite/listmy")]
+async fn list_ops_invites(
+    state: &RocketState<Arc<Mutex<HexstodyState>>>,
+    config: &RocketState<Config>,
+    signature_data: SignatureData,
+) -> Result<Json<Vec<InviteResp>>, (Status, &'static str)>{
+    guard_op_signature_nomsg(&config, uri!(list_ops_invites).to_string(), signature_data)?;
+    let invitor = signature_data.public_key.to_string();
+    let hexstody_state = state.lock().await;
+    let invites = hexstody_state.invites.values().into_iter().filter_map(|v| {
+        if v.invitor == invitor {
+            Some(InviteResp{ invite: v.invite.clone(), label: v.label.clone()})
+        } else {None}
+    }).collect();
+    Ok(Json(invites))
+}
+
 pub async fn serve_api(
     pool: Pool,
     state: Arc<Mutex<HexstodyState>>,
@@ -178,7 +226,15 @@ pub async fn serve_api(
     let _ = rocket::custom(api_config)
         .mount("/", FileServer::from(static_path))
         .mount("/", routes![index])
-        .mount("/", openapi_get_routes![list, create, confirm, reject, get_hot_balance])
+        .mount("/", openapi_get_routes![
+            list, 
+            create, 
+            confirm, 
+            reject, 
+            get_hot_balance, 
+            gen_invite,
+            list_ops_invites
+            ])
         .mount(
             "/swagger/",
             make_swagger_ui(&SwaggerUIConfig {

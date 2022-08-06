@@ -16,7 +16,8 @@ pub use transaction::*;
 pub use user::*;
 pub use withdraw::*;
 
-use crate::update::withdrawal::{WithdrawCompleteInfo, WithdrawalRejectInfo, TokenUpdate, TokenAction};
+use crate::update::withdrawal::{WithdrawCompleteInfo, WithdrawalRejectInfo};
+use crate::update::misc::{TokenUpdate, TokenAction, InviteRec};
 
 use super::update::btc::BtcTxCancel;
 use super::update::deposit::DepositAddress;
@@ -26,7 +27,7 @@ use super::update::withdrawal::{
 };
 use super::update::{results::UpdateResult, StateUpdate, UpdateBody};
 use hexstody_api::domain::*;
-use hexstody_api::types::WithdrawalRequestDecisionType;
+use hexstody_api::types::{WithdrawalRequestDecisionType, Invite};
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct State {
@@ -38,6 +39,8 @@ pub struct State {
     pub last_changed: NaiveDateTime,
     /// Tracks state of BTC chain
     pub btc_state: BtcState,
+    /// Invites: Invite + string rep of pubk of the operator
+    pub invites: HashMap<Invite, InviteRec>
 }
 
 #[derive(Error, Debug, PartialEq)]
@@ -65,7 +68,9 @@ pub enum StateUpdateErr {
     #[error("{0} has non-zero balance. Can not disable")]
     TokenNonZeroBalance(Erc20Token),
     #[error("Failed to enable token {0} from {1}")]
-    TokenEnableFail(Erc20Token, UserId)
+    TokenEnableFail(Erc20Token, UserId),
+    #[error("Invite already exist")]
+    InviteAlreadyExist,
 }
 
 impl State {
@@ -74,6 +79,7 @@ impl State {
             users: HashMap::new(),
             last_changed: Utc::now().naive_utc(),
             btc_state: BtcState::new(network.btc()),
+            invites: HashMap::new(),
         }
     }
 
@@ -152,6 +158,11 @@ impl State {
             }
             UpdateBody::UpdateTokens(token_update) => {
                 self.update_tokens(token_update)?;
+                self.last_changed = update.created;
+                Ok(None)
+            },
+            UpdateBody::GenInvite(invite_req) => {
+                self.gen_invite(invite_req)?;
                 self.last_changed = update.created;
                 Ok(None)
             },
@@ -527,6 +538,16 @@ impl State {
                     }
                 }
             }
+        }
+    }
+
+    fn gen_invite(&mut self, invite_req: InviteRec) -> Result<(), StateUpdateErr> {
+        let invite = invite_req.invite;
+        if let Some(_) = self.invites.get(&invite) {
+            Err(StateUpdateErr::InviteAlreadyExist)
+        } else {
+            self.invites.insert(invite, invite_req);
+            Ok(())
         }
     }
 }

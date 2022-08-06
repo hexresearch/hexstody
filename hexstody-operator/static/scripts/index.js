@@ -1,7 +1,15 @@
+import { loadTemplate, formattedElapsedTime } from "./common.js";
+
 const fileSelector = document.getElementById("file-selector");
 const fileSelectorStatus = document.getElementById("file-selector-status");
 const withdrawalRequestsTableBody = document.getElementById("withdrawal-requests-table-body");
+const invitesTab = document.getElementById("invites-tab");
+const withdrawsTabBody = document.getElementById('withdraw-tab-body');
+const withdrawsTab = document.getElementById('withdraw-tab');
+const invitesTabBody = document.getElementById("invites-tab-body");
 
+let invitesTemplate = null;
+let invitesListTemplate = null;
 let privateKeyJwk;
 let publicKeyDer;
 
@@ -315,6 +323,153 @@ function truncate(input, maxLength) {
     return input;
 };
 
-window.addEventListener('load', function () {
+function enableCopyBtn(copyBtn, invite) {
+    copyBtn.addEventListener("click", () => {
+        navigator.clipboard.writeText(invite).then(function () { }, function (err) {
+            console.error('Could not copy text: ', err);
+        });
+    });
+    tippy(copyBtn, {
+        content: "Copied",
+        trigger: "click",
+        hideOnClick: false,
+        onShow(instance) {
+            setTimeout(() => {
+                instance.hide();
+            }, 1000);
+        }
+    });
+}
+
+async function getInvite(body) {
+    return await makeSignedRequest(body, "invite/generate", "POST");
+};
+
+async function getMyInvites(){
+    return await makeSignedRequest(null, "invite/listmy", "GET");
+}
+
+function mkCopyBtn(parent, value){
+    const copyBtn = document.createElement("button");
+    const spn = document.createElement("span");
+    const i = document.createElement("i");
+    i.classList.add("mdi","mdi-content-copy");
+    spn.classList.add("icon");
+    copyBtn.classList.add("button", "is-h3", "is-ghost", "font-gray");
+    spn.appendChild(i);
+    copyBtn.appendChild(spn);
+    parent.appendChild(copyBtn);
+    copyBtn.addEventListener("click", () => {
+        navigator.clipboard.writeText(value).then(function () { }, function (err) {
+            console.error('Could not copy text: ', err);
+        });
+    });
+    tippy(copyBtn, {
+        content: "Copied",
+        trigger: "click",
+        hideOnClick: false,
+        onShow(instance) {
+            setTimeout(() => {
+                instance.hide();
+            }, 1000);
+        }
+    });
+}
+
+function renderError(errMsg){
+    const inviteDisplayBody = document.getElementById("invite-display-body");
+    const inviteDisplayLabel = document.getElementById("invite-display-label")
+    inviteDisplayBody.classList.add("text-error");
+    inviteDisplayLabel.classList.add("text-error");
+    inviteDisplayLabel.innerHTML = "Error!";
+    inviteDisplayBody.innerHTML = errMsg;
+}
+
+function renderInvite(data){
+    const invite = data.invite.invite.toString();
+    const label = data.label.toString();
+    const inviteDisplay = document.getElementById("invite-display");
+    const inviteDisplayBody = document.getElementById("invite-display-body");
+    const inviteDisplayLabel = document.getElementById("invite-display-label")
+    inviteDisplayBody.classList.remove("text-error");
+    inviteDisplayLabel.classList.remove("text-error");
+    inviteDisplayBody.innerHTML = invite;
+    inviteDisplayLabel.innerHTML = label + ":";
+    mkCopyBtn(inviteDisplay, invite);
+}
+
+async function genInvite(){
+    const inviteLabelField = document.getElementById("invite-label");
+    const label = inviteLabelField.value;
+    const body = {label: label}
+    const inviteResp = await getInvite(body)
+    if (inviteResp.ok) {
+        let data = await inviteResp.json();
+        renderInvite(data);
+    } else {
+        const errMsg = JSON.stringify(inviteResp);
+        renderError(errMsg);
+    }
+}
+
+async function listInvites(){
+    const [invitesTemp] = await Promise.allSettled([
+        await loadTemplate("/scripts/templates/inviteslist.html.hbs")
+    ]);
+
+    invitesListTemplate = invitesTemp.value;
+
+    const mock = {
+        invites: [
+            {label: "a", invite: {invite: "qwe"}},
+            {label: "a", invite: {invite: "qwe"}},
+            {label: "a", invite: {invite: "qwe"}},
+        ]
+    }
+    const invitesListBody = document.getElementById("invites-list");
+    const invitesResp = await getMyInvites();
+    if (invitesResp.ok){
+        const invites = await invitesResp.json();
+        const invitesList = invitesListTemplate({invites: invites});
+        invitesListBody.innerHTML = invitesList;
+        const inviteDisplays = invitesListBody.querySelectorAll(".invite-display");
+        inviteDisplays.forEach(display => {
+            const value = display.querySelector('.invite').innerHTML;
+            mkCopyBtn(display, value)
+        })
+    } else {
+        const errMsg = document.createElement("h3");
+        errMsg.classList.add("text-error");
+        errMsg.innerHTML = "Error: " + invitesResp.status + ": " + invitesResp.statusText;
+        invitesListBody.innerHTML = "";
+        invitesListBody.append(errMsg)
+    }
+
+}
+
+async function loadInvitesTab(){
+    const [invitesTemp] = await Promise.allSettled([
+        await loadTemplate("/scripts/templates/invites.html.hbs")
+    ]);
+
+    invitesTemplate = invitesTemp.value;
+    const inivitesDrawUpdate = invitesTemplate();
+    invitesTabBody.innerHTML = inivitesDrawUpdate;
+
+    withdrawsTabBody.style.display = 'none';
+    withdrawsTab.classList.remove('is-active');
+    invitesTabBody.style.display = 'block';
+    invitesTab.classList.add('is-active');
+
+    const genInviteBtn = document.getElementById("gen-invite-btn");
+    const listInvitesBtn = document.getElementById("btn-list-invites");
+    genInviteBtn.onclick = genInvite;
+    listInvitesBtn.onclick = listInvites;
+}
+
+async function init(){
     fileSelector.addEventListener('change', loadKeyFile);
-});
+    invitesTab.onclick = loadInvitesTab;
+}
+
+document.addEventListener("DOMContentLoaded", init);

@@ -11,6 +11,7 @@ pub struct Config {
     pub operator_public_keys: Vec<PublicKey>,
 }
 
+/// Guard operator handle from non-authorized user
 pub fn guard_op_signature<T: Serialize>(
     config: &Config, 
     uri: String, 
@@ -31,6 +32,7 @@ pub fn guard_op_signature<T: Serialize>(
         .map_err(|_| (Status::Forbidden, "Signature verification failed"))
 }
 
+/// Guard operator handle from non-authorized user. Special case for when request has no body attached
 pub fn guard_op_signature_nomsg(
     config: &Config, 
     uri: String, 

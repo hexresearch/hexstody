@@ -604,3 +604,19 @@ pub struct TokenInfo {
 pub struct TokenActionRequest{
     pub token: Erc20Token
 }
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Hash, JsonSchema)]
+pub struct Invite{
+    pub invite: Uuid
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct InviteRequest{
+    pub label: String
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct InviteResp{
+    pub invite: Invite,
+    pub label: String
+}

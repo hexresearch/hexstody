@@ -18,7 +18,8 @@ use hexstody_btc_client::client::{BtcClient, BTC_BYTES_PER_TRANSACTION};
 use hexstody_db::state::{State as DbState};
 use hexstody_db::state::{Transaction, WithdrawalRequest, REQUIRED_NUMBER_OF_CONFIRMATIONS};
 use hexstody_db::update::deposit::DepositAddress;
-use hexstody_db::update::withdrawal::{WithdrawalRequestInfo, TokenUpdate, TokenAction};
+use hexstody_db::update::withdrawal::{WithdrawalRequestInfo};
+use hexstody_db::update::misc::{TokenUpdate, TokenAction};
 use hexstody_db::update::{StateUpdate, UpdateBody};
 
 #[openapi(tag = "wallet")]
