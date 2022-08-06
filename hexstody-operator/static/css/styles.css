@@ -130,10 +130,6 @@
   display: flex;
 }
 
-.m-r-05em{
-  margin-right: 0.5em;
-}
-
 .button.is-small {
   font-size: 0.75rem; 
 }
@@ -173,6 +169,14 @@
 
 .font-gray{
   color: grey !important;
+}
+
+.m-r-05em{
+  margin-right: 0.5em;
+}
+
+.m-b-05em{
+  margin-bottom: 0.5em;
 }
 
 .m-tb-0{

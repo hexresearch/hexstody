@@ -1,6 +1,6 @@
-<h3 class="margin-b-24px">
-    My invites
-</h3>
+{{#if isList}}
+<h3 class="m-b-05em">My invites:</h3>
+{{/if}}
 {{#each invites}}
 <div class="invite-display">
     <h3 class="m-tb-0 m-r-05em">{{this.label}}:</h3>

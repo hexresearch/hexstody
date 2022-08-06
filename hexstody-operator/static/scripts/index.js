@@ -7,11 +7,20 @@ const invitesTab = document.getElementById("invites-tab");
 const withdrawsTabBody = document.getElementById('withdraw-tab-body');
 const withdrawsTab = document.getElementById('withdraw-tab');
 const invitesTabBody = document.getElementById("invites-tab-body");
+const authedBody = document.getElementById("authed-body");
 
 let invitesTemplate = null;
 let invitesListTemplate = null;
 let privateKeyJwk;
 let publicKeyDer;
+
+function hide_authed(){
+    authedBody.style.display = "none";
+}
+
+function show_authed(){
+    authedBody.style.display = "block";
+}
 
 async function importKey(_event) {
     const keyObj = new window.jscu.Key('pem', this.result);
@@ -23,6 +32,7 @@ async function importKey(_event) {
             fileSelectorStatus.className = "text-error";
             fileSelectorStatus.innerText = "Wrong password";
             clearWithdrawalRequests();
+            hide_authed();
             return;
         };
     };
@@ -30,6 +40,7 @@ async function importKey(_event) {
         fileSelectorStatus.className = "text-error";
         fileSelectorStatus.innerText = "The selected key is not private";
         clearWithdrawalRequests();
+        hide_authed();
         return;
     } else {
         try {
@@ -39,9 +50,11 @@ async function importKey(_event) {
             fileSelectorStatus.className = "text-error";
             fileSelectorStatus.innerText = error;
             clearWithdrawalRequests();
+            hide_authed();
             return;
         };
     };
+    show_authed();
     const response = await updateWithdrawalRequests();
     if (response.ok) {
         fileSelectorStatus.className = "text-success";
@@ -59,6 +72,7 @@ async function importKey(_event) {
             fileSelectorStatus.className = "text-error";
             fileSelectorStatus.innerText = "Invalid key";
             clearWithdrawalRequests();
+            hide_authed();
             return;
         } else {
             fileSelectorStatus.className = "text-error";
@@ -323,24 +337,6 @@ function truncate(input, maxLength) {
     return input;
 };
 
-function enableCopyBtn(copyBtn, invite) {
-    copyBtn.addEventListener("click", () => {
-        navigator.clipboard.writeText(invite).then(function () { }, function (err) {
-            console.error('Could not copy text: ', err);
-        });
-    });
-    tippy(copyBtn, {
-        content: "Copied",
-        trigger: "click",
-        hideOnClick: false,
-        onShow(instance) {
-            setTimeout(() => {
-                instance.hide();
-            }, 1000);
-        }
-    });
-}
-
 async function getInvite(body) {
     return await makeSignedRequest(body, "invite/generate", "POST");
 };
@@ -376,61 +372,40 @@ function mkCopyBtn(parent, value){
     });
 }
 
-function renderError(errMsg){
-    const inviteDisplayBody = document.getElementById("invite-display-body");
-    const inviteDisplayLabel = document.getElementById("invite-display-label")
-    inviteDisplayBody.classList.add("text-error");
-    inviteDisplayLabel.classList.add("text-error");
-    inviteDisplayLabel.innerHTML = "Error!";
-    inviteDisplayBody.innerHTML = errMsg;
-}
-
-function renderInvite(data){
-    const invite = data.invite.invite.toString();
-    const label = data.label.toString();
-    const inviteDisplay = document.getElementById("invite-display");
-    const inviteDisplayBody = document.getElementById("invite-display-body");
-    const inviteDisplayLabel = document.getElementById("invite-display-label")
-    inviteDisplayBody.classList.remove("text-error");
-    inviteDisplayLabel.classList.remove("text-error");
-    inviteDisplayBody.innerHTML = invite;
-    inviteDisplayLabel.innerHTML = label + ":";
-    mkCopyBtn(inviteDisplay, invite);
+function renderError(parent, errMsg){
+    const errNode = document.createElement("h3");
+    errNode.classList.add("text-error");
+    errNode.innerHTML = "Error! " + errMsg;
+    parent.append(errNode);
 }
 
 async function genInvite(){
     const inviteLabelField = document.getElementById("invite-label");
+    const inviteDisplay = document.getElementById("invite-display");
+    inviteDisplay.style.display = 'flex';
     const label = inviteLabelField.value;
-    const body = {label: label}
-    const inviteResp = await getInvite(body)
-    if (inviteResp.ok) {
-        let data = await inviteResp.json();
-        renderInvite(data);
+    if (!label) {
+        renderError(inviteDisplay, "Label should be non-empty!")
     } else {
-        const errMsg = JSON.stringify(inviteResp);
-        renderError(errMsg);
+        const body = {label: label}
+        const inviteResp = await getInvite(body)
+        if (inviteResp.ok) {
+            let invite = await inviteResp.json();
+            const invitesList = invitesListTemplate({invites: [invite], isList: false});
+            inviteDisplay.innerHTML = invitesList;
+            mkCopyBtn(inviteDisplay, invite.invite.invite);
+        } else {
+            renderError(inviteDisplay, JSON.stringify(inviteResp));
+        }
     }
 }
 
 async function listInvites(){
-    const [invitesTemp] = await Promise.allSettled([
-        await loadTemplate("/scripts/templates/inviteslist.html.hbs")
-    ]);
-
-    invitesListTemplate = invitesTemp.value;
-
-    const mock = {
-        invites: [
-            {label: "a", invite: {invite: "qwe"}},
-            {label: "a", invite: {invite: "qwe"}},
-            {label: "a", invite: {invite: "qwe"}},
-        ]
-    }
     const invitesListBody = document.getElementById("invites-list");
     const invitesResp = await getMyInvites();
     if (invitesResp.ok){
         const invites = await invitesResp.json();
-        const invitesList = invitesListTemplate({invites: invites});
+        const invitesList = invitesListTemplate({invites: invites, isList: true});
         invitesListBody.innerHTML = invitesList;
         const inviteDisplays = invitesListBody.querySelectorAll(".invite-display");
         inviteDisplays.forEach(display => {
@@ -448,11 +423,6 @@ async function listInvites(){
 }
 
 async function loadInvitesTab(){
-    const [invitesTemp] = await Promise.allSettled([
-        await loadTemplate("/scripts/templates/invites.html.hbs")
-    ]);
-
-    invitesTemplate = invitesTemp.value;
     const inivitesDrawUpdate = invitesTemplate();
     invitesTabBody.innerHTML = inivitesDrawUpdate;
 
@@ -468,6 +438,12 @@ async function loadInvitesTab(){
 }
 
 async function init(){
+    const [invitesTemp, invitesListTemp] = await Promise.allSettled([
+        await loadTemplate("/scripts/templates/invites.html.hbs"),
+        await loadTemplate("/scripts/templates/inviteslist.html.hbs")
+    ]);
+    invitesTemplate = invitesTemp.value;
+    invitesListTemplate = invitesListTemp.value;
     fileSelector.addEventListener('change', loadKeyFile);
     invitesTab.onclick = loadInvitesTab;
 }
