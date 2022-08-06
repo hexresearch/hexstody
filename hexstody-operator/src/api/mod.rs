@@ -15,15 +15,17 @@ use serde::Deserialize;
 use std::{path::PathBuf, str, sync::Arc};
 use tokio::sync::{mpsc, Mutex, Notify};
 
-use hexstody_api::types::{
-    ConfirmationData, SignatureData, WithdrawalRequest, WithdrawalRequestInfo, WithdrawalRequestDecisionType, HotBalanceResponse
+use hexstody_api::{
+    domain::Currency,
+    types::{
+        ConfirmationData, HotBalanceResponse, SignatureData, WithdrawalRequest,
+        WithdrawalRequestDecisionType, WithdrawalRequestInfo,
+    },
 };
 use hexstody_btc_client::client::BtcClient;
 use hexstody_db::{
-    state::State as HexstodyState,
-    update::withdrawal::{
-        WithdrawalRequestInfo as WithdrawalRequestInfoDb,
-    },
+    state::{State as HexstodyState, REQUIRED_NUMBER_OF_CONFIRMATIONS},
+    update::withdrawal::WithdrawalRequestInfo as WithdrawalRequestInfoDb,
     update::{StateUpdate, UpdateBody},
     Pool,
 };
@@ -37,26 +39,67 @@ struct Config {
 
 #[openapi(skip)]
 #[get("/")]
-async fn index(state: &RocketState<Arc<Mutex<HexstodyState>>>) -> Template {
-    let hexstody_state = state.lock().await;
-    let withdrawal_requests: Vec<WithdrawalRequest> = Vec::from_iter(
-        hexstody_state
-            .withdrawal_requests()
-            .values()
-            .cloned()
-            .map(|x| x.into()),
-    );
+async fn index() -> Template {
     let context = context! {
-        title: "Withdrawal requests".to_owned(),
+        title: "Operator interface".to_owned(),
         parent: "base".to_owned(),
-        withdrawal_requests,
     };
     Template::render("index", context)
 }
 
-/// # hot wallet balance
+/// # Get all supported currencies
+#[openapi(tag = "Currency")]
+#[get("/currencies")]
+async fn get_supported_currencies(
+    signature_data: SignatureData,
+    config: &RocketState<Config>,
+) -> Result<Json<Vec<Currency>>, (Status, &'static str)> {
+    let url = [
+        config.domain.clone(),
+        uri!(get_supported_currencies).to_string(),
+    ]
+    .join("");
+    let signature_verification_data = SignatureVerificationData {
+        url,
+        signature: signature_data.signature,
+        nonce: signature_data.nonce,
+        message: None,
+        public_key: signature_data.public_key,
+    };
+    let _ = signature_verification_data
+        .verify(config.operator_public_keys.clone())
+        .map_err(|_| (Status::Forbidden, "Signature verification failed"))?;
+    Ok(Json(Currency::supported()))
+}
+
+/// # Get required number of confirmations from operatros
+#[openapi(tag = "Confirmations")]
+#[get("/confirmations")]
+async fn get_required_confrimations(
+    signature_data: SignatureData,
+    config: &RocketState<Config>,
+) -> Result<Json<i16>, (Status, &'static str)> {
+    let url = [
+        config.domain.clone(),
+        uri!(get_required_confrimations).to_string(),
+    ]
+    .join("");
+    let signature_verification_data = SignatureVerificationData {
+        url,
+        signature: signature_data.signature,
+        nonce: signature_data.nonce,
+        message: None,
+        public_key: signature_data.public_key,
+    };
+    let _ = signature_verification_data
+        .verify(config.operator_public_keys.clone())
+        .map_err(|_| (Status::Forbidden, "Signature verification failed"))?;
+    Ok(Json(REQUIRED_NUMBER_OF_CONFIRMATIONS))
+}
+
+/// # Hot wallet balance
 #[openapi(tag = "Hot balance")]
-#[post("/hotbalance")]
+#[get("/hotbalance")]
 async fn get_hot_balance(
     signature_data: SignatureData,
     config: &RocketState<Config>,
@@ -73,7 +116,8 @@ async fn get_hot_balance(
     let _ = signature_verification_data
         .verify(config.operator_public_keys.clone())
         .map_err(|_| (Status::Forbidden, "Signature verification failed"))?;
-    let res = btc_client.get_hot_balance()
+    let res = btc_client
+        .get_hot_balance()
         .await
         .map_err(|_| (Status::InternalServerError, "Internal server error"))
         .map(|v| Json(v));
@@ -200,7 +244,7 @@ async fn reject(
         public_key: signature_data.public_key,
     };
     let _ = signature_verification_data
-        .verify(config.operator_public_keys.clone(),)
+        .verify(config.operator_public_keys.clone())
         .map_err(|_| (Status::Forbidden, "Signature verification failed"))?;
     let state_update = StateUpdate::new(UpdateBody::WithdrawalRequestDecision(
         (
@@ -236,7 +280,18 @@ pub async fn serve_api(
     let _ = rocket::custom(api_config)
         .mount("/", FileServer::from(static_path))
         .mount("/", routes![index])
-        .mount("/", openapi_get_routes![list, create, confirm, reject, get_hot_balance])
+        .mount(
+            "/",
+            openapi_get_routes![
+                list,
+                create,
+                confirm,
+                reject,
+                get_hot_balance,
+                get_supported_currencies,
+                get_required_confrimations,
+            ],
+        )
         .mount(
             "/swagger/",
             make_swagger_ui(&SwaggerUIConfig {

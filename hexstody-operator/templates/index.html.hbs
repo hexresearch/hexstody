@@ -2,6 +2,7 @@
 {{/inline}}
 
 {{#*inline "scripts"}}
+<script src="/scripts/handlebars.min-v4.7.7.js" defer></script>
 <script src="/scripts/jscu.bundle.js" defer></script>
 <script src="/scripts/jscec.bundle.js" defer></script>
 <script src="/scripts/base64.min.js" defer></script>
@@ -11,28 +12,16 @@
 {{/inline}}
 
 {{#*inline "page"}}
-<h3>Select the private key file</h3>
-<div class="file-selector-wrapper">
-    <input type="file" id="file-selector" accept=".pem" />
-    <span id="file-selector-status"></span>
+<div id="keyfile-wrapper">
+    <h4>Select the private key file</h4>
+    <div class="keyfile-input-wrapper">
+        <input type="file" id="keyfile-input" accept=".pem" />
+        <span id="keyfile-input-status"></span>
+    </div>
 </div>
-<h3>Withdrawal requests</h3>
-<table>
-    <thead>
-        <tr>
-            <th><b>Time</b></th>
-            <th><b>ID</b></th>
-            <th><b>User</b></th>
-            <th><b>Currency</b></th>
-            <th><b>Withdrawal address</b></th>
-            <th><b>Amount</b></th>
-            <th><b>Status</b></th>
-            <th><b>Actions</b></th>
-        </tr>
-    </thead>
-    <tbody id="withdrawal-requests-table-body">
-    </tbody>
-</table>
+<div id="currency-wrapper"></div>
+<div id="hot-wallet-balance-wrapper"></div>
+<div id="withdrawal-requests-wrapper"></div>
 {{/inline}}
 
 {{> base}}

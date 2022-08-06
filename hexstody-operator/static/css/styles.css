@@ -1,15 +1,22 @@
-.file-selector-wrapper {
+.keyfile-input-wrapper {
     display: flex;
     align-items: center;
     gap: 1rem;
 }
 
-#file-selector {
+#keyfile-input {
     width: auto;
 }
 
-.address-cell {
+.centered-cell {
     display: flex;
     align-items: center;
-    gap: 1rem;
+}
+
+.centered-cell img {
+    max-width: none;
+}
+
+#currency-select {
+    max-width: 20rem;
 }
