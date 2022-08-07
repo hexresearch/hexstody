@@ -75,27 +75,14 @@ export function initTabs(tabIds) {
         tabIds.forEach(tabId => {
             const validationDisplay = document.getElementById(tabId + "-body");
             if (tabId === clickedTabId) {
-                document.getElementById(tabId).classList.add("active");
+                document.getElementById(tabId).classList.add("is-active");
                 validationDisplay.style.display = "block";
             } else {
-                document.getElementById(tabId).classList.remove("active");
+                document.getElementById(tabId).classList.remove("is-active");
                 validationDisplay.style.display = "none";
             }
         });
     }
     tabIds.forEach(tab => document.getElementById(tab).onclick = () => tabClicked(tab));
-
-    function openTab(evt, tabName) {
-        var i, x, tablinks;
-        x = document.getElementsByClassName("content-tab");
-        for (i = 0; i < x.length; i++) {
-            x[i].style.display = "none";
-        }
-        tablinks = document.getElementsByClassName("tab");
-        for (i = 0; i < x.length; i++) {
-            tablinks[i].className = tablinks[i].className.replace(" is-active", "");
-        }
-        document.getElementById(tabName).style.display = "block";
-        evt.currentTarget.className += " is-active";
-    }
+    tabClicked(tabIds[0]);
 }
