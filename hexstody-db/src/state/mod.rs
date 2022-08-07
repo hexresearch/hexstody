@@ -16,7 +16,8 @@ pub use transaction::*;
 pub use user::*;
 pub use withdraw::*;
 
-use crate::update::withdrawal::{WithdrawCompleteInfo, WithdrawalRejectInfo, TokenUpdate, TokenAction};
+use crate::update::withdrawal::{WithdrawCompleteInfo, WithdrawalRejectInfo};
+use crate::update::misc::{TokenUpdate, TokenAction, InviteRec};
 
 use super::update::btc::BtcTxCancel;
 use super::update::deposit::DepositAddress;
@@ -26,7 +27,7 @@ use super::update::withdrawal::{
 };
 use super::update::{results::UpdateResult, StateUpdate, UpdateBody};
 use hexstody_api::domain::*;
-use hexstody_api::types::WithdrawalRequestDecisionType;
+use hexstody_api::types::{WithdrawalRequestDecisionType, Invite};
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct State {
@@ -38,6 +39,8 @@ pub struct State {
     pub last_changed: NaiveDateTime,
     /// Tracks state of BTC chain
     pub btc_state: BtcState,
+    /// Invites: Invite + string rep of pubk of the operator
+    pub invites: HashMap<Invite, InviteRec>
 }
 
 #[derive(Error, Debug, PartialEq)]
@@ -65,7 +68,11 @@ pub enum StateUpdateErr {
     #[error("{0} has non-zero balance. Can not disable")]
     TokenNonZeroBalance(Erc20Token),
     #[error("Failed to enable token {0} from {1}")]
-    TokenEnableFail(Erc20Token, UserId)
+    TokenEnableFail(Erc20Token, UserId),
+    #[error("Invite already exist")]
+    InviteAlreadyExist,
+    #[error("Invite is not valid")]
+    InviteNotFound,
 }
 
 impl State {
@@ -74,6 +81,7 @@ impl State {
             users: HashMap::new(),
             last_changed: Utc::now().naive_utc(),
             btc_state: BtcState::new(network.btc()),
+            invites: HashMap::new(),
         }
     }
 
@@ -155,6 +163,11 @@ impl State {
                 self.last_changed = update.created;
                 Ok(None)
             },
+            UpdateBody::GenInvite(invite_req) => {
+                self.gen_invite(invite_req)?;
+                self.last_changed = update.created;
+                Ok(None)
+            },
         }
     }
 
@@ -164,13 +177,17 @@ impl State {
         timestamp: NaiveDateTime,
         signup: SignupInfo,
     ) -> Result<(), StateUpdateErr> {
+        let invite = signup.invite.clone();
         if self.users.contains_key(&signup.username) {
             return Err(StateUpdateErr::UserAlreadyExists(signup.username));
         }
 
+        if !self.invites.contains_key(&invite){
+            return Err(StateUpdateErr::InviteNotFound)
+        }
         let user_info: UserInfo = (timestamp, signup).into();
         self.users.insert(user_info.username.clone(), user_info);
-
+        let _ = self.invites.remove(&invite);
         Ok(())
     }
 
@@ -529,6 +546,16 @@ impl State {
             }
         }
     }
+
+    fn gen_invite(&mut self, invite_req: InviteRec) -> Result<(), StateUpdateErr> {
+        let invite = invite_req.invite;
+        if let Some(_) = self.invites.get(&invite) {
+            Err(StateUpdateErr::InviteAlreadyExist)
+        } else {
+            self.invites.insert(invite, invite_req);
+            Ok(())
+        }
+    }
 }
 
 impl Default for State {
@@ -568,8 +595,12 @@ mod tests {
     #[sqlx_database_tester::test(pool(variable = "pool", migrations = "./migrations"))]
     async fn test_signup_update() {
         let mut state = State::default();
+        let invite = Invite{invite: Uuid::new_v4()};
+        let invite_rec = InviteRec { invite: invite.clone(), invitor: String::new(), label: String::new()};
+        let _ = apply_state_update(StateUpdate::new(UpdateBody::GenInvite(invite_rec.clone())), &mut state, &pool).await;
         let signup_info = SignupInfo {
             username: "Alice".to_owned(),
+            invite,
             auth: SignupAuth::Lightning,
         };
         let created_at = apply_state_update(
@@ -594,8 +625,12 @@ mod tests {
     #[sqlx_database_tester::test(pool(variable = "pool", migrations = "./migrations"))]
     async fn test_new_withdrawal_request_update() {
         let mut state = State::default();
+        let invite = Invite{invite: Uuid::new_v4()};
+        let invite_rec = InviteRec { invite: invite.clone(), invitor: String::new(), label: String::new()};
+        let _ = apply_state_update(StateUpdate::new(UpdateBody::GenInvite(invite_rec.clone())), &mut state, &pool).await;
         let signup_info = SignupInfo {
             username: "Alice".to_owned(),
+            invite,
             auth: SignupAuth::Lightning,
         };
         let withdrawal_request_info = WithdrawalRequestInfo {
@@ -649,8 +684,12 @@ mod tests {
     #[sqlx_database_tester::test(pool(variable = "pool", migrations = "./migrations"))]
     async fn test_new_withdrawal_request_decision_update() {
         let mut state = State::default();
+        let invite = Invite{invite: Uuid::new_v4()};
+        let invite_rec = InviteRec { invite: invite.clone(), invitor: String::new(), label: String::new()};
+        let _ = apply_state_update(StateUpdate::new(UpdateBody::GenInvite(invite_rec.clone())), &mut state, &pool).await;
         let signup_info = SignupInfo {
             username: "Alice".to_owned(),
+            invite,
             auth: SignupAuth::Lightning,
         };
         let withdrawal_request_info = WithdrawalRequestInfo {

@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use super::auth::{require_auth, require_auth_user};
 use hexstody_api::domain::{
     filter_tokens, BtcAddress, Currency, CurrencyAddress, CurrencyTxId, Erc20Token,
@@ -8,7 +10,7 @@ use hexstody_btc_client::client::{BtcClient, BTC_BYTES_PER_TRANSACTION};
 use hexstody_db::state::State as DbState;
 use hexstody_db::state::{Transaction, WithdrawalRequest, REQUIRED_NUMBER_OF_CONFIRMATIONS};
 use hexstody_db::update::deposit::DepositAddress;
-use hexstody_db::update::withdrawal::{TokenAction, TokenUpdate, WithdrawalRequestInfo};
+use hexstody_db::update::withdrawal::WithdrawalRequestInfo;
 use hexstody_db::update::{StateUpdate, UpdateBody};
 use hexstody_eth_client::client::EthClient;
 use log::*;
@@ -17,8 +19,8 @@ use rocket::http::CookieJar;
 use rocket::serde::json::Json;
 use rocket::{get, post, State};
 use rocket_okapi::openapi;
-use std::sync::Arc;
-use tokio::sync::{mpsc, Mutex};
+use hexstody_db::update::misc::{TokenUpdate, TokenAction};
+use tokio::sync::{Mutex, mpsc};
 use uuid::Uuid;
 
 #[openapi(tag = "wallet")]

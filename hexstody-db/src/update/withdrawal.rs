@@ -5,7 +5,7 @@ use uuid::Uuid;
 
 use crate::state::withdraw::WithdrawalRequestId;
 use crate::update::signup::UserId;
-use hexstody_api::domain::{Currency, CurrencyAddress, CurrencyTxId, Erc20Token};
+use hexstody_api::domain::{Currency, CurrencyAddress, CurrencyTxId};
 use hexstody_api::types::{
     ConfirmationData, SignatureData, WithdrawalRequestDecisionType,
     WithdrawalRequestInfo as WithdrawalRequestInfoApi,
@@ -135,17 +135,4 @@ pub struct WithdrawCompleteInfo {
 pub struct WithdrawalRejectInfo {
     pub id: WithdrawalRequestId,
     pub reason: String,
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub enum TokenAction {
-    Enable,
-    Disable
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub struct TokenUpdate{
-    pub user: UserId,
-    pub token: Erc20Token,
-    pub action: TokenAction
 }

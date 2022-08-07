@@ -1,9 +1,26 @@
+import { loadTemplate, formattedElapsedTime } from "./common.js";
+
 const fileSelector = document.getElementById("file-selector");
 const fileSelectorStatus = document.getElementById("file-selector-status");
 const withdrawalRequestsTableBody = document.getElementById("withdrawal-requests-table-body");
+const invitesTab = document.getElementById("invites-tab");
+const withdrawsTabBody = document.getElementById('withdraw-tab-body');
+const withdrawsTab = document.getElementById('withdraw-tab');
+const invitesTabBody = document.getElementById("invites-tab-body");
+const authedBody = document.getElementById("authed-body");
 
+let invitesTemplate = null;
+let invitesListTemplate = null;
 let privateKeyJwk;
 let publicKeyDer;
+
+function hide_authed(){
+    authedBody.style.display = "none";
+}
+
+function show_authed(){
+    authedBody.style.display = "block";
+}
 
 async function importKey(_event) {
     const keyObj = new window.jscu.Key('pem', this.result);
@@ -15,6 +32,7 @@ async function importKey(_event) {
             fileSelectorStatus.className = "text-error";
             fileSelectorStatus.innerText = "Wrong password";
             clearWithdrawalRequests();
+            hide_authed();
             return;
         };
     };
@@ -22,6 +40,7 @@ async function importKey(_event) {
         fileSelectorStatus.className = "text-error";
         fileSelectorStatus.innerText = "The selected key is not private";
         clearWithdrawalRequests();
+        hide_authed();
         return;
     } else {
         try {
@@ -31,9 +50,11 @@ async function importKey(_event) {
             fileSelectorStatus.className = "text-error";
             fileSelectorStatus.innerText = error;
             clearWithdrawalRequests();
+            hide_authed();
             return;
         };
     };
+    show_authed();
     const response = await updateWithdrawalRequests();
     if (response.ok) {
         fileSelectorStatus.className = "text-success";
@@ -51,6 +72,7 @@ async function importKey(_event) {
             fileSelectorStatus.className = "text-error";
             fileSelectorStatus.innerText = "Invalid key";
             clearWithdrawalRequests();
+            hide_authed();
             return;
         } else {
             fileSelectorStatus.className = "text-error";
@@ -315,6 +337,115 @@ function truncate(input, maxLength) {
     return input;
 };
 
-window.addEventListener('load', function () {
+async function getInvite(body) {
+    return await makeSignedRequest(body, "invite/generate", "POST");
+};
+
+async function getMyInvites(){
+    return await makeSignedRequest(null, "invite/listmy", "GET");
+}
+
+function mkCopyBtn(parent, value){
+    const copyBtn = document.createElement("button");
+    const spn = document.createElement("span");
+    const i = document.createElement("i");
+    i.classList.add("mdi","mdi-content-copy");
+    spn.classList.add("icon");
+    copyBtn.classList.add("button", "is-h3", "is-ghost", "font-gray");
+    spn.appendChild(i);
+    copyBtn.appendChild(spn);
+    parent.appendChild(copyBtn);
+    copyBtn.addEventListener("click", () => {
+        navigator.clipboard.writeText(value).then(function () { }, function (err) {
+            console.error('Could not copy text: ', err);
+        });
+    });
+    tippy(copyBtn, {
+        content: "Copied",
+        trigger: "click",
+        hideOnClick: false,
+        onShow(instance) {
+            setTimeout(() => {
+                instance.hide();
+            }, 1000);
+        }
+    });
+}
+
+function renderError(parent, errMsg){
+    const errNode = document.createElement("h3");
+    errNode.classList.add("text-error");
+    errNode.innerHTML = "Error! " + errMsg;
+    parent.append(errNode);
+}
+
+async function genInvite(){
+    const inviteLabelField = document.getElementById("invite-label");
+    const inviteDisplay = document.getElementById("invite-display");
+    inviteDisplay.style.display = 'flex';
+    const label = inviteLabelField.value;
+    if (!label) {
+        renderError(inviteDisplay, "Label should be non-empty!")
+    } else {
+        const body = {label: label}
+        const inviteResp = await getInvite(body)
+        if (inviteResp.ok) {
+            let invite = await inviteResp.json();
+            const invitesList = invitesListTemplate({invites: [invite], isList: false});
+            inviteDisplay.innerHTML = invitesList;
+            mkCopyBtn(inviteDisplay, invite.invite.invite);
+        } else {
+            renderError(inviteDisplay, JSON.stringify(inviteResp));
+        }
+    }
+}
+
+async function listInvites(){
+    const invitesListBody = document.getElementById("invites-list");
+    const invitesResp = await getMyInvites();
+    if (invitesResp.ok){
+        const invites = await invitesResp.json();
+        const invitesList = invitesListTemplate({invites: invites, isList: true});
+        invitesListBody.innerHTML = invitesList;
+        const inviteDisplays = invitesListBody.querySelectorAll(".invite-display");
+        inviteDisplays.forEach(display => {
+            const value = display.querySelector('.invite').innerHTML;
+            mkCopyBtn(display, value)
+        })
+    } else {
+        const errMsg = document.createElement("h3");
+        errMsg.classList.add("text-error");
+        errMsg.innerHTML = "Error: " + invitesResp.status + ": " + invitesResp.statusText;
+        invitesListBody.innerHTML = "";
+        invitesListBody.append(errMsg)
+    }
+
+}
+
+async function loadInvitesTab(){
+    const inivitesDrawUpdate = invitesTemplate();
+    invitesTabBody.innerHTML = inivitesDrawUpdate;
+
+    withdrawsTabBody.style.display = 'none';
+    withdrawsTab.classList.remove('is-active');
+    invitesTabBody.style.display = 'block';
+    invitesTab.classList.add('is-active');
+
+    const genInviteBtn = document.getElementById("gen-invite-btn");
+    const listInvitesBtn = document.getElementById("btn-list-invites");
+    genInviteBtn.onclick = genInvite;
+    listInvitesBtn.onclick = listInvites;
+}
+
+async function init(){
+    const [invitesTemp, invitesListTemp] = await Promise.allSettled([
+        await loadTemplate("/scripts/templates/invites.html.hbs"),
+        await loadTemplate("/scripts/templates/inviteslist.html.hbs")
+    ]);
+    invitesTemplate = invitesTemp.value;
+    invitesListTemplate = invitesListTemp.value;
     fileSelector.addEventListener('change', loadKeyFile);
-});
+    invitesTab.onclick = loadInvitesTab;
+}
+
+document.addEventListener("DOMContentLoaded", init);

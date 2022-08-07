@@ -228,10 +228,11 @@ pub struct History {
     pub history_items: Vec<HistoryItem>,
 }
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SignupEmail {
-    /// Unique email
+    /// Unique user name
     pub user: String,
+    pub invite: Invite,
     pub password: String,
 }
 
@@ -603,4 +604,20 @@ pub struct TokenInfo {
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct TokenActionRequest{
     pub token: Erc20Token
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Hash, JsonSchema)]
+pub struct Invite{
+    pub invite: Uuid
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct InviteRequest{
+    pub label: String
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct InviteResp{
+    pub invite: Invite,
+    pub label: String
 }
