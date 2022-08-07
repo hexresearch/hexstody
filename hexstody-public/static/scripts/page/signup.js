@@ -1,26 +1,33 @@
-var emailEl = null;
+const uuidRegexp = /^[0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12}$/i;
+var usernameEl = null;
 var passwordEl = null;
+var inviteEl = null;
 
-async function postSignUp(email, password) {
+async function postSignUp(username, password, invite) {
     return await fetch("/signup/email",
         {
             method: "POST",
-            body: JSON.stringify({ user: email, password: password })
+            body: JSON.stringify({ user: username, password: password, invite: {invite: invite} })
         })
 };
 
 async function trySubmit() {
-    const email = emailEl.value;
+    const username = usernameEl.value;
     const password = passwordEl.value;
-    const signUpResult = await postSignUp(email, password);
-    if (signUpResult.ok) {
-        window.location.href = "/signin";
-
+    const invite = inviteEl.value;
+    const validationDisplay = document.getElementById("validation-error");
+    if (uuidRegexp.test(invite)) {
+        const signUpResult = await postSignUp(username, password, invite);
+        if (signUpResult.ok) {
+            window.location.href = "/signin";
+        } else {
+            validationDisplay.textContent = (await signUpResult.json()).message;
+            validationDisplay.parentNode.hidden = false;
+        };
     } else {
-        const validationDisplay = document.getElementById("validationError");
-        validationDisplay.textContent = (await signUpResult.json()).message;
-        validationDisplay.hidden = false;
-    };
+        validationDisplay.textContent = "Malformed invite. UUID is expected";
+        validationDisplay.parentNode.hidden = false;
+    }
 }
 
 async function init() {
@@ -31,11 +38,12 @@ async function init() {
         }
     }
     const submitButton = document.getElementById("submit");
-    emailEl = document.getElementById("signUpEmail");
-    passwordEl = document.getElementById("signUpPassword");
+    usernameEl = document.getElementById("username-input");
+    passwordEl = document.getElementById("password-input");
+    inviteEl = document.getElementById("invite-input");
 
     submitButton.onclick = trySubmit;
-    emailEl.addEventListener("keyup", trySubmitOnEnter);
+    usernameEl.addEventListener("keyup", trySubmitOnEnter);
     passwordEl.addEventListener("keyup", trySubmitOnEnter);
 }
 

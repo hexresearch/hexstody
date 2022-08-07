@@ -71,6 +71,8 @@ pub enum StateUpdateErr {
     TokenEnableFail(Erc20Token, UserId),
     #[error("Invite already exist")]
     InviteAlreadyExist,
+    #[error("Invite is not valid")]
+    InviteNotFound,
 }
 
 impl State {
@@ -175,13 +177,17 @@ impl State {
         timestamp: NaiveDateTime,
         signup: SignupInfo,
     ) -> Result<(), StateUpdateErr> {
+        let invite = signup.invite.clone();
         if self.users.contains_key(&signup.username) {
             return Err(StateUpdateErr::UserAlreadyExists(signup.username));
         }
 
+        if !self.invites.contains_key(&invite){
+            return Err(StateUpdateErr::InviteNotFound)
+        }
         let user_info: UserInfo = (timestamp, signup).into();
         self.users.insert(user_info.username.clone(), user_info);
-
+        let _ = self.invites.remove(&invite);
         Ok(())
     }
 

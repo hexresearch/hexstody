@@ -52,8 +52,8 @@ pub enum Error {
     TokenNonZeroBalance(Erc20Token),
     #[error("Token action failed: {0}")]
     TokenActionFailed(String),
-    #[error("Invalid invite")]
-    InvalidInvite
+    #[error("Invite does not exist")]
+    InviteNotFound
 }
 
 impl Error {
@@ -77,7 +77,7 @@ impl Error {
             Error::TokenAlreadyDisabled(_) => 15,
             Error::TokenNonZeroBalance(_) => 16,
             Error::TokenActionFailed(_) => 17,
-            Error::InvalidInvite => 18
+            Error::InviteNotFound => 18
         }
     }
 
@@ -101,7 +101,7 @@ impl Error {
             Error::TokenAlreadyDisabled(_) => Status::from_code(500).unwrap(),
             Error::TokenNonZeroBalance(_) => Status::from_code(500).unwrap(),
             Error::TokenActionFailed(_) => Status::from_code(500).unwrap(),
-            Error::InvalidInvite => Status::from_code(400).unwrap(),
+            Error::InviteNotFound => Status::from_code(400).unwrap(),
         }
     }
 }

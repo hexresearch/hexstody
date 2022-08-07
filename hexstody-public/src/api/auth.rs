@@ -49,7 +49,7 @@ pub async fn signup_email(
         return Err(error::Error::SignupExistedUser.into());
     } 
     if !invite_valid {
-        return Err(error::Error::InvalidInvite.into())
+        return Err(error::Error::InviteNotFound.into())
     }
     else {
         // Create user

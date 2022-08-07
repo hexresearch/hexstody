@@ -77,16 +77,16 @@
 <div class="full-height" style="background-color: #ECEFF4;">
     <div class="container" style="padding-top: 15%;">
         <div class="box"
-            style="box-shadow: none !Important; width: 560px; height: 560px; padding: 85px; margin-left: auto; margin-right: auto;">
+            style="box-shadow: none !Important; width: 560px; padding: 85px; margin-left: auto; margin-right: auto;">
 
             <div class="field">
                 <h1 class="login-title">Sign up</h1>
             </div>
 
             <div class="field login-field-email" style="margin-top: 25px;">
-                <label for="" class="label form-group-label">E-mail</label>
+                <label for="" class="label form-group-label">Username</label>
                 <div class="control has-icons-left">
-                    <input id="signUpEmail" type="text" placeholder="т.е. user@mail.ru" class="input"
+                    <input id="username-input" type="text" placeholder="username" class="input"
                         style="height: 50px;" value="" value="">
                     <span class="icon is-small is-left">
                         <i class="fa fa-envelope"></i>
@@ -96,7 +96,7 @@
 
             <div class="field login-field-pswd" style="margin-top: 25px;">
                 <div class="control has-icons-left">
-                    <input id="signUpPassword" type="password" placeholder="********" class="input"
+                    <input id="password-input" type="password" placeholder="********" class="input"
                         style="height: 50px;" value="">
                     <span class="icon is-small is-left">
                         <i class="fa fa-lock"></i>
@@ -104,9 +104,19 @@
                 </div>
             </div>
 
+            <div class="field login-field-invite" style="margin-top: 25px;">
+                <label for="" class="label form-group-label">Invite</label>
+                <div class="control has-icons-left">
+                    <input id="invite-input" type="text" class="input"
+                        style="height: 50px;" value="" value="">
+                    <span class="icon is-small is-left">
+                        <i class="fa fa-envelope"></i>
+                    </span>
+                </div>
+            </div>
 
             <div class="field login-field-pswd validationError" hidden="true" style=" margin-top: 25px;">
-                <div class="notification is-danger">
+                <div id = "validation-error" class="notification is-danger">
                     Username already taken
                 </div>
             </div>
