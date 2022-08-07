@@ -72,7 +72,7 @@ async fn test_public_api_ping() {
         let client = HexstodyClient::new(&format!(
             "http://{}:{}",
             SERVICE_TEST_HOST, SERVICE_TEST_PORT
-        ))
+        ), &format!("http://{}:{}", SERVICE_TEST_HOST, SERVICE_TEST_PORT + 1))
         .expect("client created");
         client.ping().await.unwrap();
     })

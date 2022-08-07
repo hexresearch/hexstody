@@ -3,6 +3,7 @@ mod runner;
 use bitcoin::{Address, Amount};
 use hexstody_api::{domain::*, types::*};
 use hexstody_btc_test::helpers::*;
+use uuid::Uuid;
 use runner::*;
 use serial_test::serial;
 use std::str::FromStr;
@@ -33,13 +34,29 @@ async fn test_auth_email() {
             })
             .await;
         assert!(!res.is_ok());
+
+        let wrong_invite = Invite{invite: Uuid::new_v4()};
+        let res = env.hot_client
+            .signup_email(SignupEmail {
+                user: user.clone(),
+                invite: wrong_invite,
+                password: password.clone(),
+            })
+            .await;
+        assert!(res.is_err(), "Signed up with a wrong invite!");
+ 
+        let sk = env.secret_keys.get(0).unwrap();
+        let invite_req = InviteRequest{ label: "test invite".to_string() };
+        let invite_resp = env.hot_client.gen_invite(sk.clone(), invite_req).await.expect("Failed to register invite");
         env.hot_client
             .signup_email(SignupEmail {
                 user: user.clone(),
+                invite: invite_resp.invite,
                 password: password.clone(),
             })
             .await
             .expect("Signup");
+
         let res = env.hot_client.logout().await;
         // switched from !res to res.is_ok() since with redirects double logouts return Ok(Redirect) to /
         assert!(res.is_ok(), "Logout before signing");

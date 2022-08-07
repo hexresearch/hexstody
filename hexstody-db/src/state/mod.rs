@@ -589,8 +589,12 @@ mod tests {
     #[sqlx_database_tester::test(pool(variable = "pool", migrations = "./migrations"))]
     async fn test_signup_update() {
         let mut state = State::default();
+        let invite = Invite{invite: Uuid::new_v4()};
+        let invite_rec = InviteRec { invite: invite.clone(), invitor: String::new(), label: String::new()};
+        let _ = apply_state_update(StateUpdate::new(UpdateBody::GenInvite(invite_rec.clone())), &mut state, &pool).await;
         let signup_info = SignupInfo {
             username: "Alice".to_owned(),
+            invite,
             auth: SignupAuth::Lightning,
         };
         let created_at = apply_state_update(
@@ -615,8 +619,12 @@ mod tests {
     #[sqlx_database_tester::test(pool(variable = "pool", migrations = "./migrations"))]
     async fn test_new_withdrawal_request_update() {
         let mut state = State::default();
+        let invite = Invite{invite: Uuid::new_v4()};
+        let invite_rec = InviteRec { invite: invite.clone(), invitor: String::new(), label: String::new()};
+        let _ = apply_state_update(StateUpdate::new(UpdateBody::GenInvite(invite_rec.clone())), &mut state, &pool).await;
         let signup_info = SignupInfo {
             username: "Alice".to_owned(),
+            invite,
             auth: SignupAuth::Lightning,
         };
         let withdrawal_request_info = WithdrawalRequestInfo {
@@ -670,8 +678,12 @@ mod tests {
     #[sqlx_database_tester::test(pool(variable = "pool", migrations = "./migrations"))]
     async fn test_new_withdrawal_request_decision_update() {
         let mut state = State::default();
+        let invite = Invite{invite: Uuid::new_v4()};
+        let invite_rec = InviteRec { invite: invite.clone(), invitor: String::new(), label: String::new()};
+        let _ = apply_state_update(StateUpdate::new(UpdateBody::GenInvite(invite_rec.clone())), &mut state, &pool).await;
         let signup_info = SignupInfo {
             username: "Alice".to_owned(),
+            invite,
             auth: SignupAuth::Lightning,
         };
         let withdrawal_request_info = WithdrawalRequestInfo {

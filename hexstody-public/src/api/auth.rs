@@ -39,10 +39,19 @@ pub async fn signup_email(
         return Err(error::Error::UserPasswordTooLong.into());
     }
 
-    let user_exists = state.lock().await.users.contains_key(&data.user);
+    let (user_exists, invite_valid) = {
+        let state = state.lock().await;
+        let ue = state.users.contains_key(&data.user);
+        let iv = state.invites.contains_key(&data.invite);
+        (ue,iv)
+    };
     if user_exists {
         return Err(error::Error::SignupExistedUser.into());
-    } else {
+    } 
+    if !invite_valid {
+        return Err(error::Error::InvalidInvite.into())
+    }
+    else {
         // Create user
         if let Err(e) = eth_client.createuser(&data.user).await{
             return Err(error::Error::FailedETHConnection(e.to_string()).into())
@@ -55,6 +64,7 @@ pub async fn signup_email(
         let pass_hash = bcrypt::hash(&data.password).map_err(|e| error::Error::from(e))?;
         let upd = StateUpdate::new(UpdateBody::Signup(SignupInfo {
             username: data.user.clone(),
+            invite: data.invite.clone(),
             auth: SignupAuth::Password(pass_hash),
         }));
         updater.send(upd).await.unwrap();

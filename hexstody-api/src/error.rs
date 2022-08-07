@@ -51,7 +51,9 @@ pub enum Error {
     #[error("{0} has non-zero balance. Can not disable")]
     TokenNonZeroBalance(Erc20Token),
     #[error("Token action failed: {0}")]
-    TokenActionFailed(String)
+    TokenActionFailed(String),
+    #[error("Invalid invite")]
+    InvalidInvite
 }
 
 impl Error {
@@ -75,6 +77,7 @@ impl Error {
             Error::TokenAlreadyDisabled(_) => 15,
             Error::TokenNonZeroBalance(_) => 16,
             Error::TokenActionFailed(_) => 17,
+            Error::InvalidInvite => 18
         }
     }
 
@@ -97,7 +100,8 @@ impl Error {
             Error::TokenAlreadyEnabled(_) => Status::from_code(500).unwrap(),
             Error::TokenAlreadyDisabled(_) => Status::from_code(500).unwrap(),
             Error::TokenNonZeroBalance(_) => Status::from_code(500).unwrap(),
-            Error::TokenActionFailed(_) => Status::from_code(500).unwrap()
+            Error::TokenActionFailed(_) => Status::from_code(500).unwrap(),
+            Error::InvalidInvite => Status::from_code(400).unwrap(),
         }
     }
 }

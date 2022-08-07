@@ -228,10 +228,11 @@ pub struct History {
     pub history_items: Vec<HistoryItem>,
 }
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct SignupEmail {
-    /// Unique email
+    /// Unique user name
     pub user: String,
+    pub invite: Invite,
     pub password: String,
 }
 

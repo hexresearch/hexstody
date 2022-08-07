@@ -5,6 +5,7 @@ use crate::update::signup::{SignupAuth, SignupInfo, UserId};
 use chrono::prelude::*;
 use hexstody_api::domain::CurrencyTxId;
 use hexstody_api::domain::{Currency, CurrencyAddress};
+use hexstody_api::types::Invite;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
@@ -12,6 +13,8 @@ use std::collections::{HashMap, HashSet};
 pub struct UserInfo {
     /// It is unique user ID whithin the system. It is either email address or hex encoded LNAuth public key.
     pub username: UserId,
+    /// User's invite
+    pub invite: Invite,
     /// Contains additional info that required to authentificated user in future.
     pub auth: SignupAuth,
     /// When the user was created
@@ -26,9 +29,10 @@ pub struct UserInfo {
 }
 
 impl UserInfo {
-    pub fn new(username: &str, auth: SignupAuth, created_at: NaiveDateTime) -> Self {
+    pub fn new(username: &str, invite: Invite, auth: SignupAuth, created_at: NaiveDateTime) -> Self {
         UserInfo {
             username: username.to_owned(),
+            invite,
             auth,
             created_at,
             withdrawal_requests: HashSet::new(),
@@ -58,7 +62,7 @@ impl UserInfo {
 
 impl From<(NaiveDateTime, SignupInfo)> for UserInfo {
     fn from(value: (NaiveDateTime, SignupInfo)) -> Self {
-        UserInfo::new(&value.1.username, value.1.auth, value.0)
+        UserInfo::new(&value.1.username, value.1.invite, value.1.auth, value.0)
     }
 }
 

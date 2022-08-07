@@ -190,7 +190,7 @@ async fn gen_invite(
 }
 
 /// List operator's invites
-#[openapi(tag = "Generate invite")]
+#[openapi(tag = "List invites")]
 #[get("/invite/listmy")]
 async fn list_ops_invites(
     state: &RocketState<Arc<Mutex<HexstodyState>>>,
