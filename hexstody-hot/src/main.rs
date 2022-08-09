@@ -143,8 +143,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
                                     println!("First bitcoin node: http://127.0.0.1:{}/wallet/default", node1_port);
                                     println!("Second bitcoin node: http://127.0.0.1:{}/wallet/default", node2_port);
                                     println!("Hexstody BTC adapter API docs: {}/rapidoc", hbtc_url);
-                                    println!("Hexstody operator API docs: http://127.0.0.1:{}/rapidoc", op_port);
-                                    println!("Hexstody public API docs: http://127.0.0.1:{}/rapidoc", pub_port);
+                                    println!("Hexstody operator API docs: http://127.0.0.1:{}/swagger", op_port);
+                                    println!("Hexstody public API docs: http://127.0.0.1:{}/swagger", pub_port);
                                     println!("Hexstody operator GUI: http://127.0.0.1:{}", op_port);
                                     println!("Hexstody public GUI: http://127.0.0.1:{}", pub_port);
                                 }
