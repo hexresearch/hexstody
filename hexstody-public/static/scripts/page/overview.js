@@ -16,7 +16,7 @@ async function getHistory(skip, take) {
 }
 
 async function getHistoryERC20(tokenAddr) {
-    return fetch("/historyerc20/" + tokenAddr).then(r => r.json());
+    return fetch(`/historyerc20/${tokenAddr}`).then(r => r.json());
 }
 
 async function getUserData() {
@@ -162,9 +162,9 @@ async function loadHistoryETH() {
         htb.timeStamp = timeStampToTime(Math.round(Date.parse(htb.date) / 1000));
         var isDeposit = htb.type == "deposit";
         var sign = isDeposit ? '+' : '-';
-        htb.valuetoshow = sign + formattedCurrencyValue(htb.currency, htb.value) + " " + htb.currency;
+        htb.valuetoshow = `${sign}${formattedCurrencyValue(htb.currency, htb.value)} ${htb.currency}`;
         htb.hash = isDeposit ? htb.txid.txid : 'tx does not exist yet';
-        htb.explorerLink = isDeposit ? "https://mempool.space/tx/" + htb.txid.txid : "";
+        htb.explorerLink = isDeposit ? `https://mempool.space/tx/${htb.txid.txid}` : "";
         htb.flowClass = isDeposit ? 'is-deposit' : 'is-withdrawal';
         if (!isDeposit) {
             htb.arrow = "mdi-arrow-up";
@@ -183,15 +183,15 @@ async function loadHistoryETH() {
         var isDeposit = hist.histories[i].addr.toUpperCase() != hist.histories[i].from.toUpperCase();
         var sign = isDeposit ? '+' : '-';
         hist.histories[i].valuetoshow = sign + formattedCurrencyValue(hist.histories[i].tokenName, hist.histories[i].value) + " " + hist.histories[i].tokenName;
-        hist.histories[i].explorerLink = "https://etherscan.io/tx/" + hist.histories[i].hash;
+        hist.histories[i].explorerLink = `https://etherscan.io/tx/${hist.histories[i].hash}`;
         hist.histories[i].flowClass = isDeposit ? 'is-deposit' : 'is-withdrawal';
         if (!isDeposit) {
-            hist.histories[i].arrow = "mdi-arrow-up"
-            hist.histories[i].flowType = "Withdrawal " + hist.histories[i].tokenName
+            hist.histories[i].arrow = "mdi-arrow-up";
+            hist.histories[i].flowType = `Withdrawal ${hist.histories[i].tokenName}`;
         }
         else {
-            hist.histories[i].arrow = "mdi-arrow-collapse-down"
-            hist.histories[i].flowType = "Deposit " + hist.histories[i].tokenName
+            hist.histories[i].arrow = "mdi-arrow-collapse-down";
+            hist.histories[i].flowType = `Deposit ${hist.histories[i].tokenName}`;
         }
     };
 
@@ -241,11 +241,9 @@ function enableDepositWithdrawBtns(balancesElem) {
 
 function timeStampToTime(unix_timestamp) {
     var date = new Date(unix_timestamp * 1000);
-    var dateStr = date.getFullYear()
-        + "-" + String(date.getMonth() + 1).padStart(2, '0')
-        + "-" + String(date.getDate()).padStart(2, '0');
+    var dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     var timeStr = date.toLocaleTimeString();
-    return dateStr + " " + timeStr;
+    return `${dateStr} ${timeStr}`;
 }
 
 async function loadMoreHistory() {
@@ -265,30 +263,30 @@ async function updateLoop() {
 
     const jsonresBTC = await getCourseForBTC("BTC");
     const usdToBtc = document.getElementById("usd-BTC");
-    let currValBtc = document.getElementById("curr-val-BTC").textContent;
-    usdToBtc.textContent = "(" + (currValBtc * jsonresBTC.USD).toFixed(2) + " USD)";
+    const currValBtc = document.getElementById("curr-val-BTC").textContent;
+    usdToBtc.textContent = `(${(currValBtc * jsonresBTC.USD).toFixed(2)} USD)`;
 
     const jsonres = await getCourseForETH("ETH")
     const usdToEth = document.getElementById("usd-ETH");
     const currValEth = document.getElementById("curr-val-ETH").textContent;
-    usdToEth.textContent = "(" + (currValEth * jsonres.USD).toFixed(2) + " USD)";
+    usdToEth.textContent = `(${(currValEth * jsonres.USD).toFixed(2)} USD)`;
     const jsonresUSDT = await getCourseForERC20("USDT", "USDT")
     const usdToUSDT = document.getElementById("usd-USDT");
     const currValUSDT = document.getElementById("curr-val-USDT").textContent;
-    usdToUSDT.textContent = "(" + (currValUSDT * 1.0).toFixed(2) + " USD)";
+    usdToUSDT.textContent = `(${(currValUSDT * 1.0).toFixed(2)} USD)`;
 
-    const jsonresCRV = await getCourseForERC20("CRV", "CRV")
+    const jsonresCRV = await getCourseForERC20("CRV", "CRV");
     const usdToCRV = document.getElementById("usd-CRV");
     const currValCRV = document.getElementById("curr-val-CRV").textContent;
-    usdToCRV.textContent = "(" + (currValCRV * jsonresCRV.USD).toFixed(2) + " USD)";
+    usdToCRV.textContent = `(${(currValCRV * jsonresCRV.USD).toFixed(2)} USD)`;
 
-    const awBal = await (currValCRV * jsonresCRV.USD + parseFloat(currValUSDT) + currValEth * jsonres.USD + currValBtc * jsonresBTC.USD)
-    const awBalRub = await (currValCRV * jsonresCRV.RUB + currValUSDT * jsonresUSDT.RUB + currValEth * jsonres.RUB + currValBtc * jsonresBTC.RUB)
+    const awBal = currValCRV * jsonresCRV.USD + parseFloat(currValUSDT) + currValEth * jsonres.USD + currValBtc * jsonresBTC.USD;
+    const awBalRub = currValCRV * jsonresCRV.RUB + currValUSDT * jsonresUSDT.RUB + currValEth * jsonres.RUB + currValBtc * jsonresBTC.RUB;
 
     const totalUsd = document.getElementById("total-balance-usd");
     const totalRub = document.getElementById("total-balance-rub");
-    totalUsd.textContent = awBal.toFixed(2) + " $";
-    totalRub.textContent = "(" + awBalRub.toFixed(2) + " ₽)";
+    totalUsd.textContent = `${awBal.toFixed(2)} $`;
+    totalRub.textContent = `(${awBalRub.toFixed(2)})`;
 
     await new Promise((resolve) => setTimeout(resolve, refreshInterval));
     updateLoop();
