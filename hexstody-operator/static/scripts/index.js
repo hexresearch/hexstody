@@ -1,16 +1,11 @@
+import { loadTemplate } from "./common.js";
+
 const fileSelector = document.getElementById("keyfile-input");
 const fileSelectorStatus = document.getElementById("keyfile-input-status");
-const currencyWrapper = document.getElementById("currency-wrapper");
-const hotWalletBalanceWrapper = document.getElementById("hot-wallet-balance-wrapper");
-const withdrawalRequestsWrapper = document.getElementById("withdrawal-requests-wrapper");
+const authorizedInfoWrapper = document.getElementById("authorized-content-wrapper");
 
 let privateKeyJwk;
 let publicKeyDer;
-
-async function loadTemplate(path) {
-    const template = await (await fetch(path)).text();
-    return Handlebars.compile(template);
-}
 
 function registerHelpers() {
     Handlebars.registerHelper('currencyName', (currency) => {
@@ -79,14 +74,14 @@ async function importKey(_event) {
         } catch (_error) {
             fileSelectorStatus.className = "text-error";
             fileSelectorStatus.innerText = "Wrong password";
-            clearData();
+            clearAuthorizedWrapper();
             return;
         };
     };
     if (!keyObj.isPrivate) {
         fileSelectorStatus.className = "text-error";
         fileSelectorStatus.innerText = "The selected key is not private";
-        clearData();
+        clearAuthorizedWrapper();
         return;
     } else {
         try {
@@ -95,7 +90,7 @@ async function importKey(_event) {
         } catch (error) {
             fileSelectorStatus.className = "text-error";
             fileSelectorStatus.innerText = error;
-            clearData();
+            clearAuthorizedWrapper();
             return;
         };
     };
@@ -103,18 +98,19 @@ async function importKey(_event) {
     if (response.ok) {
         fileSelectorStatus.className = "text-success";
         fileSelectorStatus.innerText = "Private key imported successfully";
+        // Here we test the key and get the list of supported currencies
         const currencies = await response.json();
-        await loadData(currencies);
+        await loadAuthorizedContent(currencies);
     } else {
         if (response.status == 403) {
             fileSelectorStatus.className = "text-error";
             fileSelectorStatus.innerText = "Invalid key";
-            clearData();
+            clearAuthorizedWrapper();
             return;
         } else {
             fileSelectorStatus.className = "text-error";
             fileSelectorStatus.innerText = response.text();
-            clearData();
+            clearAuthorizedWrapper();
         }
     }
 }
@@ -183,7 +179,8 @@ async function getRequiredConfirmations() {
 }
 
 async function loadHotWalletBalance(currency) {
-    hotBalanceTemplate = await loadTemplate("/templates/hot_balance.html.hbs");
+    const hotWalletBalanceWrapper = document.getElementById("hot-wallet-balance-wrapper");
+    const hotBalanceTemplate = await loadTemplate("/templates/hot_balance.html.hbs");
     const response = await makeSignedRequest(null, "hotbalance", "GET");
     if (response.ok) {
         let data = await response.json();
@@ -262,8 +259,52 @@ function prettifyWithdrawalRequestsTable(withdrawalRequests) {
     }
 }
 
+async function loadWithdrawalRequestsTab(supportedCurrencies) {
+    const invitesTab = document.getElementById("invites-tab");
+    const invitesTabContent = document.getElementById("invites-tab-content");
+    const withdrawalRequestsTab = document.getElementById("withdrawal-requests-tab");
+    const withdrawalRequestsTabContent = document.getElementById("withdrawal-requests-tab-content");
+
+    withdrawalRequestsTabContent.innerHTML = "";
+
+    invitesTabContent.style.display = 'none';
+    invitesTab.classList.remove('active');
+    withdrawalRequestsTabContent.style.display = 'block';
+    withdrawalRequestsTab.classList.add('active');
+
+    const currencySelectWrapper = document.createElement("div");
+    currencySelectWrapper.id = "currency-select-wrapper";
+    currencySelectWrapper.classList.add('mb-1');
+    withdrawalRequestsTabContent.appendChild(currencySelectWrapper);
+
+    const hotWalletBalanceWrapper = document.createElement("div");
+    hotWalletBalanceWrapper.id = "hot-wallet-balance-wrapper";
+    hotWalletBalanceWrapper.classList.add('mb-1');
+    withdrawalRequestsTabContent.appendChild(hotWalletBalanceWrapper);
+
+    const withdrawalRequestsWrapper = document.createElement("div");
+    withdrawalRequestsWrapper.id = "withdrawal-requests-wrapper";
+    withdrawalRequestsTabContent.appendChild(withdrawalRequestsWrapper);
+
+    const currencySelectTemplate = await loadTemplate("/templates/currency_select.html.hbs");
+    const context = { currencies: supportedCurrencies };
+    const currencySelectHTML = currencySelectTemplate(context);
+    currencySelectWrapper.innerHTML = currencySelectHTML;
+
+    const currencySelect = document.getElementById("currency-select");
+    currencySelect.addEventListener("change", () => {
+        let selectedCurrency = currencySelect.options[currencySelect.selectedIndex].text;
+        loadHotWalletBalance(selectedCurrency);
+        loadWithdrawalRequests(selectedCurrency);
+    });
+    let selectedCurrency = currencySelect.options[currencySelect.selectedIndex].text;
+    loadHotWalletBalance(selectedCurrency);
+    loadWithdrawalRequests(selectedCurrency);
+}
+
 async function loadWithdrawalRequests(currency) {
-    withdrawalRequestsTemplate = await loadTemplate("/templates/withdrawal_requests.html.hbs");
+    const withdrawalRequestsWrapper = document.getElementById("withdrawal-requests-wrapper");
+    const withdrawalRequestsTemplate = await loadTemplate("/templates/withdrawal_requests.html.hbs");
     const response = await makeSignedRequest(null, "request", 'GET');
     if (response.ok) {
         const withdrawalRequests = await response.json();
@@ -282,26 +323,20 @@ async function loadWithdrawalRequests(currency) {
     }
 }
 
-async function loadData(supportedCurrencies) {
-    currencySelectTemplate = await loadTemplate("/templates/currency_select.html.hbs");
-    const context = { currencies: supportedCurrencies };
-    const currencySelectHTML = currencySelectTemplate(context);
-    currencyWrapper.innerHTML = currencySelectHTML;
-    const currencySelect = document.getElementById("currency-select");
-    currencySelect.addEventListener("change", () => {
-        let selectedCurrency = currencySelect.options[currencySelect.selectedIndex].text;
-        loadHotWalletBalance(selectedCurrency);
-        loadWithdrawalRequests(selectedCurrency);
-    });
-    let selectedCurrency = currencySelect.options[currencySelect.selectedIndex].text;
-    loadHotWalletBalance(selectedCurrency);
-    loadWithdrawalRequests(selectedCurrency);
+async function loadAuthorizedContent(supportedCurrencies) {
+    clearAuthorizedWrapper();
+    const navigationTabsTemplate = await loadTemplate("/templates/navigation_tabs.html.hbs");
+    const navigationTabsHTML = navigationTabsTemplate();
+    authorizedInfoWrapper.insertAdjacentHTML('beforeend', navigationTabsHTML);
+    loadWithdrawalRequestsTab(supportedCurrencies);
+    const withdrawalRequestsTab = document.getElementById("withdrawal-requests-tab");
+    withdrawalRequestsTab.addEventListener("click", () => { loadWithdrawalRequestsTab(supportedCurrencies); });
+    const invitesTab = document.getElementById("invites-tab");
+    invitesTab.addEventListener("click", loadInvitesTab);
 }
 
-function clearData() {
-    currencyWrapper.innerHTML = "";
-    withdrawalRequestsWrapper.innerHTML = "";
-    hotWalletBalanceWrapper.innerHTML = "";
+function clearAuthorizedWrapper() {
+    authorizedInfoWrapper.innerHTML = "";
 }
 
 async function confirmRequest(confirmationData) {
@@ -359,6 +394,114 @@ function addActionBtns(row, withdrawalRequest, requestStatus) {
 
     cell.appendChild(btnRow);
     row.appendChild(cell);
+}
+
+async function getInvite(body) {
+    return await makeSignedRequest(body, "invite/generate", "POST");
+};
+
+async function getMyInvites() {
+    return await makeSignedRequest(null, "invite/listmy", "GET");
+}
+
+function mkCopyBtn(parent, value) {
+    const copyBtn = document.createElement("button");
+    const spn = document.createElement("span");
+    const i = document.createElement("i");
+    i.classList.add("mdi", "mdi-content-copy");
+    spn.classList.add("icon");
+    copyBtn.classList.add("button", "is-h3", "is-ghost", "font-gray");
+    spn.appendChild(i);
+    copyBtn.appendChild(spn);
+    parent.appendChild(copyBtn);
+    copyBtn.addEventListener("click", () => {
+        navigator.clipboard.writeText(value).then(function () { }, function (err) {
+            console.error('Could not copy text: ', err);
+        });
+    });
+    tippy(copyBtn, {
+        content: "Copied",
+        trigger: "click",
+        hideOnClick: false,
+        onShow(instance) {
+            setTimeout(() => {
+                instance.hide();
+            }, 1000);
+        }
+    });
+}
+
+function renderError(parent, errMsg) {
+    const errNode = document.createElement("h3");
+    errNode.classList.add("text-error");
+    errNode.innerHTML = "Error! " + errMsg;
+    parent.append(errNode);
+}
+
+async function genInvite() {
+    const inviteLabelField = document.getElementById("invite-label");
+    const inviteDisplay = document.getElementById("invite-display");
+    inviteDisplay.style.display = 'flex';
+    const label = inviteLabelField.value;
+    if (!label) {
+        renderError(inviteDisplay, "Label should be non-empty!")
+    } else {
+        const body = { label: label }
+        const inviteResp = await getInvite(body)
+        if (inviteResp.ok) {
+            let invite = await inviteResp.json();
+            const invitesListTemplate = await loadTemplate("/templates/inviteslist.html.hbs");
+            const invitesHTML = invitesListTemplate({ invites: [invite], isList: false });
+            inviteDisplay.innerHTML = invitesHTML;
+            mkCopyBtn(inviteDisplay, invite.invite.invite);
+        } else {
+            renderError(inviteDisplay, JSON.stringify(inviteResp));
+        }
+    }
+}
+
+async function listInvites() {
+    const invitesListBody = document.getElementById("invites-list");
+    const invitesResp = await getMyInvites();
+    if (invitesResp.ok) {
+        const invites = await invitesResp.json();
+        const invitesListTemplate = await loadTemplate("/templates/inviteslist.html.hbs");
+        const invitesList = invitesListTemplate({ invites: invites, isList: true });
+        invitesListBody.innerHTML = invitesList;
+        const inviteDisplays = invitesListBody.querySelectorAll(".invite-display");
+        inviteDisplays.forEach(display => {
+            const value = display.querySelector('.invite').innerHTML;
+            mkCopyBtn(display, value)
+        })
+    } else {
+        const errMsg = document.createElement("h3");
+        errMsg.classList.add("text-error");
+        errMsg.innerHTML = "Error: " + invitesResp.status + ": " + invitesResp.statusText;
+        invitesListBody.innerHTML = "";
+        invitesListBody.append(errMsg)
+    }
+
+}
+
+async function loadInvitesTab() {
+    const invitesTab = document.getElementById("invites-tab");
+    const invitesTabContent = document.getElementById("invites-tab-content");
+    const withdrawalRequestsTab = document.getElementById("withdrawal-requests-tab");
+    const withdrawalRequestsTabContent = document.getElementById("withdrawal-requests-tab-content");
+
+    withdrawalRequestsTabContent.style.display = 'none';
+    withdrawalRequestsTab.classList.remove('active');
+    invitesTabContent.style.display = 'block';
+    invitesTab.classList.add('active');
+
+    const inivitesTemplate = await loadTemplate("/templates/invites.html.hbs");
+    const inivitesHTML = inivitesTemplate();
+    invitesTabContent.innerHTML = inivitesHTML;
+
+    const genInviteBtn = document.getElementById("gen-invite-btn");
+    const listInvitesBtn = document.getElementById("btn-list-invites");
+    genInviteBtn.onclick = genInvite;
+    listInvitesBtn.onclick = listInvites;
 }
 
 window.addEventListener('load', function () {

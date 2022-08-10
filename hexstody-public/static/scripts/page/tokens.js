@@ -1,4 +1,4 @@
-import { loadTemplate, formattedCurrencyValue, formattedElapsedTime } from "./common.js";
+import { loadTemplate, formattedElapsedTime } from "./common.js";
 
 let tokensTemplate = null;
 const refreshInterval = 20000;
@@ -23,22 +23,6 @@ async function postDisable(token) {
         method: "POST",
         body: JSON.stringify(body)
     });
-}
-
-function buildEnabler(token) {
-    return async function enabler(){
-        console.log("enable " + token.token.tiker)
-        const res = await postEnable(token.token);
-        loadTokens();
-    } 
-}
-
-function buildDisabler(token) {
-    return async function disabler(){
-        console.log("disable " + token.token.ticker)
-        const res = await postDisable(token.token);
-        loadTokens();
-    }
 }
 
 async function initTemplates() {

@@ -1,3 +1,4 @@
+use hexstody_api::types::Invite;
 use serde::{Deserialize, Serialize};
 
 /// It is unique user ID whithin the system. It is either email address or hex encoded LNAuth public key.
@@ -7,6 +8,8 @@ pub type UserId = String;
 pub struct SignupInfo {
     /// It is unique user ID whithin the system. It is either email address or hex encoded LNAuth public key.
     pub username: UserId,
+    /// User's invite
+    pub invite: Invite,
     /// Contains additional info that required to authentificated user in future.
     pub auth: SignupAuth,
 }

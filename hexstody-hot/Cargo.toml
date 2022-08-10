@@ -59,3 +59,5 @@ port-selector = "0.1.4"
 run_script = "0.9.0"
 hexstody-client = { path = "../hexstody-client" }
 tempdir = "0.3.7"
+anyhow = "1.0"
+uuid = { version = "0.8.2", features = ["v4"]}

@@ -1292,9 +1292,12 @@ dependencies = [
 name = "hexstody-client"
 version = "0.1.0"
 dependencies = [
+ "base64",
  "hexstody-api",
  "log",
+ "p256",
  "reqwest",
+ "rocket",
  "serde",
  "serde_json",
  "thiserror",
@@ -1340,6 +1343,7 @@ dependencies = [
 name = "hexstody-hot"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "bitcoin",
  "bitcoin_hashes",
  "bitcoincore-rpc",
@@ -1378,6 +1382,7 @@ dependencies = [
  "tempdir",
  "thiserror",
  "tokio",
+ "uuid 0.8.2",
 ]
 
 [[package]]

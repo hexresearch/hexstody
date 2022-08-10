@@ -8,15 +8,184 @@
     width: auto;
 }
 
+.mb-1 {
+    margin-bottom: 1rem;
+}
+
 .centered-cell {
     display: flex;
     align-items: center;
+    gap: 1rem;
 }
 
-.centered-cell img {
-    max-width: none;
+.
+/* 
+.tabs {
+    -webkit-overflow-scrolling: touch;
+    align-items: stretch;
+    display: flex;
+    font-size: 1rem;
+    justify-content: space-between;
+    overflow: hidden;
+    overflow-x: auto;
+    white-space: nowrap; }
+    .tabs a {
+      align-items: center;
+      border-bottom-color: #D5D7E7;
+      border-bottom-style: solid;
+      border-bottom-width: 1px;
+      color: #282143;
+      display: flex;
+      justify-content: center;
+      margin-bottom: -1px;
+      padding: 0.5em 1em;
+      vertical-align: top; }
+      .tabs a:hover {
+        border-bottom-color: #363636;
+        color: #363636; }
+    .tabs li {
+      display: block; }
+      .tabs li.is-active a {
+        border-bottom-color: #485fc7;
+        color: #485fc7; }
+    .tabs ul {
+      align-items: center;
+      border-bottom-color: #D5D7E7;
+      border-bottom-style: solid;
+      border-bottom-width: 1px;
+      display: flex;
+      flex-grow: 1;
+      flex-shrink: 0;
+      justify-content: flex-start; }
+      .tabs ul.is-left {
+        padding-right: 0.75em; }
+      .tabs ul.is-center {
+        flex: none;
+        justify-content: center;
+        padding-left: 0.75em;
+        padding-right: 0.75em; }
+      .tabs ul.is-right {
+        justify-content: flex-end;
+        padding-left: 0.75em; }
+    .tabs .icon:first-child {
+      margin-right: 0.5em; }
+    .tabs .icon:last-child {
+      margin-left: 0.5em; }
+    .tabs.is-centered ul {
+      justify-content: center; }
+    .tabs.is-right ul {
+      justify-content: flex-end; }
+    .tabs.is-boxed a {
+      border: 1px solid transparent;
+      border-radius: 4px 4px 0 0; }
+      .tabs.is-boxed a:hover {
+        background-color: whitesmoke;
+        border-bottom-color: #D5D7E7; }
+    .tabs.is-boxed li.is-active a {
+      background-color: white;
+      border-color: #D5D7E7;
+      border-bottom-color: transparent !important; }
+    .tabs.is-fullwidth li {
+      flex-grow: 1;
+      flex-shrink: 0; }
+    .tabs.is-toggle a {
+      border-color: #D5D7E7;
+      border-style: solid;
+      border-width: 1px;
+      margin-bottom: 0;
+      position: relative; }
+      .tabs.is-toggle a:hover {
+        background-color: whitesmoke;
+        border-color: #77778C;
+        z-index: 2; }
+    .tabs.is-toggle li + li {
+      margin-left: -1px; }
+    .tabs.is-toggle li:first-child a {
+      border-top-left-radius: 4px;
+      border-bottom-left-radius: 4px; }
+    .tabs.is-toggle li:last-child a {
+      border-top-right-radius: 4px;
+      border-bottom-right-radius: 4px; }
+    .tabs.is-toggle li.is-active a {
+      background-color: #485fc7;
+      border-color: #485fc7;
+      color: #fff;
+      z-index: 1; }
+    .tabs.is-toggle ul {
+      border-bottom: none; }
+    .tabs.is-toggle.is-toggle-rounded li:first-child a {
+      border-bottom-left-radius: 9999px;
+      border-top-left-radius: 9999px;
+      padding-left: 1.25em; }
+    .tabs.is-toggle.is-toggle-rounded li:last-child a {
+      border-bottom-right-radius: 9999px;
+      border-top-right-radius: 9999px;
+      padding-right: 1.25em; }
+    .tabs.is-small {
+      font-size: 0.75rem; }
+    .tabs.is-medium {
+      font-size: 1.25rem; }
+    .tabs.is-large {
+      font-size: 1.5rem; }
+
+.margin-b-24px{
+  margin-bottom: 24px;
 }
 
-#currency-select {
-    max-width: 20rem;
+.invite-display{
+  display: flex;
 }
+
+.button.is-small {
+  font-size: 0.75rem; 
+}
+.button.is-small:not(.is-rounded) {
+  border-radius: 2px; 
+}
+.button.is-normal {
+  font-size: 1rem; 
+}
+.button.is-medium {
+  font-size: 1.25rem; 
+}
+.button.is-large {
+  font-size: 1.5rem; 
+}
+
+.button.is-ghost {
+  background: none;
+  border-color: transparent;
+  color: #485fc7;
+  text-decoration: none; 
+}
+
+.button.is-ghost:hover, .button.is-ghost.is-hovered {
+  color: #485fc7;
+  text-decoration: underline; 
+}
+
+.button.is-h3{
+  padding: 0;
+  margin-top: 0.35em;
+  margin-right: 0px;
+  margin-bottom: 0.7em;
+  margin-left: 0px;
+  font-size: 1.5em;
+}
+
+.font-gray{
+  color: grey !important;
+}
+
+.m-r-05em{
+  margin-right: 0.5em;
+}
+
+.m-b-05em{
+  margin-bottom: 0.5em;
+}
+
+.m-tb-0{
+  margin-top: 0;
+  margin-bottom: 0;
+} */

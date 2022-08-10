@@ -8,20 +8,19 @@
 <script src="/scripts/base64.min.js" defer></script>
 <script src="https://unpkg.com/@popperjs/core@2" defer></script>
 <script src="https://unpkg.com/tippy.js@6" defer></script>
-<script src="/scripts/index.js" defer></script>
+<script type="module" src="/scripts/index.js"></script>
+<script type="module" src="/scripts/common.js"></script>
 {{/inline}}
 
 {{#*inline "page"}}
-<div id="keyfile-wrapper">
+<div id="keyfile-wrapper" class="mb-1">
     <h4>Select the private key file</h4>
     <div class="keyfile-input-wrapper">
         <input type="file" id="keyfile-input" accept=".pem" />
         <span id="keyfile-input-status"></span>
     </div>
 </div>
-<div id="currency-wrapper"></div>
-<div id="hot-wallet-balance-wrapper"></div>
-<div id="withdrawal-requests-wrapper"></div>
+<div id="authorized-content-wrapper"></div>
 {{/inline}}
 
 {{> base}}
