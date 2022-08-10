@@ -10,6 +10,7 @@ use log::*;
 pub use network::*;
 use p256::PublicKey;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 use std::collections::HashMap;
 use thiserror::Error;
 pub use transaction::*;
@@ -27,7 +28,7 @@ use super::update::withdrawal::{
 };
 use super::update::{results::UpdateResult, StateUpdate, UpdateBody};
 use hexstody_api::domain::*;
-use hexstody_api::types::{WithdrawalRequestDecisionType, Invite};
+use hexstody_api::types::{WithdrawalRequestDecisionType, Invite, LimitChangeRequest, LimitChangeData, LimitChangeStatus};
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct State {
@@ -165,6 +166,11 @@ impl State {
             },
             UpdateBody::GenInvite(invite_req) => {
                 self.gen_invite(invite_req)?;
+                self.last_changed = update.created;
+                Ok(None)
+            },
+            UpdateBody::LimitsChangeRequest(req) => {
+                self.insert_limits_req(req)?;
                 self.last_changed = update.created;
                 Ok(None)
             },
@@ -554,6 +560,32 @@ impl State {
         } else {
             self.invites.insert(invite, invite_req);
             Ok(())
+        }
+    }
+
+    fn insert_limits_req(&mut self, req: LimitChangeRequest) -> Result<(), StateUpdateErr> {
+        let cur = req.request.currency.clone();
+        match self.users.get_mut(&req.user){
+            Some(usr) => {
+                match usr.currencies.get_mut(&cur){
+                    None => Err(StateUpdateErr::UserMissingCurrency(req.user, cur)),
+                    Some(_) => {
+                        let data = LimitChangeData{
+                            id: Uuid::new_v4(),
+                            user: usr.username.clone(),
+                            created_at: chrono::offset::Utc::now().to_string(),
+                            status: LimitChangeStatus::InProgress { confirmations: 0, rejections: 0 },
+                            currency: cur.clone(),
+                            limit: req.request.limit,
+                            confirmations: vec![],
+                            rejections: vec![],
+                        };
+                        usr.limit_change_requests.insert(cur, data);
+                        Ok(())
+                    },
+                }
+            },
+            None => Err(StateUpdateErr::UserNotFound(req.user)),
         }
     }
 }

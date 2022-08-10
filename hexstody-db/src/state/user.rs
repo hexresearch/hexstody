@@ -6,6 +6,8 @@ use chrono::prelude::*;
 use hexstody_api::domain::CurrencyTxId;
 use hexstody_api::domain::{Currency, CurrencyAddress};
 use hexstody_api::types::Invite;
+use hexstody_api::types::LimitChangeData;
+use hexstody_api::types::LimitInfo;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
@@ -26,6 +28,8 @@ pub struct UserInfo {
     pub completed_requests: HashSet<WithdrawalRequestId>,
     /// Information for each currency
     pub currencies: HashMap<Currency, UserCurrencyInfo>,
+    /// Limit change requests
+    pub limit_change_requests: HashMap<Currency, LimitChangeData>
 }
 
 impl UserInfo {
@@ -41,6 +45,7 @@ impl UserInfo {
                 .into_iter()
                 .map(|c| (c.clone(), UserCurrencyInfo::new(c)))
                 .collect(),
+            limit_change_requests: HashMap::new()
         }
     }
 
@@ -78,6 +83,8 @@ pub struct UserCurrencyInfo {
     pub transactions: Vec<Transaction>,
     /// Users can create withdrawal requests that in some cases require manual confirmation from operators
     pub withdrawal_requests: HashMap<WithdrawalRequestId, WithdrawalRequest>,
+    /// User's limit info. 
+    pub limit_info: LimitInfo
 }
 
 impl UserCurrencyInfo {
@@ -87,6 +94,7 @@ impl UserCurrencyInfo {
             deposit_info: Vec::new(),
             transactions: Vec::new(),
             withdrawal_requests: HashMap::new(),
+            limit_info: LimitInfo::default()
         }
     }
 

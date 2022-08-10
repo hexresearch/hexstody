@@ -366,7 +366,7 @@ pub struct DepositInfo {
 /// Signature data that comes from operators
 /// when they sign or reject requests.
 /// This data type is used for authorization.
-#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, Copy)]
 pub struct SignatureData {
     pub signature: Signature,
     pub nonce: u64,
@@ -620,4 +620,72 @@ pub struct InviteRequest{
 pub struct InviteResp{
     pub invite: Invite,
     pub label: String
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
+pub enum LimitSpan {
+    Day,
+    Week,
+    Month
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct Limit {
+    pub amount: u64,
+    pub span: LimitSpan
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct LimitChangeReq{
+    pub currency: Currency,
+    pub limit: Limit
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct LimitChangeData{
+    pub id: Uuid,
+    pub user: String,
+    pub created_at: String,
+    pub status: LimitChangeStatus,
+    pub currency: Currency,
+    pub limit: Limit,
+    pub confirmations: Vec<SignatureData>,
+    pub rejections: Vec<SignatureData>
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
+pub enum LimitChangeStatus{
+    InProgress{confirmations: i16, rejections: i16},
+    Completed,
+    Rejected
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct LimitChangeRequest {
+    pub id: Uuid,
+    pub user: String,
+    pub created_at: String,
+    pub request: LimitChangeReq,
+    pub status: LimitChangeStatus
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct LimitInfo {
+    pub limit: Limit,
+    pub spent: u64
+}
+
+impl Default for LimitInfo {
+    fn default() -> Self {
+        Self { 
+            limit: Limit { amount: 1000000, span: LimitSpan::Day }, 
+            spent: Default::default() 
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct LimitApiResp {
+    pub limit_info: LimitInfo,
+    pub currency: Currency
 }
