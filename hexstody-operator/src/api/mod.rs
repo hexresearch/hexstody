@@ -1,7 +1,6 @@
 use figment::Figment;
 use rocket::{
     fs::FileServer,
-    http::Status,
     response::status,
     serde::json::Json,
     State as RocketState,
@@ -11,7 +10,7 @@ use rocket::{
 use rocket_dyn_templates::{context, Template};
 use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
 use uuid::Uuid;
-use std::{path::PathBuf, str, sync::Arc};
+use std::{path::PathBuf, sync::Arc};
 use tokio::sync::{mpsc, Mutex, Notify};
 
 use hexstody_api::types::{
@@ -20,6 +19,7 @@ use hexstody_api::types::{
     WithdrawalRequestDecisionType, HotBalanceResponse, 
     Invite, InviteRequest, InviteResp,
 };
+use hexstody_api::error;
 use hexstody_btc_client::client::BtcClient;
 use hexstody_db::{
     state::State as HexstodyState,
@@ -59,11 +59,11 @@ async fn get_hot_balance(
     signature_data: SignatureData,
     config: &RocketState<Config>,
     btc_client: &RocketState<BtcClient>,
-) -> Result<Json<HotBalanceResponse>, (Status, &'static str)> {
+) -> error::Result<Json<HotBalanceResponse>> {
     guard_op_signature_nomsg(&config, uri!(get_hot_balance).to_string(), signature_data)?;
     btc_client.get_hot_balance()
         .await
-        .map_err(|_| (Status::InternalServerError, "Internal server error"))
+        .map_err(|e| error::Error::InternalServerError(format!("{:?}", e)).into())
         .map(|v| Json(v))
 }
 
@@ -74,7 +74,7 @@ async fn list(
     state: &RocketState<Arc<Mutex<HexstodyState>>>,
     signature_data: SignatureData,
     config: &RocketState<Config>,
-) -> Result<Json<Vec<WithdrawalRequest>>, (Status, &'static str)> {
+) -> error::Result<Json<Vec<WithdrawalRequest>>> {
     guard_op_signature_nomsg(&config, uri!(list).to_string(), signature_data)?;
     let hexstody_state = state.lock().await;
     let withdrawal_requests = Vec::from_iter(
@@ -95,7 +95,7 @@ async fn create(
     signature_data: SignatureData,
     withdrawal_request_info: Json<WithdrawalRequestInfo>,
     config: &RocketState<Config>,
-) -> Result<Created<Json<WithdrawalRequest>>, (Status, &'static str)> {
+) -> error::Result<Created<Json<WithdrawalRequest>>> {
     let withdrawal_request_info = withdrawal_request_info.into_inner();
     guard_op_signature(&config, uri!(create).to_string(), signature_data, &withdrawal_request_info)?;
     let info: WithdrawalRequestInfoDb = withdrawal_request_info.into();
@@ -104,8 +104,8 @@ async fn create(
     update_sender
         .send(state_update)
         .await
-        .map_err(|_| (Status::InternalServerError, "Internal server error"))?;
-    Ok(status::Created::new("/request"))
+        .map_err(|e| error::Error::InternalServerError(format!("{:?}", e)).into())
+        .map(|_| status::Created::new("/request"))
 }
 
 /// # Confirm withdrawal request
@@ -116,7 +116,7 @@ async fn confirm(
     signature_data: SignatureData,
     confirmation_data: Json<ConfirmationData>,
     config: &RocketState<Config>,
-) -> Result<(), (Status, &'static str)> {
+) -> error::Result<()> {
     let confirmation_data = confirmation_data.into_inner();
     guard_op_signature(&config, uri!(confirm).to_string(), signature_data, &confirmation_data)?;
     let url = [config.domain.clone(), uri!(confirm).to_string()].join("");
@@ -132,8 +132,7 @@ async fn confirm(
     update_sender
         .send(state_update)
         .await
-        .map_err(|_| (Status::InternalServerError, "Internal server error"))?;
-    Ok(())
+        .map_err(|e| error::Error::InternalServerError(format!("{:?}", e)).into())
 }
 
 /// # Reject withdrawal request
@@ -144,7 +143,7 @@ async fn reject(
     signature_data: SignatureData,
     confirmation_data: Json<ConfirmationData>,
     config: &RocketState<Config>,
-) -> Result<(), (Status, &'static str)> {
+) -> error::Result<()> {
     let confirmation_data = confirmation_data.into_inner();
     guard_op_signature(&config, uri!(reject).to_string(), signature_data, &confirmation_data)?;
     let url = [config.domain.clone(), uri!(reject).to_string()].join("");
@@ -160,8 +159,7 @@ async fn reject(
     update_sender
         .send(state_update)
         .await
-        .map_err(|_| (Status::InternalServerError, "Internal server error"))?;
-    Ok(())
+        .map_err(|e| error::Error::InternalServerError(format!("{:?}", e)).into())
 }
 
 /// Generate an invite
@@ -173,7 +171,7 @@ async fn gen_invite(
     config: &RocketState<Config>,
     signature_data: SignatureData,
     req: Json<InviteRequest>
-) -> Result<Json<InviteResp>, (Status, &'static str)> {
+) -> error::Result<Json<InviteResp>> {
     let label = req.label.clone();
     guard_op_signature(&config, uri!(gen_invite).to_string(), signature_data, &req.into_inner())?;
     let invitor = signature_data.public_key.to_string();
@@ -188,7 +186,7 @@ async fn gen_invite(
     update_sender
         .send(state_update)
         .await
-        .map_err(|_| (Status::InternalServerError, "Internal server error"))
+         .map_err(|e| error::Error::InternalServerError(format!("{:?}", e)).into())
         .map(|_| Json(InviteResp{invite, label}))
 }
 
@@ -199,7 +197,7 @@ async fn list_ops_invites(
     state: &RocketState<Arc<Mutex<HexstodyState>>>,
     config: &RocketState<Config>,
     signature_data: SignatureData,
-) -> Result<Json<Vec<InviteResp>>, (Status, &'static str)>{
+) -> error::Result<Json<Vec<InviteResp>>>{
     guard_op_signature_nomsg(&config, uri!(list_ops_invites).to_string(), signature_data)?;
     let invitor = signature_data.public_key.to_string();
     let hexstody_state = state.lock().await;

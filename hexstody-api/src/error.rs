@@ -57,7 +57,13 @@ pub enum Error {
     #[error("Limits are not changed by the update")]
     LimitsNoChanges,
     #[error("Limit change not found")]
-    LimChangeNotFound
+    LimChangeNotFound,
+    #[error("Signature error: {0}")]
+    SignatureError(String),
+    #[error("Internal server error: {0}")]
+    InternalServerError(String),
+    #[error("Error: {0}")]
+    GenericError(String),
 }
 
 impl Error {
@@ -84,6 +90,9 @@ impl Error {
             Error::InviteNotFound => 18,
             Error::LimitsNoChanges => 19,
             Error::LimChangeNotFound => 20,
+            Error::SignatureError(_) => 21,
+            Error::InternalServerError(_) => 22,
+            Error::GenericError(_) => 23,
         }
     }
 
@@ -110,6 +119,9 @@ impl Error {
             Error::InviteNotFound => Status::from_code(400).unwrap(),
             Error::LimitsNoChanges => Status::from_code(500).unwrap(),
             Error::LimChangeNotFound => Status::from_code(400).unwrap(),
+            Error::SignatureError(_) => Status::from_code(403).unwrap(),
+            Error::InternalServerError(_) => Status::from_code(500).unwrap(),
+            Error::GenericError(_) => Status::from_code(500).unwrap(),
         }
     }
 }
