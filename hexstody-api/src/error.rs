@@ -55,7 +55,9 @@ pub enum Error {
     #[error("Invite does not exist")]
     InviteNotFound,
     #[error("Limits are not changed by the update")]
-    LimitsNoChanges
+    LimitsNoChanges,
+    #[error("Limit change not found")]
+    LimChangeNotFound
 }
 
 impl Error {
@@ -81,6 +83,7 @@ impl Error {
             Error::TokenActionFailed(_) => 17,
             Error::InviteNotFound => 18,
             Error::LimitsNoChanges => 19,
+            Error::LimChangeNotFound => 20,
         }
     }
 
@@ -105,7 +108,8 @@ impl Error {
             Error::TokenNonZeroBalance(_) => Status::from_code(500).unwrap(),
             Error::TokenActionFailed(_) => Status::from_code(500).unwrap(),
             Error::InviteNotFound => Status::from_code(400).unwrap(),
-            Error::LimitsNoChanges => Status::from_code(500).unwrap()
+            Error::LimitsNoChanges => Status::from_code(500).unwrap(),
+            Error::LimChangeNotFound => Status::from_code(400).unwrap(),
         }
     }
 }

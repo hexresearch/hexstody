@@ -3,10 +3,11 @@ pub mod wallet;
 
 use auth::*;
 use figment::Figment;
-use hexstody_api::types::{LimitApiResp, LimitChangeReq, LimitChangeRequest, LimitChangeStatus, LimitChangeData};
+use hexstody_api::domain::Currency;
+use hexstody_api::types::{LimitApiResp, LimitChangeReq, LimitChangeData};
+use hexstody_db::update::misc::{LimitCancelData, LimitChangeUpd};
 use hexstody_eth_client::client::EthClient;
 use serde_json::json;
-use uuid::Uuid;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -198,18 +199,16 @@ pub async fn request_new_limits(
 ) -> Result<error::Result<()>, Redirect> {
     let new_limits = new_limits.into_inner();
     let resp = require_auth_user(cookies, state, |_, user| async move {
-        let filtered_limits : Vec<LimitChangeRequest> = new_limits.into_iter().filter_map(|l| {
+        let filtered_limits : Vec<LimitChangeUpd> = new_limits.into_iter().filter_map(|l| {
             match user.currencies.get(&l.currency) {
                 None => None,
                 Some(ci) => if ci.limit_info.limit == l.limit{
                     None
                 } else {
-                    Some(LimitChangeRequest{
-                        id: Uuid::new_v4(),
+                    Some(LimitChangeUpd{
                         user: user.username.clone(),
-                        created_at: chrono::offset::Utc::now().to_string(),
-                        request: l.clone(),
-                        status: LimitChangeStatus::InProgress { confirmations: 0, rejections: 0 },
+                        currency: l.currency.clone(),
+                        limit: l.limit.clone(),
                     })
                 }
             }
@@ -247,6 +246,35 @@ pub async fn get_user_limit_changes(
     }).await.map_err(|_| goto_signin())
 }
 
+#[openapi(skip)]
+#[post("/profile/limits/cancel", data="<currency>")]
+pub async fn cancel_user_change(
+    cookies: &CookieJar<'_>,
+    state: &State<Arc<Mutex<DbState>>>,
+    updater: &State<mpsc::Sender<StateUpdate>>,
+    currency: Json<Currency>
+) -> Result<error::Result<()>, Redirect>{
+    let resp = require_auth_user(cookies, state, |_, user| async move {
+        match user.limit_change_requests.get(&currency){
+            Some(v) => {
+                let state_update = StateUpdate::new(UpdateBody::CancelLimitChange(
+                    LimitCancelData{ id: v.id.clone(), user: user.username.clone(), currency: currency.into_inner().clone() }));
+                let _ = updater.send(state_update).await;
+                Ok(())
+            },
+            None => return Err(error::Error::LimChangeNotFound.into()),
+        }
+    }).await;
+    match resp {
+        Ok(v) => Ok(Ok(v)),
+        // Error code 8 => NoUserFound (not logged in). 7 => Requires auth
+        Err(err) => if err.1.code == 8 || err.1.code == 7 {
+            Err(goto_signin())
+        } else {
+            Ok(Err(err))
+        },
+    }
+}
 pub async fn serve_api(
     pool: Pool,
     state: Arc<Mutex<DbState>>,
@@ -292,7 +320,8 @@ pub async fn serve_api(
                 remove_user,
                 get_user_limits,
                 request_new_limits,
-                get_user_limit_changes
+                get_user_limit_changes,
+                cancel_user_change
             ],
         )
         .mount(

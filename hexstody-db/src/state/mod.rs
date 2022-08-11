@@ -18,7 +18,7 @@ pub use user::*;
 pub use withdraw::*;
 
 use crate::update::withdrawal::{WithdrawCompleteInfo, WithdrawalRejectInfo};
-use crate::update::misc::{TokenUpdate, TokenAction, InviteRec};
+use crate::update::misc::{TokenUpdate, TokenAction, InviteRec, LimitCancelData, LimitChangeUpd};
 
 use super::update::btc::BtcTxCancel;
 use super::update::deposit::DepositAddress;
@@ -28,7 +28,7 @@ use super::update::withdrawal::{
 };
 use super::update::{results::UpdateResult, StateUpdate, UpdateBody};
 use hexstody_api::domain::*;
-use hexstody_api::types::{WithdrawalRequestDecisionType, Invite, LimitChangeRequest, LimitChangeData, LimitChangeStatus};
+use hexstody_api::types::{WithdrawalRequestDecisionType, Invite, LimitChangeData, LimitChangeStatus};
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct State {
@@ -171,6 +171,11 @@ impl State {
             },
             UpdateBody::LimitsChangeRequest(req) => {
                 self.insert_limits_req(req)?;
+                self.last_changed = update.created;
+                Ok(None)
+            },
+            UpdateBody::CancelLimitChange(cancel_req) => {
+                self.cancel_limit_change(cancel_req)?;
                 self.last_changed = update.created;
                 Ok(None)
             },
@@ -563,8 +568,8 @@ impl State {
         }
     }
 
-    fn insert_limits_req(&mut self, req: LimitChangeRequest) -> Result<(), StateUpdateErr> {
-        let cur = req.request.currency.clone();
+    fn insert_limits_req(&mut self, req: LimitChangeUpd) -> Result<(), StateUpdateErr> {
+        let cur = req.currency.clone();
         match self.users.get_mut(&req.user){
             Some(usr) => {
                 match usr.currencies.get_mut(&cur){
@@ -576,7 +581,7 @@ impl State {
                             created_at: chrono::offset::Utc::now().to_string(),
                             status: LimitChangeStatus::InProgress { confirmations: 0, rejections: 0 },
                             currency: cur.clone(),
-                            limit: req.request.limit,
+                            limit: req.limit,
                             confirmations: vec![],
                             rejections: vec![],
                         };
@@ -586,6 +591,17 @@ impl State {
                 }
             },
             None => Err(StateUpdateErr::UserNotFound(req.user)),
+        }
+    }
+
+    fn cancel_limit_change(&mut self, cancel_req: LimitCancelData) -> Result<(), StateUpdateErr> {
+        let LimitCancelData { id: _, user, currency } = cancel_req;
+        match self.users.get_mut(&user){
+            Some(usr) => {
+                let _ = usr.limit_change_requests.remove(&currency);
+                Ok(())
+            },
+            None => Err(StateUpdateErr::UserNotFound(user)),
         }
     }
 }

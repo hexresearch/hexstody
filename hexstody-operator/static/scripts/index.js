@@ -5,14 +5,21 @@ const fileSelectorStatus = document.getElementById("file-selector-status");
 const withdrawalRequestsTableBody = document.getElementById("withdrawal-requests-table-body");
 const invitesTab = document.getElementById("invites-tab");
 const withdrawsTabBody = document.getElementById('withdraw-tab-body');
+const changesTab = document.getElementById('changes-tab');
+const changesTabBody = document.getElementById('changes-tab-body');
 const withdrawsTab = document.getElementById('withdraw-tab');
 const invitesTabBody = document.getElementById("invites-tab-body");
 const authedBody = document.getElementById("authed-body");
 
 let invitesTemplate = null;
 let invitesListTemplate = null;
+let changesTemplate = null;
 let privateKeyJwk;
 let publicKeyDer;
+
+async function getAllChanges(){
+    return await makeSignedRequest(null, "/changes", "GET")
+}
 
 function hide_authed(){
     authedBody.style.display = "none";
@@ -437,15 +444,31 @@ async function loadInvitesTab(){
     listInvitesBtn.onclick = listInvites;
 }
 
+async function loadChangesTab(){
+    const changesDrawUpdate = changesTemplate();
+    invitesTabBody.innerHTML = inivitesDrawUpdate;
+
+    withdrawsTabBody.style.display = 'none';
+    withdrawsTab.classList.remove('is-active');
+    invitesTabBody.style.display = 'block';
+    invitesTab.classList.add('is-active');
+
+    const genInviteBtn = document.getElementById("gen-invite-btn");
+    const listInvitesBtn = document.getElementById("btn-list-invites");
+}
+
 async function init(){
-    const [invitesTemp, invitesListTemp] = await Promise.allSettled([
+    const [invitesTemp, invitesListTemp, changesTemp] = await Promise.allSettled([
         await loadTemplate("/scripts/templates/invites.html.hbs"),
-        await loadTemplate("/scripts/templates/inviteslist.html.hbs")
+        await loadTemplate("/scripts/templates/inviteslist.html.hbs"),
+        await loadTemplate("/scripts/templates/changes.html.hbs")
     ]);
     invitesTemplate = invitesTemp.value;
     invitesListTemplate = invitesListTemp.value;
+    changesTemplate = changesTemp.value;
     fileSelector.addEventListener('change', loadKeyFile);
     invitesTab.onclick = loadInvitesTab;
+    invitesTab.onclick = loadChangesTab;
 }
 
 document.addEventListener("DOMContentLoaded", init);

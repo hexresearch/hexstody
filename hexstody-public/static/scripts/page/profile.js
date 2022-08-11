@@ -44,12 +44,19 @@ async function postLimitsChange(changes){
     });
 }
 
-async function postChangeCancel(id){
+async function postChangeCancel(currency){
     return await fetch("/profile/limits/cancel",
     {
         method: "POST",
-        body: JSON.stringify(id)
+        body: JSON.stringify(currency)
     });
+}
+
+function changeCancelHandler(currency){
+    return async function(){
+        await postChangeCancel(currency);
+        loadLimits();
+    }
 }
 
 function getCurName(val){
@@ -63,7 +70,6 @@ function getCurName(val){
 }
 
 function renderChangeStatus(status){
-    console.log(status)
     switch (Object.keys(status)[0]) {
         case "InProgress":
             let body = status["InProgress"];
@@ -87,7 +93,6 @@ async function initTemplates() {
     limitsTemplate = limitsTemp.value;
     Handlebars.registerHelper('tokenFormatName', function () { return this.token.ticker; });
     Handlebars.registerHelper('limitsFormatName', function () { return getCurName(this) });
-    Handlebars.registerHelper('changeStatus', function() { console.log(this.status); return renderChangeStatus(this.status)});
 }
 
 function setLimit(limit){
@@ -126,8 +131,6 @@ async function loadLimits(){
     const limits = await getLimits();
     const changes = await getMyChanges();
     origLimits = limits;
-    console.log(limits);
-    console.log(changes);
     const limitsDrawUpdate = limitsTemplate({limits: limits, changes: changes});
     const limitsElem = document.getElementById("limits-tab-body");
     limitsElem.innerHTML = limitsDrawUpdate;
@@ -138,7 +141,7 @@ async function loadLimits(){
 
     changes.forEach(change => {
         const btn = document.getElementById(change.id + "-btn");
-        btn.onclick = postChangeCancel;
+        btn.onclick = changeCancelHandler(change.currency)
     })
 }
 
@@ -150,10 +153,9 @@ function setChangeHandlers(cur) {
 }
 
 function commitChanges(changes){
-    console.log("push")
     return async function(){
-        console.log(changes)
         await postLimitsChange(changes)
+        loadLimits()
     }
 }
 
@@ -164,7 +166,6 @@ function checkLimitsChange() {
         const valEl = document.getElementById(cur + "-value");
         const spanEl = document.getElementById(cur + "-span");
         if (!(valEl.value == ol.limit_info.limit.amount && spanEl.value == ol.limit_info.limit.span)){
-            console.log("changed")
             changes.push({
                 currency: ol.currency,
                 limit: {
@@ -174,7 +175,6 @@ function checkLimitsChange() {
             })
         }
     })
-    console.log(changes.length)
     if (changes.length !== 0) {
         const commitBtn = document.getElementById("commit-limits-btn");
         commitBtn.style.display = 'inline-flex'

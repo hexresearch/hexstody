@@ -15,7 +15,7 @@ use std::{path::PathBuf, str, sync::Arc};
 use tokio::sync::{mpsc, Mutex, Notify};
 
 use hexstody_api::types::{
-    ConfirmationData, SignatureData, WithdrawalRequest, WithdrawalRequestInfo, WithdrawalRequestDecisionType, HotBalanceResponse, Invite, InviteRequest, InviteResp
+    ConfirmationData, SignatureData, WithdrawalRequest, WithdrawalRequestInfo, WithdrawalRequestDecisionType, HotBalanceResponse, Invite, InviteRequest, InviteResp, LimitChangeData
 };
 use hexstody_btc_client::client::BtcClient;
 use hexstody_db::{
@@ -207,6 +207,16 @@ async fn list_ops_invites(
     }).collect();
     Ok(Json(invites))
 }
+
+// #[openapi(skip)]
+// #[get("/changes")]
+// async fn get_all_changes(
+//     state: &RocketState<Arc<Mutex<HexstodyState>>>,
+//     config: &RocketState<Config>,
+//     signature_data: SignatureData,
+// ) -> Result<Json<Vec<LimitChangeData>>>{
+
+// }
 
 pub async fn serve_api(
     pool: Pool,
