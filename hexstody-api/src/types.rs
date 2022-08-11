@@ -642,18 +642,6 @@ pub struct LimitChangeReq{
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
-pub struct LimitChangeData{
-    pub id: Uuid,
-    pub user: String,
-    pub created_at: String,
-    pub status: LimitChangeStatus,
-    pub currency: Currency,
-    pub limit: Limit,
-    pub confirmations: Vec<SignatureData>,
-    pub rejections: Vec<SignatureData>
-}
-
-#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
 pub enum LimitChangeStatus{
     InProgress{confirmations: i16, rejections: i16},
     Completed,
@@ -661,7 +649,7 @@ pub enum LimitChangeStatus{
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
-pub struct LimitChangeRequest {
+pub struct LimitChangeResponse {
     pub id: Uuid,
     pub user: String,
     pub created_at: String,

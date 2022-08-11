@@ -3,7 +3,7 @@ use uuid::Uuid;
 use super::signup::UserId;
 
 use hexstody_api::domain::{Erc20Token, Currency};
-use hexstody_api::types::{Invite, Limit};
+use hexstody_api::types::{Invite, Limit, LimitChangeStatus, SignatureData};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub enum TokenAction {
@@ -40,4 +40,16 @@ pub struct LimitChangeUpd{
     pub user: String,
     pub currency: Currency,
     pub limit: Limit
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
+pub struct LimitChangeData{
+    pub id: Uuid,
+    pub user: String,
+    pub created_at: String,
+    pub status: LimitChangeStatus,
+    pub currency: Currency,
+    pub limit: Limit,
+    pub confirmations: Vec<SignatureData>,
+    pub rejections: Vec<SignatureData>
 }

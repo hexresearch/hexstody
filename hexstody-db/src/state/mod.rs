@@ -18,7 +18,7 @@ pub use user::*;
 pub use withdraw::*;
 
 use crate::update::withdrawal::{WithdrawCompleteInfo, WithdrawalRejectInfo};
-use crate::update::misc::{TokenUpdate, TokenAction, InviteRec, LimitCancelData, LimitChangeUpd};
+use crate::update::misc::{TokenUpdate, TokenAction, InviteRec, LimitCancelData, LimitChangeUpd, LimitChangeData};
 
 use super::update::btc::BtcTxCancel;
 use super::update::deposit::DepositAddress;
@@ -28,7 +28,7 @@ use super::update::withdrawal::{
 };
 use super::update::{results::UpdateResult, StateUpdate, UpdateBody};
 use hexstody_api::domain::*;
-use hexstody_api::types::{WithdrawalRequestDecisionType, Invite, LimitChangeData, LimitChangeStatus};
+use hexstody_api::types::{WithdrawalRequestDecisionType, Invite, LimitChangeStatus};
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct State {

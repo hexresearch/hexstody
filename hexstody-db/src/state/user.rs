@@ -1,12 +1,12 @@
 use super::transaction::*;
 use super::withdraw::*;
 use crate::update::btc::BtcTxCancel;
+use crate::update::misc::LimitChangeData;
 use crate::update::signup::{SignupAuth, SignupInfo, UserId};
 use chrono::prelude::*;
 use hexstody_api::domain::CurrencyTxId;
 use hexstody_api::domain::{Currency, CurrencyAddress};
 use hexstody_api::types::Invite;
-use hexstody_api::types::LimitChangeData;
 use hexstody_api::types::LimitInfo;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
