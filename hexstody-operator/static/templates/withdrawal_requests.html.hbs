@@ -21,7 +21,7 @@
                         {{truncate id 8}}
                     </span>
                     <button class="button clear icon-only">
-                        <img src="/images/copy.svg?size=18"></img>
+                        <img src="/images/copy.svg?size=18" class="icon-18px"></img>
                     </button>
                 </div>
             </td>
@@ -32,7 +32,7 @@
                         {{truncateMiddle (formatAddress address) 15}}
                     </span>
                     <button class="button clear icon-only">
-                        <img src="/images/copy.svg?size=18"></img>
+                        <img src="/images/copy.svg?size=18" class="icon-18px"></img>
                     </button>
                 </div>
             </td>
@@ -47,9 +47,11 @@
                     {{/if}}
                 </div>
             </td>
-            <td>
-                <button class="button primary" disabled="true">Confirm</button>
-                <button class="button error" disabled="true">Reject</button>
+            <td class="action-buttons-cell">
+                <div class="action-buttons-wrapper">
+                    <button class="button primary">Confirm</button>
+                    <button class="button error">Reject</button>
+                </div>
             </td>
         </tr>
         {{/each}}

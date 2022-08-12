@@ -30,6 +30,7 @@ use hexstody_db::{
     },
     Pool,
 };
+use hexstody_eth_client::client::EthClient;
 
 mod helpers;
 use helpers::*;
@@ -75,37 +76,82 @@ async fn get_required_confrimations(
 }
 
 /// # Hot wallet balance
-#[openapi(tag = "Hot balance")]
-#[get("/hotbalance")]
-async fn get_hot_balance(
+#[openapi(tag = "Hot wallet balance")]
+#[get("/hot-wallet-balance/<currency_name>")]
+async fn get_hot_wallet_balance(
     signature_data: SignatureData,
     config: &RocketState<Config>,
     btc_client: &RocketState<BtcClient>,
+    eth_client: &RocketState<EthClient>,
+    currency_name: &str,
 ) -> Result<Json<HotBalanceResponse>, (Status, &'static str)> {
-    guard_op_signature_nomsg(&config, uri!(get_hot_balance).to_string(), signature_data)?;
-    btc_client
-        .get_hot_balance()
-        .await
-        .map_err(|_| (Status::InternalServerError, "Internal server error"))
-        .map(|v| Json(v))
+    guard_op_signature_nomsg(
+        &config,
+        uri!(get_hot_wallet_balance(currency_name)).to_string(),
+        signature_data,
+    )?;
+    if currency_name == Currency::BTC.ticker_lowercase() {
+        btc_client
+            .get_hot_wallet_balance()
+            .await
+            .map_err(|_| (Status::InternalServerError, "Internal server error"))
+            .map(|v| Json(v))
+    } else if currency_name == Currency::ETH.ticker_lowercase() {
+        eth_client
+            .get_hot_wallet_balance(&Currency::ETH)
+            .await
+            .map_err(|_| (Status::InternalServerError, "Internal server error"))
+            .map(|v| Json(v))
+    } else if currency_name == Currency::usdt_erc20().ticker_lowercase() {
+        eth_client
+            .get_hot_wallet_balance(&Currency::usdt_erc20())
+            .await
+            .map_err(|_| (Status::InternalServerError, "Internal server error"))
+            .map(|v| Json(v))
+    } else if currency_name == Currency::crv_erc20().ticker_lowercase() {
+        eth_client
+            .get_hot_wallet_balance(&Currency::crv_erc20())
+            .await
+            .map_err(|_| (Status::InternalServerError, "Internal server error"))
+            .map(|v| Json(v))
+    } else if currency_name == Currency::gtech_erc20().ticker_lowercase() {
+        eth_client
+            .get_hot_wallet_balance(&Currency::gtech_erc20())
+            .await
+            .map_err(|_| (Status::InternalServerError, "Internal server error"))
+            .map(|v| Json(v))
+    } else {
+        Err((Status::BadRequest, "Unknown currency"))
+    }
 }
 
 /// # Get all withdrawal requests
 #[openapi(tag = "Withdrawal request")]
-#[get("/request")]
+#[get("/request/<currency_name>")]
 async fn list(
     state: &RocketState<Arc<Mutex<HexstodyState>>>,
     signature_data: SignatureData,
     config: &RocketState<Config>,
+    currency_name: &str,
 ) -> Result<Json<Vec<WithdrawalRequest>>, (Status, &'static str)> {
-    guard_op_signature_nomsg(&config, uri!(list).to_string(), signature_data)?;
+    guard_op_signature_nomsg(
+        &config,
+        uri!(list(currency_name)).to_string(),
+        signature_data,
+    )?;
     let hexstody_state = state.lock().await;
     let withdrawal_requests = Vec::from_iter(
         hexstody_state
             .withdrawal_requests()
             .values()
             .cloned()
-            .map(|x| x.into()),
+            .filter_map(|x| {
+                if x.address.currency().ticker_lowercase() == currency_name {
+                    Some(x.into())
+                } else {
+                    None
+                }
+            }),
     );
     Ok(Json(withdrawal_requests))
 }
@@ -279,6 +325,7 @@ pub async fn serve_api(
     start_notify: Arc<Notify>,
     update_sender: mpsc::Sender<StateUpdate>,
     btc_client: BtcClient,
+    eth_client: EthClient,
     api_config: Figment,
 ) -> Result<(), rocket::Error> {
     let on_ready = AdHoc::on_liftoff("API Start!", |_| {
@@ -297,7 +344,7 @@ pub async fn serve_api(
                 create,
                 confirm,
                 reject,
-                get_hot_balance,
+                get_hot_wallet_balance,
                 get_supported_currencies,
                 get_required_confrimations,
                 gen_invite,
@@ -315,6 +362,7 @@ pub async fn serve_api(
         .manage(pool)
         .manage(update_sender)
         .manage(btc_client)
+        .manage(eth_client)
         .attach(AdHoc::config::<Config>())
         .attach(Template::fairing())
         .attach(on_ready)

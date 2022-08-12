@@ -1,4 +1,4 @@
-import { loadTemplate } from "./common.js";
+import { loadTemplate, formattedCurrencyValue } from "./common.js";
 
 const fileSelector = document.getElementById("keyfile-input");
 const fileSelectorStatus = document.getElementById("keyfile-input-status");
@@ -181,10 +181,10 @@ async function getRequiredConfirmations() {
 async function loadHotWalletBalance(currency) {
     const hotWalletBalanceWrapper = document.getElementById("hot-wallet-balance-wrapper");
     const hotBalanceTemplate = await loadTemplate("/templates/hot_balance.html.hbs");
-    const response = await makeSignedRequest(null, "hotbalance", "GET");
+    const response = await makeSignedRequest(null, `hot-wallet-balance/${currency.toLowerCase()}`, "GET");
     if (response.ok) {
         let data = await response.json();
-        let value = data.balance / 100000000;
+        let value = formattedCurrencyValue(currency, data.balance);
         const context = { balance: value, units: currency };
         const hotBalanceHTML = hotBalanceTemplate(context);
         hotWalletBalanceWrapper.innerHTML = hotBalanceHTML;
@@ -193,21 +193,37 @@ async function loadHotWalletBalance(currency) {
     }
 }
 
+async function confirmRequest(confirmationData, currency) {
+    const response = await makeSignedRequest(confirmationData, 'confirm', 'POST');
+    if (response.ok) {
+        await loadWithdrawalRequests(currency);
+    } else {
+        alert("Error: " + response.text);
+    };
+}
+
+async function rejectRequest(confirmationData, currency) {
+    const response = await makeSignedRequest(confirmationData, 'reject', 'POST');
+    if (response.ok) {
+        await loadWithdrawalRequests(currency);
+    } else {
+        alert("Error: " + response.text);
+    };
+}
+
 // Adds tooltips, enables copy buttons
-function prettifyWithdrawalRequestsTable(withdrawalRequests) {
+function prettifyWithdrawalRequestsTable(withdrawalRequests, currency) {
     const withdrawalRequestElements = document.getElementsByClassName("withdrawal-request-row");
-    let withdrawalRequestElement;
-    let withdrawalRequestIdElement;
     for (let i = 0; i < withdrawalRequestElements.length; i++) {
-        withdrawalRequestElement = withdrawalRequestElements[i];
+        let withdrawalRequestElement = withdrawalRequestElements[i];
 
         // Add tooltips and enable copy button to withdrawal request ID
-        withdrawalRequestIdElement = withdrawalRequestElement.getElementsByClassName("id-cell")[0];
-        withdrawalRequestIdTextElement = withdrawalRequestIdElement.getElementsByTagName("span")[0];
+        let withdrawalRequestIdElement = withdrawalRequestElement.getElementsByClassName("id-cell")[0];
+        let withdrawalRequestIdTextElement = withdrawalRequestIdElement.getElementsByTagName("span")[0];
         tippy(withdrawalRequestIdTextElement, {
             content: withdrawalRequests[i].id,
         });
-        withdrawalRequestIdCopyBtnElement = withdrawalRequestIdElement.getElementsByTagName("button")[0];
+        let withdrawalRequestIdCopyBtnElement = withdrawalRequestIdElement.getElementsByTagName("button")[0];
         withdrawalRequestIdCopyBtnElement.addEventListener("click", () => {
             navigator.clipboard.writeText(withdrawalRequests[i].id).then(function () { }, function (err) {
                 console.error('Could not copy text: ', err);
@@ -225,13 +241,13 @@ function prettifyWithdrawalRequestsTable(withdrawalRequests) {
         });
 
         // Add tooltips and enable copy button to address
-        addressElement = withdrawalRequestElement.getElementsByClassName("address-cell")[0];
-        addressTextElement = addressElement.getElementsByTagName("span")[0];
+        let addressElement = withdrawalRequestElement.getElementsByClassName("address-cell")[0];
+        let addressTextElement = addressElement.getElementsByTagName("span")[0];
         tippy(addressTextElement, {
             content: addressToString(withdrawalRequests[i].address),
         });
 
-        addressCopyBtnElement = addressElement.getElementsByTagName("button")[0];
+        let addressCopyBtnElement = addressElement.getElementsByTagName("button")[0];
         addressCopyBtnElement.addEventListener("click", () => {
             navigator.clipboard.writeText(addressToString(withdrawalRequests[i].address)).then(function () { }, function (err) {
                 console.error('Could not copy text: ', err);
@@ -249,13 +265,29 @@ function prettifyWithdrawalRequestsTable(withdrawalRequests) {
         });
 
         // Add tooltip to explorer link if it exists
-        statusElement = withdrawalRequestElement.getElementsByClassName("status-cell")[0];
+        let statusElement = withdrawalRequestElement.getElementsByClassName("status-cell")[0];
         if (statusElement.getElementsByTagName("a").lengh > 0) {
             statusTxIdBtnElement = statusElement.getElementsByTagName("a")[0];
             tippy(statusTxIdBtnElement, {
                 content: "Link to the explorer",
             });
         }
+
+        // Add "Confirm" and "Reject" buttons
+        let actionButtonsElement = withdrawalRequestElement.getElementsByClassName("action-buttons-cell")[0];
+        let isDisabled = (withdrawalRequests[i].confirmation_status.type == "InProgress") ? false : true;
+        // Here we copy withdrawal_request and remove confirmation status feild
+        let confirmationData = (({ confirmation_status, ...o }) => o)(withdrawalRequests[i]);
+        let confirmBtn = actionButtonsElement.getElementsByTagName("button")[0];
+        confirmBtn.addEventListener("click", () => { confirmRequest(confirmationData, currency); });
+        if (isDisabled) {
+            confirmBtn.setAttribute("disabled", "true");
+        };
+        let rejectBtn = actionButtonsElement.getElementsByTagName("button")[1];
+        rejectBtn.addEventListener("click", () => { rejectRequest(confirmationData, currency); });
+        if (isDisabled) {
+            rejectBtn.setAttribute("disabled", "true");
+        };
     }
 }
 
@@ -305,7 +337,7 @@ async function loadWithdrawalRequestsTab(supportedCurrencies) {
 async function loadWithdrawalRequests(currency) {
     const withdrawalRequestsWrapper = document.getElementById("withdrawal-requests-wrapper");
     const withdrawalRequestsTemplate = await loadTemplate("/templates/withdrawal_requests.html.hbs");
-    const response = await makeSignedRequest(null, "request", 'GET');
+    const response = await makeSignedRequest(null, `request/${currency.toLowerCase()}`, 'GET');
     if (response.ok) {
         const withdrawalRequests = await response.json();
         const sortedWithdrawalRequests = withdrawalRequests.sort((a, b) => {
@@ -317,7 +349,7 @@ async function loadWithdrawalRequests(currency) {
         const context = { withdrawalRequests: sortedWithdrawalRequests, requiredConfirmations: totatlRequiredConfirmations };
         const withdrawalRequestsHTML = withdrawalRequestsTemplate(context);
         withdrawalRequestsWrapper.innerHTML = withdrawalRequestsHTML;
-        prettifyWithdrawalRequestsTable(sortedWithdrawalRequests);
+        prettifyWithdrawalRequestsTable(sortedWithdrawalRequests, currency);
     } else {
         alert("Error: " + response.text);
     }
@@ -339,63 +371,6 @@ function clearAuthorizedWrapper() {
     authorizedInfoWrapper.innerHTML = "";
 }
 
-async function confirmRequest(confirmationData) {
-    const response = await makeSignedRequest(confirmationData, 'confirm', 'POST');
-    if (response.ok) {
-        await loadWithdrawalRequests();
-    } else {
-        alert("Error: " + response.text);
-    };
-}
-
-async function rejectRequest(confirmationData) {
-    const response = await makeSignedRequest(confirmationData, 'reject', 'POST');
-    if (response.ok) {
-        await loadWithdrawalRequests();
-    } else {
-        alert("Error: " + response.text);
-    };
-}
-
-function addActionBtns(row, withdrawalRequest, requestStatus) {
-    // Here we copy withdrawal_request and remove confirmation status feild
-    let confirmationData = (({ confirmation_status, ...o }) => o)(withdrawalRequest);
-
-    let disabled = (requestStatus == "InProgress") ? false : true;
-    let cell = document.createElement("td");
-    let btnRow = document.createElement("div");
-    btnRow.setAttribute("class", "row pull-left");
-
-    let confirmBtnCol = document.createElement("div");
-    confirmBtnCol.setAttribute("class", "col");
-    let confirmBtn = document.createElement("button");
-    confirmBtn.addEventListener("click", () => { confirmRequest(confirmationData); });
-    let confirmBtnText = document.createTextNode("Confirm")
-    confirmBtn.appendChild(confirmBtnText);
-    confirmBtn.setAttribute("class", "button primary");
-    if (disabled) {
-        confirmBtn.setAttribute("disabled", "true");
-    };
-    confirmBtnCol.appendChild(confirmBtn);
-    btnRow.appendChild(confirmBtnCol);
-
-    let rejectBtnCol = document.createElement("div");
-    rejectBtnCol.setAttribute("class", "col");
-    let rejectBtn = document.createElement("button");
-    rejectBtn.addEventListener("click", () => { rejectRequest(confirmationData); });
-    let rejectBtnText = document.createTextNode("Reject")
-    rejectBtn.appendChild(rejectBtnText);
-    rejectBtn.setAttribute("class", "button error");
-    if (disabled) {
-        rejectBtn.setAttribute("disabled", "true");
-    };
-    rejectBtnCol.appendChild(rejectBtn);
-    btnRow.appendChild(rejectBtnCol);
-
-    cell.appendChild(btnRow);
-    row.appendChild(cell);
-}
-
 async function getInvite(body) {
     return await makeSignedRequest(body, "invite/generate", "POST");
 };
@@ -406,13 +381,8 @@ async function getMyInvites() {
 
 function mkCopyBtn(parent, value) {
     const copyBtn = document.createElement("button");
-    const spn = document.createElement("span");
-    const i = document.createElement("i");
-    i.classList.add("mdi", "mdi-content-copy");
-    spn.classList.add("icon");
-    copyBtn.classList.add("button", "is-h3", "is-ghost", "font-gray");
-    spn.appendChild(i);
-    copyBtn.appendChild(spn);
+    copyBtn.classList.add("button", "clear", "icon-only");
+    copyBtn.innerHTML = `<img src="/images/copy.svg?size=18" class="icon-18px"></img>`;
     parent.appendChild(copyBtn);
     copyBtn.addEventListener("click", () => {
         navigator.clipboard.writeText(value).then(function () { }, function (err) {
@@ -431,31 +401,36 @@ function mkCopyBtn(parent, value) {
     });
 }
 
-function renderError(parent, errMsg) {
-    const errNode = document.createElement("h3");
-    errNode.classList.add("text-error");
-    errNode.innerHTML = "Error! " + errMsg;
-    parent.append(errNode);
+function clearError(errorContainer) {
+    errorContainer.innerHTML = "";
+}
+
+function renderError(errorContainer, errMsg) {
+    errorContainer.innerHTML = `<p>${errMsg}</p>`;
 }
 
 async function genInvite() {
     const inviteLabelField = document.getElementById("invite-label");
     const inviteDisplay = document.getElementById("invite-display");
-    inviteDisplay.style.display = 'flex';
+    const inviteError = document.getElementById("invite-error");
     const label = inviteLabelField.value;
     if (!label) {
-        renderError(inviteDisplay, "Label should be non-empty!")
+        renderError(inviteError, "Label field is required");
+        inviteDisplay.style.display = 'none';
     } else {
+        clearError(inviteError);
         const body = { label: label }
         const inviteResp = await getInvite(body)
         if (inviteResp.ok) {
             let invite = await inviteResp.json();
             const invitesListTemplate = await loadTemplate("/templates/inviteslist.html.hbs");
             const invitesHTML = invitesListTemplate({ invites: [invite], isList: false });
+            inviteDisplay.style.display = 'block';
             inviteDisplay.innerHTML = invitesHTML;
-            mkCopyBtn(inviteDisplay, invite.invite.invite);
+            const copyBtnParent = inviteDisplay.querySelector(".invite-display");
+            mkCopyBtn(copyBtnParent, invite.invite.invite);
         } else {
-            renderError(inviteDisplay, JSON.stringify(inviteResp));
+            renderError(inviteError, `Failed do generate an invite: ${JSON.stringify(inviteResp)}`);
         }
     }
 }
@@ -471,10 +446,10 @@ async function listInvites() {
         const inviteDisplays = invitesListBody.querySelectorAll(".invite-display");
         inviteDisplays.forEach(display => {
             const value = display.querySelector('.invite').innerHTML;
-            mkCopyBtn(display, value)
+            mkCopyBtn(display, value.trim())
         })
     } else {
-        const errMsg = document.createElement("h3");
+        const errMsg = document.createElement("p");
         errMsg.classList.add("text-error");
         errMsg.innerHTML = "Error: " + invitesResp.status + ": " + invitesResp.statusText;
         invitesListBody.innerHTML = "";

@@ -1,4 +1,9 @@
-use hexstody_api::{domain::Erc20Token, types::UserEth};
+use hexstody_api::{
+    domain::{Currency, Erc20Token},
+    types::{
+        Erc20HotWalletBalanceResponse, EthHotWalletBalanceResponse, HotBalanceResponse, UserEth,
+    },
+};
 use log::*;
 use thiserror::Error;
 
@@ -8,6 +13,10 @@ pub enum Error {
     Reqwest(#[from] reqwest::Error),
     #[error("JSON encoding/decoding error: {0}")]
     Json(#[from] serde_json::Error),
+    #[error("Invalid currency: {0}")]
+    InvalidCurrency(Currency),
+    #[error("Currency not found: {0}")]
+    CurrencyNotFound(Currency),
 }
 
 /// Alias for a `Result` with the error type `self::Error`.
@@ -31,11 +40,7 @@ impl EthClient {
         let path = "/createuser";
         let endpoint = format!("{}{}/{}", self.server, path, user);
         let request = self.client.get(endpoint).build()?;
-        let response = self
-            .client
-            .execute(request)
-            .await?
-            .error_for_status()?;
+        let response = self.client.execute(request).await?.error_for_status()?;
         debug!("Response {path}: {:?}", response);
         Ok(())
     }
@@ -70,7 +75,7 @@ impl EthClient {
         Ok(serde_json::from_str(&response)?)
     }
 
-    pub async fn send_tx(&self, addr: &str, amount: &str) -> Result<()>{
+    pub async fn send_tx(&self, addr: &str, amount: &str) -> Result<()> {
         let path = "/sendtx";
         let endpoint = format!("{}{}/{}/{}", self.server, path, addr, amount);
         let request = self.client.get(endpoint).build()?;
@@ -85,9 +90,12 @@ impl EthClient {
         Ok(())
     }
 
-    pub async fn send_token_tx(&self, token: &Erc20Token, addr: &str, amount: &str) -> Result<()>{
+    pub async fn send_token_tx(&self, token: &Erc20Token, addr: &str, amount: &str) -> Result<()> {
         let path = "/sendtokentx";
-        let endpoint = format!("{}{}/{}/{}/{}", self.server, path, &token.contract, addr, amount);
+        let endpoint = format!(
+            "{}{}/{}/{}/{}",
+            self.server, path, &token.contract, addr, amount
+        );
         let request = self.client.get(endpoint).build()?;
         let response = self
             .client
@@ -104,12 +112,50 @@ impl EthClient {
         let path = "/removeuser";
         let endpoint = format!("{}{}/{}", self.server, path, user);
         let request = self.client.get(endpoint).build()?;
+        let response = self.client.execute(request).await?.error_for_status();
+        debug!("Response {path}: {:?}", response);
+        Ok(())
+    }
+
+    pub async fn get_hot_wallet_balance(&self, currency: &Currency) -> Result<HotBalanceResponse> {
+        let path = match currency {
+            Currency::ETH => "/totalethbalance",
+            Currency::ERC20(_) => "/totalerc20balance",
+            Currency::BTC => return Err(Error::InvalidCurrency(Currency::BTC)),
+        };
+        let endpoint = format!("{}{}", self.server, path);
+        let request = self.client.get(endpoint).build()?;
         let response = self
             .client
             .execute(request)
             .await?
-            .error_for_status();
+            .error_for_status()?
+            .text()
+            .await?;
         debug!("Response {path}: {:?}", response);
-        Ok(())
+        match currency {
+            Currency::ETH => {
+                let eth_balance: EthHotWalletBalanceResponse = serde_json::from_str(&response)?;
+                return Ok(HotBalanceResponse {
+                    balance: eth_balance.balance,
+                });
+            }
+            Currency::ERC20(token) => {
+                let erc20_balance: Erc20HotWalletBalanceResponse = serde_json::from_str(&response)?;
+                let result = erc20_balance
+                    .balance
+                    .into_iter()
+                    .find(|x| x.token_name == token.ticker);
+                match result {
+                    None => return Err(Error::CurrencyNotFound(currency.clone())),
+                    Some(b) => {
+                        return Ok(HotBalanceResponse {
+                            balance: b.token_balance,
+                        })
+                    }
+                };
+            }
+            Currency::BTC => return Err(Error::InvalidCurrency(Currency::BTC)),
+        };
     }
 }

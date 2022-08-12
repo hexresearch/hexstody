@@ -106,8 +106,8 @@ impl BtcClient {
         Ok(serde_json::from_str(&response)?)
     }
 
-    pub async fn get_hot_balance(&self) -> Result<HotBalanceResponse> {
-        let path = "/hotbalance";
+    pub async fn get_hot_wallet_balance(&self) -> Result<HotBalanceResponse> {
+        let path = "/hot-wallet-balance";
         let endpoint = format!("{}{}", self.server, path);
         let request = self.client.post(endpoint).build()?;
         let response = self

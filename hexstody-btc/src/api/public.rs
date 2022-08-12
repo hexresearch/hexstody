@@ -251,9 +251,9 @@ async fn withdraw_btc(
     }
 }
 
-#[openapi(tag = "hotbalance")]
-#[post("/hotbalance")]
-async fn get_hot_balance(client: &State<Client>) -> error::Result<HotBalanceResponse> {
+#[openapi(tag = "Hot wallet balance")]
+#[post("/hot-wallet-balance")]
+async fn get_hot_wallet_balance(client: &State<Client>) -> error::Result<HotBalanceResponse> {
     client
         .get_balance(None, None)
         .map_err(|e| {
@@ -382,7 +382,7 @@ pub async fn serve_public_api(
                 generate_blocks,
                 new_address,
                 send_to_address,
-                get_hot_balance,
+                get_hot_wallet_balance,
             ],
         )
         .mount(

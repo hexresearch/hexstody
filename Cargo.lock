@@ -1401,6 +1401,7 @@ dependencies = [
  "hexstody-btc-api",
  "hexstody-btc-client",
  "hexstody-db",
+ "hexstody-eth-client",
  "hexstody-sig",
  "log",
  "okapi",

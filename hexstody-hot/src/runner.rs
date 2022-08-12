@@ -216,6 +216,7 @@ async fn serve_api(
                     start_notify.clone(),
                     update_sender.clone(),
                     btc_client,
+                    eth_client,
                     api_config,
                 )
             })

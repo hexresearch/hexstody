@@ -1,14 +1,11 @@
-<div class="m-b-05em">
-    <h3>Invites</h3>
-    <div class="m-b-05em">
-        <label for="invite-label">Invite label:</label>
-        <input type="text" id="invite-label" name="invite-label">
-    </div>
-    <button id="gen-invite-btn">Generate an invite</button>
-    <div style="display: none;" id="invite-display" class="invite-display m-b-05em">
-    </div>
-    <button id="btn-list-invites">List my active invites</button>
-    <div id="invites-list">
-
-    </div>
+<div class="mb-1">
+    <label for="invite-label">Invite label:</label>
+    <input type="text" id="invite-label" name="invite-label">
+    <div id="invite-error" class="text-error"></div>
 </div>
+<div class="action-buttons-wrapper">
+    <button class="button" id="gen-invite-btn">Generate an invite</button>
+    <button class="button" id="btn-list-invites">List my active invites</button>
+</div>
+<div style="display: none;" id="invite-display"></div>
+<div id="invites-list"></div>
