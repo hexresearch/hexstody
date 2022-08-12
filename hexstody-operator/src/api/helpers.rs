@@ -1,7 +1,8 @@
 use hexstody_api::types::SignatureData;
+use hexstody_api::error;
 use hexstody_sig::SignatureVerificationData;
 use p256::PublicKey;
-use rocket::{http::Status, serde::json};
+use rocket::serde::json;
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize)]
@@ -15,8 +16,8 @@ pub fn guard_op_signature<T: Serialize>(
     config: &Config,
     uri: String,
     signature_data: SignatureData,
-    body: &T,
-) -> Result<(), (Status, &'static str)> {
+    body: &T
+) -> error::Result<()>{
     let url = [config.domain.clone(), uri].join("");
     let message = json::to_string(body).unwrap();
     let signature_verification_data = SignatureVerificationData {
@@ -28,7 +29,7 @@ pub fn guard_op_signature<T: Serialize>(
     };
     signature_verification_data
         .verify(config.operator_public_keys.clone())
-        .map_err(|_| (Status::Forbidden, "Signature verification failed"))
+        .map_err(|e| error::Error::SignatureError(format!("{:?}", e)).into())
 }
 
 /// Guard operator handle from non-authorized user. Special case for when request has no body attached
@@ -36,7 +37,7 @@ pub fn guard_op_signature_nomsg(
     config: &Config,
     uri: String,
     signature_data: SignatureData,
-) -> Result<(), (Status, &'static str)> {
+) -> error::Result<()>{
     let url = [config.domain.clone(), uri].join("");
     let signature_verification_data = SignatureVerificationData {
         url,
@@ -47,5 +48,5 @@ pub fn guard_op_signature_nomsg(
     };
     signature_verification_data
         .verify(config.operator_public_keys.clone())
-        .map_err(|_| (Status::Forbidden, "Signature verification failed"))
+        .map_err(|e| error::Error::SignatureError(format!("{:?}", e)).into())
 }

@@ -53,7 +53,15 @@ pub enum Error {
     #[error("Token action failed: {0}")]
     TokenActionFailed(String),
     #[error("Invite does not exist")]
-    InviteNotFound
+    InviteNotFound,
+    #[error("Signature error: {0}")]
+    SignatureError(String),
+    #[error("Internal server error: {0}")]
+    InternalServerError(String),
+    #[error("Error: {0}")]
+    GenericError(String),
+    #[error("Unknown currency: {0}")]
+    UnknownCurrency(String),
 }
 
 impl Error {
@@ -77,7 +85,11 @@ impl Error {
             Error::TokenAlreadyDisabled(_) => 15,
             Error::TokenNonZeroBalance(_) => 16,
             Error::TokenActionFailed(_) => 17,
-            Error::InviteNotFound => 18
+            Error::InviteNotFound => 18,
+            Error::SignatureError(_) => 19,
+            Error::InternalServerError(_) => 20,
+            Error::GenericError(_) => 21,
+            Error::UnknownCurrency(_) => 22,
         }
     }
 
@@ -95,13 +107,17 @@ impl Error {
             Error::NoUserCurrency(_) => Status::from_code(500).unwrap(),
             Error::FailedGenAddress(_) => Status::from_code(500).unwrap(),
             Error::FailedGetFee(_) => Status::from_code(500).unwrap(),
-            Error::InsufficientFunds(_) =>  Status::from_code(417).unwrap(),
+            Error::InsufficientFunds(_) => Status::from_code(417).unwrap(),
             Error::FailedETHConnection(_) => Status::from_code(500).unwrap(),
             Error::TokenAlreadyEnabled(_) => Status::from_code(500).unwrap(),
             Error::TokenAlreadyDisabled(_) => Status::from_code(500).unwrap(),
             Error::TokenNonZeroBalance(_) => Status::from_code(500).unwrap(),
             Error::TokenActionFailed(_) => Status::from_code(500).unwrap(),
             Error::InviteNotFound => Status::from_code(400).unwrap(),
+            Error::SignatureError(_) => Status::from_code(403).unwrap(),
+            Error::InternalServerError(_) => Status::from_code(500).unwrap(),
+            Error::GenericError(_) => Status::from_code(500).unwrap(),
+            Error::UnknownCurrency(_) => Status::from_code(400).unwrap()
         }
     }
 }
