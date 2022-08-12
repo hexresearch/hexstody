@@ -1,9 +1,8 @@
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 use super::signup::UserId;
 
-use hexstody_api::domain::{Erc20Token, Currency};
-use hexstody_api::types::{Invite, Limit, LimitChangeStatus, SignatureData};
+use hexstody_api::domain::Erc20Token;
+use hexstody_api::types::Invite;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub enum TokenAction {
@@ -26,30 +25,4 @@ pub struct InviteRec{
     pub invitor: String,
     /// Invite label
     pub label: String
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub struct LimitCancelData{
-    pub id: Uuid,
-    pub user: String,
-    pub currency: Currency
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub struct LimitChangeUpd{
-    pub user: String,
-    pub currency: Currency,
-    pub limit: Limit
-}
-
-#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
-pub struct LimitChangeData{
-    pub id: Uuid,
-    pub user: String,
-    pub created_at: String,
-    pub status: LimitChangeStatus,
-    pub currency: Currency,
-    pub limit: Limit,
-    pub confirmations: Vec<SignatureData>,
-    pub rejections: Vec<SignatureData>
 }

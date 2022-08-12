@@ -29,13 +29,13 @@
 </div>
 {{#each changes}}
 <div class="content-row mt-5 ticker-with-checkbox">
-    <span id="curr-name-{{limitsFormatName}}" class="item-val-bg mr-2em">
-        {{limitsFormatName}}
+    <span id="curr-name-{{changesFormatName}}" class="item-val-bg mr-2em">
+        {{changesFormatName}}
     </span>
     <div class="ticker-with-checkbox">
-    <span id="{{limitsFormatName}}-value" class="p-05em"> {{this.limit.amount}} </span>
+    <span id="{{changesFormatName}}-value" class="p-05em"> {{this.limit.amount}} </span>
     <span class="">per</span>
-    <span id="{{limitsFormatName}}-value" class="p-05em"> {{this.limit.span}} </span>
+    <span id="{{changesFormatName}}-value" class="p-05em"> {{this.limit.span}} </span>
     <span class="p-05em">Status:</span>
     <span class="p-05em mr-2em">{{changeStatus}}</span>
     <button id="{{this.id}}-btn" type="button" class="button is-danger deposit-button">Cancel request</button>

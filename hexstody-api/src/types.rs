@@ -653,7 +653,19 @@ pub struct LimitChangeResponse {
     pub id: Uuid,
     pub user: String,
     pub created_at: String,
-    pub request: LimitChangeReq,
+    pub currency: Currency,
+    pub limit: Limit,
+    pub status: LimitChangeStatus
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct LimitChangeOpResponse {
+    pub id: Uuid,
+    pub user: String,
+    pub created_at: String,
+    pub currency: Currency,
+    pub current_limit: Limit,
+    pub requested_limit: Limit,
     pub status: LimitChangeStatus
 }
 
@@ -676,4 +688,19 @@ impl Default for LimitInfo {
 pub struct LimitApiResp {
     pub limit_info: LimitInfo,
     pub currency: Currency
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct LimitConfirmationData {
+    pub id: Uuid,
+    pub user: String,
+    pub currency: Currency,
+    pub created_at: String,
+    pub requested_limit: Limit,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy)]
+pub enum LimitChangeDecisionType {
+    Confirm,
+    Reject,
 }

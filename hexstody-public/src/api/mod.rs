@@ -4,10 +4,9 @@ pub mod wallet;
 use auth::*;
 use figment::Figment;
 use hexstody_api::domain::Currency;
-use hexstody_api::types::{LimitApiResp, LimitChangeReq, LimitChangeData, LimitChangeResponse};
-use hexstody_db::update::misc::{LimitCancelData, LimitChangeUpd};
+use hexstody_api::types::{LimitApiResp, LimitChangeReq, LimitChangeResponse};
+use hexstody_db::update::limit::{LimitCancelData, LimitChangeUpd};
 use hexstody_eth_client::client::EthClient;
-use rocket::http::hyper::request;
 use serde_json::json;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -242,11 +241,7 @@ pub async fn get_user_limit_changes(
     state: &State<Arc<Mutex<DbState>>>,
 ) -> Result<Json<Vec<LimitChangeResponse>>, Redirect>{
     require_auth_user(cookies, state, |_, user| async move {
-        let changes = user.limit_change_requests.values().map(|v| {
-            let LimitChangeData{ id, user, created_at, status, currency, limit, .. } = v.clone();
-            let request = LimitChangeReq{currency, limit};
-            LimitChangeResponse{ id, user, created_at, request,status}
-        }).collect();
+        let changes = user.limit_change_requests.values().map(|v| { v.clone().into() }).collect();
         Ok(Json(changes))
     }).await.map_err(|_| goto_signin())
 }

@@ -93,6 +93,8 @@ async function initTemplates() {
     limitsTemplate = limitsTemp.value;
     Handlebars.registerHelper('tokenFormatName', function () { return this.token.ticker; });
     Handlebars.registerHelper('limitsFormatName', function () { return getCurName(this) });
+    Handlebars.registerHelper('changesFormatName', function () { return getCurName(this) });
+    Handlebars.registerHelper('changeStatus', function () { return renderChangeStatus(this.status) });
 }
 
 function setLimit(limit){
@@ -130,6 +132,7 @@ async function loadTokens() {
 async function loadLimits(){
     const limits = await getLimits();
     const changes = await getMyChanges();
+    console.log(changes)
     origLimits = limits;
     const limitsDrawUpdate = limitsTemplate({limits: limits, changes: changes});
     const limitsElem = document.getElementById("limits-tab-body");

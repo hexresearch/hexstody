@@ -1,7 +1,7 @@
 use super::transaction::*;
 use super::withdraw::*;
 use crate::update::btc::BtcTxCancel;
-use crate::update::misc::LimitChangeData;
+use crate::update::limit::LimitChangeData;
 use crate::update::signup::{SignupAuth, SignupInfo, UserId};
 use chrono::prelude::*;
 use hexstody_api::domain::CurrencyTxId;

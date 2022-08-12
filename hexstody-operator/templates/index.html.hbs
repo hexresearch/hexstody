@@ -21,18 +21,7 @@
 <div id="authed-body" style="display: none;">
 <div class="tabs is-large is-centered">
     <ul>
-        <li class="is-active" id="withdraw-tab" onclick="
-    (function(){
-    withdrawsTabBody = document.getElementById('withdraw-tab-body');
-    withdrawsTab = document.getElementById('withdraw-tab');
-    withdrawsTabBody.style.display = 'block';
-    withdrawsTab.classList.add('is-active');
-    invitesTabBody = document.getElementById('invites-tab-body');
-    invitesTab = document.getElementById('invites-tab');
-    invitesTabBody.style.display = 'none';
-    invitesTab.classList.remove('is-active');
-    })();
-    "> <a>Withdraws</a></li>
+        <li id="withdraw-tab"class="is-active"><a>Withdraws</a></li>
         <li id="invites-tab" class=""><a>Invites</a></li>
         <li id="changes-tab" class=""><a>Changes</a></li>
     </ul>
