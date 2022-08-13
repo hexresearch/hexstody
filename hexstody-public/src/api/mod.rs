@@ -190,7 +190,6 @@ pub async fn serve_api(
                 get_deposit_eth,
                 ticker,
                 get_user_data,
-                erc20_ticker,
                 ethfee,
                 btcfee,
                 get_history,

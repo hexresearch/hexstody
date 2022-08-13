@@ -102,7 +102,7 @@ async function updateBalanceAndFeeLoop() {
         if (balance.currency === "ETH") {
             const balanceEth = balance.value;
             const feeObj = await getEthFee();
-            const tikerObj = await getCourseForETH("ETH")
+            const tikerObj = await getCourse("ETH")
 
             ethBalanceEl.setAttribute("balance", balanceEth);
             const balToUSD = (tikerObj.USD * balanceEth / 100_000_000_000_000_0000).toFixed(2);
@@ -116,7 +116,7 @@ async function updateBalanceAndFeeLoop() {
         } else if (balance.currency === "BTC") {
             const feeObj = await getBtcFee();
             const balanceBtc = balance.value;
-            const tikerObj = await getCourseForETH("BTC");
+            const tikerObj = await getCourse("BTC");
 
             btcBalanceEl.setAttribute("balance", balanceBtc);
             const balToUSD = (tikerObj.USD * balanceBtc / 100_000_000_000).toFixed(2);
@@ -139,7 +139,7 @@ async function updateLoop() {
     updateLoop();
 }
 
-async function getCourseForETH(currency) {
+async function getCourse(currency) {
     return await fetch("/ticker",
         {
             method: "POST",

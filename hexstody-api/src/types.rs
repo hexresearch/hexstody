@@ -16,7 +16,7 @@ use rocket_okapi::{
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::domain::CurrencyTxId;
+use crate::domain::{CurrencyTxId, CurrencyCode};
 
 use super::domain::currency::{BtcAddress, Currency, CurrencyAddress, Erc20Token};
 
@@ -143,7 +143,7 @@ pub struct UserData{
 #[allow(non_snake_case)]
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct Erc20TokenBalance{
-    pub tokenName: String,
+    pub token: CurrencyCode,
     pub tokenBalance: String
 }
 

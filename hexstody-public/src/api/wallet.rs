@@ -1,6 +1,6 @@
 use super::auth::{require_auth, require_auth_user};
 use hexstody_api::domain::{
-    filter_tokens, BtcAddress, Currency, CurrencyAddress, CurrencyTxId, Erc20Token,
+    filter_tokens, BtcAddress, Currency, CurrencyAddress, CurrencyTxId, Erc20Token, CurrencyCode,
 };
 use hexstody_api::error;
 use hexstody_api::types::{self as api, GetTokensResponse, TokenActionRequest, TokenInfo};
@@ -46,7 +46,7 @@ pub async fn get_balance(
                     }
                     Currency::ERC20(token) => {
                         for tok in &user_data.data.balanceTokens {
-                            if tok.tokenName == token.ticker {
+                            if tok.token == token.ticker {
                                 bal = tok.tokenBalance.parse::<u64>().unwrap();
                             }
                         }
@@ -121,17 +121,12 @@ pub async fn get_deposit_eth(
 #[post("/ticker", data = "<currency>")]
 pub async fn ticker(
     cookies: &CookieJar<'_>,
-    currency: Json<Currency>,
+    currency: Json<CurrencyCode>,
 ) -> error::Result<Json<api::TickerETH>> {
     require_auth(cookies, |_| async move {
-        let currency_literal = match currency.0 {
-            Currency::BTC => "BTC",
-            Currency::ETH => "ETH",
-            _ => todo!("ERC20"),
-        };
         let url = format!(
             "https://min-api.cryptocompare.com/data/price?fsym={}&tsyms=USD,RUB",
-            currency_literal
+            currency.to_string()
         );
         let tick_btc_str = reqwest::get(url).await.unwrap().text().await.unwrap();
         let ticker_btc: api::TickerETH = (serde_json::from_str(&tick_btc_str)).unwrap();
@@ -153,23 +148,6 @@ pub async fn get_user_data(
             .await
             .map_err(|e| error::Error::FailedETHConnection(e.to_string()).into())
             .map(|user_data| Json(user_data))
-    })
-    .await
-}
-
-#[openapi(tag = "wallet")]
-#[get("/erc20ticker/<token>")]
-pub async fn erc20_ticker(
-    cookies: &CookieJar<'_>,
-    token: &str,
-) -> error::Result<Json<api::TickerETH>> {
-    require_auth(cookies, |_| async move {
-        let url_req = "https://min-api.cryptocompare.com/data/price?fsym=".to_owned()
-            + token
-            + "&tsyms=USD,RUB";
-        let ticker_erc20_str = reqwest::get(url_req).await.unwrap().text().await.unwrap();
-        let ticker_erc20: api::TickerETH = (serde_json::from_str(&ticker_erc20_str)).unwrap();
-        Ok(Json(ticker_erc20))
     })
     .await
 }
@@ -295,7 +273,7 @@ pub async fn get_history_erc20(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
     eth_client: &State<EthClient>,
-    token: String,
+    token: CurrencyCode,
 ) -> error::Result<Json<Vec<api::Erc20HistUnitU>>> {
     require_auth_user(cookies, state, |_, user| async move {
         let user_data_resp = eth_client.get_user_data(&user.username).await;
@@ -360,8 +338,9 @@ pub async fn post_withdraw(
                 .await
                 .map_err(|_| error::Error::FailedGetFee(Currency::BTC))?
                 .fee_rate;
-            let required_amount = withdraw_request.amount + btc_fee_per_byte * BTC_BYTES_PER_TRANSACTION;
-            if  required_amount <= btc_balance {
+            let required_amount =
+                withdraw_request.amount + btc_fee_per_byte * BTC_BYTES_PER_TRANSACTION;
+            if required_amount <= btc_balance {
                 let withdrawal_request = WithdrawalRequestInfo {
                     id: Uuid::new_v4(),
                     user: user.username,
