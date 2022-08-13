@@ -5,14 +5,21 @@ const fileSelectorStatus = document.getElementById("file-selector-status");
 const withdrawalRequestsTableBody = document.getElementById("withdrawal-requests-table-body");
 const invitesTab = document.getElementById("invites-tab");
 const withdrawsTabBody = document.getElementById('withdraw-tab-body');
+const changesTab = document.getElementById('changes-tab');
+const changesTabBody = document.getElementById('changes-tab-body');
 const withdrawsTab = document.getElementById('withdraw-tab');
 const invitesTabBody = document.getElementById("invites-tab-body");
 const authedBody = document.getElementById("authed-body");
 
 let invitesTemplate = null;
 let invitesListTemplate = null;
+let changesTemplate = null;
 let privateKeyJwk;
 let publicKeyDer;
+
+async function getAllChanges(){
+    return await makeSignedRequest(null, "changes", "GET").then(r => r.json())
+}
 
 function hide_authed(){
     authedBody.style.display = "none";
@@ -22,7 +29,51 @@ function show_authed(){
     authedBody.style.display = "block";
 }
 
+function getCurName(currency){
+    if (currency == null) {
+        return "null"
+    } else if (typeof currency === 'object') {
+        return currency[Object.keys(currency)[0]].ticker
+    } else {
+        return currency
+    }
+}
+
+function renderChangeStatus(status){
+    switch (Object.keys(status)[0]) {
+        case "InProgress":
+            let body = status["InProgress"];
+            return "In progress (+" + body.confirmations + "/-" + body.rejections + " of 2)";
+        case "Confirmed":
+            return "Confirmed";
+        case "Rejected":
+            return "Rejected by operators";
+        default:
+            cellText = document.createTextNode("Unknown");
+    };
+}
+
+function renderLimit(limit){
+    return limit.amount + "/" + limit.span
+}
+
+function hideAllExcept(tab){
+    withdrawsTabBody.style.display = 'none';
+    invitesTabBody.style.display = 'none'
+    changesTabBody.style.display = 'none'
+    withdrawsTab.classList.remove('is-active');
+    invitesTab.classList.remove('is-active');
+    changesTab.classList.remove('is-active');
+
+    const tabEl = document.getElementById(tab + '-tab')
+    const bodyEl = document.getElementById(tab + '-tab-body')
+
+    tabEl.classList.add('is-active')
+    bodyEl.style.display = 'block'
+}
+
 async function importKey(_event) {
+    hide_authed()
     const keyObj = new window.jscu.Key('pem', this.result);
     if (keyObj.isEncrypted) {
         const password = window.prompt("Enter password");
@@ -422,30 +473,87 @@ async function listInvites(){
 
 }
 
+function loadWithdrawsTab(){
+    hideAllExcept("withdraw");
+}
+
 async function loadInvitesTab(){
     const inivitesDrawUpdate = invitesTemplate();
     invitesTabBody.innerHTML = inivitesDrawUpdate;
-
-    withdrawsTabBody.style.display = 'none';
-    withdrawsTab.classList.remove('is-active');
-    invitesTabBody.style.display = 'block';
-    invitesTab.classList.add('is-active');
-
+    hideAllExcept("invites");
     const genInviteBtn = document.getElementById("gen-invite-btn");
     const listInvitesBtn = document.getElementById("btn-list-invites");
     genInviteBtn.onclick = genInvite;
     listInvitesBtn.onclick = listInvites;
 }
 
+function handleConfirm(change){
+    return async function() {
+        const body = {
+            id: change.id,
+            user: change.user,
+            currency: change.currency,
+            created_at: change.created_at,
+            requested_limit: change.requested_limit,
+        };
+        await makeSignedRequest(body, "limits/confirm", "POST");
+        loadChangesTab()
+    }
+}
+
+function handleReject(change){
+    return async function() {
+        const body = {
+            id: change.id,
+            user: change.user,
+            currency: change.currency,
+            created_at: change.created_at,
+            requested_limit: change.requested_limit,
+        };
+        await makeSignedRequest(body, "limits/reject", "POST");
+        loadChangesTab()
+    }
+}
+
+async function loadChangesTab(){
+    const changes = await getAllChanges();
+    const changesDrawUpdate = changesTemplate({changes: changes});
+    changesTabBody.innerHTML = changesDrawUpdate;
+    hideAllExcept("changes");
+    changes.forEach(change => {
+        const confirmBtn = document.getElementById(change.id + "-confirm"); 
+        const rejectBtn = document.getElementById(change.id + "-reject"); 
+        const idSpan = document.getElementById(change.id + "-id");
+        tippy(idSpan, { content: change.id });
+        confirmBtn.onclick = handleConfirm(change);
+        rejectBtn.onclick = handleReject(change);
+    })
+}
+
 async function init(){
-    const [invitesTemp, invitesListTemp] = await Promise.allSettled([
+    const [invitesTemp, invitesListTemp, changesTemp] = await Promise.allSettled([
         await loadTemplate("/scripts/templates/invites.html.hbs"),
-        await loadTemplate("/scripts/templates/inviteslist.html.hbs")
+        await loadTemplate("/scripts/templates/inviteslist.html.hbs"),
+        await loadTemplate("/scripts/templates/changes.html.hbs")
     ]);
     invitesTemplate = invitesTemp.value;
     invitesListTemplate = invitesListTemp.value;
+    changesTemplate = changesTemp.value;
     fileSelector.addEventListener('change', loadKeyFile);
     invitesTab.onclick = loadInvitesTab;
+    changesTab.onclick = loadChangesTab;
+    withdrawsTab.onclick = loadWithdrawsTab;
+    Handlebars.registerHelper('truncateChangeId', function(){ return truncate(this.id, 10)});
+    Handlebars.registerHelper('limitsFormatName', function () { return getCurName(this.currency) });
+    Handlebars.registerHelper('renderChangeStatus', function () { return renderChangeStatus(this.status) });
+    Handlebars.registerHelper('renderCurLimit', function () { return renderLimit(this.current_limit) });
+    Handlebars.registerHelper('renderNewLimit', function () { return renderLimit(this.requested_limit) });
+    Handlebars.registerHelper('renderTime', function() { 
+            const d = new Date(this.created_at); 
+            if (d instanceof Date && !isNaN(d)) {
+                return d.getDate() + "." + d.getMonth() + "." + d.getFullYear() + " " + d.toLocaleTimeString()
+            } else { return "Invalid time" }
+        })
 }
 
 document.addEventListener("DOMContentLoaded", init);

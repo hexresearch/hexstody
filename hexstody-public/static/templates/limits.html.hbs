@@ -1,0 +1,43 @@
+<div class="margin-b-24px">
+    <span class="font-mid-size font-dark-grey">Set up limits</span>
+</div>
+<div class="margin-b-24px">
+    <span class="font-small-size font-dark-grey">Enter the integer amount in minimal values, i.e. satoshis</span>
+</div>
+
+{{#each limits}}
+<div class="content-row mt-5 ticker-with-checkbox">
+    <span id="curr-name-{{limitsFormatName}}" class="item-val-bg mr-2em">
+        {{limitsFormatName}}
+    </span>
+    <div class="ticker-with-checkbox">
+    <input type="text" id="{{limitsFormatName}}-value" class="p-05em mr-2em">
+    <span class="mr-2em">per</span>
+    <select name="span" id="{{limitsFormatName}}-span" class="p-05em mr-2em">
+        <option value="Day">Day</option>
+        <option value="Week">Week</option>
+        <option value="Month">Month</option>
+    </select>
+    </div>
+</div>
+{{/each}}
+<button id="commit-limits-btn" type="button" style="display: none" class="button is-primary deposit-button m-t-24px"> Commit changes </button>
+
+<div class="margin-b-24px m-t-24px">
+    <span class="font-mid-size font-dark-grey">My requested changes</span>
+</div>
+{{#each changes}}
+<div class="content-row mt-5 ticker-with-checkbox">
+    <span id="curr-name-{{changesFormatName}}" class="item-val-bg mr-2em">
+        {{changesFormatName}}
+    </span>
+    <div class="ticker-with-checkbox">
+    <span id="{{changesFormatName}}-value" class="p-05em"> {{this.limit.amount}} </span>
+    <span class="">per</span>
+    <span id="{{changesFormatName}}-value" class="p-05em"> {{this.limit.span}} </span>
+    <span class="p-05em">Status:</span>
+    <span class="p-05em mr-2em">{{changeStatus}}</span>
+    <button id="{{this.id}}-btn" type="button" class="button is-danger deposit-button">Cancel request</button>
+    </div>
+</div>
+{{/each}}

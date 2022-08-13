@@ -54,6 +54,10 @@ pub enum Error {
     TokenActionFailed(String),
     #[error("Invite does not exist")]
     InviteNotFound,
+    #[error("Limits are not changed by the update")]
+    LimitsNoChanges,
+    #[error("Limit change not found")]
+    LimChangeNotFound,
     #[error("Signature error: {0}")]
     SignatureError(String),
     #[error("Internal server error: {0}")]
@@ -84,9 +88,11 @@ impl Error {
             Error::TokenNonZeroBalance(_) => 16,
             Error::TokenActionFailed(_) => 17,
             Error::InviteNotFound => 18,
-            Error::SignatureError(_) => 19,
-            Error::InternalServerError(_) => 20,
-            Error::GenericError(_) => 21,
+            Error::LimitsNoChanges => 19,
+            Error::LimChangeNotFound => 20,
+            Error::SignatureError(_) => 21,
+            Error::InternalServerError(_) => 22,
+            Error::GenericError(_) => 23,
         }
     }
 
@@ -111,6 +117,8 @@ impl Error {
             Error::TokenNonZeroBalance(_) => Status::from_code(500).unwrap(),
             Error::TokenActionFailed(_) => Status::from_code(500).unwrap(),
             Error::InviteNotFound => Status::from_code(400).unwrap(),
+            Error::LimitsNoChanges => Status::from_code(500).unwrap(),
+            Error::LimChangeNotFound => Status::from_code(400).unwrap(),
             Error::SignatureError(_) => Status::from_code(403).unwrap(),
             Error::InternalServerError(_) => Status::from_code(500).unwrap(),
             Error::GenericError(_) => Status::from_code(500).unwrap(),

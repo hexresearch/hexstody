@@ -4,6 +4,7 @@ pub mod signup;
 pub mod withdrawal;
 pub mod results;
 pub mod misc;
+pub mod limit;
 
 use chrono::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -13,6 +14,7 @@ use thiserror::Error;
 
 use self::btc::{BestBtcBlock, BtcTxCancel};
 use self::deposit::DepositAddress;
+use self::limit::{LimitChangeUpd, LimitCancelData, LimitChangeDecision};
 use self::signup::SignupInfo;
 use self::withdrawal::{WithdrawalRequestDecisionInfo, WithdrawalRequestInfo, WithdrawCompleteInfo, WithdrawalRejectInfo};
 use self::misc::{InviteRec, TokenUpdate};
@@ -62,7 +64,13 @@ pub enum UpdateBody {
     /// Update token list
     UpdateTokens(TokenUpdate),
     /// Generate invite
-    GenInvite(InviteRec)
+    GenInvite(InviteRec),
+    /// Register limits change
+    LimitsChangeRequest(LimitChangeUpd),
+    /// Cancel limit change request
+    CancelLimitChange(LimitCancelData),
+    /// Limit change decision
+    LimitChangeDecision(LimitChangeDecision)
 }
 
 impl UpdateBody {
@@ -80,6 +88,9 @@ impl UpdateBody {
             UpdateBody::CancelBtcTx(_) => UpdateTag::CancelBtcTx,
             UpdateBody::UpdateTokens(_) => UpdateTag::UpdateTokens,
             UpdateBody::GenInvite(_) => UpdateTag::GenInvite,
+            UpdateBody::LimitsChangeRequest(_) => UpdateTag::LimitsChangeRequest,
+            UpdateBody::CancelLimitChange(_) => UpdateTag::CancelLimitChange,
+            UpdateBody::LimitChangeDecision(_) => UpdateTag::LimitChangeDecision,
         }
     }
 
@@ -97,6 +108,9 @@ impl UpdateBody {
             UpdateBody::CancelBtcTx(v) => serde_json::to_value(v),
             UpdateBody::UpdateTokens(v) => serde_json::to_value(v),
             UpdateBody::GenInvite(v) => serde_json::to_value(v),
+            UpdateBody::LimitsChangeRequest(v) => serde_json::to_value(v),
+            UpdateBody::CancelLimitChange(v) => serde_json::to_value(v),
+            UpdateBody::LimitChangeDecision(v) => serde_json::to_value(v),
         }
     }
 }
@@ -114,7 +128,10 @@ pub enum UpdateTag {
     UpdateBtcTx,
     CancelBtcTx,
     UpdateTokens,
-    GenInvite
+    GenInvite,
+    LimitsChangeRequest,
+    CancelLimitChange,
+    LimitChangeDecision,
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -143,6 +160,9 @@ impl fmt::Display for UpdateTag {
             UpdateTag::CancelBtcTx => write!(f, "cancel btc tx"),
             UpdateTag::UpdateTokens => write!(f, "update tokens"),
             UpdateTag::GenInvite => write!(f, "gen invite"),
+            UpdateTag::LimitsChangeRequest => write!(f, "limits change req"),
+            UpdateTag::CancelLimitChange => write!(f, "cancel limits change"),
+            UpdateTag::LimitChangeDecision => write!(f, "limit change decision")
         }
     }
 }
@@ -164,6 +184,9 @@ impl FromStr for UpdateTag {
             "cancel btc tx" => Ok(UpdateTag::CancelBtcTx),
             "update tokens" => Ok(UpdateTag::UpdateTokens),
             "gen invite" => Ok(UpdateTag::GenInvite),
+            "limits change req" => Ok(UpdateTag::LimitsChangeRequest),
+            "cancel limits change" => Ok(UpdateTag::CancelLimitChange),
+            "limit change decision" => Ok(UpdateTag::LimitChangeDecision),
             _ => Err(UnknownUpdateTag(s.to_owned())),
         }
     }
@@ -217,6 +240,9 @@ impl UpdateTag {
             UpdateTag::CancelBtcTx => Ok(UpdateBody::CancelBtcTx(serde_json::from_value(value)?)),
             UpdateTag::UpdateTokens => Ok(UpdateBody::UpdateTokens(serde_json::from_value(value)?)),
             UpdateTag::GenInvite => Ok(UpdateBody::GenInvite(serde_json::from_value(value)?)),
+            UpdateTag::LimitsChangeRequest => Ok(UpdateBody::LimitsChangeRequest(serde_json::from_value(value)?)),
+            UpdateTag::CancelLimitChange => Ok(UpdateBody::CancelLimitChange(serde_json::from_value(value)?)),
+            UpdateTag::LimitChangeDecision => Ok(UpdateBody::LimitChangeDecision(serde_json::from_value(value)?)),
         }
     }
 }

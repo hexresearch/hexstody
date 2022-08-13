@@ -3,13 +3,13 @@
 </div>
 {{#each tokens}}
 <div class="content-row mt-5 ticker-with-checkbox">
-    <span id="curr-name-{{formatCurrencyName}}" class="item-val-bg mr-2em">
-        {{formatCurrencyName}}
+    <span id="curr-name-{{tokenFormatName}}" class="item-val-bg mr-2em">
+        {{tokenFormatName}}
     </span>
     {{#if this.is_active}}
-        <input id="checkbox-{{formatCurrencyName}}" class="zoom-1-6" type="checkbox" checked>
+        <input id="checkbox-{{tokenFormatName}}" class="zoom-1-6" type="checkbox" checked>
     {{else}}
-        <input id="checkbox-{{formatCurrencyName}}" class="zoom-1-6" type="checkbox">
+        <input id="checkbox-{{tokenFormatName}}" class="zoom-1-6" type="checkbox">
     {{/if}}
 </div>
 {{/each}}

@@ -7929,8 +7929,21 @@ a.has-text-danger-dark:hover, a.has-text-danger-dark:focus {
   font-size: 28px;
   line-height: 36px; }
 
+.font-small-size {
+  font-weight: 300;
+  font-size: 14px;
+  line-height: 23px; }
+
 .margin-b-24px {
   margin-bottom: 24px; }
 
 .font-dark-grey {
   color: #77778C; }
+
+.p-05em{
+  padding: 0.5em;
+}
+
+.m-t-24px{
+  margin-top: 24px;
+}

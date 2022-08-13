@@ -13,15 +13,19 @@ use uuid::Uuid;
 use std::{path::PathBuf, sync::Arc};
 use tokio::sync::{mpsc, Mutex, Notify};
 
-use hexstody_api::{types::{
-    ConfirmationData, SignatureData, WithdrawalRequest, WithdrawalRequestInfo, WithdrawalRequestDecisionType, HotBalanceResponse, Invite, InviteRequest, InviteResp
-}, error};
+use hexstody_api::types::{
+    ConfirmationData, SignatureData, 
+    WithdrawalRequest, WithdrawalRequestInfo, 
+    WithdrawalRequestDecisionType, HotBalanceResponse, 
+    Invite, InviteRequest, InviteResp, LimitChangeOpResponse, LimitConfirmationData, LimitChangeDecisionType
+};
+use hexstody_api::error;
 use hexstody_btc_client::client::BtcClient;
 use hexstody_db::{
     state::State as HexstodyState,
     update::{withdrawal::{
         WithdrawalRequestInfo as WithdrawalRequestInfoDb,
-    }, misc::InviteRec},
+    }, misc::InviteRec, limit::LimitChangeData},
     update::{StateUpdate, UpdateBody},
     Pool,
 };
@@ -80,6 +84,24 @@ async fn list(
             .cloned()
             .map(|x| x.into()),
     );
+    // let adr = CurrencyAddress::BTC(hexstody_api::domain::BtcAddress{addr: "bc1q8xsxrzmkvlv7d742uqcztfq6qywesrqfwvd5jl".to_string()});
+    // let withdrawal_requests = vec![
+    //     WithdrawalRequest{ 
+    //         id: Uuid::new_v4(), 
+    //         user: "todo!()".to_string(), 
+    //         address: adr.clone(), 
+    //         created_at: "now".to_string(), 
+    //         amount: 12345678, 
+    //         confirmation_status: WithdrawalRequestStatus::InProgress { confirmations: 1 }
+    //     },
+    //     WithdrawalRequest{ 
+    //         id: Uuid::new_v4(), 
+    //         user: "todo!()".to_string(), 
+    //         address: adr.clone(), 
+    //         created_at: "now".to_string(), 
+    //         amount: 12345678, 
+    //         confirmation_status: WithdrawalRequestStatus::InProgress { confirmations: 2 }
+    //     }];
     Ok(Json(withdrawal_requests))
 }
 
@@ -205,6 +227,65 @@ async fn list_ops_invites(
     Ok(Json(invites))
 }
 
+#[openapi(skip)]
+#[get("/changes")]
+async fn get_all_changes(
+    state: &RocketState<Arc<Mutex<HexstodyState>>>,
+    config: &RocketState<Config>,
+    signature_data: SignatureData,
+) -> error::Result<Json<Vec<LimitChangeOpResponse>>>{
+    guard_op_signature_nomsg(&config, uri!(get_all_changes).to_string(), signature_data)?;
+    let hexstody_state = state.lock().await;
+    let changes = hexstody_state.users.values().into_iter()
+        .flat_map(|uinfo| uinfo.limit_change_requests.values().map(|req| {
+            let LimitChangeData{ id, user, created_at, status, currency, limit: requested_limit, .. } = req.clone();
+            let current_limit = uinfo.currencies.get(&currency).unwrap().limit_info.limit.clone();
+            LimitChangeOpResponse{ id, user, created_at, currency, current_limit, requested_limit, status}
+        }
+        )).collect();
+    Ok(Json(changes))
+}
+
+#[openapi(skip)]
+#[post("/limits/confirm", data="<confirmation_data>")]
+async fn confirm_limits(
+    update_sender: &RocketState<mpsc::Sender<StateUpdate>>,
+    signature_data: SignatureData,
+    confirmation_data: Json<LimitConfirmationData>,
+    config: &RocketState<Config>,
+) -> error::Result<()>{
+    let confirmation_data = confirmation_data.into_inner();
+    guard_op_signature(&config, uri!(confirm_limits).to_string(), signature_data, &confirmation_data)?;
+    let url = [config.domain.clone(), uri!(confirm_limits).to_string()].join("");
+    let state_update = StateUpdate::new(UpdateBody::LimitChangeDecision(
+        ( confirmation_data, signature_data, LimitChangeDecisionType::Confirm, url).into(),
+    ));
+    update_sender
+        .send(state_update)
+        .await
+        .map_err(|e| error::Error::InternalServerError(format!("{:?}", e)).into())
+}
+
+#[openapi(skip)]
+#[post("/limits/reject", data="<confirmation_data>")]
+async fn reject_limits(
+    update_sender: &RocketState<mpsc::Sender<StateUpdate>>,
+    signature_data: SignatureData,
+    confirmation_data: Json<LimitConfirmationData>,
+    config: &RocketState<Config>,
+) -> error::Result<()>{
+    let confirmation_data = confirmation_data.into_inner();
+    guard_op_signature(&config, uri!(reject_limits).to_string(), signature_data, &confirmation_data)?;
+    let url = [config.domain.clone(), uri!(reject_limits).to_string()].join("");
+    let state_update = StateUpdate::new(UpdateBody::LimitChangeDecision(
+        ( confirmation_data, signature_data, LimitChangeDecisionType::Reject, url).into(),
+    ));
+    update_sender
+        .send(state_update)
+        .await
+        .map_err(|e| error::Error::InternalServerError(format!("{:?}", e)).into())
+}
+
 pub async fn serve_api(
     pool: Pool,
     state: Arc<Mutex<HexstodyState>>,
@@ -230,7 +311,10 @@ pub async fn serve_api(
             reject, 
             get_hot_balance, 
             gen_invite,
-            list_ops_invites
+            list_ops_invites,
+            get_all_changes,
+            confirm_limits,
+            reject_limits
             ])
         .mount(
             "/swagger/",

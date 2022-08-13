@@ -3,20 +3,26 @@
 
 {{#*inline "scripts"}}
 <script type="module" src="/scripts/page/common.js"></script>
-<script type="module" src="/scripts/page/tokens.js"></script>
+<script type="module" src="/scripts/page/profile.js"></script>
 <script src="/scripts/handlebars.min-v4.7.7.js" defer></script>
 <script src="https://unpkg.com/@popperjs/core@2" defer></script>
 <script src="https://unpkg.com/tippy.js@6" defer></script>
 {{/inline}}
 
 {{#*inline "page"}}
+<div class="tabs is-large is-centered">
+    <ul>
+        {{#each tabs}}
+        <li id="{{this}}-tab"><a class="is-uppercase">{{this}}</a></li>
+        {{/each}}
+    </ul>
+</div>
+
 <div class="full-height" style="background-color: #ECEFF4;">
-
     <div class="container" style="padding-top: 25px;">
-
         <div class="box balance-box">
-            <div class="row is-center fit-content" id="tokens">
-            </div>
+            <div class="row is-center fit-content" id="tokens-tab-body"></div>
+            <div class="row is-center fit-content" id="limits-tab-body"></div>
         </div>
     </div>
 
