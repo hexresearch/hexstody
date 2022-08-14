@@ -47,6 +47,7 @@ pwhash = "1.0.0"
 ctrlc = "3.2.2"
 figment = { version = "0.10", features = ["toml", "env"] }
 p256 = { version = "0.11.1", features = ["serde"] }
+tokio-cron-scheduler = {version = "0.8.0", features = ["signal"]}
 
 [dev-dependencies]
 serial_test = "0.8.0"

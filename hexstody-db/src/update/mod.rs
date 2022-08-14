@@ -7,6 +7,7 @@ pub mod misc;
 pub mod limit;
 
 use chrono::prelude::*;
+use hexstody_api::types::LimitSpan;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::str::FromStr;
@@ -70,7 +71,9 @@ pub enum UpdateBody {
     /// Cancel limit change request
     CancelLimitChange(LimitCancelData),
     /// Limit change decision
-    LimitChangeDecision(LimitChangeDecision)
+    LimitChangeDecision(LimitChangeDecision),
+    /// Clear limits by span
+    ClearLimits(LimitSpan)
 }
 
 impl UpdateBody {
@@ -91,6 +94,7 @@ impl UpdateBody {
             UpdateBody::LimitsChangeRequest(_) => UpdateTag::LimitsChangeRequest,
             UpdateBody::CancelLimitChange(_) => UpdateTag::CancelLimitChange,
             UpdateBody::LimitChangeDecision(_) => UpdateTag::LimitChangeDecision,
+            UpdateBody::ClearLimits(_) => UpdateTag::ClearLimits,
         }
     }
 
@@ -111,6 +115,7 @@ impl UpdateBody {
             UpdateBody::LimitsChangeRequest(v) => serde_json::to_value(v),
             UpdateBody::CancelLimitChange(v) => serde_json::to_value(v),
             UpdateBody::LimitChangeDecision(v) => serde_json::to_value(v),
+            UpdateBody::ClearLimits(v) => serde_json::to_value(v),
         }
     }
 }
@@ -132,6 +137,7 @@ pub enum UpdateTag {
     LimitsChangeRequest,
     CancelLimitChange,
     LimitChangeDecision,
+    ClearLimits,
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -162,7 +168,8 @@ impl fmt::Display for UpdateTag {
             UpdateTag::GenInvite => write!(f, "gen invite"),
             UpdateTag::LimitsChangeRequest => write!(f, "limits change req"),
             UpdateTag::CancelLimitChange => write!(f, "cancel limits change"),
-            UpdateTag::LimitChangeDecision => write!(f, "limit change decision")
+            UpdateTag::LimitChangeDecision => write!(f, "limit change decision"),
+            UpdateTag::ClearLimits => write!(f, "clear limits")
         }
     }
 }
@@ -187,6 +194,7 @@ impl FromStr for UpdateTag {
             "limits change req" => Ok(UpdateTag::LimitsChangeRequest),
             "cancel limits change" => Ok(UpdateTag::CancelLimitChange),
             "limit change decision" => Ok(UpdateTag::LimitChangeDecision),
+            "clear limits" => Ok(UpdateTag::ClearLimits),
             _ => Err(UnknownUpdateTag(s.to_owned())),
         }
     }
@@ -243,6 +251,7 @@ impl UpdateTag {
             UpdateTag::LimitsChangeRequest => Ok(UpdateBody::LimitsChangeRequest(serde_json::from_value(value)?)),
             UpdateTag::CancelLimitChange => Ok(UpdateBody::CancelLimitChange(serde_json::from_value(value)?)),
             UpdateTag::LimitChangeDecision => Ok(UpdateBody::LimitChangeDecision(serde_json::from_value(value)?)),
+            UpdateTag::ClearLimits => Ok(UpdateBody::ClearLimits(serde_json::from_value(value)?)),
         }
     }
 }
