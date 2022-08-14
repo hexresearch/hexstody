@@ -1,34 +1,14 @@
 import {
     initTabs,
+    loadTemplate,
     formattedCurrencyValue,
-    formattedCurrencyValueFixed
+    formattedCurrencyValueFixed,
 }
     from "./common.js";
 
-
-
-const refreshInterval = 10000;
-
-const btcBalanceEl = document.getElementById("btc_balance");
-const ethBalanceEl = document.getElementById("eth_balance");
-
-const btcFeeEl = document.getElementById("btc_fee");
-const ethFeeEl = document.getElementById("eth_fee");
-
-const btcSendAmountEl = document.getElementById("btc_send_amount");
-const ethSendAmountEl = document.getElementById("eth_send_amount");
-
-const maxBtcAmountBtn = document.getElementById("max_btc");
-const maxEthAmountBtn = document.getElementById("max_eth");
-
-const sendBtcBtn = document.getElementById("send_btc");
-const sendEthBtn = document.getElementById("send_eth");
-
-const btcAddressEl = document.getElementById("btc_address");
-const ethAddressEl = document.getElementById("eth_address");
-
-const btcValidationDisplayEl = document.getElementById("btc_validation");
-const ethValidationDisplayEl = document.getElementById("eth_validation");
+const refreshInterval = 3000000;
+var selectedTab = "btc-tab"
+var withdrawTabTemplate = null;
 
 async function postWithdrawRequest(currency, address, amount) {
     let body;
@@ -59,33 +39,20 @@ async function trySubmit(currency, address, amount, validationDisplayEl) {
 
 async function init() {
     const tabs = ["btc-tab", "eth-tab"];
-    initTabs(tabs);
-    updateLoop();
-
     Handlebars.registerHelper('currencies', () => ["btc", "eth"]);
 
-    maxBtcAmountBtn.onclick = () => btcSendAmountEl.value =
-        Math.max(0, btcBalanceEl.getAttribute("balance") - btcFeeEl.getAttribute("fee"));
+    const [withdrawTabTemp] = await Promise.allSettled([
+        await loadTemplate("/templates/withdraw-tab.html.hbs")
+    ]);
 
-    maxEthAmountBtn.onclick = () => ethSendAmountEl.value =
-        Math.max(0, ethBalanceEl.getAttribute("balance") - ethFeeEl.getAttribute("fee"));
-
-    sendBtcBtn.onclick = () => trySubmit(
-        "BTC",
-        btcAddressEl.value,
-        Number(btcSendAmountEl.value),
-        btcValidationDisplayEl);
-
-    sendEthBtn.onclick = () => trySubmit(
-        "ETH",
-        ethAddressEl.value,
-        Number(ethSendAmountEl.value),
-        ethValidationDisplayEl);
+    withdrawTabTemplate = withdrawTabTemp.value;
+    initTabs(tabs, updateBalanceAndFeeLoop);
+    updateLoop();
 }
 
-async function getBalances() {
-    return await fetch("/balance").then(r => r.json());
-};
+async function getBalance(currency){
+    return await fetch("balance", {method: "POST", body: JSON.stringify(currency)}).then(r => r.json())
+}
 
 async function getEthFee() {
     return await fetch("/ethfee").then(r => r.json());
@@ -94,52 +61,125 @@ async function getBtcFee() {
     return await fetch("/btcfee").then(r => r.json());
 };
 
-async function updateBalanceAndFeeLoop() {
-
-    const balancesObj = await getBalances();
-
-    await balancesObj.balances.forEach(async balance => {
-        if (balance.currency === "ETH") {
-            const balanceEth = balance.value;
-            const feeObj = await getEthFee();
-            const tikerObj = await getCourseForETH("ETH")
-
-            ethBalanceEl.setAttribute("balance", balanceEth);
-            const balToUSD = (tikerObj.USD * balanceEth / 100_000_000_000_000_0000).toFixed(2);
-            const txtBal = `${formattedCurrencyValue("ETH", balanceEth)} ETH ($ ${balToUSD})`;
-            ethBalanceEl.textContent = txtBal;
-
-            ethFeeEl.setAttribute("fee", feeObj.FastGasPrice);
-            const feeToUSD = (tikerObj.USD * 21 * feeObj.FastGasPrice / 1000000).toFixed(2);
-            const txtFee = `${formattedCurrencyValueFixed("ETH", 210000 * feeObj.FastGasPrice * 1000000000, 5)} ETH ($ ${feeToUSD})`;
-            ethFeeEl.textContent = txtFee;
-        } else if (balance.currency === "BTC") {
-            const feeObj = await getBtcFee();
-            const balanceBtc = balance.value;
-            const tikerObj = await getCourseForETH("BTC");
-
-            btcBalanceEl.setAttribute("balance", balanceBtc);
-            const balToUSD = (tikerObj.USD * balanceBtc / 100_000_000_000).toFixed(2);
-            const txtBal = `${formattedCurrencyValue("BTC", balanceBtc)} BTC ($ ${balToUSD})`;
-            btcBalanceEl.textContent = txtBal;
-
-            btcFeeEl.setAttribute("fee", feeObj);
-            const feeToUSD = (tikerObj.USD * feeObj / 100_000_000_000).toFixed(2);
-            const txtFee = `${formattedCurrencyValueFixed("BTC", feeObj, 5)} BTC ($ ${feeToUSD})`;
-            btcFeeEl.textContent = txtFee;
-        }
-    });
+function calcAvailiableBalance(balanceObj){
+    const lim = balanceObj.limit_info.limit.amount;
+    const spent = balanceObj.limit_info.spent;
+    const value = balanceObj.value;
+    if (value < (lim - spent)) {
+        return value
+    } else {
+        return (lim - spent)
+    }
 }
 
+function btcToFiat(value, rate, decimals){
+    const val = (value * rate / 100_000_000);
+    if (decimals) {
+        return val.toFixed(decimals)
+    } else {
+        return val
+    }
+}
+
+function ethToFiat(value, rate, decimals){
+    const val = (value * rate / 100_000_000_000_000_0000);
+    if (decimals) {
+        return val.toFixed(decimals)
+    } else {
+        return val
+    }
+}
+
+async function updateBtcTab(){
+    const balanceObj = await getBalance("BTC");
+    const fee = await getBtcFee();
+    const balance = calcAvailiableBalance(balanceObj);
+    const tikerObj = await getCourseForCurrency("BTC");
+    const balToFiat = btcToFiat(balance, tikerObj.USD, 2);
+    const feeToFiat = btcToFiat(fee, tikerObj.USD, 2);
+    const limitAmount = btcToFiat(balanceObj.limit_info.limit.amount, 1);
+    const spentAmount = btcToFiat(balanceObj.limit_info.spent,1);
+    const limitToFiat = btcToFiat(balanceObj.limit_info.limit.amount, tikerObj.USD, 2);
+    const spentToFiat = btcToFiat(balanceObj.limit_info.spent, tikerObj.USD, 2);
+
+    let cfg = {
+        name: "btc",
+        balance: `${formattedCurrencyValue("BTC", balance)} BTC ($ ${balToFiat})`,
+        fee: `${formattedCurrencyValueFixed("BTC", fee, 5)} BTC ($ ${feeToFiat})`,
+        limit: `${limitAmount} BTC ($ ${limitToFiat})/${balanceObj.limit_info.limit.span}`,
+        spent: `${spentAmount} BTC ($ ${spentToFiat})`
+    }
+
+    const drawUpdate = withdrawTabTemplate(cfg);
+    const tabBody = document.getElementById('btc-tab-body');
+    tabBody.innerHTML = drawUpdate;
+
+    const maxBtcAmountBtn = document.getElementById("max_btc");
+    const sendBtcBtn = document.getElementById("send_btc");
+    const btcSendAmountEl = document.getElementById("btc_send_amount");
+    const btcValidationDisplayEl = document.getElementById("btc_validation");
+    const btcAddressEl = document.getElementById("btc_address");
+
+    maxBtcAmountBtn.onclick = () => btcSendAmountEl.value = Math.max(0, balance - fee);
+    sendBtcBtn.onclick = () => trySubmit(
+        "BTC",
+        btcAddressEl.value,
+        Number(btcSendAmountEl.value),
+        btcValidationDisplayEl);
+}
+
+async function updateEthTab(){
+    const balanceObj = await getBalance("ETH");
+    const balance = calcAvailiableBalance(balanceObj);
+    const feeObj = await getEthFee();
+    const tikerObj = await getCourseForCurrency("ETH")
+    const balToFiat = ethToFiat(balance, tikerObj.USD, 2);
+    const feeToFiat = (tikerObj.USD * 21 * feeObj.FastGasPrice / 1000000).toFixed(2);
+    const limitAmount = ethToFiat(balanceObj.limit_info.limit.amount, 1);
+    const spentAmount = ethToFiat(balanceObj.limit_info.spent,1);
+    const limitToFiat = ethToFiat(balanceObj.limit_info.limit.amount, tikerObj.USD, 2);
+    const spentToFiat = ethToFiat(balanceObj.limit_info.spent, tikerObj.USD, 2);
+
+    let cfg = {
+        name: "eth",
+        balance: `${formattedCurrencyValue("ETH", balance)} ETH ($ ${balToFiat})`,
+        fee: `${formattedCurrencyValueFixed("ETH", 210000 * feeObj.FastGasPrice * 1000000000, 5)} ETH ($ ${feeToFiat})`,
+        limit: `${limitAmount} ETH ($ ${limitToFiat})/${balanceObj.limit_info.limit.span}`,
+        spent: `${spentAmount} ETH ($ ${spentToFiat})`
+    }
+
+    const drawUpdate = withdrawTabTemplate(cfg);
+    const tabBody = document.getElementById('eth-tab-body');
+    tabBody.innerHTML = drawUpdate;
+    const maxEthAmountBtn = document.getElementById("max_eth");    
+    const ethSendAmountEl = document.getElementById("eth_send_amount");
+    const sendEthBtn = document.getElementById("send_eth");
+    const ethAddressEl = document.getElementById("eth_address");
+    const ethValidationDisplayEl = document.getElementById("eth_validation");
+
+    maxEthAmountBtn.onclick = () => ethSendAmountEl.value = Math.max(0, balance - feeObj.FastGasPrice);
+    sendEthBtn.onclick = () => trySubmit(
+        "ETH",
+        ethAddressEl.value,
+        Number(ethSendAmountEl.value),
+        ethValidationDisplayEl);
+}
+
+async function updateBalanceAndFeeLoop(clickedTabId) {
+    selectedTab = clickedTabId
+    switch (clickedTabId){
+        case "btc-tab": await updateBtcTab()
+        case "eth-tab": await updateEthTab()
+    } 
+}
 
 async function updateLoop() {
-    await Promise.allSettled([updateBalanceAndFeeLoop()]);
-    updateBalanceAndFeeLoop();
     await new Promise((resolve) => setTimeout(resolve, refreshInterval));
+    await updateBalanceAndFeeLoop(selectedTab);
     updateLoop();
 }
 
-async function getCourseForETH(currency) {
+async function getCourseForCurrency(currency) {
     return await fetch("/ticker",
         {
             method: "POST",

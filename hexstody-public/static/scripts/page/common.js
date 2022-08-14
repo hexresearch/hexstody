@@ -70,7 +70,7 @@ export function formattedElapsedTime(dateTimeString) {
     }
 }
 
-export function initTabs(tabIds) {
+export function initTabs(tabIds, hook) {
     function tabClicked(clickedTabId) {
         tabIds.forEach(tabId => {
             const validationDisplay = document.getElementById(tabId + "-body");
@@ -82,6 +82,9 @@ export function initTabs(tabIds) {
                 validationDisplay.style.display = "none";
             }
         });
+        if (typeof hook === 'function') {
+            hook(clickedTabId)
+        }
     }
     tabIds.forEach(tab => document.getElementById(tab).onclick = () => tabClicked(tab));
     tabClicked(tabIds[0]);

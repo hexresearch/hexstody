@@ -176,6 +176,7 @@ pub struct EthGasPrice {
 pub struct BalanceItem {
     pub currency: Currency,
     pub value: u64,
+    pub limit_info: LimitInfo
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]

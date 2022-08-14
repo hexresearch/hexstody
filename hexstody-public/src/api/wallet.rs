@@ -5,7 +5,7 @@ use hexstody_api::domain::{
     filter_tokens, BtcAddress, Currency, CurrencyAddress, CurrencyTxId, Erc20Token,
 };
 use hexstody_api::error;
-use hexstody_api::types::{self as api, GetTokensResponse, TokenActionRequest, TokenInfo};
+use hexstody_api::types::{self as api, GetTokensResponse, TokenActionRequest, TokenInfo, BalanceItem};
 use hexstody_btc_client::client::{BtcClient, BTC_BYTES_PER_TRANSACTION};
 use hexstody_db::state::State as DbState;
 use hexstody_db::state::{Transaction, WithdrawalRequest, REQUIRED_NUMBER_OF_CONFIRMATIONS};
@@ -57,6 +57,7 @@ pub async fn get_balance(
                 api::BalanceItem {
                     currency: cur.clone(),
                     value: bal,
+                    limit_info: info.limit_info.clone()
                 }
             })
             .collect();
@@ -64,6 +65,51 @@ pub async fn get_balance(
     })
     .await
 }
+
+#[openapi(tag="wallet")]
+#[post("/balance", data="<currency>")]
+pub async fn get_balance_by_currency(
+    cookies: &CookieJar<'_>,
+    state: &State<Arc<Mutex<DbState>>>,
+    eth_client: &State<EthClient>,
+    currency: Json<Currency>
+) -> error::Result<Json<api::BalanceItem>> {
+    let cur = currency.into_inner();
+    let currency = cur.clone();
+    let nofound_err = Err(error::Error::NoUserCurrency(cur.clone()).into());
+    let resp = require_auth_user(cookies, state, |_, user| async move {
+        match user.currencies.get(&cur) {
+            Some(info) => {
+                let limit_info = info.limit_info.clone();
+                if cur == Currency::BTC{
+                    return Ok((info.balance(), limit_info))
+                } else {
+                    let user_data_resp = eth_client.get_user_data(&user.username).await;
+                    if let Err(e) = user_data_resp {
+                        return Err(error::Error::FailedETHConnection(e.to_string()).into());
+                    };
+                    let user_data = user_data_resp.unwrap();
+                    match cur.clone() {
+                        Currency::BTC => return nofound_err, // this should not happen
+                        Currency::ETH => return Ok((user_data.data.balanceEth.parse().unwrap(), limit_info)),
+                        Currency::ERC20(token) => {
+                            for tok in user_data.data.balanceTokens{
+                                if tok.tokenName == token.ticker{
+                                    return Ok((tok.tokenBalance.parse::<u64>().unwrap(), limit_info))
+                                }
+                            }
+                            return nofound_err;
+                        },
+                    }
+                }
+            },
+            None => return nofound_err,
+        }
+    })
+    .await;
+    resp.map(|(value, limit_info)| Json(BalanceItem{currency, value, limit_info}))
+}
+
 
 #[openapi(tag = "wallet")]
 #[post("/deposit", data = "<currency>")]
