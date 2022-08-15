@@ -340,6 +340,11 @@ pub async fn run_hot_wallet(
         }    
     });
 
+    let cron_workers_hndl = tokio::spawn({
+        let update_sender = update_sender.clone();
+        async move { cron_workers(update_sender) }
+    });
+
     if let Err(Aborted) = serve_apis(
         pool,
         state_mx,
@@ -358,6 +363,7 @@ pub async fn run_hot_wallet(
         update_worker_hndl.abort();
         btc_worker_hndl.abort();
         update_response_hndl.abort();
+        cron_workers_hndl.abort();
         Err(Error::Aborted)
     } else {
         Ok(())

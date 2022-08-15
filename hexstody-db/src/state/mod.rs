@@ -10,12 +10,14 @@ use log::*;
 pub use network::*;
 use p256::PublicKey;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 use std::collections::HashMap;
 use thiserror::Error;
 pub use transaction::*;
 pub use user::*;
 pub use withdraw::*;
 
+use crate::update::limit::{LimitChangeData, LimitChangeUpd, LimitCancelData, LimitChangeDecision};
 use crate::update::withdrawal::{WithdrawCompleteInfo, WithdrawalRejectInfo};
 use crate::update::misc::{TokenUpdate, TokenAction, InviteRec};
 
@@ -27,7 +29,7 @@ use super::update::withdrawal::{
 };
 use super::update::{results::UpdateResult, StateUpdate, UpdateBody};
 use hexstody_api::domain::*;
-use hexstody_api::types::{WithdrawalRequestDecisionType, Invite};
+use hexstody_api::types::{WithdrawalRequestDecisionType, Invite, LimitChangeStatus, LimitChangeDecisionType, SignatureData, LimitInfo, LimitSpan};
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct State {
@@ -73,6 +75,16 @@ pub enum StateUpdateErr {
     InviteAlreadyExist,
     #[error("Invite is not valid")]
     InviteNotFound,
+    #[error("Limit request does not exist")]
+    LimitChangeNotFound,
+    #[error("Limit request already signed by the operator")]
+    LimitAlreadySigned,
+    #[error("Limit request already confirmed and finalized")]
+    LimitAlreadyConfirmed,
+    #[error("Limit request already rejected")]
+    LimitAlreadyRejected,
+    #[error("The spending is over the limit")]
+    LimitOverflow
 }
 
 impl State {
@@ -168,6 +180,26 @@ impl State {
                 self.last_changed = update.created;
                 Ok(None)
             },
+            UpdateBody::LimitsChangeRequest(req) => {
+                self.insert_limits_req(req)?;
+                self.last_changed = update.created;
+                Ok(None)
+            },
+            UpdateBody::CancelLimitChange(cancel_req) => {
+                self.cancel_limit_change(cancel_req)?;
+                self.last_changed = update.created;
+                Ok(None)
+            },
+            UpdateBody::LimitChangeDecision(limit_change_decision) => {
+                self.with_limit_change_decision(limit_change_decision)?;
+                self.last_changed = update.created;
+                Ok(None)
+            },
+            UpdateBody::ClearLimits(span) => {
+                self.clear_limits(span)?;
+                self.last_changed = update.created;
+                Ok(None)
+            },
         }
     }
 
@@ -202,6 +234,10 @@ impl State {
         if let Some(user) = self.users.get_mut(&withdrawal_request.user) {
             let currency = withdrawal_request.address.currency();
             if let Some(cur_info) = user.currencies.get_mut(&currency) {
+                if cur_info.limit_info.limit.amount < cur_info.limit_info.spent + withdrawal_request.amount {
+                    return Err(StateUpdateErr::LimitOverflow)
+                }
+                cur_info.limit_info.spent += withdrawal_request.amount;
                 cur_info
                     .withdrawal_requests
                     .insert(withdrawal_request_info.id, withdrawal_request);
@@ -536,6 +572,7 @@ impl State {
                                     Err(StateUpdateErr::TokenNonZeroBalance(token))
                                 } else {
                                     user_info.currencies.remove(&cur);
+                                    user_info.limit_change_requests.remove(&cur);
                                     Ok(())
                                 }
                             },
@@ -555,6 +592,108 @@ impl State {
             self.invites.insert(invite, invite_req);
             Ok(())
         }
+    }
+
+    fn insert_limits_req(&mut self, req: LimitChangeUpd) -> Result<(), StateUpdateErr> {
+        let cur = req.currency.clone();
+        match self.users.get_mut(&req.user){
+            Some(usr) => {
+                match usr.currencies.get_mut(&cur){
+                    None => Err(StateUpdateErr::UserMissingCurrency(req.user, cur)),
+                    Some(_) => {
+                        let data = LimitChangeData{
+                            id: Uuid::new_v4(),
+                            user: usr.username.clone(),
+                            created_at: chrono::offset::Utc::now().to_string(),
+                            status: LimitChangeStatus::InProgress { confirmations: 0, rejections: 0 },
+                            currency: cur.clone(),
+                            limit: req.limit,
+                            confirmations: vec![],
+                            rejections: vec![],
+                        };
+                        usr.limit_change_requests.insert(cur, data);
+                        Ok(())
+                    },
+                }
+            },
+            None => Err(StateUpdateErr::UserNotFound(req.user)),
+        }
+    }
+
+    fn cancel_limit_change(&mut self, cancel_req: LimitCancelData) -> Result<(), StateUpdateErr> {
+        let LimitCancelData { id: _, user, currency } = cancel_req;
+        match self.users.get_mut(&user){
+            Some(usr) => {
+                let _ = usr.limit_change_requests.remove(&currency);
+                Ok(())
+            },
+            None => Err(StateUpdateErr::UserNotFound(user)),
+        }
+    }
+
+    fn with_limit_change_decision(&mut self, lcd: LimitChangeDecision) -> Result<(), StateUpdateErr> {
+        match self.users.get_mut(&lcd.user){
+            Some(usr) => {
+                match usr.limit_change_requests.get_mut(&lcd.currency){
+                    Some(req) => {
+                        let sdata = SignatureData{ signature: lcd.signature, nonce: lcd.nonce, public_key: lcd.public_key };
+                        match req.status{
+                            LimitChangeStatus::Completed => Err(StateUpdateErr::LimitAlreadyConfirmed),
+                            LimitChangeStatus::Rejected => Err(StateUpdateErr::LimitAlreadyRejected),
+                            LimitChangeStatus::InProgress { confirmations, rejections } => match lcd.decision_type {
+                                LimitChangeDecisionType::Confirm => {
+                                    if req.has_confirmed(lcd.public_key){
+                                        Err(StateUpdateErr::LimitAlreadyConfirmed)
+                                    } else {
+                                        req.confirmations.push(sdata);
+                                        if confirmations + 1 - rejections >= 2 {
+                                            req.status = LimitChangeStatus::Completed;
+                                            if let Some(cinfo) = usr.currencies.get_mut(&lcd.currency) {
+                                                cinfo.limit_info = LimitInfo {
+                                                    limit: lcd.requested_limit.clone(),
+                                                    spent: 0,
+                                                } 
+                                            }
+                                            let _ = usr.limit_change_requests.remove(&lcd.currency);
+                                        } else {
+                                            req.status = LimitChangeStatus::InProgress { confirmations: confirmations + 1, rejections };
+                                        };
+                                        Ok(())
+                                    }
+                                },
+                                LimitChangeDecisionType::Reject => {
+                                    if req.has_rejected(lcd.public_key){
+                                        return Err(StateUpdateErr::LimitAlreadyConfirmed)
+                                    } else {
+                                        req.rejections.push(sdata);
+                                        if rejections + 1 - confirmations >= 2 {
+                                            req.status = LimitChangeStatus::Rejected;
+                                            let _ = usr.limit_change_requests.remove(&lcd.currency);
+                                        } else {
+                                            req.status = LimitChangeStatus::InProgress { confirmations, rejections: rejections + 1 };
+                                        };
+                                        Ok(())
+                                    }
+                                },
+                            }
+                        }
+                    },
+                    None => Err(StateUpdateErr::LimitChangeNotFound)
+                }
+            },
+            None => Err(StateUpdateErr::UserNotFound(lcd.user)),
+        }
+    }
+
+    fn clear_limits(&mut self, span: LimitSpan) -> Result<(), StateUpdateErr> {
+        for (_, uinfo) in self.users.iter_mut(){
+            for curinfo in uinfo.currencies.values_mut(){
+                if curinfo.limit_info.limit.span == span{
+                    curinfo.limit_info.spent = 0;
+                }
+            }
+        };
+        Ok(())
     }
 }
 

@@ -1,7 +1,7 @@
 use chrono::Utc;
 use hexstody_api::{
     domain::{BTCTxid, CurrencyTxId},
-    types::ConfirmedWithdrawal,
+    types::{ConfirmedWithdrawal, LimitSpan},
 };
 use hexstody_btc_api::events::*;
 use hexstody_btc_client::client::BtcClient;
@@ -19,6 +19,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::{mpsc, Mutex};
 use tokio::time::sleep;
+use tokio_cron_scheduler::*;
 
 pub async fn update_results_worker(
     btc_client: BtcClient,
@@ -148,4 +149,55 @@ pub async fn process_btc_events(
             }
         }
     }
+}
+
+pub async fn cron_workers(
+    update_sender: mpsc::Sender<StateUpdate>,
+) {
+    let mut sched = JobScheduler::new().await.expect("Failed to create scheduler");
+
+    sched.shutdown_on_ctrl_c();
+    sched.set_shutdown_handler(Box::new(|| {
+        Box::pin(async move {
+          println!("Shut down done");
+        })
+      }));
+
+    let send_daily = update_sender.clone();
+    let send_weekly = update_sender.clone();
+
+    let _daily_id = sched.add(Job::new_async("0 0 * * * *", move |_, _| {
+        let update_sender = send_daily.clone();
+        let upd = StateUpdate::new(UpdateBody::ClearLimits(LimitSpan::Day));
+        Box::pin(async move {
+            info!("Starting daily cleanup");
+            if let Err(e) = update_sender.send(upd.clone()).await{
+                error!("{:?}", e);
+            }
+        })
+    }).expect("Failed to create daily job"));
+
+    let _weekly_id = sched.add(Job::new_async("0 0 * * * 1", move |_, _| {
+        let update_sender = send_weekly.clone();
+        let upd = StateUpdate::new(UpdateBody::ClearLimits(LimitSpan::Week));
+        Box::pin(async move {
+            info!("Starting weekly cleanup");
+            if let Err(e) = update_sender.send(upd.clone()).await{
+                error!("{:?}", e);
+            }
+        })
+    }).expect("Failed to create weekly job"));
+
+    let _monthly_id = sched.add(Job::new_async("0 0 1 * * 0", move |_, _| {
+        let update_sender = update_sender.clone();
+        let upd = StateUpdate::new(UpdateBody::ClearLimits(LimitSpan::Month));
+        Box::pin(async move {
+            info!("Starting monthly cleanup");
+            if let Err(e) = update_sender.send(upd.clone()).await{
+                error!("{:?}", e);
+            }
+        })
+    }).expect("Failed to create monthly job"));
+    
+    sched.start().await.expect("Some error in scheduling");
 }
