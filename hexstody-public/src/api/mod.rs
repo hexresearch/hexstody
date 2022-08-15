@@ -299,6 +299,7 @@ pub async fn serve_api(
             openapi_get_routes![
                 ping,
                 get_balance,
+                get_balance_by_currency,
                 get_deposit,
                 get_deposit_eth,
                 ticker,

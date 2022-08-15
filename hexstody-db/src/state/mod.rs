@@ -29,7 +29,7 @@ use super::update::withdrawal::{
 };
 use super::update::{results::UpdateResult, StateUpdate, UpdateBody};
 use hexstody_api::domain::*;
-use hexstody_api::types::{WithdrawalRequestDecisionType, Invite, LimitChangeStatus, LimitChangeDecisionType, SignatureData, LimitInfo};
+use hexstody_api::types::{WithdrawalRequestDecisionType, Invite, LimitChangeStatus, LimitChangeDecisionType, SignatureData, LimitInfo, LimitSpan};
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct State {
@@ -82,7 +82,9 @@ pub enum StateUpdateErr {
     #[error("Limit request already confirmed and finalized")]
     LimitAlreadyConfirmed,
     #[error("Limit request already rejected")]
-    LimitAlreadyRejected
+    LimitAlreadyRejected,
+    #[error("The spending is over the limit")]
+    LimitOverflow
 }
 
 impl State {
@@ -193,6 +195,11 @@ impl State {
                 self.last_changed = update.created;
                 Ok(None)
             },
+            UpdateBody::ClearLimits(span) => {
+                self.clear_limits(span)?;
+                self.last_changed = update.created;
+                Ok(None)
+            },
         }
     }
 
@@ -227,6 +234,10 @@ impl State {
         if let Some(user) = self.users.get_mut(&withdrawal_request.user) {
             let currency = withdrawal_request.address.currency();
             if let Some(cur_info) = user.currencies.get_mut(&currency) {
+                if cur_info.limit_info.limit.amount < cur_info.limit_info.spent + withdrawal_request.amount {
+                    return Err(StateUpdateErr::LimitOverflow)
+                }
+                cur_info.limit_info.spent += withdrawal_request.amount;
                 cur_info
                     .withdrawal_requests
                     .insert(withdrawal_request_info.id, withdrawal_request);
@@ -672,6 +683,17 @@ impl State {
             },
             None => Err(StateUpdateErr::UserNotFound(lcd.user)),
         }
+    }
+
+    fn clear_limits(&mut self, span: LimitSpan) -> Result<(), StateUpdateErr> {
+        for (_, uinfo) in self.users.iter_mut(){
+            for curinfo in uinfo.currencies.values_mut(){
+                if curinfo.limit_info.limit.span == span{
+                    curinfo.limit_info.spent = 0;
+                }
+            }
+        };
+        Ok(())
     }
 }
 
