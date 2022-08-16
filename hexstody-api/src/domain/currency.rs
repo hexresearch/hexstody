@@ -1,7 +1,9 @@
 use bitcoin;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::{fmt, vec};
+use std::{collections::HashMap, fmt, vec};
+
+use crate::types::TokenInfo;
 
 /// A currency that custody understands. Can be extended in future.
 #[derive(
@@ -10,15 +12,44 @@ use std::{fmt, vec};
 pub enum Currency {
     BTC,
     ETH,
-    ERC20(Erc20Token),
+    USDT,
+    GTECH,
+    CRV,
 }
+
+const TOKEN_MAP: HashMap<Currency, Erc20Token> = HashMap::from([
+    (
+        Currency::USDT,
+        Erc20Token {
+            ticker: "USDT".to_string(),
+            name: "USDT".to_string(),
+            contract: "0xdAC17F958D2ee523a2206206994597C13D831ec7".to_string(),
+        },
+    ),
+    (
+        Currency::CRV,
+        Erc20Token {
+            ticker: "CRV".to_string(),
+            name: "CRV".to_string(),
+            contract: "0xD533a949740bb3306d119CC777fa900bA034cd52".to_string(),
+        },
+    ),
+    (
+        Currency::GTECH,
+        Erc20Token {
+            ticker: "GTECH".to_string(),
+            name: "GTECH".to_string(),
+            contract: "0xD533a949740bb3306d119CC777fa900bA034cd52".to_string(),
+        },
+    ),
+]);
 
 impl fmt::Display for Currency {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            c if c.is_token() => write!(f, "{} ERC-20", c),
             Currency::BTC => write!(f, "Bitcoin"),
             Currency::ETH => write!(f, "Ethereum"),
-            Currency::ERC20(token) => write!(f, "{} ERC-20", token),
         }
     }
 }
@@ -26,62 +57,55 @@ impl fmt::Display for Currency {
 impl Currency {
     /// List supported currencies at the moment
     pub fn supported() -> Vec<Currency> {
-        vec![Currency::BTC,
-             Currency::ETH,
-             Currency::ERC20(Erc20Token{ticker:"USDT".to_string()
-                                        ,name:"USDT".to_string()
-                                        ,contract:"0xdAC17F958D2ee523a2206206994597C13D831ec7".to_string()
-                                    }),
-             Currency::ERC20(Erc20Token{ticker:"CRV".to_string()
-                                        ,name:"CRV".to_string()
-                                        ,contract:"0xD533a949740bb3306d119CC777fa900bA034cd52".to_string()
-                                    }),
-             Currency::ERC20(Erc20Token{ticker:"GTECH".to_string()
-                                        ,name:"GTECH".to_string()
-                                        ,contract:"0xD533a949740bb3306d119CC777fa900bA034cd52".to_string()
-                                    })
-            ]
+        vec![
+            Currency::BTC,
+            Currency::ETH,
+            Currency::USDT,
+            Currency::CRV,
+            Currency::GTECH,
+        ]
     }
 
     /// Check if the currency is a token
     pub fn is_token(&self) -> bool {
         match self {
-            Currency::ERC20(_) => true,
+            Currency::USDT | Currency::GTECH | Currency::CRV => true,
             _ => false,
         }
     }
 
     pub fn supported_tokens() -> Vec<Erc20Token> {
-        Currency::supported().into_iter().filter_map(|c| match c {
-            Currency::ERC20(token) => Some(token),
-            _ => None
-        }).collect()
+        vec![
+            TOKEN_MAP.get(&Currency::USDT).unwrap().to_owned(),
+            TOKEN_MAP.get(&Currency::GTECH).unwrap().to_owned(),
+            TOKEN_MAP.get(&Currency::CRV).unwrap().to_owned(),
+        ]
     }
 
     pub fn default_tokens() -> Vec<Erc20Token> {
-        let supported_tickers = vec!["USDT".to_string(), "GTECH".to_string()];
-        Currency::supported().into_iter().filter_map(|c| match c {
-            Currency::ERC20(token) => if supported_tickers.contains(&token.ticker) {Some(token)} else {None},
-            _ => None
-        }).collect()
+        vec![
+            TOKEN_MAP.get(&Currency::USDT).unwrap().to_owned(),
+            TOKEN_MAP.get(&Currency::GTECH).unwrap().to_owned(),
+        ]
     }
 
     /// List of currencies active by default for a new user
     pub fn default_currencies() -> Vec<Currency> {
-        Currency::supported().into_iter().filter_map(|c| match c.clone() {
-            Currency::ERC20(token) => if token.ticker == "CRV" {None} else {Some(c)},
-            _ => Some(c)
-        }).collect()
+        vec![
+            Currency::BTC,
+            Currency::ETH,
+            Currency::USDT,
+            Currency::GTECH,
+        ]
     }
 }
 
 pub fn filter_tokens(curs: Vec<Currency>) -> Vec<Erc20Token> {
-    curs.into_iter().filter_map(|c| match c {
-        Currency::ERC20(token) => Some(token),
-        _ => None
-    }).collect()
+    curs.into_iter()
+        .filter_map(|c| TOKEN_MAP.get(&c))
+        .cloned()
+        .collect()
 }
-
 
 /// Description of ERC20 token that allows to distinguish them between each other
 #[derive(
@@ -220,6 +244,8 @@ impl fmt::Display for CurrencyTxId {
 
 impl From<bitcoin::Txid> for CurrencyTxId {
     fn from(txid: bitcoin::Txid) -> Self {
-        CurrencyTxId::BTC(BTCTxid { txid: txid.to_string() })
+        CurrencyTxId::BTC(BTCTxid {
+            txid: txid.to_string(),
+        })
     }
 }
