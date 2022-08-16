@@ -12,7 +12,7 @@
 {{#*inline "page"}}
 <div class="box balance-box">
     <div class="total-balance-title">
-        <span>Total Balance</span>
+        <span>{{lang.overview.totalbalance}}</span>
     </div>
     <div class="total-balance">
         <span id="total-balance-usd"></span><wbr><span id="total-balance-rub"></span>
@@ -21,12 +21,12 @@
     <div id="balances"></div>
 </div>
 <div class="box history-box">
-    <div class="history-header">Recent transactions</div>
+    <div class="history-header">{{lang.overview.recenttransactions}}</div>
     <div class="content-separator"></div>
     <div id="history-table">
     </div>
 </div>
-<button style="visibility: collapse" id="loadMore">LoadMore</button>
+<button style="visibility: collapse" id="loadMore">{{lang.overview.loadmore}}</button>
 {{/inline}}
 
 {{> base_with_header}}

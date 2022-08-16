@@ -6,9 +6,12 @@ import {
 }
     from "./common.js";
 
+import {localizeSpan} from "./localize.js";
+
 const refreshInterval = 3000000;
 var selectedTab = "btc-tab"
 var withdrawTabTemplate = null;
+var withdrawDict = null;
 
 async function postWithdrawRequest(currency, address, amount) {
     let body;
@@ -41,10 +44,12 @@ async function init() {
     const tabs = ["btc-tab", "eth-tab"];
     Handlebars.registerHelper('currencies', () => ["btc", "eth"]);
 
-    const [withdrawTabTemp] = await Promise.allSettled([
-        await loadTemplate("/templates/withdraw-tab.html.hbs")
+    const [withdrawTabTemp, withdrawDictTemp] = await Promise.allSettled([
+        await loadTemplate("/templates/withdraw-tab.html.hbs"),
+        await fetch("/lang/withdraw.json").then(r => r.json())
     ]);
 
+    withdrawDict = withdrawDictTemp.value;
     withdrawTabTemplate = withdrawTabTemp.value;
     initTabs(tabs, updateBalanceAndFeeLoop);
     updateLoop();
@@ -106,8 +111,9 @@ async function updateBtcTab(){
         name: "btc",
         balance: `${formattedCurrencyValue("BTC", balance)} BTC ($ ${balToFiat})`,
         fee: `${formattedCurrencyValueFixed("BTC", fee, 5)} BTC ($ ${feeToFiat})`,
-        limit: `${limitAmount} BTC ($ ${limitToFiat})/${balanceObj.limit_info.limit.span}`,
-        spent: `${spentAmount} BTC ($ ${spentToFiat})`
+        limit: `${limitAmount} BTC ($ ${limitToFiat})/${localizeSpan(balanceObj.limit_info.limit.span)}`,
+        spent: `${spentAmount} BTC ($ ${spentToFiat})`,
+        lang: withdrawDict
     }
 
     const drawUpdate = withdrawTabTemplate(cfg);
@@ -144,8 +150,9 @@ async function updateEthTab(){
         name: "eth",
         balance: `${formattedCurrencyValue("ETH", balance)} ETH ($ ${balToFiat})`,
         fee: `${formattedCurrencyValueFixed("ETH", 210000 * feeObj.FastGasPrice * 1000000000, 5)} ETH ($ ${feeToFiat})`,
-        limit: `${limitAmount} ETH ($ ${limitToFiat})/${balanceObj.limit_info.limit.span}`,
-        spent: `${spentAmount} ETH ($ ${spentToFiat})`
+        limit: `${limitAmount} ETH ($ ${limitToFiat})/${localizeSpan(balanceObj.limit_info.limit.span)}`,
+        spent: `${spentAmount} ETH ($ ${spentToFiat})`,
+        lang: withdrawDict
     }
 
     const drawUpdate = withdrawTabTemplate(cfg);
@@ -187,4 +194,4 @@ async function getCourseForCurrency(currency) {
         }).then(r => r.json());
 };
 
-document.addEventListener("DOMContentLoaded", init);
+document.addEventListener("headerLoaded", init);

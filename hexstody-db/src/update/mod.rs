@@ -18,7 +18,7 @@ use self::deposit::DepositAddress;
 use self::limit::{LimitChangeUpd, LimitCancelData, LimitChangeDecision};
 use self::signup::SignupInfo;
 use self::withdrawal::{WithdrawalRequestDecisionInfo, WithdrawalRequestInfo, WithdrawCompleteInfo, WithdrawalRejectInfo};
-use self::misc::{InviteRec, TokenUpdate};
+use self::misc::{InviteRec, TokenUpdate, SetLanguage};
 use super::state::transaction::BtcTransaction;
 use super::state::State;
 
@@ -73,7 +73,9 @@ pub enum UpdateBody {
     /// Limit change decision
     LimitChangeDecision(LimitChangeDecision),
     /// Clear limits by span
-    ClearLimits(LimitSpan)
+    ClearLimits(LimitSpan),
+    /// Set language
+    SetLanguage(SetLanguage)
 }
 
 impl UpdateBody {
@@ -95,6 +97,7 @@ impl UpdateBody {
             UpdateBody::CancelLimitChange(_) => UpdateTag::CancelLimitChange,
             UpdateBody::LimitChangeDecision(_) => UpdateTag::LimitChangeDecision,
             UpdateBody::ClearLimits(_) => UpdateTag::ClearLimits,
+            UpdateBody::SetLanguage(_) => UpdateTag::SetLanguage,
         }
     }
 
@@ -116,6 +119,7 @@ impl UpdateBody {
             UpdateBody::CancelLimitChange(v) => serde_json::to_value(v),
             UpdateBody::LimitChangeDecision(v) => serde_json::to_value(v),
             UpdateBody::ClearLimits(v) => serde_json::to_value(v),
+            UpdateBody::SetLanguage(v) => serde_json::to_value(v),
         }
     }
 }
@@ -138,6 +142,7 @@ pub enum UpdateTag {
     CancelLimitChange,
     LimitChangeDecision,
     ClearLimits,
+    SetLanguage,
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -169,7 +174,8 @@ impl fmt::Display for UpdateTag {
             UpdateTag::LimitsChangeRequest => write!(f, "limits change req"),
             UpdateTag::CancelLimitChange => write!(f, "cancel limits change"),
             UpdateTag::LimitChangeDecision => write!(f, "limit change decision"),
-            UpdateTag::ClearLimits => write!(f, "clear limits")
+            UpdateTag::ClearLimits => write!(f, "clear limits"),
+            UpdateTag::SetLanguage => write!(f, "set language"),
         }
     }
 }
@@ -195,6 +201,7 @@ impl FromStr for UpdateTag {
             "cancel limits change" => Ok(UpdateTag::CancelLimitChange),
             "limit change decision" => Ok(UpdateTag::LimitChangeDecision),
             "clear limits" => Ok(UpdateTag::ClearLimits),
+            "set language" => Ok(UpdateTag::SetLanguage),
             _ => Err(UnknownUpdateTag(s.to_owned())),
         }
     }
@@ -252,6 +259,7 @@ impl UpdateTag {
             UpdateTag::CancelLimitChange => Ok(UpdateBody::CancelLimitChange(serde_json::from_value(value)?)),
             UpdateTag::LimitChangeDecision => Ok(UpdateBody::LimitChangeDecision(serde_json::from_value(value)?)),
             UpdateTag::ClearLimits => Ok(UpdateBody::ClearLimits(serde_json::from_value(value)?)),
+            UpdateTag::SetLanguage => Ok(UpdateBody::SetLanguage(serde_json::from_value(value)?)),
         }
     }
 }

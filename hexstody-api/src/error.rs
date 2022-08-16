@@ -64,6 +64,8 @@ pub enum Error {
     InternalServerError(String),
     #[error("Error: {0}")]
     GenericError(String),
+    #[error("Language is not changed!")]
+    LangNotChanged
 }
 
 impl Error {
@@ -93,6 +95,7 @@ impl Error {
             Error::SignatureError(_) => 21,
             Error::InternalServerError(_) => 22,
             Error::GenericError(_) => 23,
+            Error::LangNotChanged => 24,
         }
     }
 
@@ -122,6 +125,7 @@ impl Error {
             Error::SignatureError(_) => Status::from_code(403).unwrap(),
             Error::InternalServerError(_) => Status::from_code(500).unwrap(),
             Error::GenericError(_) => Status::from_code(500).unwrap(),
+            Error::LangNotChanged => Status::from_code(400).unwrap(),
         }
     }
 }

@@ -2,45 +2,45 @@
     <div class='card-content'>
         <div class="columns is-center">
             <div class="column">
-                Available: <span id="{{name}}_balance">{{balance}}</span>
+                {{lang.avaliable}}: <span id="{{name}}_balance">{{balance}}</span>
             </div>
             <div class="column has-text-right">
-                Fee: <span id="{{name}}_fee">{{fee}}</span>
+                {{lang.fee}}: <span id="{{name}}_fee">{{fee}}</span>
             </div>
         </div>
         <div class="columns is-center">
             <div class="column">
-                Limit: <span id="{{name}}_limit">{{this.limit}}</span>
+                {{lang.limit}}: <span id="{{name}}_limit">{{this.limit}}</span>
             </div>
             <div class="column has-text-right">
-                Spent: <span id="{{name}}_spent">{{this.spent}}</span>
+                {{lang.spent}}: <span id="{{name}}_spent">{{this.spent}}</span>
             </div>
         </div>
         <div class="columns is-center">
-            <div class="column">
-                Address:
+            <div class="column is-3">
+                {{lang.address}}:
             </div>
-            <div class="column is-8">
+            <div class="column is-9">
                 <input class="input is-fullwidth" id="{{name}}_address" type="text">
             </div>
         </div>
         <div class="columns is-center">
-            <div class="column is-4">
-                Amount:
+            <div class="column is-3">
+                {{lang.amount}}:
             </div>
             <div class="column is-6">
                 <input class="input" id="{{name}}_send_amount" type="text">
             </div>
-            <div class="column">
+            <div class="column is-3">
                 <button id="max_{{name}}" type="button" class="button is-fullwidth">
-                    Max
+                    {{lang.max}}
                 </button>
             </div>
         </div>
         <div class="columns is-center">
             <div class="column">
                 <button id="send_{{name}}" type="button" class="button is-info is-fullwidth item-buttom-d">
-                    Send
+                    {{lang.send}}
                 </button>
             </div>
         </div>
