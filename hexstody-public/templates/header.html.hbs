@@ -6,7 +6,7 @@
         <div class="dropdown">
             <div class="dropdown-trigger">
                 <button class="button header-dropdown header-lang">
-                    <span>EN</span>
+                    <span id="lang-span">{{lang.lang}}</span>
                     <span class="icon">
                         <i class="mdi mdi-chevron-down"></i>
                     </span>
@@ -14,10 +14,10 @@
             </div>
             <div class="dropdown-menu">
                 <div class="dropdown-content">
-                    <a href="#" class="dropdown-item">
+                    <a id="lang-en" href="#" class="dropdown-item">
                         English
                     </a>
-                    <a href="#" class="dropdown-item">
+                    <a id="lang-ru" href="#" class="dropdown-item">
                         Русский
                     </a>
                 </div>
@@ -36,8 +36,16 @@
             </div>
             <div class="dropdown-menu">
                 <div class="dropdown-content">
+                    <a href="/overview" class="dropdown-item">
+                        {{lang.header.overview}}
+                    </a>
+                    <a href="/profile" class="dropdown-item">
+                        {{lang.header.profile}}
+                    </a>
+                </div>
+                <div class="dropdown-content">
                     <a href="/logout" class="dropdown-item" id="logout-btn">
-                        Logout
+                        {{lang.header.logout}}
                     </a>
                 </div>
             </div>

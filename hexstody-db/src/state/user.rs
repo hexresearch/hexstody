@@ -5,6 +5,7 @@ use crate::update::limit::LimitChangeData;
 use crate::update::signup::{SignupAuth, SignupInfo, UserId};
 use chrono::prelude::*;
 use hexstody_api::domain::CurrencyTxId;
+use hexstody_api::domain::Language;
 use hexstody_api::domain::{Currency, CurrencyAddress};
 use hexstody_api::types::Invite;
 use hexstody_api::types::LimitInfo;
@@ -29,7 +30,9 @@ pub struct UserInfo {
     /// Information for each currency
     pub currencies: HashMap<Currency, UserCurrencyInfo>,
     /// Limit change requests
-    pub limit_change_requests: HashMap<Currency, LimitChangeData>
+    pub limit_change_requests: HashMap<Currency, LimitChangeData>,
+    /// User's language
+    pub language: Language
 }
 
 impl UserInfo {
@@ -45,7 +48,8 @@ impl UserInfo {
                 .into_iter()
                 .map(|c| (c.clone(), UserCurrencyInfo::new(c)))
                 .collect(),
-            limit_change_requests: HashMap::new()
+            limit_change_requests: HashMap::new(),
+            language: Language::English
         }
     }
 

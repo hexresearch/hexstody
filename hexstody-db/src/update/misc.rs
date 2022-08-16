@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use super::signup::UserId;
 
-use hexstody_api::domain::Erc20Token;
+use hexstody_api::domain::{Erc20Token, Language};
 use hexstody_api::types::Invite;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -25,4 +25,10 @@ pub struct InviteRec{
     pub invitor: String,
     /// Invite label
     pub label: String
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+pub struct SetLanguage{
+    pub user: String,
+    pub language: Language
 }

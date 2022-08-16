@@ -2,6 +2,7 @@ import { loadTemplate, formattedCurrencyValue, formattedElapsedTime } from "./co
 
 let balanceTemplate = null;
 let historyTemplate = null;
+let dict = null;
 const refreshInterval = 20000;
 const historyPageSize = 50;
 let historyPagesToLoad = 1;
@@ -59,33 +60,18 @@ async function getBalanceERC20(currency, token) {
 
 async function initTemplates() {
 
-    const [balanceTemp, historyTemp] = await Promise.allSettled([
+    const [balanceTemp, historyTemp, dictTemp] = await Promise.allSettled([
         await loadTemplate("/templates/balance.html.hbs"),
-        await loadTemplate("/templates/history.html.hbs")
+        await loadTemplate("/templates/history.html.hbs"),
+        await fetch("/lang/overview-extra.json").then(r => r.json())
     ]);
 
     balanceTemplate = balanceTemp.value;
     historyTemplate = historyTemp.value;
-
+    dict = dictTemp.value;
 
     Handlebars.registerHelper('isDeposit', (historyItem) => historyItem.type === "deposit");
     Handlebars.registerHelper('isWithdrawal', (historyItem) => historyItem.type === "withdrawal");
-    Handlebars.registerHelper('formatWithdrawalStatus', (status) => {
-        switch (status.type) {
-            case "InProgress":
-                return "In progress";
-            case "Confirmed":
-                return "Confirmed";
-            case "Completed":
-                return "Completed";
-            case "OpRejected":
-                return "Rejected by operators";
-            case "NodeRejected":
-                return "Rejected by node";
-            default:
-                return "Unknown";
-        };
-    });
     Handlebars.registerHelper('formatCurrencyValue', function () {
         if (
             typeof this.currency === 'object'
@@ -124,7 +110,7 @@ async function initTemplates() {
 
 async function loadBalance() {
     const balances = await getBalances();
-    const balanceDrawUpdate = balanceTemplate(balances);
+    const balanceDrawUpdate = balanceTemplate({balances: balances.balances, lang: dict});
     const balancesElem = document.getElementById("balances");
     balancesElem.innerHTML = balanceDrawUpdate;
     enableDepositWithdrawBtns(balancesElem);
@@ -132,20 +118,10 @@ async function loadBalance() {
 
 async function loadHistory() {
     const history = await getHistory(0, historyPagesToLoad * historyPageSize - 1);
-    const historyDrawUpdate = historyTemplate(history);
+    const historyDrawUpdate = historyTemplate({history: history.history, lang: dict});
     const historyElem = document.getElementById("history-table");
     historyElem.innerHTML = historyDrawUpdate;
     enableCopyBtns(historyElem);
-}
-
-function compareHist(a, b) {
-    if (a.timeStamp > b.timeStamp) {
-        return -1;
-    }
-    if (a.timeStamp < b.timeStamp) {
-        return 1;
-    }
-    return 0;
 }
 
 async function loadHistoryETH() {
@@ -163,16 +139,16 @@ async function loadHistoryETH() {
         var isDeposit = htb.type == "deposit";
         var sign = isDeposit ? '+' : '-';
         htb.valuetoshow = sign + formattedCurrencyValue(htb.currency, htb.value) + " " + htb.currency;
-        htb.hash = isDeposit ? htb.txid.txid : 'tx does not exist yet';
+        htb.hash = isDeposit ? htb.txid.txid : dict.txdoesntexist;
         htb.explorerLink = isDeposit ? "https://mempool.space/tx/" + htb.txid.txid : "";
         htb.flowClass = isDeposit ? 'is-deposit' : 'is-withdrawal';
         if (!isDeposit) {
             htb.arrow = "mdi-arrow-up";
-            htb.flowType = "Withdrawal " + htb.currency
+            htb.flowType = dict.withdraw + " " + htb.currency
         }
         else {
             htb.arrow = "mdi-arrow-collapse-down"
-            htb.flowType = "Deposit " + htb.currency
+            htb.flowType = dict.deposit + " " + htb.currency
         }
         histBTCready.push(htb);
     }
@@ -187,11 +163,11 @@ async function loadHistoryETH() {
         hist.histories[i].flowClass = isDeposit ? 'is-deposit' : 'is-withdrawal';
         if (!isDeposit) {
             hist.histories[i].arrow = "mdi-arrow-up"
-            hist.histories[i].flowType = "Withdrawal " + hist.histories[i].tokenName
+            hist.histories[i].flowType = dict.withdraw + " " + hist.histories[i].tokenName
         }
         else {
             hist.histories[i].arrow = "mdi-arrow-collapse-down"
-            hist.histories[i].flowType = "Deposit " + hist.histories[i].tokenName
+            hist.histories[i].flowType = dict.deposit + " " + hist.histories[i].tokenName
         }
     };
 
@@ -213,7 +189,7 @@ function enableCopyBtns(historyElem) {
             });
         });
         tippy(copyBtn, {
-            content: "Copied",
+            content: dict.copied,
             trigger: "click",
             hideOnClick: false,
             onShow(instance) {
@@ -303,4 +279,4 @@ async function init() {
 };
 
 
-document.addEventListener("DOMContentLoaded", init);
+document.addEventListener("headerLoaded", init);
