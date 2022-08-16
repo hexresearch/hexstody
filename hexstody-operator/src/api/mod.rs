@@ -92,38 +92,20 @@ async fn get_hot_wallet_balance(
         uri!(get_hot_wallet_balance(currency_name)).to_string(),
         signature_data,
     )?;
-    if currency_name == Currency::BTC.ticker_lowercase() {
+    let currency = Currency::get_by_name(currency_name)
+        .ok_or(error::Error::UnknownCurrency(format!("{:?}", currency_name)))?;
+    if currency == Currency::BTC {
         btc_client
             .get_hot_wallet_balance()
             .await
             .map_err(|e| error::Error::InternalServerError(format!("{:?}", e)).into())
             .map(|v| Json(v))
-    } else if currency_name == Currency::ETH.ticker_lowercase() {
-        eth_client
-            .get_hot_wallet_balance(&Currency::ETH)
-            .await
-            .map_err(|e| error::Error::InternalServerError(format!("{:?}", e)).into())
-            .map(|v| Json(v))
-    } else if currency_name == Currency::usdt_erc20().ticker_lowercase() {
-        eth_client
-            .get_hot_wallet_balance(&Currency::usdt_erc20())
-            .await
-            .map_err(|e| error::Error::InternalServerError(format!("{:?}", e)).into())
-            .map(|v| Json(v))
-    } else if currency_name == Currency::crv_erc20().ticker_lowercase() {
-        eth_client
-            .get_hot_wallet_balance(&Currency::crv_erc20())
-            .await
-            .map_err(|e| error::Error::InternalServerError(format!("{:?}", e)).into())
-            .map(|v| Json(v))
-    } else if currency_name == Currency::gtech_erc20().ticker_lowercase() {
-        eth_client
-            .get_hot_wallet_balance(&Currency::gtech_erc20())
-            .await
-            .map_err(|e| error::Error::InternalServerError(format!("{:?}", e)).into())
-            .map(|v| Json(v))
     } else {
-        Err(error::Error::UnknownCurrency(format!("{:?}", currency_name)).into())
+        eth_client
+            .get_hot_wallet_balance(&currency)
+            .await
+            .map_err(|e| error::Error::InternalServerError(format!("{:?}", e)).into())
+            .map(|v| Json(v))
     }
 }
 

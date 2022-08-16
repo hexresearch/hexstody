@@ -119,6 +119,23 @@ impl Currency {
             })
             .collect()
     }
+
+    pub fn get_by_name(name_orig: &str) -> Option<Currency>{
+        let name = name_orig.to_uppercase();
+        if name == "BTC" {
+            return Some(Currency::BTC)
+        } else if name == "ETH" {
+            return Some(Currency::ETH);
+        } else {
+            let tokens = Currency::supported_tokens();
+            for token in tokens {
+                if name == token.ticker{
+                    return Some(Currency::ERC20(token))
+                };
+            }
+            return None;
+        }
+    }
 }
 
 pub fn filter_tokens(curs: Vec<Currency>) -> Vec<Erc20Token> {
