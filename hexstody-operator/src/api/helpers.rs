@@ -5,7 +5,6 @@ use p256::PublicKey;
 use rocket::serde::json;
 use serde::{Deserialize, Serialize};
 
-
 #[derive(Deserialize)]
 pub struct Config {
     pub domain: String,
@@ -14,8 +13,8 @@ pub struct Config {
 
 /// Guard operator handle from non-authorized user
 pub fn guard_op_signature<T: Serialize>(
-    config: &Config, 
-    uri: String, 
+    config: &Config,
+    uri: String,
     signature_data: SignatureData,
     body: &T
 ) -> error::Result<()>{
@@ -35,8 +34,8 @@ pub fn guard_op_signature<T: Serialize>(
 
 /// Guard operator handle from non-authorized user. Special case for when request has no body attached
 pub fn guard_op_signature_nomsg(
-    config: &Config, 
-    uri: String, 
+    config: &Config,
+    uri: String,
     signature_data: SignatureData,
 ) -> error::Result<()>{
     let url = [config.domain.clone(), uri].join("");

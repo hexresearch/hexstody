@@ -24,21 +24,21 @@ use super::domain::currency::{BtcAddress, Currency, CurrencyAddress, Erc20Token}
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct TickerETH {
     pub USD: f32,
-    pub RUB: f32
+    pub RUB: f32,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct EthHistResp {
     pub status: String,
     pub message: String,
-    pub result: Vec<EthHistUnit>
+    pub result: Vec<EthHistUnit>,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct Erc20HistResp {
     pub status: String,
     pub message: String,
-    pub result: Vec<Erc20HistUnit>
+    pub result: Vec<Erc20HistUnit>,
 }
 
 #[allow(non_snake_case)]
@@ -79,7 +79,7 @@ pub struct EthHistUnitU {
     pub gasPrice: String,
     pub contractAddress: String,
     pub confirmations: String,
-    pub addr: String
+    pub addr: String,
 }
 
 #[allow(non_snake_case)]
@@ -120,31 +120,31 @@ pub struct Erc20HistUnitU {
     pub gasPrice: String,
     pub contractAddress: String,
     pub confirmations: String,
-    pub addr: String
+    pub addr: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct UserEth{
-  pub login   : String
- ,pub address : String
- ,pub data    : UserData
+pub struct UserEth {
+    pub login: String,
+    pub address: String,
+    pub data: UserData,
 }
 
 #[allow(non_snake_case)]
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct UserData{
+pub struct UserData {
     pub tokens: Vec<Erc20Token>,
     pub historyEth: Vec<Erc20HistUnitU>,
     pub historyTokens: Vec<Erc20TokenHistory>,
     pub balanceEth: String,
-    pub balanceTokens: Vec<Erc20TokenBalance>
+    pub balanceTokens: Vec<Erc20TokenBalance>,
 }
 
 #[allow(non_snake_case)]
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct Erc20TokenBalance{
+pub struct Erc20TokenBalance {
     pub tokenName: String,
-    pub tokenBalance: String
+    pub tokenBalance: String,
 }
 
 #[allow(non_snake_case)]
@@ -158,7 +158,7 @@ pub struct Erc20TokenHistory {
 pub struct EthFeeResp {
     pub status: String,
     pub message: String,
-    pub result: EthGasPrice
+    pub result: EthGasPrice,
 }
 
 #[allow(non_snake_case)]
@@ -169,14 +169,14 @@ pub struct EthGasPrice {
     pub ProposeGasPrice: String,
     pub FastGasPrice: String,
     pub suggestBaseFee: String,
-    pub gasUsedRatio: String
+    pub gasUsedRatio: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct BalanceItem {
     pub currency: Currency,
     pub value: u64,
-    pub limit_info: LimitInfo
+    pub limit_info: LimitInfo,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
@@ -588,10 +588,9 @@ pub struct WithdrawalResponse {
     pub output_addresses: Vec<CurrencyAddress>,
 }
 
-
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct GetTokensResponse {
-    pub tokens: Vec<TokenInfo>
+    pub tokens: Vec<TokenInfo>,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
@@ -599,54 +598,73 @@ pub struct TokenInfo {
     pub token: Erc20Token,
     pub balance: u64,
     pub finalized_balance: u64,
-    pub is_active: bool
+    pub is_active: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct TokenActionRequest{
-    pub token: Erc20Token
+pub struct TokenActionRequest {
+    pub token: Erc20Token,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Hash, JsonSchema)]
-pub struct Invite{
-    pub invite: Uuid
-}
-
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct InviteRequest{
-    pub label: String
+#[derive(
+    Debug, Serialize, Deserialize, Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Hash, JsonSchema,
+)]
+pub struct Invite {
+    pub invite: Uuid,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct InviteResp{
+pub struct InviteRequest {
+    pub label: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct InviteResp {
     pub invite: Invite,
-    pub label: String
+    pub label: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct EthHotWalletBalanceResponse {
+    pub balance: u64,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct Erc20Balance {
+    pub token_name: String,
+    pub token_balance: u64,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct Erc20HotWalletBalanceResponse {
+    pub balance: Vec<Erc20Balance>,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
 pub enum LimitSpan {
     Day,
     Week,
-    Month
+    Month,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
 pub struct Limit {
     pub amount: u64,
-    pub span: LimitSpan
+    pub span: LimitSpan,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
-pub struct LimitChangeReq{
+pub struct LimitChangeReq {
     pub currency: Currency,
-    pub limit: Limit
+    pub limit: Limit,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
-pub enum LimitChangeStatus{
-    InProgress{confirmations: i16, rejections: i16},
+pub enum LimitChangeStatus {
+    InProgress { confirmations: i16, rejections: i16 },
     Completed,
-    Rejected
+    Rejected,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
@@ -656,7 +674,7 @@ pub struct LimitChangeResponse {
     pub created_at: String,
     pub currency: Currency,
     pub limit: Limit,
-    pub status: LimitChangeStatus
+    pub status: LimitChangeStatus,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
@@ -667,20 +685,23 @@ pub struct LimitChangeOpResponse {
     pub currency: Currency,
     pub current_limit: Limit,
     pub requested_limit: Limit,
-    pub status: LimitChangeStatus
+    pub status: LimitChangeStatus,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
 pub struct LimitInfo {
     pub limit: Limit,
-    pub spent: u64
+    pub spent: u64,
 }
 
 impl Default for LimitInfo {
     fn default() -> Self {
-        Self { 
-            limit: Limit { amount: 1000000, span: LimitSpan::Day }, 
-            spent: Default::default() 
+        Self {
+            limit: Limit {
+                amount: 1000000,
+                span: LimitSpan::Day,
+            },
+            spent: Default::default(),
         }
     }
 }
@@ -688,7 +709,7 @@ impl Default for LimitInfo {
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
 pub struct LimitApiResp {
     pub limit_info: LimitInfo,
-    pub currency: Currency
+    pub currency: Currency,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]

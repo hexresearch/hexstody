@@ -2,54 +2,25 @@
 {{/inline}}
 
 {{#*inline "scripts"}}
+<script src="/scripts/handlebars.min-v4.7.7.js" defer></script>
 <script src="/scripts/jscu.bundle.js" defer></script>
 <script src="/scripts/jscec.bundle.js" defer></script>
 <script src="/scripts/base64.min.js" defer></script>
 <script src="https://unpkg.com/@popperjs/core@2" defer></script>
 <script src="https://unpkg.com/tippy.js@6" defer></script>
-<script type="module" src="/scripts/index.js" defer></script>
-<script type="module" src="/scripts/common.js" defer></script>
-<script src="/scripts/handlebars.min-v4.7.7.js" defer></script>
+<script type="module" src="/scripts/index.js"></script>
+<script type="module" src="/scripts/common.js"></script>
 {{/inline}}
 
 {{#*inline "page"}}
-<h3>Select the private key file</h3>
-<div class="file-selector-wrapper">
-    <input type="file" id="file-selector" accept=".pem" />
-    <span id="file-selector-status"></span>
+<div id="keyfile-wrapper" class="mb-1">
+    <h4>Select the private key file</h4>
+    <div class="keyfile-input-wrapper">
+        <input type="file" id="keyfile-input" accept=".pem" />
+        <span id="keyfile-input-status"></span>
+    </div>
 </div>
-<div id="authed-body" style="display: none;">
-<div class="tabs is-large is-centered">
-    <ul>
-        <li id="withdraw-tab"class="is-active"><a>Withdraws</a></li>
-        <li id="invites-tab" class=""><a>Invites</a></li>
-        <li id="changes-tab" class=""><a>Changes</a></li>
-    </ul>
-</div>
-<div id="withdraw-tab-body">
-    <h3>Withdrawal requests</h3>
-    <table>
-        <thead>
-            <tr>
-                <th><b>Time</b></th>
-                <th><b>ID</b></th>
-                <th><b>User</b></th>
-                <th><b>Currency</b></th>
-                <th><b>Withdrawal address</b></th>
-                <th><b>Amount</b></th>
-                <th><b>Status</b></th>
-                <th><b>Actions</b></th>
-            </tr>
-        </thead>
-        <tbody id="withdrawal-requests-table-body">
-        </tbody>
-    </table>
-</div>
-<div id="invites-tab-body" style="display: none;">
-</div>
-<div id="changes-tab-body" style="display: none;">
-</div>
-</div>
+<div id="authorized-content-wrapper"></div>
 {{/inline}}
 
 {{> base}}

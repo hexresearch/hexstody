@@ -693,10 +693,10 @@ async fn get_fees_from_node_test() {
 #[tokio::test]
 async fn get_balance_test() {
     run_test(|btc, api| async move {
-        let HotBalanceResponse{balance} = api.get_hot_balance().await.expect("Failed to get balance");
+        let HotBalanceResponse{balance} = api.get_hot_wallet_balance().await.expect("Failed to get balance");
         assert_eq!(balance, 0, "Balance is non-zero!");
         fund_wallet(&btc);
-        let HotBalanceResponse{balance} = api.get_hot_balance().await.expect("Failed to get balance");
+        let HotBalanceResponse{balance} = api.get_hot_wallet_balance().await.expect("Failed to get balance");
         assert_eq!(balance, 5000000000, "Balance is not 50 btc!");
     })
     .await;

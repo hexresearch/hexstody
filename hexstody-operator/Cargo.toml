@@ -22,6 +22,7 @@ hexstody-db = { path = "../hexstody-db" }
 hexstody-api = { path = "../hexstody-api" }
 hexstody-btc-api = { path = "../hexstody-btc-api" }
 hexstody-btc-client = { path = "../hexstody-btc-client" }
+hexstody-eth-client = { path = "../hexstody-eth-client" }
 hexstody-sig = { path = "../hexstody-sig" }
 log = "0.4.14"
 serde = { version = "1.0", features = ["derive"] }

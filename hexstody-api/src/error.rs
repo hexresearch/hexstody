@@ -64,8 +64,10 @@ pub enum Error {
     InternalServerError(String),
     #[error("Error: {0}")]
     GenericError(String),
+    #[error("Unknown currency: {0}")]
+    UnknownCurrency(String),
     #[error("Language is not changed!")]
-    LangNotChanged
+    LangNotChanged,
 }
 
 impl Error {
@@ -93,9 +95,10 @@ impl Error {
             Error::LimitsNoChanges => 19,
             Error::LimChangeNotFound => 20,
             Error::SignatureError(_) => 21,
-            Error::InternalServerError(_) => 22,
-            Error::GenericError(_) => 23,
-            Error::LangNotChanged => 24,
+            Error::UnknownCurrency(_) => 22,
+            Error::InternalServerError(_) => 23,
+            Error::GenericError(_) => 24,
+            Error::LangNotChanged => 25,
         }
     }
 
@@ -113,7 +116,7 @@ impl Error {
             Error::NoUserCurrency(_) => Status::from_code(500).unwrap(),
             Error::FailedGenAddress(_) => Status::from_code(500).unwrap(),
             Error::FailedGetFee(_) => Status::from_code(500).unwrap(),
-            Error::InsufficientFunds(_) =>  Status::from_code(417).unwrap(),
+            Error::InsufficientFunds(_) => Status::from_code(417).unwrap(),
             Error::FailedETHConnection(_) => Status::from_code(500).unwrap(),
             Error::TokenAlreadyEnabled(_) => Status::from_code(500).unwrap(),
             Error::TokenAlreadyDisabled(_) => Status::from_code(500).unwrap(),
@@ -125,6 +128,7 @@ impl Error {
             Error::SignatureError(_) => Status::from_code(403).unwrap(),
             Error::InternalServerError(_) => Status::from_code(500).unwrap(),
             Error::GenericError(_) => Status::from_code(500).unwrap(),
+            Error::UnknownCurrency(_) => Status::from_code(400).unwrap(),
             Error::LangNotChanged => Status::from_code(400).unwrap(),
         }
     }
