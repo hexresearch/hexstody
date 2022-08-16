@@ -1,4 +1,4 @@
-import { loadTemplate, formattedCurrencyValue } from "./common.js";
+import { loadTemplate, formattedCurrencyValue, initTabs, openTab } from "./common.js";
 
 const fileSelector = document.getElementById("keyfile-input");
 const fileSelectorStatus = document.getElementById("keyfile-input-status");
@@ -34,7 +34,37 @@ function registerHelpers() {
             default:
                 return "unknown";
         };
-    })
+    });
+    Handlebars.registerHelper('truncateChangeId', function () { return truncate(this.id, 10) });
+    Handlebars.registerHelper('limitsFormatName', function () { return getCurName(this.currency) });
+    Handlebars.registerHelper('renderChangeStatus', function () { return renderChangeStatus(this.status) });
+    Handlebars.registerHelper('renderCurLimit', function () { return renderLimit(this.current_limit) });
+    Handlebars.registerHelper('renderNewLimit', function () { return renderLimit(this.requested_limit) });
+    Handlebars.registerHelper('renderTime', function () {
+        const d = new Date(this.created_at);
+        if (d instanceof Date && !isNaN(d)) {
+            return d.getDate() + "." + d.getMonth() + "." + d.getFullYear() + " " + d.toLocaleTimeString()
+        } else { return "Invalid time" }
+    });
+}
+
+
+function renderLimit(limit) {
+    return limit.amount + "/" + limit.span
+}
+
+function renderChangeStatus(status) {
+    switch (Object.keys(status)[0]) {
+        case "InProgress":
+            let body = status["InProgress"];
+            return "In progress (+" + body.confirmations + "/-" + body.rejections + " of 2)";
+        case "Confirmed":
+            return "Confirmed";
+        case "Rejected":
+            return "Rejected by operators";
+        default:
+            cellText = document.createTextNode("Unknown");
+    };
 }
 
 function addressToString(address) {
@@ -178,6 +208,10 @@ async function getRequiredConfirmations() {
     }
 }
 
+async function getAllChanges() {
+    return await makeSignedRequest(null, "changes", "GET").then(r => r.json())
+}
+
 async function loadHotWalletBalance(currency) {
     const hotWalletBalanceWrapper = document.getElementById("hot-wallet-balance-wrapper");
     const hotBalanceTemplate = await loadTemplate("/templates/hot_balance.html.hbs");
@@ -209,6 +243,34 @@ async function rejectRequest(confirmationData, currency) {
     } else {
         alert("Error: " + response.text);
     };
+}
+
+function handleConfirm(change) {
+    return async function () {
+        const body = {
+            id: change.id,
+            user: change.user,
+            currency: change.currency,
+            created_at: change.created_at,
+            requested_limit: change.requested_limit,
+        };
+        await makeSignedRequest(body, "limits/confirm", "POST");
+        loadWithdrawalLimitsTab()
+    }
+}
+
+function handleReject(change) {
+    return async function () {
+        const body = {
+            id: change.id,
+            user: change.user,
+            currency: change.currency,
+            created_at: change.created_at,
+            requested_limit: change.requested_limit,
+        };
+        await makeSignedRequest(body, "limits/reject", "POST");
+        loadWithdrawalLimitsTab()
+    }
 }
 
 // Adds tooltips, enables copy buttons
@@ -292,17 +354,10 @@ function prettifyWithdrawalRequestsTable(withdrawalRequests, currency) {
 }
 
 async function loadWithdrawalRequestsTab(supportedCurrencies) {
-    const invitesTab = document.getElementById("invites-tab");
-    const invitesTabContent = document.getElementById("invites-tab-content");
-    const withdrawalRequestsTab = document.getElementById("withdrawal-requests-tab");
+    openTab("navigation-tabs", "withdrawal-requests-tab");
+
     const withdrawalRequestsTabContent = document.getElementById("withdrawal-requests-tab-content");
-
     withdrawalRequestsTabContent.innerHTML = "";
-
-    invitesTabContent.style.display = 'none';
-    invitesTab.classList.remove('active');
-    withdrawalRequestsTabContent.style.display = 'block';
-    withdrawalRequestsTab.classList.add('active');
 
     const currencySelectWrapper = document.createElement("div");
     currencySelectWrapper.id = "currency-select-wrapper";
@@ -360,11 +415,14 @@ async function loadAuthorizedContent(supportedCurrencies) {
     const navigationTabsTemplate = await loadTemplate("/templates/navigation_tabs.html.hbs");
     const navigationTabsHTML = navigationTabsTemplate();
     authorizedInfoWrapper.insertAdjacentHTML('beforeend', navigationTabsHTML);
+    initTabs("navigation-tabs");
     loadWithdrawalRequestsTab(supportedCurrencies);
     const withdrawalRequestsTab = document.getElementById("withdrawal-requests-tab");
     withdrawalRequestsTab.addEventListener("click", () => { loadWithdrawalRequestsTab(supportedCurrencies); });
     const invitesTab = document.getElementById("invites-tab");
     invitesTab.addEventListener("click", loadInvitesTab);
+    const withdrawalLimitsTab = document.getElementById("withdrawal-limits-tab");
+    withdrawalLimitsTab.addEventListener("click", loadWithdrawalLimitsTab);
 }
 
 function clearAuthorizedWrapper() {
@@ -455,28 +513,34 @@ async function listInvites() {
         invitesListBody.innerHTML = "";
         invitesListBody.append(errMsg)
     }
-
 }
 
 async function loadInvitesTab() {
-    const invitesTab = document.getElementById("invites-tab");
+    openTab("navigation-tabs", "invites-tab");
     const invitesTabContent = document.getElementById("invites-tab-content");
-    const withdrawalRequestsTab = document.getElementById("withdrawal-requests-tab");
-    const withdrawalRequestsTabContent = document.getElementById("withdrawal-requests-tab-content");
-
-    withdrawalRequestsTabContent.style.display = 'none';
-    withdrawalRequestsTab.classList.remove('active');
-    invitesTabContent.style.display = 'block';
-    invitesTab.classList.add('active');
-
     const inivitesTemplate = await loadTemplate("/templates/invites.html.hbs");
-    const inivitesHTML = inivitesTemplate();
-    invitesTabContent.innerHTML = inivitesHTML;
-
+    invitesTabContent.innerHTML = inivitesTemplate();
     const genInviteBtn = document.getElementById("gen-invite-btn");
     const listInvitesBtn = document.getElementById("btn-list-invites");
     genInviteBtn.onclick = genInvite;
     listInvitesBtn.onclick = listInvites;
+}
+
+async function loadWithdrawalLimitsTab() {
+    console.log("hello");
+    openTab("navigation-tabs", "withdrawal-limits-tab");
+    const withdrawalLimitsTabContent = document.getElementById("withdrawal-limits-tab-content");
+    const withdrawalLimitsTemplate = await loadTemplate("/templates/withdrawal_limits.html.hbs");
+    const changes = await getAllChanges();
+    withdrawalLimitsTabContent.innerHTML = withdrawalLimitsTemplate({ changes: changes });
+    changes.forEach(change => {
+        const confirmBtn = document.getElementById(change.id + "-confirm");
+        const rejectBtn = document.getElementById(change.id + "-reject");
+        const idSpan = document.getElementById(change.id + "-id");
+        tippy(idSpan, { content: change.id });
+        confirmBtn.onclick = handleConfirm(change);
+        rejectBtn.onclick = handleReject(change);
+    })
 }
 
 window.addEventListener('load', function () {

@@ -67,32 +67,28 @@ export function formattedElapsedTime(dateTimeString) {
     }
 }
 
-export function initTabs(tabIds) {
-    function tabClicked(clickedTabId) {
-        tabIds.forEach(tabId => {
-            const validationDisplay = document.getElementById(tabId + "-body");
-            if (tabId === clickedTabId) {
-                document.getElementById(tabId).classList.add("active");
-                validationDisplay.style.display = "block";
-            } else {
-                document.getElementById(tabId).classList.remove("active");
-                validationDisplay.style.display = "none";
-            }
-        });
-    }
-    tabIds.forEach(tab => document.getElementById(tab).onclick = () => tabClicked(tab));
+const tabContentSuffix = "-content";
 
-    function openTab(evt, tabName) {
-        var i, x, tablinks;
-        x = document.getElementsByClassName("content-tab");
-        for (i = 0; i < x.length; i++) {
-            x[i].style.display = "none";
-        }
-        tablinks = document.getElementsByClassName("tab");
-        for (i = 0; i < x.length; i++) {
-            tablinks[i].className = tablinks[i].className.replace(" is-active", "");
-        }
-        document.getElementById(tabName).style.display = "block";
-        evt.currentTarget.className += " is-active";
-    }
+export function initTabs(tabContainerId) {
+    const tabs = document.querySelectorAll(`#${tabContainerId} a`);
+    const activeTab = tabs[0];
+    const activeTabContent = document.getElementById(activeTab.id + tabContentSuffix);
+    let tabContent;
+    for (let i = 1; i < tabs.length; i++) {
+        tabContent = document.getElementById(tabs[i].id + tabContentSuffix);
+        tabContent.style.display = 'none';
+    };
+    activeTab.classList.add('active');
+    activeTabContent.style.display = 'block';
+}
+
+export function openTab(tabContainerId, newActiveTabId) {
+    const activeTab = document.querySelector(`#${tabContainerId} a.active`);
+    const activeTabContent = document.getElementById(activeTab.id + tabContentSuffix);
+    const newActiveTab = document.getElementById(newActiveTabId);
+    const newActiveTabContent = document.getElementById(newActiveTabId + tabContentSuffix);
+    activeTab.classList.remove('active');
+    activeTabContent.style.display = 'none';
+    newActiveTab.classList.add('active');
+    newActiveTabContent.style.display = 'block';
 }
