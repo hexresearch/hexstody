@@ -1,8 +1,11 @@
 import { loadTemplate, initTabs } from "./common.js";
+import { localizeChangeStatus, localizeSpan } from "./localize.js";
 
 const tabs = ["tokens-tab", "limits-tab"];
 let tokensTemplate = null;
 let limitsTemplate = null;
+let limitsDict = null;
+let tokensDict = null;
 let origLimits = null;
 const refreshInterval = 2000000;
 
@@ -69,32 +72,24 @@ function getCurName(val){
     }
 }
 
-function renderChangeStatus(status){
-    switch (Object.keys(status)[0]) {
-        case "InProgress":
-            let body = status["InProgress"];
-            return "In progress (+" + body.confirmations + "/-" + body.rejections + " of 2)";
-        case "Confirmed":
-            return "Confirmed";
-        case "Rejected":
-            return "Rejected by operators";
-        default:
-            cellText = document.createTextNode("Unknown");
-    };
-}
-
 async function initTemplates() {
-    const [tokensTemp, limitsTemp] = await Promise.allSettled([
+    const [tokensTemp, tokensD, limitsTemp, limitsD] = await Promise.allSettled([
         await loadTemplate("/templates/token.html.hbs"),
-        await loadTemplate("/templates/limits.html.hbs")
+        await fetch("/lang/token.json").then(r => r.json()),
+        await loadTemplate("/templates/limits.html.hbs"),
+        await fetch("/lang/limits.json").then(r => r.json()),
     ]);
 
+    const status = {InProgress: {confirmations: 0, rejections: 0}}
     tokensTemplate = tokensTemp.value;
     limitsTemplate = limitsTemp.value;
+    limitsDict = limitsD.value;
+    tokensDict = tokensD.value;
     Handlebars.registerHelper('tokenFormatName', function () { return this.token.ticker; });
     Handlebars.registerHelper('limitsFormatName', function () { return getCurName(this) });
     Handlebars.registerHelper('changesFormatName', function () { return getCurName(this) });
-    Handlebars.registerHelper('changeStatus', function () { return renderChangeStatus(this.status) });
+    Handlebars.registerHelper('changeStatus', function () { return localizeChangeStatus(this.status) });
+    Handlebars.registerHelper('localizeSpan', function () { return localizeSpan(this.limit.span)})
 }
 
 function setLimit(limit){
@@ -119,7 +114,7 @@ async function checkboxHandler(event, token) {
 
 async function loadTokens() {
     const tokens = await getTokens();
-    const tokensDrawUpdate = tokensTemplate(tokens);
+    const tokensDrawUpdate = tokensTemplate({tokens: tokens.tokens, lang: tokensDict});
     const tokensElem = document.getElementById("tokens-tab-body");
     tokensElem.innerHTML = tokensDrawUpdate;
     const tokensArray = tokens.tokens;
@@ -132,9 +127,8 @@ async function loadTokens() {
 async function loadLimits(){
     const limits = await getLimits();
     const changes = await getMyChanges();
-    console.log(changes)
     origLimits = limits;
-    const limitsDrawUpdate = limitsTemplate({limits: limits, changes: changes});
+    const limitsDrawUpdate = limitsTemplate({limits: limits, changes: changes, lang: limitsDict});
     const limitsElem = document.getElementById("limits-tab-body");
     limitsElem.innerHTML = limitsDrawUpdate;
     limits.forEach(limit => { 
@@ -185,11 +179,6 @@ function checkLimitsChange() {
     }
 }
 
-async function loadChanges(){
-    const changes = await getMyChanges();
-
-}
-
 async function updateLoop() {
     await Promise.allSettled([
         loadTokens(),
@@ -206,4 +195,4 @@ async function init() {
 };
 
 
-document.addEventListener("DOMContentLoaded", init);
+document.addEventListener("headerLoaded", init);

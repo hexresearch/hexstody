@@ -19,7 +19,7 @@ pub use withdraw::*;
 
 use crate::update::limit::{LimitChangeData, LimitChangeUpd, LimitCancelData, LimitChangeDecision};
 use crate::update::withdrawal::{WithdrawCompleteInfo, WithdrawalRejectInfo};
-use crate::update::misc::{TokenUpdate, TokenAction, InviteRec};
+use crate::update::misc::{TokenUpdate, TokenAction, InviteRec, SetLanguage};
 
 use super::update::btc::BtcTxCancel;
 use super::update::deposit::DepositAddress;
@@ -197,6 +197,11 @@ impl State {
             },
             UpdateBody::ClearLimits(span) => {
                 self.clear_limits(span)?;
+                self.last_changed = update.created;
+                Ok(None)
+            },
+            UpdateBody::SetLanguage(req) => {
+                self.set_language(req)?;
                 self.last_changed = update.created;
                 Ok(None)
             },
@@ -694,6 +699,16 @@ impl State {
             }
         };
         Ok(())
+    }
+
+    fn set_language(&mut self, req: SetLanguage) -> Result<(), StateUpdateErr> {
+        match self.users.get_mut(&req.user){
+            Some(uinfo) => {
+                uinfo.language = req.language;
+                Ok(())
+            },
+            None => Err(StateUpdateErr::UserNotFound(req.user)),
+        }
     }
 }
 

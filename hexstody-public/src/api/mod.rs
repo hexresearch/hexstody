@@ -1,15 +1,18 @@
 pub mod auth;
 pub mod wallet;
+pub mod profile;
 
+use hexstody_api::domain::Language;
+use profile::*;
 use auth::*;
 use figment::Figment;
-use hexstody_api::domain::Currency;
-use hexstody_api::types::{LimitApiResp, LimitChangeReq, LimitChangeResponse};
-use hexstody_db::update::limit::{LimitCancelData, LimitChangeUpd};
 use hexstody_eth_client::client::EthClient;
 use serde_json::json;
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::Read;
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio::sync::{Mutex, Notify};
@@ -20,7 +23,7 @@ use rocket::http::{CookieJar, Status};
 use rocket::response::Redirect;
 use rocket::serde::json::Json;
 use rocket::uri;
-use rocket::{get, post, routes, State};
+use rocket::{get, routes, State};
 use rocket_dyn_templates::Template;
 use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
 
@@ -31,9 +34,24 @@ use hexstody_db::update::*;
 use hexstody_db::Pool;
 use wallet::*;
 
-/// Redirect to signin page
-fn goto_signin() -> Redirect{
-    Redirect::to(uri!(signin))
+struct StaticPath(PathBuf);
+
+fn get_dict_json(
+    static_path: &StaticPath, 
+    lang: Language, 
+    path: PathBuf
+) -> error::Result<serde_json::Value>{
+    let file_path = format!("{}/lang/{}/{}", static_path.0.display(), lang.to_alpha(), path.display());
+    let file = File::open(file_path);
+    if let Err(e) = file { 
+        return Err(error::Error::GenericError(format!("Failed to open file: {:?}", e)).into())
+    };
+    let mut file = file.unwrap();
+    let mut data = String::new();
+    if let Err(e) = file.read_to_string(&mut data){
+       return Err(error::Error::GenericError(format!("Failed to read file: {:?}", e)).into()) 
+    };
+    Ok(serde_json::from_str(&data).unwrap())
 }
 
 #[openapi(tag = "ping")]
@@ -57,25 +75,58 @@ async fn index(
 async fn overview(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
+    static_path: &State<StaticPath>
 ) -> Result<Template, Redirect> {
     require_auth_user(cookies, state, |_, user| async move {
-        let context = HashMap::from([("title", "Overview"), ("username", &user.username), ("parent", "base_with_header")]);
+        let title = match user.language{
+            Language::English => "Overview",
+            Language::Russian => "Главная",
+        };
+        let header_dict = get_dict_json(static_path.inner(), user.language, PathBuf::from_str("header.json").unwrap());
+        let overview_dict = get_dict_json(static_path.inner(), user.language, PathBuf::from_str("overview.json").unwrap());
+        if let Err(e) = header_dict { return Err(e) };
+        if let Err(e) = overview_dict { return Err(e) };
+        let context = json!({
+            "title":title, 
+            "username": &user.username, 
+            "parent": "base_with_header",
+            "lang": json!({
+                "lang": user.language.to_alpha().to_uppercase(),
+                "header": header_dict.unwrap(),
+                "overview": overview_dict.unwrap()
+            })
+        });
         Ok(Template::render("overview", context))
     }).await.map_err(|_| goto_signin())
 }
 
 #[openapi(skip)]
 #[get("/profile")]
-async fn profile(
+async fn profile_page(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
+    static_path: &State<StaticPath>
 ) -> Result<Template, Redirect> {
     require_auth_user(cookies, state, |_, user| async move {
+        let title = match user.language{
+            Language::English => "Profile",
+            Language::Russian => "Профиль",
+        };
+        let tabs = match user.language {
+            Language::English =>  [json!({"id": "tokens", "label": "tokens"}), json!({"id": "limits", "label": "limits"})],
+            Language::Russian => [json!({"id": "tokens", "label": "токены"}), json!({"id": "limits", "label": "лимиты"})],
+        };
+        let header_dict = get_dict_json(static_path.inner(), user.language, PathBuf::from_str("header.json").unwrap());
+        if let Err(e) = header_dict { return Err(e) };
         let context = json!({
-            "title" : "Profile",
+            "title" : title,
             "parent": "base_footer_header",
-            "tabs"   : ["tokens", "limits"],
-            "username": &user.username
+            "tabs"  : tabs,
+            "username": &user.username,
+            "lang": json!({
+                "lang": user.language.to_alpha().to_uppercase(),
+                "header": header_dict.unwrap(),
+            })
         }
         );
         Ok(Template::render("profile", context))
@@ -87,13 +138,6 @@ async fn profile(
 fn signup() -> Template {
     let context = HashMap::from([("title", "Sign Up"), ("parent", "base")]);
     Template::render("signup", context)
-}
-
-#[openapi(skip)]
-#[get("/signin")]
-fn signin() -> Template {
-    let context = HashMap::from([("title", "Sign In"), ("parent", "base")]);
-    Template::render("signin", context)
 }
 
 #[openapi(tag = "auth")]
@@ -120,9 +164,24 @@ pub async fn logout(cookies: &CookieJar<'_>)
 async fn deposit(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
+    static_path: &State<StaticPath>
 ) -> Result<Template, Redirect> {
     require_auth_user(cookies, state, |_, user| async move {
-        let context = HashMap::from([("title", "Deposit"), ("username", &user.username), ("parent", "base_with_header")]);
+        let title = match user.language{
+            Language::English => "Deposit",
+            Language::Russian => "Депозит",
+        };
+        let header_dict = get_dict_json(static_path.inner(), user.language, PathBuf::from_str("header.json").unwrap());
+        if let Err(e) = header_dict { return Err(e) };
+        let context = json!({
+            "title" : title,
+            "parent": "base_footer_header",
+            "username": &user.username,
+            "lang": json!({
+                "lang": user.language.to_alpha().to_uppercase(),
+                "header": header_dict.unwrap(),
+            })
+        });
         Ok(Template::render("deposit", context))
     }).await.map_err(|_| goto_signin())
 }
@@ -132,13 +191,24 @@ async fn deposit(
 async fn withdraw(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
+    static_path: &State<StaticPath>
 ) -> Result<error::Result<Template>, Redirect> {
     let resp = require_auth_user(cookies, state, |_, user| async move {
+        let title = match user.language{
+            Language::English => "Withdraw",
+            Language::Russian => "Вывод",
+        };
+        let header_dict = get_dict_json(static_path.inner(), user.language, PathBuf::from_str("header.json").unwrap());
+        if let Err(e) = header_dict { return Err(e) };
         let context = json!({
-            "title" : "Withdraw",
+            "title" : title,
             "parent": "base_footer_header",
             "tabs"   : ["btc", "eth"],
-            "username": &user.username
+            "username": &user.username,
+            "lang": json!({
+                "lang": user.language.to_alpha().to_uppercase(),
+                "header": header_dict.unwrap(),
+            })
         }
         );
         Ok(Template::render("withdraw", context))
@@ -155,126 +225,18 @@ async fn withdraw(
 }
 
 #[openapi(skip)]
-#[get("/removeuser/<user>")]
-pub async fn remove_user(
-    eth_client: &State<EthClient>,
-    state: &State<Arc<Mutex<hexstody_db::state::State>>>,
-    is_test: &State<IsTestFlag>,
-    user: &str
-) -> Result<(), Redirect> {
-    if is_test.0 {
-        let _ = eth_client.remove_user(&user).await;
-        let mut mstate = state.lock().await;
-        mstate.users.remove(user);
-        Ok(())
-    } else {
-        Err(Redirect::to(uri!(signin)))
-    }
-
-}
-
-#[openapi(skip)]
-#[get("/profile/limits/get")]
-pub async fn get_user_limits(
+#[get("/lang/<path..>")]
+async fn get_dict(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
-) -> Result<Json<Vec<LimitApiResp>>, Redirect>{
+    static_path: &State<StaticPath>,
+    path: PathBuf
+) -> error::Result<serde_json::Value> {
     require_auth_user(cookies, state, |_, user| async move {
-        let infos = user.currencies.values().map(|cur_info| 
-            LimitApiResp{ 
-                limit_info: cur_info.limit_info.clone(), 
-                currency: cur_info.currency.clone() 
-            }).collect();
-        Ok(Json(infos))
-    }).await.map_err(|_| goto_signin())
+        get_dict_json(static_path.inner(), user.language, path)
+    }).await
 }
 
-#[openapi(skip)]
-#[post("/profile/limits", data="<new_limits>")]
-pub async fn request_new_limits(
-    cookies: &CookieJar<'_>,
-    state: &State<Arc<Mutex<DbState>>>,
-    updater: &State<mpsc::Sender<StateUpdate>>,
-    new_limits: Json<Vec<LimitChangeReq>>
-) -> Result<error::Result<()>, Redirect> {
-    let new_limits = new_limits.into_inner();
-    let resp = require_auth_user(cookies, state, |_, user| async move {
-        let filtered_limits : Vec<LimitChangeUpd> = new_limits.into_iter().filter_map(|l| {
-            match user.currencies.get(&l.currency) {
-                None => None,
-                Some(ci) => if ci.limit_info.limit == l.limit{
-                    None
-                } else {
-                    Some(LimitChangeUpd{
-                        user: user.username.clone(),
-                        currency: l.currency.clone(),
-                        limit: l.limit.clone(),
-                    })
-                }
-            }
-        }).collect();
-        if filtered_limits.is_empty(){
-            Err(error::Error::InviteNotFound.into())
-        } else {
-           for req in filtered_limits {
-            let state_update = StateUpdate::new(UpdateBody::LimitsChangeRequest(req));
-            let _ = updater.send(state_update).await;
-            }
-            Ok(())
-        }
-    }).await;
-    match resp {
-        Ok(v) => Ok(Ok(v)),
-        // Error code 8 => NoUserFound (not logged in). 7 => Requires auth
-        Err(err) => if err.1.code == 8 || err.1.code == 7 {
-            Err(goto_signin())
-        } else {
-            Ok(Err(err))
-        },
-    }
-}
-
-#[openapi(skip)]
-#[get("/profile/limits/changes")]
-pub async fn get_user_limit_changes(
-    cookies: &CookieJar<'_>,
-    state: &State<Arc<Mutex<DbState>>>,
-) -> Result<Json<Vec<LimitChangeResponse>>, Redirect>{
-    require_auth_user(cookies, state, |_, user| async move {
-        let changes = user.limit_change_requests.values().map(|v| { v.clone().into() }).collect();
-        Ok(Json(changes))
-    }).await.map_err(|_| goto_signin())
-}
-
-#[openapi(skip)]
-#[post("/profile/limits/cancel", data="<currency>")]
-pub async fn cancel_user_change(
-    cookies: &CookieJar<'_>,
-    state: &State<Arc<Mutex<DbState>>>,
-    updater: &State<mpsc::Sender<StateUpdate>>,
-    currency: Json<Currency>
-) -> Result<error::Result<()>, Redirect>{
-    let resp = require_auth_user(cookies, state, |_, user| async move {
-        match user.limit_change_requests.get(&currency){
-            Some(v) => {
-                let state_update = StateUpdate::new(UpdateBody::CancelLimitChange(
-                    LimitCancelData{ id: v.id.clone(), user: user.username.clone(), currency: currency.into_inner().clone() }));
-                let _ = updater.send(state_update).await;
-                Ok(())
-            },
-            None => return Err(error::Error::LimChangeNotFound.into()),
-        }
-    }).await;
-    match resp {
-        Ok(v) => Ok(Ok(v)),
-        // Error code 8 => NoUserFound (not logged in). 7 => Requires auth
-        Err(err) => if err.1.code == 8 || err.1.code == 7 {
-            Err(goto_signin())
-        } else {
-            Ok(Err(err))
-        },
-    }
-}
 pub async fn serve_api(
     pool: Pool,
     state: Arc<Mutex<DbState>>,
@@ -293,7 +255,7 @@ pub async fn serve_api(
     });
     let static_path: PathBuf = api_config.extract_inner("static_path").unwrap();
     let _ = rocket::custom(api_config)
-        .mount("/", FileServer::from(static_path))
+        .mount("/", FileServer::from(static_path.clone()))
         .mount(
             "/",
             openapi_get_routes![
@@ -322,12 +284,14 @@ pub async fn serve_api(
                 get_user_limits,
                 request_new_limits,
                 get_user_limit_changes,
-                cancel_user_change
+                cancel_user_change,
+                set_language,
+                get_dict
             ],
         )
         .mount(
             "/",
-            routes![index, overview, profile, signup, signin, deposit, withdraw],
+            routes![index, overview, profile_page, signup, signin_page, deposit, withdraw],
         )
         .mount(
             "/swagger/",
@@ -342,6 +306,7 @@ pub async fn serve_api(
         .manage(btc_client)
         .manage(eth_client)
         .manage(IsTestFlag(is_test))
+        .manage(StaticPath(static_path))
         .attach(Template::fairing())
         .attach(on_ready)
         .launch()

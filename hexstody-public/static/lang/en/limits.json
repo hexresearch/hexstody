@@ -1,0 +1,12 @@
+{
+    "setup": "Set up limits",
+    "setuphelp": "Enter the integer amount in minimal values, i.e. satoshis",
+    "per": "per",
+    "day": "Day",
+    "week": "Week",
+    "month": "Month",
+    "commit": "Commit changes",
+    "mychanges": "My requested changes",
+    "status": "Status",
+    "cancelreq": "Cancel request"
+}

@@ -1,0 +1,6 @@
+{
+    "deposit": "Deposit",
+    "withdraw": "Withdraw",
+    "copied": "Copied",
+    "txdoesntexist": "Tx does not exist yet"
+}

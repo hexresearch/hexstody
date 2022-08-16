@@ -66,6 +66,8 @@ pub enum Error {
     GenericError(String),
     #[error("Unknown currency: {0}")]
     UnknownCurrency(String),
+    #[error("Language is not changed!")]
+    LangNotChanged,
 }
 
 impl Error {
@@ -96,6 +98,7 @@ impl Error {
             Error::UnknownCurrency(_) => 22,
             Error::InternalServerError(_) => 23,
             Error::GenericError(_) => 24,
+            Error::LangNotChanged => 25,
         }
     }
 
@@ -125,7 +128,8 @@ impl Error {
             Error::SignatureError(_) => Status::from_code(403).unwrap(),
             Error::InternalServerError(_) => Status::from_code(500).unwrap(),
             Error::GenericError(_) => Status::from_code(500).unwrap(),
-            Error::UnknownCurrency(_) => Status::from_code(400).unwrap()
+            Error::UnknownCurrency(_) => Status::from_code(400).unwrap(),
+            Error::LangNotChanged => Status::from_code(400).unwrap(),
         }
     }
 }

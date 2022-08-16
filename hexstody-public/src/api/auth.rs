@@ -6,11 +6,16 @@ use hexstody_db::update::signup::*;
 use hexstody_db::update::*;
 use hexstody_eth_client::client::EthClient;
 use pwhash::bcrypt;
+use rocket::get;
 use rocket::http::{Cookie, CookieJar};
 use rocket::post;
+use rocket::response::Redirect;
 use rocket::serde::json::Json;
 use rocket::State as RState;
+use rocket::uri;
+use rocket_dyn_templates::Template;
 use rocket_okapi::openapi;
+use std::collections::HashMap;
 use std::future::Future;
 use std::sync::Arc;
 use tokio::sync::mpsc;
@@ -148,4 +153,36 @@ where
         }
     })
     .await
+}
+
+#[openapi(skip)]
+#[get("/signin")]
+pub fn signin_page() -> Template {
+    let context = HashMap::from([("title", "Sign In"), ("parent", "base")]);
+    Template::render("signin", context)
+}
+
+
+#[openapi(skip)]
+#[get("/removeuser/<user>")]
+pub async fn remove_user(
+    eth_client: &RState<EthClient>,
+    state: &RState<Arc<Mutex<hexstody_db::state::State>>>,
+    is_test: &RState<IsTestFlag>,
+    user: &str
+) -> Result<(), Redirect> {
+    if is_test.0 {
+        let _ = eth_client.remove_user(&user).await;
+        let mut mstate = state.lock().await;
+        mstate.users.remove(user);
+        Ok(())
+    } else {
+        Err(Redirect::to(uri!(signin_page)))
+    }
+
+}
+
+/// Redirect to signin page
+pub fn goto_signin() -> Redirect{
+    Redirect::to(uri!(signin_page))
 }
