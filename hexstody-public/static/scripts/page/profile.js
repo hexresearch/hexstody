@@ -1,7 +1,7 @@
 import { loadTemplate, initTabs } from "./common.js";
 import { localizeChangeStatus, localizeSpan } from "./localize.js";
 
-const tabs = ["tokens-tab", "limits-tab"];
+var tabs = [];
 let tokensTemplate = null;
 let limitsTemplate = null;
 let limitsDict = null;
@@ -172,26 +172,62 @@ function checkLimitsChange() {
             })
         }
     })
+    const commitBtn = document.getElementById("commit-limits-btn");
+    const clearBtn = document.getElementById("clear-changes-btn");
     if (changes.length !== 0) {
-        const commitBtn = document.getElementById("commit-limits-btn");
         commitBtn.style.display = 'inline-flex'
         commitBtn.onclick = commitChanges(changes);
+        clearBtn.style.display = 'inline-flex';
+        clearBtn.onclick = loadLimits;
+    } else {
+        commitBtn.style.display = 'none'
+        commitBtn.onclick = commitChanges(changes);
+        clearBtn.style.display = 'none';
+        clearBtn.onclick = loadLimits;
     }
 }
 
-async function updateLoop() {
-    await Promise.allSettled([
-        loadTokens(),
-        loadLimits(),
-    ]);
-    // await new Promise((resolve) => setTimeout(resolve, refreshInterval));
-    // updateLoop();
+async function tabUrlHook(tabid){
+    const tab = tabid.replace("-tab","")
+    const name = document.getElementById(tabid).getElementsByTagName("a")[0].innerText.toLowerCase();
+    const properName = name.charAt(0).toUpperCase() + name.slice(1);
+    const titleEl = document.getElementsByTagName("title")[0];
+    const titleOld = titleEl.innerText.split(":");
+
+    window.history.pushState("", "", `/profile?tab=${tab}`);
+    titleEl.innerText = titleOld[0] + ": " + properName;
+
+    switch(tabid){
+        case "tokens-tab": 
+            await loadTokens();
+            break;
+        case "limits-tab":
+            await loadLimits();
+            break;
+        case "settings-tab":
+            console.log("unimplemented")
+            break;
+    }
+}
+
+function preInitTabs(){
+    var selectedIndex = 0;
+    const tabEls = document.getElementById("tabs-ul").getElementsByTagName("li");
+    for(let i = 0; i < tabEls.length; i++)
+    {
+        tabs.push(tabEls[i].id);
+    }
+    const selectedTab = document.getElementById("tabs-ul").getElementsByClassName("is-active");
+    if (selectedTab.length != 0) {
+        selectedIndex = tabs.indexOf(selectedTab[0].id)
+    }
+    return selectedIndex
 }
 
 async function init() {
-    initTabs(tabs);
     await initTemplates();
-    updateLoop();
+    const selectedTab = preInitTabs();
+    initTabs(tabs, tabUrlHook, selectedTab);
 };
 
 

@@ -704,7 +704,7 @@ impl State {
     fn set_language(&mut self, req: SetLanguage) -> Result<(), StateUpdateErr> {
         match self.users.get_mut(&req.user){
             Some(uinfo) => {
-                uinfo.language = req.language;
+                uinfo.config.language = req.language;
                 Ok(())
             },
             None => Err(StateUpdateErr::UserNotFound(req.user)),

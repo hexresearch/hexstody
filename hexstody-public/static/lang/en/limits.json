@@ -6,6 +6,7 @@
     "week": "Week",
     "month": "Month",
     "commit": "Commit changes",
+    "clear": "Clear changes",
     "mychanges": "My requested changes",
     "status": "Status",
     "cancelreq": "Cancel request"

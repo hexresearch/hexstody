@@ -121,7 +121,7 @@ pub async fn set_language(
 ) -> error::Result<()> {
     let lang = lang.into_inner();
     require_auth_user(cookies, state, |_, user| async move {
-        if user.language == lang {
+        if user.config.language == lang {
             Err(error::Error::LimitsNoChanges.into())
         } else {
             let _ = updater.send(StateUpdate::new(UpdateBody::SetLanguage(SetLanguage{ user: user.username, language: lang }))).await;
