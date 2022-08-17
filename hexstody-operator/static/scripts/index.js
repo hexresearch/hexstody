@@ -527,7 +527,6 @@ async function loadInvitesTab() {
 }
 
 async function loadWithdrawalLimitsTab() {
-    console.log("hello");
     openTab("navigation-tabs", "withdrawal-limits-tab");
     const withdrawalLimitsTabContent = document.getElementById("withdrawal-limits-tab-content");
     const withdrawalLimitsTemplate = await loadTemplate("/templates/withdrawal_limits.html.hbs");
