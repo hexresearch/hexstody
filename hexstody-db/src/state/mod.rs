@@ -19,7 +19,7 @@ pub use withdraw::*;
 
 use crate::update::limit::{LimitChangeData, LimitChangeUpd, LimitCancelData, LimitChangeDecision};
 use crate::update::withdrawal::{WithdrawCompleteInfo, WithdrawalRejectInfo};
-use crate::update::misc::{TokenUpdate, TokenAction, InviteRec, SetLanguage};
+use crate::update::misc::{TokenUpdate, TokenAction, InviteRec, SetLanguage, ConfigUpdateData};
 
 use super::update::btc::BtcTxCancel;
 use super::update::deposit::DepositAddress;
@@ -202,6 +202,11 @@ impl State {
             },
             UpdateBody::SetLanguage(req) => {
                 self.set_language(req)?;
+                self.last_changed = update.created;
+                Ok(None)
+            },
+            UpdateBody::ConfigUpdate(req) => {
+                self.update_user_config(req)?;
                 self.last_changed = update.created;
                 Ok(None)
             },
@@ -708,6 +713,25 @@ impl State {
                 Ok(())
             },
             None => Err(StateUpdateErr::UserNotFound(req.user)),
+        }
+    }
+
+    fn update_user_config(&mut self, req: ConfigUpdateData) -> Result<(), StateUpdateErr> {
+        let ConfigUpdateData{ user, email, phone, tg_name } = req;
+        match self.users.get_mut(&user){
+            Some(uinfo) => {
+                if let Some(email) = email {
+                    uinfo.config.email = email.ok();
+                }
+                if let Some(phone) = phone {
+                    uinfo.config.phone = phone.ok();
+                }
+                if let Some(tg_name) = tg_name {
+                    uinfo.config.tg_name = tg_name.ok();
+                }
+                Ok(())
+            },
+            None => Err(StateUpdateErr::UserNotFound(user)),
         }
     }
 }

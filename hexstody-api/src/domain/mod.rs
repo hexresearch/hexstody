@@ -49,7 +49,7 @@ pub struct PhoneNumber {pub number: String}
 
 impl PhoneNumber {
     pub fn validate(value: &str) -> bool {
-        let phone_regex = Regex::new(r"^(\+\d{1,2}\s)?\(?\d{3}\)?[\s.-]\d{3}[\s.-]?\d{4}$").unwrap();
+        let phone_regex = Regex::new(r"^(\+\d{1,2}\s?)?1?\-?\.?\s?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$|^(\+\d{1,2}\s?)?1?\-?\.?\s?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{2}[\s.-]?\d{2}$").unwrap();
         phone_regex.is_match(value)
     }
 

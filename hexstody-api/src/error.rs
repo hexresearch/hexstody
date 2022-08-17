@@ -68,6 +68,10 @@ pub enum Error {
     UnknownCurrency(String),
     #[error("Language is not changed!")]
     LangNotChanged,
+    #[error("Invalid e-mail")]
+    InvalidEmail,
+    #[error("Invalid phone number")]
+    InvalidPhoneNumber
 }
 
 impl Error {
@@ -99,6 +103,8 @@ impl Error {
             Error::InternalServerError(_) => 23,
             Error::GenericError(_) => 24,
             Error::LangNotChanged => 25,
+            Error::InvalidEmail => 26,
+            Error::InvalidPhoneNumber => 27,
         }
     }
 
@@ -130,6 +136,8 @@ impl Error {
             Error::GenericError(_) => Status::from_code(500).unwrap(),
             Error::UnknownCurrency(_) => Status::from_code(400).unwrap(),
             Error::LangNotChanged => Status::from_code(400).unwrap(),
+            Error::InvalidEmail => Status::from_code(400).unwrap(),
+            Error::InvalidPhoneNumber => Status::from_code(400).unwrap(),
         }
     }
 }

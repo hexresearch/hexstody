@@ -1,0 +1,58 @@
+<div class="margin-b-24px">
+    <span class="font-big-size font-dark-grey">{{lang.settings}}</span>
+</div>
+<div class="content-row mt-5 ticker-with-checkbox">
+    <span class="font-mid-size font-bold mr-2em">
+        {{lang.email}}
+    </span>
+    {{#if editable}}
+    <input id="cfg-email" type="text" class="mr-2em p-05em" value={{#if config.email.email}}"{{config.email.email}}"{{else}}""{{/if}} >
+    {{else}}
+    <div id="cfg-email" class="mr-2em">
+        {{#if config.email.email}}
+        {{config.email.email}}
+        {{else}}
+        {{lang.notdefined}}
+        {{/if}}
+    </div>
+    {{/if}}
+</div>
+<div class="content-row mt-5 ticker-with-checkbox">
+    <span class="font-mid-size font-bold mr-2em">
+        {{lang.phone}}
+    </span>
+    {{#if editable}}
+    <input id="cfg-phone" type="text" class="mr-2em p-05em" value={{#if config.phone.number}}"{{config.phone.number}}"{{else}}""{{/if}} >
+    {{else}}
+    <div id="cfg-phone" class="mr-2em">
+        {{#if config.phone.number}}
+        {{config.phone.number}}
+        {{else}}
+        {{lang.notdefined}}
+        {{/if}}
+    </div>
+    {{/if}}
+</div>
+
+<div class="content-row mt-5 ticker-with-checkbox">
+    <span class="font-mid-size font-bold mr-2em">
+        {{lang.tgnick}}
+    </span>
+    {{#if editable}}
+    <input id="cfg-tgnick" type="text" class="mr-2em p-05em" value={{#if config.tg_name.tg_name}}"{{config.tg_name.tg_name}}"{{else}}""{{/if}} >
+    {{else}}
+    <div id="cfg-tgnick" class="mr-2em">
+        {{#if config.tg_name.tg_name}}
+        {{config.tg_name.tg_name}}
+        {{else}}
+        {{lang.notdefined}}
+        {{/if}}
+    </div>
+    {{/if}}
+</div>
+{{#if editable}}
+<button id="confirm-config-changes-btn" type="button" class="button is-primary deposit-button margin-t-24px mr-2em"> {{lang.confirm}} </button>
+<button id="reset-changes-btn" type="button" class="button is-danger deposit-button margin-t-24px"> {{lang.clear}} </button>
+{{else}}
+<button id="edit-config-btn" type="button" class="button is-primary deposit-button margin-t-24px"> {{lang.change}} </button>
+{{/if}}

@@ -114,22 +114,14 @@ async fn profile_page(
             Language::English => "Profile",
             Language::Russian => "Профиль",
         };
-        let tabs = match user.config.language {
-            Language::English =>  [
-                json!({"id": "tokens", "label": "tokens"}), 
-                json!({"id": "limits", "label": "limits"}),
-                json!({"id": "settings", "label": "settings"})],
-            Language::Russian => [
-                json!({"id": "tokens", "label": "токены"}), 
-                json!({"id": "limits", "label": "лимиты"}),
-                json!({"id": "settings", "label": "настройки"})],
-        };
+        let tabs = get_dict_json(static_path.inner(), user.config.language, PathBuf::from_str("profile-tabs.json").unwrap());
+        if let Err(e) = tabs { return Err(e) };
         let header_dict = get_dict_json(static_path.inner(), user.config.language, PathBuf::from_str("header.json").unwrap());
         if let Err(e) = header_dict { return Err(e) };
         let context = json!({
             "title" : title,
             "parent": "base_footer_header",
-            "tabs"  : tabs,
+            "tabs"  : tabs.unwrap(),
             "selected": tab.unwrap_or("tokens".to_string()),
             "username": &user.username,
             "lang": json!({
@@ -295,7 +287,9 @@ pub async fn serve_api(
                 get_user_limit_changes,
                 cancel_user_change,
                 set_language,
-                get_dict
+                get_dict,
+                get_user_config,
+                set_user_config
             ],
         )
         .mount(

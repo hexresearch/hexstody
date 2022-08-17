@@ -1,0 +1,5 @@
+[
+    {"id": "tokens", "label": "токены"}, 
+    {"id": "limits", "label": "лимиты"},
+    {"id": "settings", "label": "настройки"}
+]

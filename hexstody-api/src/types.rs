@@ -726,3 +726,10 @@ pub enum LimitChangeDecisionType {
     Confirm,
     Reject,
 }
+
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct ConfigChangeRequest{
+    pub email: Option<String>,
+    pub phone: Option<String>,
+    pub tg_name: Option<String>,
+}
