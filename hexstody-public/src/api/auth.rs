@@ -13,9 +13,9 @@ use rocket::response::Redirect;
 use rocket::serde::json::Json;
 use rocket::State as RState;
 use rocket::uri;
-use rocket_dyn_templates::Template;
+use rocket_dyn_templates::{context, Template};
 use rocket_okapi::openapi;
-use std::collections::HashMap;
+
 use std::future::Future;
 use std::sync::Arc;
 use tokio::sync::mpsc;
@@ -158,7 +158,7 @@ where
 #[openapi(skip)]
 #[get("/signin")]
 pub fn signin_page() -> Template {
-    let context = HashMap::from([("title", "Sign In"), ("parent", "base")]);
+    let context = context! {title: "Sign In", parent: "base"};
     Template::render("signin", context)
 }
 

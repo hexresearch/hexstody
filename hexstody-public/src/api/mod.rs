@@ -4,8 +4,6 @@ pub mod profile;
 pub mod wallet;
 
 use figment::Figment;
-use serde_json::json;
-use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
@@ -21,7 +19,7 @@ use rocket::response::Redirect;
 use rocket::serde::json::Json;
 use rocket::uri;
 use rocket::{get, routes, State};
-use rocket_dyn_templates::Template;
+use rocket_dyn_templates::{context, Template};
 use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
 
 use auth::*;
@@ -102,16 +100,16 @@ async fn overview(
         if let Err(e) = overview_dict {
             return Err(e);
         };
-        let context = json!({
-            "title":title,
-            "username": &user.username,
-            "parent": "base_with_header",
-            "lang": json!({
-                "lang": user.config.language.to_alpha().to_uppercase(),
-                "header": header_dict.unwrap(),
-                "overview": overview_dict.unwrap()
-            })
-        });
+        let context = context! {
+            title,
+            username: &user.username,
+            parent: "base_with_header",
+            lang: context! {
+                lang: user.config.language.to_alpha().to_uppercase(),
+                header: header_dict.unwrap(),
+                overview: overview_dict.unwrap()
+            }
+        };
         Ok(Template::render("overview", context))
     })
     .await
@@ -147,18 +145,17 @@ async fn profile_page(
         if let Err(e) = header_dict {
             return Err(e);
         };
-        let context = json!({
-            "title" : title,
-            "parent": "base_footer_header",
-            "tabs"  : tabs.unwrap(),
-            "selected": tab.unwrap_or("tokens".to_string()),
-            "username": &user.username,
-            "lang": json!({
-                "lang": user.config.language.to_alpha().to_uppercase(),
-                "header": header_dict.unwrap(),
-            })
-        }
-        );
+        let context = context! {
+            title,
+            parent: "base_footer_header",
+            tabs  : tabs.unwrap(),
+            selected: tab.unwrap_or("tokens".to_string()),
+            username: &user.username,
+            lang: context! {
+                lang: user.config.language.to_alpha().to_uppercase(),
+                header: header_dict.unwrap(),
+            }
+        };
         Ok(Template::render("profile", context))
     })
     .await
@@ -168,7 +165,7 @@ async fn profile_page(
 #[openapi(skip)]
 #[get("/signup")]
 fn signup() -> Template {
-    let context = HashMap::from([("title", "Sign Up"), ("parent", "base")]);
+    let context = context! {title: "Sign Up",parent: "base"};
     Template::render("signup", context)
 }
 
@@ -213,15 +210,15 @@ async fn deposit(
         if let Err(e) = header_dict {
             return Err(e);
         };
-        let context = json!({
-            "title" : title,
-            "parent": "base_footer_header",
-            "username": &user.username,
-            "lang": json!({
-                "lang": user.config.language.to_alpha().to_uppercase(),
-                "header": header_dict.unwrap(),
-            })
-        });
+        let context = context! {
+            title,
+            parent: "base_footer_header",
+            username: &user.username,
+            lang: context! {
+                lang: user.config.language.to_alpha().to_uppercase(),
+                header: header_dict.unwrap(),
+            }
+        };
         Ok(Template::render("deposit", context))
     })
     .await
@@ -248,17 +245,16 @@ async fn withdraw(
         if let Err(e) = header_dict {
             return Err(e);
         };
-        let context = json!({
-            "title" : title,
-            "parent": "base_footer_header",
-            "tabs"   : ["btc", "eth"],
-            "username": &user.username,
-            "lang": json!({
-                "lang": user.config.language.to_alpha().to_uppercase(),
-                "header": header_dict.unwrap(),
-            })
-        }
-        );
+        let context = context! {
+            title,
+            parent: "base_footer_header",
+            tabs: ["btc", "eth"],
+            username: &user.username,
+            lang: context! {
+                lang: user.config.language.to_alpha().to_uppercase(),
+                header: header_dict.unwrap(),
+            }
+        };
         Ok(Template::render("withdraw", context))
     })
     .await;
