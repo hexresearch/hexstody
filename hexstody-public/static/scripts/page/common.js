@@ -70,7 +70,7 @@ export function formattedElapsedTime(dateTimeString) {
     }
 }
 
-export function initTabs(tabIds, hook) {
+export function initTabs(tabIds, hook, selected) {
     function tabClicked(clickedTabId) {
         tabIds.forEach(tabId => {
             const validationDisplay = document.getElementById(tabId + "-body");
@@ -87,5 +87,7 @@ export function initTabs(tabIds, hook) {
         }
     }
     tabIds.forEach(tab => document.getElementById(tab).onclick = () => tabClicked(tab));
-    tabClicked(tabIds[0]);
+    var i;
+    if (selected) {i = selected} else {i = 0};
+    tabClicked(tabIds[i]);
 }

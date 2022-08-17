@@ -1,0 +1,10 @@
+{
+    "settings": "Settings",
+    "email": "E-mail",
+    "phone": "Phone",
+    "tgnick": "Telegram name",
+    "notdefined": "Not filled",
+    "change": "Change settings",
+    "confirm": "Confirm",
+    "clear": "Clear changes"
+}

@@ -11,18 +11,31 @@
 
 {{#*inline "page"}}
 <div class="tabs is-large is-centered">
-    <ul>
+    <ul id="tabs-ul">
         {{#each tabs}}
-        <li id="{{this.id}}-tab"><a class="is-uppercase">{{this.label}}</a></li>
+        {{#if (isEqString this.id ../selected)}}
+            <li id="{{this.id}}-tab" class="is-active"><a class="is-uppercase">{{this.label}}</a></li>
+        {{else}}
+            <li id="{{this.id}}-tab"><a class="is-uppercase">{{this.label}}</a></li>
+        {{/if}}
         {{/each}}
     </ul>
 </div>
-
 <div class="full-height" style="background-color: #ECEFF4;">
     <div class="container" style="padding-top: 25px;">
         <div class="box balance-box">
-            <div class="row is-center fit-content" id="tokens-tab-body"></div>
-            <div class="row is-center fit-content" id="limits-tab-body"></div>
+            {{#each tabs}}
+            {{#if isEqString this.id ../selected}}
+                <div class="row is-center fit-content" id="{{this.id}}-tab-body" style="display:block"></div>
+            {{else}}
+                <div class="row is-center fit-content" id="{{this.id}}-tab-body" style="display:none"></div>
+            {{/if}}
+            {{/each}}
+        </div>
+    </div>
+    <div id="error-box" style="display: none;" class="container" style="padding-top: 25px;">
+        <div class="box balance-box">
+            <span class="font-big-size is-danger"></span>
         </div>
     </div>
 

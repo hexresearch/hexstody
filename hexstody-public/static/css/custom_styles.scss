@@ -286,7 +286,7 @@
     margin-right: 2em;
 }
 
-.item-val-bg {
+.font-big-size {
     font-weight: 600;
     font-size: 28px;
     line-height: 36px; 
@@ -302,16 +302,32 @@
     align-items: center;
 }
 
-.font-mid-size{
-    font-weight: 600;
-    font-size: 28px;
-    line-height: 36px;
+.font-mid-size {
+    font-weight: 400;
+    font-size: 18px;
+    line-height: 24px; 
+}
+
+.font-bold {
+    font-weight: bold;
 }
 
 .margin-b-24px{
     margin-bottom: 24px;
 }
 
+.margin-t-24px{
+    margin-top: 24px;
+}
+
 .font-dark-grey{
     color: #77778C;
+}
+
+.p-05em{
+    padding: 0.5em;
+}
+
+span.is-danger{
+    color: #f03a5f
 }

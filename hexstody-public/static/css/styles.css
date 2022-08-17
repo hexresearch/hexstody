@@ -7911,7 +7911,7 @@ a.has-text-danger-dark:hover, a.has-text-danger-dark:focus {
 .mr-2em {
   margin-right: 2em; }
 
-.item-val-bg {
+.font-big-size {
   font-weight: 600;
   font-size: 28px;
   line-height: 36px; }
@@ -7925,25 +7925,24 @@ a.has-text-danger-dark:hover, a.has-text-danger-dark:focus {
   align-items: center; }
 
 .font-mid-size {
-  font-weight: 600;
-  font-size: 28px;
-  line-height: 36px; }
+  font-weight: 400;
+  font-size: 18px;
+  line-height: 24px; }
 
-.font-small-size {
-  font-weight: 300;
-  font-size: 14px;
-  line-height: 23px; }
+.font-bold {
+  font-weight: bold; }
 
 .margin-b-24px {
   margin-bottom: 24px; }
 
+.margin-t-24px {
+  margin-top: 24px; }
+
 .font-dark-grey {
   color: #77778C; }
 
-.p-05em{
-  padding: 0.5em;
-}
+.p-05em {
+  padding: 0.5em; }
 
-.m-t-24px{
-  margin-top: 24px;
-}
+span.is-danger {
+  color: #f03a5f; }

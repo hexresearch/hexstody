@@ -78,3 +78,7 @@ export function localizeWithdrawalStatus(status) {
         };
     }
 }
+
+export function getLanguage(){
+    return lang
+}

@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
-use hexstody_api::{types::{LimitApiResp, LimitChangeReq, LimitChangeResponse}, domain::{Currency, Language}};
+use hexstody_api::{types::{LimitApiResp, LimitChangeReq, LimitChangeResponse, ConfigChangeRequest}, domain::{Currency, Language, Email, PhoneNumber, TgName}};
 use rocket::{get, http::CookieJar, State, serde::json::Json, response::Redirect, post};
 use rocket_okapi::openapi;
 use tokio::sync::{Mutex, mpsc};
-use hexstody_db::{state::State as DbState, update::{StateUpdate, limit::{LimitChangeUpd, LimitCancelData}, UpdateBody, misc::SetLanguage}};
+use hexstody_db::{state::{State as DbState, UserConfig}, update::{StateUpdate, limit::{LimitChangeUpd, LimitCancelData}, UpdateBody, misc::{SetLanguage, ConfigUpdateData}}};
 use hexstody_api::error;
 use super::auth::{require_auth_user, goto_signin};
 
@@ -121,11 +121,59 @@ pub async fn set_language(
 ) -> error::Result<()> {
     let lang = lang.into_inner();
     require_auth_user(cookies, state, |_, user| async move {
-        if user.language == lang {
+        if user.config.language == lang {
             Err(error::Error::LimitsNoChanges.into())
         } else {
             let _ = updater.send(StateUpdate::new(UpdateBody::SetLanguage(SetLanguage{ user: user.username, language: lang }))).await;
             Ok(())
         }
+    }).await
+}
+
+#[openapi(skip)]
+#[get("/profile/settings/config")]
+pub async fn get_user_config(
+    cookies: &CookieJar<'_>,
+    state: &State<Arc<Mutex<DbState>>>,
+) -> error::Result<Json<UserConfig>>{
+    require_auth_user(cookies, state, |_, user| async move {
+        Ok(Json(user.config))
+    }).await
+}
+#[openapi(skip)]
+#[post("/profile/settings/config", data="<request>")]
+pub async fn set_user_config(
+    cookies: &CookieJar<'_>,
+    state: &State<Arc<Mutex<DbState>>>,
+    updater: &State<mpsc::Sender<StateUpdate>>,
+    request: Json<ConfigChangeRequest>
+) -> error::Result<()>{
+    require_auth_user(cookies, state, |_, user| async move {
+        let req = request.into_inner();
+        let mut upd_data = ConfigUpdateData::default();
+        upd_data.user = user.username;
+        if let Some(email_str) = req.email {
+            if !email_str.is_empty(){
+                match Email::from_str(email_str.as_str()){
+                    Some(email) => upd_data.email = Some(Ok(email)),
+                    None => return Err(error::Error::InvalidEmail.into()),
+                }
+            } else {
+                upd_data.email = Some(Err(()))
+            }
+        }
+        if let Some(phone_str) = req.phone {
+            if !phone_str.is_empty(){
+                match PhoneNumber::from_str(phone_str.as_str()){
+                    Some(phone) => upd_data.phone = Some(Ok(phone)),
+                    None => return Err(error::Error::InvalidPhoneNumber.into()),
+                }
+            } else {
+                upd_data.phone = Some(Err(()))
+            }
+        }
+        upd_data.tg_name = req.tg_name.map(|tg_name| if tg_name.is_empty() {Err(())} else {Ok(TgName{tg_name})});
+        let _ = updater.send(StateUpdate::new(UpdateBody::ConfigUpdate(upd_data))).await;
+        Ok(())
     }).await
 }

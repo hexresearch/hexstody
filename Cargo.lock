@@ -1203,6 +1203,7 @@ dependencies = [
  "okapi",
  "p256",
  "pwhash",
+ "regex",
  "rocket",
  "rocket_okapi",
  "schemars",

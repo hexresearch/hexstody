@@ -5,12 +5,29 @@ use crate::update::limit::LimitChangeData;
 use crate::update::signup::{SignupAuth, SignupInfo, UserId};
 use chrono::prelude::*;
 use hexstody_api::domain::CurrencyTxId;
+use hexstody_api::domain::Email;
 use hexstody_api::domain::Language;
+use hexstody_api::domain::PhoneNumber;
+use hexstody_api::domain::TgName;
 use hexstody_api::domain::{Currency, CurrencyAddress};
 use hexstody_api::types::Invite;
 use hexstody_api::types::LimitInfo;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
+
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
+pub struct UserConfig {
+    pub language: Language,
+    pub email: Option<Email>,
+    pub phone: Option<PhoneNumber>,
+    pub tg_name: Option<TgName>
+}
+
+impl Default for UserConfig {
+    fn default() -> Self {
+        Self { language: Language::English, email: Default::default(), phone: Default::default(), tg_name: Default::default() }
+    }
+}
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct UserInfo {
@@ -31,8 +48,8 @@ pub struct UserInfo {
     pub currencies: HashMap<Currency, UserCurrencyInfo>,
     /// Limit change requests
     pub limit_change_requests: HashMap<Currency, LimitChangeData>,
-    /// User's language
-    pub language: Language
+    /// User's config
+    pub config: UserConfig
 }
 
 impl UserInfo {
@@ -49,7 +66,7 @@ impl UserInfo {
                 .map(|c| (c.clone(), UserCurrencyInfo::new(c)))
                 .collect(),
             limit_change_requests: HashMap::new(),
-            language: Language::English
+            config: UserConfig::default()
         }
     }
 

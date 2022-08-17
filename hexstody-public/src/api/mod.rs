@@ -1,6 +1,7 @@
 pub mod auth;
 pub mod wallet;
 pub mod profile;
+pub mod helpers;
 
 use hexstody_api::domain::Language;
 use profile::*;
@@ -78,12 +79,12 @@ async fn overview(
     static_path: &State<StaticPath>
 ) -> Result<Template, Redirect> {
     require_auth_user(cookies, state, |_, user| async move {
-        let title = match user.language{
+        let title = match user.config.language{
             Language::English => "Overview",
             Language::Russian => "Главная",
         };
-        let header_dict = get_dict_json(static_path.inner(), user.language, PathBuf::from_str("header.json").unwrap());
-        let overview_dict = get_dict_json(static_path.inner(), user.language, PathBuf::from_str("overview.json").unwrap());
+        let header_dict = get_dict_json(static_path.inner(), user.config.language, PathBuf::from_str("header.json").unwrap());
+        let overview_dict = get_dict_json(static_path.inner(), user.config.language, PathBuf::from_str("overview.json").unwrap());
         if let Err(e) = header_dict { return Err(e) };
         if let Err(e) = overview_dict { return Err(e) };
         let context = json!({
@@ -91,7 +92,7 @@ async fn overview(
             "username": &user.username, 
             "parent": "base_with_header",
             "lang": json!({
-                "lang": user.language.to_alpha().to_uppercase(),
+                "lang": user.config.language.to_alpha().to_uppercase(),
                 "header": header_dict.unwrap(),
                 "overview": overview_dict.unwrap()
             })
@@ -101,30 +102,30 @@ async fn overview(
 }
 
 #[openapi(skip)]
-#[get("/profile")]
+#[get("/profile?<tab>")]
 async fn profile_page(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
-    static_path: &State<StaticPath>
+    static_path: &State<StaticPath>,
+    tab: Option<String>
 ) -> Result<Template, Redirect> {
     require_auth_user(cookies, state, |_, user| async move {
-        let title = match user.language{
+        let title = match user.config.language{
             Language::English => "Profile",
             Language::Russian => "Профиль",
         };
-        let tabs = match user.language {
-            Language::English =>  [json!({"id": "tokens", "label": "tokens"}), json!({"id": "limits", "label": "limits"})],
-            Language::Russian => [json!({"id": "tokens", "label": "токены"}), json!({"id": "limits", "label": "лимиты"})],
-        };
-        let header_dict = get_dict_json(static_path.inner(), user.language, PathBuf::from_str("header.json").unwrap());
+        let tabs = get_dict_json(static_path.inner(), user.config.language, PathBuf::from_str("profile-tabs.json").unwrap());
+        if let Err(e) = tabs { return Err(e) };
+        let header_dict = get_dict_json(static_path.inner(), user.config.language, PathBuf::from_str("header.json").unwrap());
         if let Err(e) = header_dict { return Err(e) };
         let context = json!({
             "title" : title,
             "parent": "base_footer_header",
-            "tabs"  : tabs,
+            "tabs"  : tabs.unwrap(),
+            "selected": tab.unwrap_or("tokens".to_string()),
             "username": &user.username,
             "lang": json!({
-                "lang": user.language.to_alpha().to_uppercase(),
+                "lang": user.config.language.to_alpha().to_uppercase(),
                 "header": header_dict.unwrap(),
             })
         }
@@ -167,18 +168,18 @@ async fn deposit(
     static_path: &State<StaticPath>
 ) -> Result<Template, Redirect> {
     require_auth_user(cookies, state, |_, user| async move {
-        let title = match user.language{
+        let title = match user.config.language{
             Language::English => "Deposit",
             Language::Russian => "Депозит",
         };
-        let header_dict = get_dict_json(static_path.inner(), user.language, PathBuf::from_str("header.json").unwrap());
+        let header_dict = get_dict_json(static_path.inner(), user.config.language, PathBuf::from_str("header.json").unwrap());
         if let Err(e) = header_dict { return Err(e) };
         let context = json!({
             "title" : title,
             "parent": "base_footer_header",
             "username": &user.username,
             "lang": json!({
-                "lang": user.language.to_alpha().to_uppercase(),
+                "lang": user.config.language.to_alpha().to_uppercase(),
                 "header": header_dict.unwrap(),
             })
         });
@@ -194,11 +195,11 @@ async fn withdraw(
     static_path: &State<StaticPath>
 ) -> Result<error::Result<Template>, Redirect> {
     let resp = require_auth_user(cookies, state, |_, user| async move {
-        let title = match user.language{
+        let title = match user.config.language{
             Language::English => "Withdraw",
             Language::Russian => "Вывод",
         };
-        let header_dict = get_dict_json(static_path.inner(), user.language, PathBuf::from_str("header.json").unwrap());
+        let header_dict = get_dict_json(static_path.inner(), user.config.language, PathBuf::from_str("header.json").unwrap());
         if let Err(e) = header_dict { return Err(e) };
         let context = json!({
             "title" : title,
@@ -206,7 +207,7 @@ async fn withdraw(
             "tabs"   : ["btc", "eth"],
             "username": &user.username,
             "lang": json!({
-                "lang": user.language.to_alpha().to_uppercase(),
+                "lang": user.config.language.to_alpha().to_uppercase(),
                 "header": header_dict.unwrap(),
             })
         }
@@ -233,7 +234,7 @@ async fn get_dict(
     path: PathBuf
 ) -> error::Result<serde_json::Value> {
     require_auth_user(cookies, state, |_, user| async move {
-        get_dict_json(static_path.inner(), user.language, path)
+        get_dict_json(static_path.inner(), user.config.language, path)
     }).await
 }
 
@@ -286,7 +287,9 @@ pub async fn serve_api(
                 get_user_limit_changes,
                 cancel_user_change,
                 set_language,
-                get_dict
+                get_dict,
+                get_user_config,
+                set_user_config
             ],
         )
         .mount(
@@ -307,7 +310,9 @@ pub async fn serve_api(
         .manage(eth_client)
         .manage(IsTestFlag(is_test))
         .manage(StaticPath(static_path))
-        .attach(Template::fairing())
+        .attach(Template::custom(|engine|{
+            engine.handlebars.register_helper("isEqString", Box::new(helpers::is_eq_string))
+        }))
         .attach(on_ready)
         .launch()
         .await?;
