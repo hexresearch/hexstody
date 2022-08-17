@@ -29,7 +29,7 @@ async function getHistoryETH() {
 }
 
 async function getCourseForBTC(currency) {
-    return await fetch("/btcticker",
+    return await fetch("/ticker",
         {
             method: "POST",
             body: JSON.stringify(currency)
@@ -37,7 +37,7 @@ async function getCourseForBTC(currency) {
 };
 
 async function getCourseForETH(currency) {
-    return await fetch("/ethticker",
+    return await fetch("/ticker",
         {
             method: "POST",
             body: JSON.stringify(currency)
@@ -253,13 +253,9 @@ async function updateLoop() {
     const currValUSDT = document.getElementById("curr-val-USDT").textContent;
     usdToUSDT.textContent = "(" + (currValUSDT * 1.0).toFixed(2) + " USD)";
 
-    const jsonresCRV = await getCourseForERC20("CRV", "CRV")
-    const usdToCRV = document.getElementById("usd-CRV");
-    const currValCRV = document.getElementById("curr-val-CRV").textContent;
-    usdToCRV.textContent = "(" + (currValCRV * jsonresCRV.USD).toFixed(2) + " USD)";
 
-    const awBal = await (currValCRV * jsonresCRV.USD + parseFloat(currValUSDT) + currValEth * jsonres.USD + currValBtc * jsonresBTC.USD)
-    const awBalRub = await (currValCRV * jsonresCRV.RUB + currValUSDT * jsonresUSDT.RUB + currValEth * jsonres.RUB + currValBtc * jsonresBTC.RUB)
+    const awBal = await (parseFloat(currValUSDT) + currValEth * jsonres.USD + currValBtc * jsonresBTC.USD)
+    const awBalRub = await (currValUSDT * jsonresUSDT.RUB + currValEth * jsonres.RUB + currValBtc * jsonresBTC.RUB)
 
     const totalUsd = document.getElementById("total-balance-usd");
     const totalRub = document.getElementById("total-balance-rub");
