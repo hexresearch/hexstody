@@ -11,8 +11,8 @@ use rocket::http::{Cookie, CookieJar};
 use rocket::post;
 use rocket::response::Redirect;
 use rocket::serde::json::Json;
-use rocket::State as RState;
 use rocket::uri;
+use rocket::State as RState;
 use rocket_dyn_templates::{context, Template};
 use rocket_okapi::openapi;
 
@@ -28,7 +28,7 @@ pub struct IsTestFlag(pub bool);
 pub async fn signup_email(
     state: &RState<Arc<Mutex<State>>>,
     updater: &RState<mpsc::Sender<StateUpdate>>,
-    eth_client:&RState<EthClient>,
+    eth_client: &RState<EthClient>,
     data: Json<api::SignupEmail>,
 ) -> error::Result<Json<()>> {
     if data.user.len() < error::MIN_USER_NAME_LEN {
@@ -48,23 +48,25 @@ pub async fn signup_email(
         let state = state.lock().await;
         let ue = state.users.contains_key(&data.user);
         let iv = state.invites.contains_key(&data.invite);
-        (ue,iv)
+        (ue, iv)
     };
     if user_exists {
         return Err(error::Error::SignupExistedUser.into());
-    } 
-    if !invite_valid {
-        return Err(error::Error::InviteNotFound.into())
     }
-    else {
+    if !invite_valid {
+        return Err(error::Error::InviteNotFound.into());
+    } else {
         // Create user
-        if let Err(e) = eth_client.createuser(&data.user).await{
-            return Err(error::Error::FailedETHConnection(e.to_string()).into())
+        if let Err(e) = eth_client.createuser(&data.user).await {
+            return Err(error::Error::FailedETHConnection(e.to_string()).into());
         }
 
         // Set user's default tokens
-        if let Err(e) = eth_client.post_tokens(&data.user, &Currency::default_tokens()).await{
-            return Err(error::Error::FailedETHConnection(e.to_string()).into())
+        if let Err(e) = eth_client
+            .post_tokens(&data.user, &Currency::default_tokens())
+            .await
+        {
+            return Err(error::Error::FailedETHConnection(e.to_string()).into());
         }
         let pass_hash = bcrypt::hash(&data.password).map_err(|e| error::Error::from(e))?;
         let upd = StateUpdate::new(UpdateBody::Signup(SignupInfo {
@@ -162,14 +164,13 @@ pub fn signin_page() -> Template {
     Template::render("signin", context)
 }
 
-
 #[openapi(skip)]
 #[get("/removeuser/<user>")]
 pub async fn remove_user(
     eth_client: &RState<EthClient>,
     state: &RState<Arc<Mutex<hexstody_db::state::State>>>,
     is_test: &RState<IsTestFlag>,
-    user: &str
+    user: &str,
 ) -> Result<(), Redirect> {
     if is_test.0 {
         let _ = eth_client.remove_user(&user).await;
@@ -179,10 +180,9 @@ pub async fn remove_user(
     } else {
         Err(Redirect::to(uri!(signin_page)))
     }
-
 }
 
 /// Redirect to signin page
-pub fn goto_signin() -> Redirect{
+pub fn goto_signin() -> Redirect {
     Redirect::to(uri!(signin_page))
 }
