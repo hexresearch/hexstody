@@ -147,7 +147,7 @@ async fn profile_page(
         };
         let context = context! {
             title,
-            parent: "base_footer_header",
+            parent: "base_with_header",
             tabs  : tabs.unwrap(),
             selected: tab.unwrap_or("tokens".to_string()),
             username: &user.username,
@@ -212,7 +212,7 @@ async fn deposit(
         };
         let context = context! {
             title,
-            parent: "base_footer_header",
+            parent: "base_with_header",
             username: &user.username,
             lang: context! {
                 lang: user.config.language.to_alpha().to_uppercase(),
@@ -247,8 +247,7 @@ async fn withdraw(
         };
         let context = context! {
             title,
-            parent: "base_footer_header",
-            tabs: ["btc", "eth"],
+            parent: "base_with_header",
             username: &user.username,
             lang: context! {
                 lang: user.config.language.to_alpha().to_uppercase(),
