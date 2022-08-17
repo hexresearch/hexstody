@@ -46,13 +46,14 @@ pub async fn get_balance(
                     Currency::ETH => {
                         bal = user_data.data.balanceEth.parse::<u64>().unwrap();
                     }
-                    Currency::ERC20(token) => {
+                    c if c.is_token() => {
                         for tok in &user_data.data.balanceTokens {
-                            if tok.tokenName == token.ticker {
+                            if tok.tokenName == c.to_string().to_owned() {
                                 bal = tok.tokenBalance.parse::<u64>().unwrap();
                             }
                         }
                     }
+                    _ => panic!("invalid operation")
                 }
                 api::BalanceItem {
                     currency: cur.clone(),
@@ -92,9 +93,9 @@ pub async fn get_balance_by_currency(
                     match cur.clone() {
                         Currency::BTC => return nofound_err, // this should not happen
                         Currency::ETH => return Ok((user_data.data.balanceEth.parse().unwrap(), limit_info)),
-                        Currency::ERC20(token) => {
+                        c if c.is_token() => {
                             for tok in user_data.data.balanceTokens{
-                                if tok.tokenName == token.ticker{
+                                if tok.tokenName == c.to_string().to_owned(){
                                     return Ok((tok.tokenBalance.parse::<u64>().unwrap(), limit_info))
                                 }
                             }
@@ -343,7 +344,7 @@ pub async fn get_history_erc20(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
     eth_client: &State<EthClient>,
-    token: String,
+    token: Currency,
 ) -> error::Result<Json<Vec<api::Erc20HistUnitU>>> {
     require_auth_user(cookies, state, |_, user| async move {
         let user_data_resp = eth_client.get_user_data(&user.username).await;
@@ -480,7 +481,7 @@ pub async fn list_tokens(
         let info = Currency::supported_tokens()
             .into_iter()
             .map(
-                |token| match user.currencies.get(&Currency::ERC20(token.clone())) {
+                |token| match user.currencies.get(&token.ticker) {
                     Some(c) => TokenInfo {
                         token: token.clone(),
                         balance: c.balance(),
@@ -512,8 +513,7 @@ pub async fn enable_token(
 ) -> error::Result<()> {
     require_auth_user(cookies, state, |_, user| async move {
         let token = req.into_inner().token;
-        let c = Currency::ERC20(token.clone());
-        match user.currencies.get(&c) {
+        match user.currencies.get(&token.ticker) {
             Some(_) => Err(error::Error::TokenAlreadyEnabled(token).into()),
             None => {
                 let state_update = StateUpdate::new(UpdateBody::UpdateTokens(TokenUpdate {
@@ -550,8 +550,7 @@ pub async fn disable_token(
 ) -> error::Result<()> {
     require_auth_user(cookies, state, |_, user| async move {
         let token = req.into_inner().token;
-        let cur = Currency::ERC20(token.clone());
-        match user.currencies.get(&cur) {
+        match user.currencies.get(&token.ticker) {
             None => Err(error::Error::TokenAlreadyDisabled(token).into()),
             Some(info) => {
                 if info.balance() > 0 {
@@ -570,8 +569,8 @@ pub async fn disable_token(
                                 .keys()
                                 .into_iter()
                                 .filter_map(|c| match c {
-                                    Currency::ERC20(tok) => {
-                                        if tok.ticker == token.ticker {
+                                    c if c.is_token() => {
+                                        if c.clone() == token.ticker {
                                             None
                                         } else {
                                             Some(token.clone())

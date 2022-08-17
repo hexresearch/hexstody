@@ -555,24 +555,23 @@ impl State {
         match self.users.get_mut(&user){
             None => Err(StateUpdateErr::UserNotFound(user)),
             Some(user_info) => {
-                let cur = Currency::ERC20(token.clone());
                 match action {
                     TokenAction::Enable => {
-                        if user_info.currencies.contains_key(&cur) {
+                        if user_info.currencies.contains_key(&token.ticker) {
                             Err(StateUpdateErr::TokenAlreadyEnabled(token))
                         } else {
-                            user_info.currencies.insert(cur.clone(), UserCurrencyInfo::new(cur.clone()));
+                            user_info.currencies.insert(token.ticker.clone(), UserCurrencyInfo::new(token.ticker.clone()));
                             Ok(())
                         }
                     },
                     TokenAction::Disable => {
-                        match user_info.currencies.get(&cur) {
+                        match user_info.currencies.get(&token.ticker) {
                             Some(info) => {
                                 if info.balance() > 0 {
                                     Err(StateUpdateErr::TokenNonZeroBalance(token))
                                 } else {
-                                    user_info.currencies.remove(&cur);
-                                    user_info.limit_change_requests.remove(&cur);
+                                    user_info.currencies.remove(&token.ticker);
+                                    user_info.limit_change_requests.remove(&token.ticker);
                                     Ok(())
                                 }
                             },
