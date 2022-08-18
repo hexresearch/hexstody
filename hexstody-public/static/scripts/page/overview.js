@@ -28,26 +28,11 @@ async function getHistoryETH() {
     return fetch("/historyeth").then(r => r.json());
 }
 
-async function getCourseForBTC(currency) {
+async function getCourseForCurrency (currency) {
     return await fetch("/ticker",
         {
             method: "POST",
             body: JSON.stringify(currency)
-        }).then(r => r.json());
-};
-
-async function getCourseForETH(currency) {
-    return await fetch("/ticker",
-        {
-            method: "POST",
-            body: JSON.stringify(currency)
-        }).then(r => r.json());
-};
-
-async function getCourseForERC20(currency, token) {
-    return await fetch("/erc20ticker/" + token,
-        {
-            method: "GET",
         }).then(r => r.json());
 };
 
@@ -239,16 +224,16 @@ async function loadMoreHistory() {
 async function updateLoop() {
     await Promise.allSettled([loadBalance(), loadHistoryETH()]);
 
-    const jsonresBTC = await getCourseForBTC("BTC");
+    const jsonresBTC = await getCourseForCurrency("BTC");
     const usdToBtc = document.getElementById("usd-BTC");
     let currValBtc = document.getElementById("curr-val-BTC").textContent;
     usdToBtc.textContent = "(" + (currValBtc * jsonresBTC.USD).toFixed(2) + " USD)";
 
-    const jsonres = await getCourseForETH("ETH")
+    const jsonres = await getCourseForCurrency("ETH")
     const usdToEth = document.getElementById("usd-ETH");
     const currValEth = document.getElementById("curr-val-ETH").textContent;
     usdToEth.textContent = "(" + (currValEth * jsonres.USD).toFixed(2) + " USD)";
-    const jsonresUSDT = await getCourseForERC20("USDT", "USDT")
+    const jsonresUSDT = await getCourseForCurrency("USDT")
     const usdToUSDT = document.getElementById("usd-USDT");
     const currValUSDT = document.getElementById("curr-val-USDT").textContent;
     usdToUSDT.textContent = "(" + (currValUSDT * 1.0).toFixed(2) + " USD)";
