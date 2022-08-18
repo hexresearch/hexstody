@@ -40,3 +40,9 @@ pub struct ConfigUpdateData{
     pub phone: Option<Result<PhoneNumber,()>>,
     pub tg_name: Option<Result<TgName,()>>
 }
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+pub struct PasswordChangeUpd{
+    pub user: String,
+    pub new_password: String
+}

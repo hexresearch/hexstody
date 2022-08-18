@@ -18,7 +18,7 @@ use self::deposit::DepositAddress;
 use self::limit::{LimitChangeUpd, LimitCancelData, LimitChangeDecision};
 use self::signup::SignupInfo;
 use self::withdrawal::{WithdrawalRequestDecisionInfo, WithdrawalRequestInfo, WithdrawCompleteInfo, WithdrawalRejectInfo};
-use self::misc::{InviteRec, TokenUpdate, SetLanguage, ConfigUpdateData};
+use self::misc::{InviteRec, TokenUpdate, SetLanguage, ConfigUpdateData, PasswordChangeUpd};
 use super::state::transaction::BtcTransaction;
 use super::state::State;
 
@@ -77,7 +77,9 @@ pub enum UpdateBody {
     /// Set language
     SetLanguage(SetLanguage),
     /// Update user's config
-    ConfigUpdate(ConfigUpdateData)
+    ConfigUpdate(ConfigUpdateData),
+    /// Change user's password
+    PasswordChange(PasswordChangeUpd)
 }
 
 impl UpdateBody {
@@ -101,6 +103,7 @@ impl UpdateBody {
             UpdateBody::ClearLimits(_) => UpdateTag::ClearLimits,
             UpdateBody::SetLanguage(_) => UpdateTag::SetLanguage,
             UpdateBody::ConfigUpdate(_) => UpdateTag::ConfigUpdate,
+            UpdateBody::PasswordChange(_) => UpdateTag::PasswordChange,
         }
     }
 
@@ -124,6 +127,7 @@ impl UpdateBody {
             UpdateBody::ClearLimits(v) => serde_json::to_value(v),
             UpdateBody::SetLanguage(v) => serde_json::to_value(v),
             UpdateBody::ConfigUpdate(v) => serde_json::to_value(v),
+            UpdateBody::PasswordChange(v) => serde_json::to_value(v),
         }
     }
 }
@@ -148,6 +152,7 @@ pub enum UpdateTag {
     ClearLimits,
     SetLanguage,
     ConfigUpdate,
+    PasswordChange,
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -182,6 +187,7 @@ impl fmt::Display for UpdateTag {
             UpdateTag::ClearLimits => write!(f, "clear limits"),
             UpdateTag::SetLanguage => write!(f, "set language"),
             UpdateTag::ConfigUpdate => write!(f, "user config update"),
+            UpdateTag::PasswordChange => write!(f, "password change"),
         }
     }
 }
@@ -209,6 +215,7 @@ impl FromStr for UpdateTag {
             "clear limits" => Ok(UpdateTag::ClearLimits),
             "set language" => Ok(UpdateTag::SetLanguage),
             "user config update" => Ok(UpdateTag::ConfigUpdate),
+            "password change" => Ok(UpdateTag::PasswordChange),
             _ => Err(UnknownUpdateTag(s.to_owned())),
         }
     }
@@ -268,6 +275,7 @@ impl UpdateTag {
             UpdateTag::ClearLimits => Ok(UpdateBody::ClearLimits(serde_json::from_value(value)?)),
             UpdateTag::SetLanguage => Ok(UpdateBody::SetLanguage(serde_json::from_value(value)?)),
             UpdateTag::ConfigUpdate => Ok(UpdateBody::ConfigUpdate(serde_json::from_value(value)?)),
+            UpdateTag::PasswordChange => Ok(UpdateBody::PasswordChange(serde_json::from_value(value)?)),
         }
     }
 }

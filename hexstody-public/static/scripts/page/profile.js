@@ -1,4 +1,4 @@
-import { loadTemplate, initTabs } from "./common.js";
+import { loadTemplate, initTabs, initCollapsibles } from "./common.js";
 import { localizeChangeStatus, localizeSpan, getLanguage } from "./localize.js";
 
 var tabs = [];
@@ -10,6 +10,7 @@ let tokensDict = null;
 let settingsDict = null;
 let origLimits = null;
 let origConfig = null;
+let keyTemplate = null;
 
 const emailRegex = /^([a-z0-9_+]([a-z0-9_+.]*[a-z0-9_+])?)@([a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,6})/;
 const phoneRegex = /^(\+\d{1,2}\s?)?1?\-?\.?\s?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$|^(\+\d{1,2}\s?)?1?\-?\.?\s?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{2}[\s.-]?\d{2}$/;
@@ -65,6 +66,15 @@ async function postLimitsChange(changes){
     });
 }
 
+async function postPasswordChange(oldPass, newPass){
+    const body = {old_password: oldPass, new_password: newPass}
+    return await fetch("/password",
+    {
+        method: "POST",
+        body: JSON.stringify(body)
+    });
+}
+
 async function postChangeCancel(currency){
     return await fetch("/profile/limits/cancel",
     {
@@ -91,13 +101,14 @@ function getCurName(val){
 }
 
 async function initTemplates() {
-    const [tokensTemp, tokensD, limitsTemp, limitsD, settingsTemp, settingsD] = await Promise.allSettled([
+    const [tokensTemp, tokensD, limitsTemp, limitsD, settingsTemp, settingsD, keyTemp] = await Promise.allSettled([
         await loadTemplate("/templates/token.html.hbs"),
         await fetch("/lang/token.json").then(r => r.json()),
         await loadTemplate("/templates/limits.html.hbs"),
         await fetch("/lang/limits.json").then(r => r.json()),
         await loadTemplate("/templates/settings.html.hbs"),
         await fetch("/lang/settings.json").then(r => r.json()),
+        await loadTemplate("/templates/key.html.hbs"),
     ]);
 
     tokensTemplate = tokensTemp.value;
@@ -106,6 +117,7 @@ async function initTemplates() {
     limitsDict = limitsD.value;
     tokensDict = tokensD.value;
     settingsDict = settingsD.value;
+    keyTemplate = keyTemp.value;
     Handlebars.registerHelper('tokenFormatName', function () { return this.token.ticker; });
     Handlebars.registerHelper('limitsFormatName', function () { return getCurName(this) });
     Handlebars.registerHelper('changesFormatName', function () { return getCurName(this) });
@@ -311,6 +323,40 @@ function checkLimitsChange() {
     }
 }
 
+async function performPasswordChange(){
+    hideError()
+    const oldPassEl = document.getElementById("old-password");
+    const oldPass = oldPassEl.value;
+    const newPassEl = document.getElementById("new-password");
+    const newPass = newPassEl.value;
+    const newPassRepEl = document.getElementById("new-password-rep");
+    const newPassRep = newPassRepEl.value;
+
+    if (newPass !== newPassRep){
+        displayError("Passwords do not match")
+    } else {
+        const resp = await postPasswordChange(oldPass, newPass);
+        if(resp.ok) {
+            oldPassEl.value = "";
+            newPassEl.value = "";
+            newPassRepEl.value = "";
+            document.getElementById("pass-change-label-btn").click();
+        } else {
+            const errMsg = await resp.json();
+            displayError(errMsg)
+        }
+    }
+}
+
+async function loadKeyTab(){
+    const keyDrawUpdate = keyTemplate();
+    const keyElement = document.getElementById("key-tab-body");
+    keyElement.style.width = "100%"
+    keyElement.innerHTML = keyDrawUpdate
+    initCollapsibles()
+    document.getElementById("password-change-btn").onclick = performPasswordChange;
+}
+
 async function tabUrlHook(tabid){
     const tab = tabid.replace("-tab","")
     const name = document.getElementById(tabid).getElementsByTagName("a")[0].innerText.toLowerCase();
@@ -330,6 +376,9 @@ async function tabUrlHook(tabid){
             break;
         case "settings-tab":
             await loadSettings(false, true);
+            break;
+        case "key-tab":
+            await loadKeyTab();
             break;
     }
 }

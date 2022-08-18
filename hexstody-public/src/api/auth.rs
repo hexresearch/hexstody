@@ -1,7 +1,9 @@
 use hexstody_api::domain::Currency;
 use hexstody_api::error;
 use hexstody_api::types as api;
+use hexstody_api::types::PasswordChange;
 use hexstody_db::state::*;
+use hexstody_db::update::misc::PasswordChangeUpd;
 use hexstody_db::update::signup::*;
 use hexstody_db::update::*;
 use hexstody_eth_client::client::EthClient;
@@ -75,6 +77,41 @@ pub async fn signup_email(
         updater.send(upd).await.unwrap();
     }
     Ok(Json(()))
+}
+
+#[openapi(tag = "auth")]
+#[post("/password", data = "<data>")]
+pub async fn change_password(
+    state: &RState<Arc<Mutex<State>>>,
+    cookies: &CookieJar<'_>,
+    updater: &RState<mpsc::Sender<StateUpdate>>,
+    data: Json<api::PasswordChange>,
+) -> error::Result<()>{
+    let PasswordChange{old_password, new_password} = data.into_inner();
+    require_auth_user(cookies, state, |_,user| async move {
+        if let UserInfo{auth: SignupAuth::Password(pass_hash),..} = user{
+            if !bcrypt::verify(&old_password, &pass_hash){
+                return Err(error::Error::UserNameTooShort.into())
+            }
+        };
+        if new_password.len() < error::MIN_USER_PASSWORD_LEN {
+            return Err(error::Error::UserPasswordTooShort.into());
+        }
+        if new_password.len() > error::MAX_USER_PASSWORD_LEN {
+            return Err(error::Error::UserPasswordTooLong.into());
+        }
+        let new_pass_hash = bcrypt::hash(&new_password).map_err(|e| error::Error::from(e))?;
+        let upd = StateUpdate::new(
+            UpdateBody::PasswordChange(
+                PasswordChangeUpd{ 
+                    user: user.username, 
+                    new_password: new_pass_hash
+                }
+            )
+        );
+        updater.send(upd).await.unwrap();
+        Ok(())
+    }).await
 }
 
 const AUTH_COOKIE: &str = "user_id";
