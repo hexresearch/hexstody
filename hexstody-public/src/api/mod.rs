@@ -290,7 +290,8 @@ pub async fn serve_api(
                 get_dict,
                 get_user_config,
                 set_user_config,
-                change_password
+                change_password,
+                set_user_public_key
             ],
         )
         .mount(

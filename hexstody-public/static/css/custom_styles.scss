@@ -324,6 +324,10 @@
     color: #77778C;
 }
 
+.font-black{
+    color: rgb(26, 26, 26);
+}
+
 .p-05em{
     padding: 0.5em;
 }
@@ -390,4 +394,34 @@ span.is-danger{
 
 .secure-input{
     -webkit-text-security: disc !important;
+}
+
+.inline-flex{
+    display: inline-flex;
+}
+
+.icon-36px {
+    height: 36px;
+}
+
+.float-right{
+    float: right;
+}
+
+.display-flex{
+    display: flex;
+}
+
+.m-l-a{
+    margin-left: auto;
+}
+
+.p-lr-1em{
+    padding-left: 1em;
+    padding-right: 1em;
+}
+
+.p-tb-05em{
+    padding-top: 0.5em;
+    padding-bottom: 0.5em;
 }

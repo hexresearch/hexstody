@@ -19,7 +19,34 @@
     <button id="password-change-btn" type="button" class="button is-primary deposit-button margin-t-24px"> Confirm </button>
     </div>
 </div>
+{{#if hasKey}}
+<button class="collapsible m-t-05em">Display private key mnemonic</button>
+<div class="collapsible-content">
+    <div id="mnemonic-password-box">
+        <div class="font-mid-size font-dark-grey m-b-05em">Enter the key password to show mnemonic</div>
+        <div class="inline-flex">
+            <input id="show-mnemonic-password" type="text" class="input secure-input mr-2em" type="password" placeholder="********">
+            <button id="show-mnemonic-btn" type="button" class="button is-primary deposit-button"> Confirm </button>
+        </div>
+    </div>
+    <div id="mnemonic-box" class="m-t-1em" style="display: none;">
+        <div id="mnemonic-display" class="font-small-size font-dark-grey m-b-05em"></div>
+        <button id="clear-key" type="button" class="button is-primary deposit-button"> Clear the key </button>
+    </div>
+</div>
+{{else}}
 <button class="collapsible m-t-05em">Set private key</button>
 <div class="collapsible-content">
-  <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+    <div id="mnemonic-password-box">
+        <div class="font-mid-size font-dark-grey m-b-05em">Enter a key password to generate mnemonic</div>
+        <input id="gen-mnemonic-password" type="text" class="input secure-input mr-2em m-b-1em" type="password" placeholder="********">
+        <div class="font-small-size font-dark-grey m-b-05em"> Repeat the password </div>
+        <input id="gen-mnemonic-password-rep" type="text" class="input secure-input mr-2em m-b-1em" type="password" placeholder="********">
+        <button id="gen-mnemonic-btn" type="button" class="button is-primary deposit-button"> Generate </button>
+    </div>
+    <div id="mnemonic-box" class="m-t-1em" style="display: none;">
+        <div id="mnemonic-display" class="font-small-size font-dark-grey m-b-05em"></div>
+        <button id="set-key" type="button" class="button is-primary deposit-button"> Set the key </button>
+    </div>
 </div>
+{{/if}}

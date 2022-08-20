@@ -1,3 +1,4 @@
+use p256::PublicKey;
 use serde::{Deserialize, Serialize};
 use super::signup::UserId;
 
@@ -45,4 +46,10 @@ pub struct ConfigUpdateData{
 pub struct PasswordChangeUpd{
     pub user: String,
     pub new_password: String
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+pub struct SetPublicKey{
+    pub user: String,
+    pub public_key: Option<PublicKey>
 }

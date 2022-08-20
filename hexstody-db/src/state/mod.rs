@@ -20,7 +20,7 @@ pub use withdraw::*;
 use crate::update::limit::{LimitChangeData, LimitChangeUpd, LimitCancelData, LimitChangeDecision};
 use crate::update::signup::SignupAuth;
 use crate::update::withdrawal::{WithdrawCompleteInfo, WithdrawalRejectInfo};
-use crate::update::misc::{TokenUpdate, TokenAction, InviteRec, SetLanguage, ConfigUpdateData, PasswordChangeUpd};
+use crate::update::misc::{TokenUpdate, TokenAction, InviteRec, SetLanguage, ConfigUpdateData, PasswordChangeUpd, SetPublicKey};
 
 use super::update::btc::BtcTxCancel;
 use super::update::deposit::DepositAddress;
@@ -213,6 +213,11 @@ impl State {
             },
             UpdateBody::PasswordChange(req) => {
                 self.change_password(req)?;
+                self.last_changed = update.created;
+                Ok(None)
+            },
+            UpdateBody::SetPublicKey(req) => {
+                self.set_user_public_key(req)?;
                 self.last_changed = update.created;
                 Ok(None)
             },
@@ -746,6 +751,17 @@ impl State {
         match self.users.get_mut(&user){
             Some(uinfo) => {
                 uinfo.auth = SignupAuth::Password(new_password);
+                Ok(())
+            },
+            None => Err(StateUpdateErr::UserNotFound(user)),
+        }
+    }
+
+    fn set_user_public_key(&mut self, req: SetPublicKey) -> Result<(), StateUpdateErr> {
+        let SetPublicKey{ user, public_key } = req;
+        match self.users.get_mut(&user){
+            Some(uinfo) => {
+                uinfo.public_key = public_key;
                 Ok(())
             },
             None => Err(StateUpdateErr::UserNotFound(user)),
