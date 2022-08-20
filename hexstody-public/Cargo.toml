@@ -49,6 +49,7 @@ figment = { version = "0.10", features = ["toml", "env"] }
 base64 = "0.13.0"
 uuid = { version = "0.8.2", features = ["v4"]}
 p256 = { version = "0.11.1", features = ["serde"] }
+hexstody-sig = { path = "../hexstody-sig" }
 
 [dev-dependencies]
 hexstody-client = { path = "../hexstody-client" }

@@ -1,27 +1,35 @@
+use hexstody_api::domain::ChallengeResponse;
 use hexstody_api::domain::Currency;
 use hexstody_api::error;
 use hexstody_api::types as api;
 use hexstody_api::types::PasswordChange;
+use hexstody_api::types::SignatureData;
 use hexstody_db::state::*;
 use hexstody_db::update::misc::PasswordChangeUpd;
 use hexstody_db::update::signup::*;
 use hexstody_db::update::*;
+use hexstody_sig::SignatureVerificationConfig;
 use hexstody_eth_client::client::EthClient;
+use hexstody_sig::verify_signature;
 use pwhash::bcrypt;
 use rocket::get;
 use rocket::http::{Cookie, CookieJar};
 use rocket::post;
 use rocket::response::Redirect;
+use rocket::serde;
 use rocket::serde::json::Json;
 use rocket::State as RState;
 use rocket::uri;
 use rocket_dyn_templates::Template;
 use rocket_okapi::openapi;
+use uuid::Uuid;
 use std::collections::HashMap;
 use std::future::Future;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio::sync::{Mutex, MutexGuard};
+
+use crate::state::RuntimeState;
 
 pub struct IsTestFlag(pub bool);
 
@@ -218,6 +226,63 @@ pub async fn remove_user(
     }
 
 }
+
+#[openapi(skip)]
+#[post("/signin/challenge/get", data="<user>")]
+pub async fn get_challenge(
+    runtime_state: &RState<Arc<Mutex<RuntimeState>>>,
+    state: &RState<Arc<Mutex<State>>>,
+    user: Json<String>
+) -> error::Result<Json<String>>{
+    let user = user.into_inner();
+    let user_exist = state.lock().await.users.contains_key(&user);
+    if user_exist {
+        let challenge = Uuid::new_v4().to_string();
+        runtime_state.lock().await.challenges.insert(user, challenge.clone());
+        Ok(Json(challenge))
+    } else {
+        return Err(error::Error::NoUserFound.into())
+    }
+}
+
+#[openapi(skip)]
+#[post("/signin/challenge/redeem", data="<resp>")]
+pub async fn redeem_challenge(
+    runtime_state: &RState<Arc<Mutex<RuntimeState>>>,
+    state: &RState<Arc<Mutex<State>>>,
+    cookies: &CookieJar<'_>,
+    resp: Json<ChallengeResponse>,
+    signature_data: SignatureData,
+    config: &RState<SignatureVerificationConfig>
+) -> error::Result<()>{
+    let url = [config.domain.clone(), uri!(redeem_challenge).to_string()].join("");
+    let user = resp.user.clone();
+    let challenge = resp.challenge.clone();
+    let user_exist = state.lock().await.users.contains_key(&user);
+    if user_exist {
+        let message = [url, serde::json::to_string(&resp.into_inner()).unwrap()].join(":");
+        let v = verify_signature(None,&signature_data.public_key, &signature_data.nonce, message, &signature_data.signature);
+        match v {
+            Ok(_) => {
+                let mut rstate = runtime_state.lock().await;
+                match rstate.challenges.get(&user){
+                    Some(stored_challenge) => if stored_challenge.clone() == challenge {
+                        rstate.challenges.remove(&user);
+                        cookies.add_private(Cookie::new(AUTH_COOKIE, user.clone()));
+                        Ok(())
+                    } else {
+                        Err(error::Error::NoUserFound.into())
+                    },
+                    None => Err(error::Error::NoUserFound.into()),
+                }
+            },
+            Err(e) => Err(error::Error::SignatureError(format!("{:?}", e)).into()),
+        }
+    } else {
+        Err(error::Error::NoUserFound.into())
+    }
+}
+
 
 /// Redirect to signin page
 pub fn goto_signin() -> Redirect{

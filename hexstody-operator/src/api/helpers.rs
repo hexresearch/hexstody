@@ -1,19 +1,12 @@
 use hexstody_api::types::SignatureData;
 use hexstody_api::error;
-use hexstody_sig::SignatureVerificationData;
-use p256::PublicKey;
+use hexstody_sig::{SignatureVerificationData, SignatureVerificationConfig};
 use rocket::serde::json;
-use serde::{Deserialize, Serialize};
-
-#[derive(Deserialize)]
-pub struct Config {
-    pub domain: String,
-    pub operator_public_keys: Vec<PublicKey>,
-}
+use serde::Serialize;
 
 /// Guard operator handle from non-authorized user
 pub fn guard_op_signature<T: Serialize>(
-    config: &Config,
+    config: &SignatureVerificationConfig,
     uri: String,
     signature_data: SignatureData,
     body: &T
@@ -34,7 +27,7 @@ pub fn guard_op_signature<T: Serialize>(
 
 /// Guard operator handle from non-authorized user. Special case for when request has no body attached
 pub fn guard_op_signature_nomsg(
-    config: &Config,
+    config: &SignatureVerificationConfig,
     uri: String,
     signature_data: SignatureData,
 ) -> error::Result<()>{

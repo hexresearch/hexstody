@@ -1452,6 +1452,7 @@ dependencies = [
  "hexstody-client",
  "hexstody-db",
  "hexstody-eth-client",
+ "hexstody-sig",
  "log",
  "p256",
  "pwhash",
@@ -1474,8 +1475,10 @@ name = "hexstody-sig"
 version = "0.1.0"
 dependencies = [
  "hexstody-api",
+ "log",
  "p256",
  "rand_core 0.6.3",
+ "serde",
 ]
 
 [[package]]
