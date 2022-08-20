@@ -1,4 +1,4 @@
-import { hasKeyPairStored, listUsers, retrievePrivateKey } from "../crypto.js";
+import { listUsers, retrievePrivateKey } from "../crypto.js";
 
 var emailEl = null;
 var passwordEl = null;
@@ -153,8 +153,10 @@ async function initTemplates(hasKeyOverride, lang){
     const keys = listUsers();
     const hasKeys = keys.length != 0
     const viaKey = hasKeys && hasKeyOverride;
-    const [singinTemp] = await Promise.allSettled([loadTemplate("/templates/signin.html.hbs")])
-    signinTemplate = singinTemp.value;
+    if(!signinTemplate){
+        const [singinTemp] = await Promise.allSettled([loadTemplate("/templates/signin.html.hbs")])
+        signinTemplate = singinTemp.value;
+    }
     const singinDraw = signinTemplate({viaKey: viaKey, hasKey: hasKeys, keys: keys, lang: dict[lang]});
     document.getElementById("signin-box").innerHTML = singinDraw
     if (viaKey) {
