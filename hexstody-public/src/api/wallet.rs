@@ -299,48 +299,6 @@ pub async fn get_history(
 }
 
 #[openapi(tag = "history")]
-#[get("/historyeth")]
-pub async fn get_history_eth(
-    cookies: &CookieJar<'_>,
-    state: &State<Arc<Mutex<DbState>>>,
-    eth_client: &State<EthClient>,
-) -> error::Result<Json<Vec<api::Erc20HistUnitU>>> {
-    require_auth_user(cookies, state, |_, user| async move {
-        eth_client
-            .get_user_data(&user.username)
-            .await
-            .map_err(|e| error::Error::FailedETHConnection(e.to_string()).into())
-            .map(|user_data| Json(user_data.data.historyEth))
-    })
-    .await
-}
-
-#[openapi(tag = "history")]
-#[get("/historyerc20/<token>")]
-pub async fn get_history_erc20(
-    cookies: &CookieJar<'_>,
-    state: &State<Arc<Mutex<DbState>>>,
-    eth_client: &State<EthClient>,
-    token: String,
-) -> error::Result<Json<Vec<api::Erc20HistUnitU>>> {
-    require_auth_user(cookies, state, |_, user| async move {
-        let user_data_resp = eth_client.get_user_data(&user.username).await;
-        if let Err(e) = user_data_resp {
-            return Err(error::Error::FailedETHConnection(e.to_string()).into());
-        };
-        let user_data = user_data_resp.unwrap();
-        let mut history = vec![];
-        for his_token in &user_data.data.historyTokens {
-            if his_token.token.ticker == token {
-                history = his_token.history.clone();
-            };
-        }
-        Ok(Json(history))
-    })
-    .await
-}
-
-#[openapi(tag = "history")]
 #[get("/withdraweth/<addr>/<amount>")]
 pub async fn withdraw_eth(
     cookies: &CookieJar<'_>,

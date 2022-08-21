@@ -270,8 +270,6 @@ pub async fn serve_api(
                 ethfee,
                 btcfee,
                 get_history,
-                get_history_eth,
-                get_history_erc20,
                 withdraw_eth,
                 post_withdraw,
                 signup_email,
