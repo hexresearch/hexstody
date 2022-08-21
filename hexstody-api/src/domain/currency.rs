@@ -181,8 +181,8 @@ pub enum CurrencyAddress {
     Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
 )]
 pub struct Erc20 {
-    token: Erc20Token,
-    account: EthAccount,
+    pub token: Erc20Token,
+    pub account: EthAccount,
 }
 
 impl CurrencyAddress {

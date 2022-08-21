@@ -106,6 +106,7 @@ async function initTemplates() {
         return formattedElapsedTime(this.date);
     });
     Handlebars.registerHelper('isInProgress', (req_confirmations, confirmations) => req_confirmations > confirmations);
+    Handlebars.registerHelper('toLowerCase', (s) => s.toLowerCase());
 }
 
 async function loadBalance() {
@@ -113,7 +114,6 @@ async function loadBalance() {
     const balanceDrawUpdate = balanceTemplate({balances: balances.balances, lang: dict});
     const balancesElem = document.getElementById("balances");
     balancesElem.innerHTML = balanceDrawUpdate;
-    enableDepositWithdrawBtns(balancesElem);
 }
 
 async function loadHistory() {
@@ -197,20 +197,6 @@ function enableCopyBtns(historyElem) {
                     instance.hide();
                 }, 1000);
             }
-        });
-    };
-}
-
-function enableDepositWithdrawBtns(balancesElem) {
-    let balanceItems = balancesElem.getElementsByClassName('balances-item');
-    for (var item of balanceItems) {
-        let depositBtn = item.getElementsByTagName('button')[0];
-        let withdrawBtn = item.getElementsByTagName('button')[1];
-        depositBtn.addEventListener("click", () => {
-            window.location.href = "/deposit";
-        });
-        withdrawBtn.addEventListener("click", () => {
-            window.location.href = "/withdraw";
         });
     };
 }

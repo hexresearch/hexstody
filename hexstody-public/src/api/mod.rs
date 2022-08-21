@@ -3,7 +3,9 @@ pub mod helpers;
 pub mod profile;
 pub mod wallet;
 
+use base64;
 use figment::Figment;
+use qrcode_generator::QrCodeEcc;
 use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
@@ -23,12 +25,13 @@ use rocket_dyn_templates::{context, Template};
 use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
 
 use auth::*;
-use hexstody_api::domain::Language;
-use hexstody_api::error::{self, ErrorMessage};
+use hexstody_api::{
+    domain::{Currency, Language},
+    error::{self, ErrorMessage},
+    types::DepositInfo,
+};
 use hexstody_btc_client::client::BtcClient;
-use hexstody_db::state::State as DbState;
-use hexstody_db::update::*;
-use hexstody_db::Pool;
+use hexstody_db::{state::State as DbState, update::*, Pool};
 use hexstody_eth_client::client::EthClient;
 use profile::*;
 use wallet::*;
@@ -148,7 +151,7 @@ async fn profile_page(
         let context = context! {
             title,
             parent: "base_with_header",
-            tabs  : tabs.unwrap(),
+            tabs: tabs.unwrap(),
             selected: tab.unwrap_or("tokens".to_string()),
             username: &user.username,
             lang: context! {
@@ -165,7 +168,7 @@ async fn profile_page(
 #[openapi(skip)]
 #[get("/signup")]
 fn signup() -> Template {
-    let context = context! {title: "Sign Up",parent: "base"};
+    let context = context! {title: "Sign Up", parent: "base"};
     Template::render("signup", context)
 }
 
@@ -191,13 +194,17 @@ pub async fn logout(cookies: &CookieJar<'_>) -> Result<Redirect, (Status, Json<E
 }
 
 #[openapi(skip)]
-#[get("/deposit")]
+#[get("/deposit?<tab>")]
 async fn deposit(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
     static_path: &State<StaticPath>,
-) -> Result<Template, Redirect> {
-    require_auth_user(cookies, state, |_, user| async move {
+    btc_client: &State<BtcClient>,
+    eth_client: &State<EthClient>,
+    update_sender: &State<mpsc::Sender<StateUpdate>>,
+    tab: Option<String>,
+) -> Result<error::Result<Template>, Redirect> {
+    let resp = require_auth_user(cookies, state, |_, user| async move {
         let title = match user.config.language {
             Language::English => "Deposit",
             Language::Russian => "Депозит",
@@ -206,37 +213,97 @@ async fn deposit(
             static_path.inner(),
             user.config.language,
             PathBuf::from_str("header.json").unwrap(),
-        );
-        if let Err(e) = header_dict {
-            return Err(e);
+        )?;
+        let deposit_dict = get_dict_json(
+            static_path.inner(),
+            user.config.language,
+            PathBuf::from_str("deposit.json").unwrap(),
+        )?;
+        let user_currencies: Vec<Currency> = user.currencies.keys().cloned().collect();
+        let tabs: Vec<String> = user_currencies
+            .iter()
+            .map(|c| c.ticker_lowercase())
+            .collect();
+
+        let selected_tab = match tab {
+            None => user_currencies[0].ticker_lowercase(),
+            Some(t) => {
+                if tabs.contains(&t) {
+                    t
+                } else {
+                    user_currencies[0].ticker_lowercase()
+                }
+            }
         };
+        let mut deposit_addresses: Vec<DepositInfo> = vec![];
+        for user_currency in user_currencies.iter() {
+            let deposit_address = get_deposit_address(
+                btc_client,
+                eth_client,
+                update_sender,
+                state,
+                &user.username,
+                user_currency.clone(),
+            )
+            .await?;
+            let qr_code: Vec<u8> =
+                qrcode_generator::to_png_to_vec(deposit_address.to_string(), QrCodeEcc::Low, 256)
+                    .unwrap();
+            deposit_addresses.push(DepositInfo {
+                address: deposit_address.to_string(),
+                qr_code_base64: base64::encode(qr_code),
+                tab: user_currency.ticker_lowercase(),
+                currency: user_currency.to_string(),
+            });
+        }
         let context = context! {
             title,
             parent: "base_with_header",
+            deposit_addresses,
+            tabs,
+            selected: selected_tab,
             username: &user.username,
             lang: context! {
                 lang: user.config.language.to_alpha().to_uppercase(),
-                header: header_dict.unwrap(),
+                header: header_dict,
+                deposit: deposit_dict,
             }
         };
         Ok(Template::render("deposit", context))
     })
-    .await
-    .map_err(|_| goto_signin())
+    .await;
+    match resp {
+        Ok(v) => Ok(Ok(v)),
+        // Error code 8 => NoUserFound (not logged in). 7 => Requires auth
+        Err(err) => {
+            if err.1.code == 8 || err.1.code == 7 {
+                Err(goto_signin())
+            } else {
+                Ok(Err(err))
+            }
+        }
+    }
 }
 
 #[openapi(skip)]
-#[get("/withdraw")]
+#[get("/withdraw?<tab>")]
 async fn withdraw(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
     static_path: &State<StaticPath>,
+    tab: String,
 ) -> Result<error::Result<Template>, Redirect> {
     let resp = require_auth_user(cookies, state, |_, user| async move {
         let title = match user.config.language {
             Language::English => "Withdraw",
             Language::Russian => "Вывод",
         };
+        let tabs: Vec<String> = user
+            .currencies
+            .keys()
+            .cloned()
+            .map(|c| c.ticker_lowercase())
+            .collect();
         let header_dict = get_dict_json(
             static_path.inner(),
             user.config.language,
@@ -248,6 +315,8 @@ async fn withdraw(
         let context = context! {
             title,
             parent: "base_with_header",
+            tabs: tabs,
+            selected: tab,
             username: &user.username,
             lang: context! {
                 lang: user.config.language.to_alpha().to_uppercase(),
@@ -309,8 +378,6 @@ pub async fn serve_api(
                 ping,
                 get_balance,
                 get_balance_by_currency,
-                get_deposit,
-                get_deposit_eth,
                 ticker,
                 get_user_data,
                 erc20_ticker,

@@ -9,7 +9,46 @@
 {{/inline}}
 
 {{#*inline "page"}}
-<div id="deposit"></div>
+<div class="tabs is-large is-centered">
+    <ul id="tabs-ul">
+        {{#each tabs}}
+        {{#if (eq this ../selected)}}
+        <li id="{{this}}-tab" class="is-active"><a class="is-uppercase">{{this}}</a></li>
+        {{else}}
+        <li id="{{this}}-tab"><a class="is-uppercase">{{this}}</a></li>
+        {{/if}}
+        {{/each}}
+    </ul>
+</div>
+{{#each deposit_addresses}}
+<div id="{{tab}}-tab-body">
+    <div class="columns is-centered">
+        <div class="column is-narrow">
+            <div class="content-tab">
+                <div class="card">
+                    <div class="card-header">
+                        <p class="card-header-title is-centered">
+                            {{#if (eq ../lang.lang "EN")}}
+                            <span class="has-text-weight-normal"><b>{{currency}}</b> {{ ../lang.deposit.description
+                                }}</span>
+                            {{else}}
+                            <span class="has-text-weight-normal">{{ ../lang.deposit.description }}
+                                <b>{{currency}}</b></span>
+                            {{/if}}
+                        </p>
+                    </div>
+                    <div class="card-content">
+                        <div class="is-flex is-flex-direction-column is-align-items-center">
+                            <img src="data:image/png;base64, {{qr_code_base64}}">
+                            <p>{{address}}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{/each}}
 {{/inline}}
 
 {{> base_with_header}}

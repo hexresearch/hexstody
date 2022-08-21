@@ -53,6 +53,8 @@ pub enum StateUpdateErr {
     UserNotFound(UserId),
     #[error("User {0} doesn't have currency {1}")]
     UserMissingCurrency(UserId, Currency),
+    #[error("Deposit address {1} is already allocated for user {0}")]
+    DepositAddressAlreadyAllocated(UserId, CurrencyAddress),
     #[error("User {0} doesn't have withdrawal request {1}")]
     WithdrawalRequestNotFound(UserId, WithdrawalRequestId),
     #[error("Withdrawal request {0} is already confirmed by {}", .1.to_string())]
@@ -395,8 +397,12 @@ impl State {
         if let Some(user) = self.users.get_mut(user_id) {
             let currency = dep_address.address.currency();
             if let Some(info) = user.currencies.get_mut(&currency) {
-                info.deposit_info.push(dep_address.address);
-                Ok(())
+                if info.deposit_info.contains(&dep_address.address) {
+                    Err(StateUpdateErr::DepositAddressAlreadyAllocated(user_id.clone(), dep_address.address))
+                } else {
+                    info.deposit_info.push(dep_address.address);
+                    Ok(())
+                }
             } else {
                 Err(StateUpdateErr::UserMissingCurrency(
                     user_id.clone(),

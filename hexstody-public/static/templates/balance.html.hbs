@@ -12,12 +12,12 @@
             </div>
         </div>
         <div class="column is-narrow">
-            <button type="button" class="button is-primary deposit-button">
+            <a class="button is-primary deposit-button" href="/deposit?tab={{toLowerCase (formatCurrencyName)}}">
                 {{../lang.deposit}}
-            </button>
-            <button type="button" class="button withdraw-button">
+            </a>
+            <a class="button withdraw-button" href="/withdraw?tab={{toLowerCase (formatCurrencyName)}}">
                 {{../lang.withdraw}}
-            </button>
+            </a>
         </div>
     </div>
 </div>

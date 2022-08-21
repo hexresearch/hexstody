@@ -1,48 +1,24 @@
-import { initTabs, loadTemplate } from "./common.js";
+import { initTabs } from "./common.js";
 
-let depositTemplate = null;
+var tabs = [];
 
-async function getForBTC(currency) {
-    return await fetch("/deposit",
-        {
-            method: "POST",
-            body: JSON.stringify(currency)
-        }).then(r => r.json());
-};
-
-async function getForETH(currency) {
-    return await fetch("/deposit_eth",
-        {
-            method: "POST",
-            body: JSON.stringify(currency)
-        }).then(r => r.json());
-};
-
+function preInitTabs() {
+    var selectedIndex = 0;
+    const tabEls = document.getElementById("tabs-ul").getElementsByTagName("li");
+    for (let i = 0; i < tabEls.length; i++) {
+        tabs.push(tabEls[i].id);
+    }
+    const selectedTab = document.getElementById("tabs-ul").getElementsByClassName("is-active");
+    if (selectedTab.length != 0) {
+        selectedIndex = tabs.indexOf(selectedTab[0].id)
+    }
+    return selectedIndex
+}
 
 async function init() {
-    const tabs = ["btc-tab", "eth-tab"];
-    //initTabs(tabs);
-
-    depositTemplate = await loadTemplate("/templates/deposit.html.hbs");
-    const resultBTC = await getForBTC("BTC");
-    const resultETH = await getForETH("ETH");
-    const params = {
-        addresses: [
-            { currency: "BTC", address: resultBTC.address },
-            { currency: "ETH", address: resultETH.address }
-        ]
-    };
-    const depositDrawUpdate = depositTemplate(params);
-    const depositElem = document.getElementById("deposit");
-    depositElem.insertAdjacentHTML('beforeend', depositDrawUpdate);
-
-    const box = document.getElementById('ETH-tab-body');
-
-    box.style.display = 'none';
-
-    new QRCode(document.getElementById("qrcode-BTC"), resultBTC.address);
-    new QRCode(document.getElementById("qrcode-ETH"), resultETH.address);
-}
+    const selectedTab = preInitTabs();
+    initTabs(tabs, () => { }, selectedTab);
+};
 
 
 document.addEventListener("headerLoaded", init);

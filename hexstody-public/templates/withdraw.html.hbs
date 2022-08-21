@@ -27,6 +27,55 @@
 
 {{#each tabs}}
 <div id="{{this}}-tab-body">
+    <div class="card column is-half is-offset-one-quarter">
+        <div class='card-content'>
+            <div class="columns is-center">
+                <div class="column">
+                    {{lang.avaliable}}: <span id="{{name}}_balance">{{balance}}</span>
+                </div>
+                <div class="column has-text-right">
+                    {{lang.fee}}: <span id="{{name}}_fee">{{fee}}</span>
+                </div>
+            </div>
+            <div class="columns is-center">
+                <div class="column">
+                    {{lang.limit}}: <span id="{{name}}_limit">{{this.limit}}</span>
+                </div>
+                <div class="column has-text-right">
+                    {{lang.spent}}: <span id="{{name}}_spent">{{this.spent}}</span>
+                </div>
+            </div>
+            <div class="columns is-center">
+                <div class="column is-3">
+                    {{lang.address}}:
+                </div>
+                <div class="column is-9">
+                    <input class="input is-fullwidth" id="{{name}}_address" type="text">
+                </div>
+            </div>
+            <div class="columns is-center">
+                <div class="column is-3">
+                    {{lang.amount}}:
+                </div>
+                <div class="column is-6">
+                    <input class="input" id="{{name}}_send_amount" type="text">
+                </div>
+                <div class="column is-3">
+                    <button id="max_{{name}}" type="button" class="button is-fullwidth">
+                        {{lang.max}}
+                    </button>
+                </div>
+            </div>
+            <div class="columns is-center">
+                <div class="column">
+                    <button id="send_{{name}}" type="button" class="button is-info is-fullwidth item-buttom-d">
+                        {{lang.send}}
+                    </button>
+                </div>
+            </div>
+        </div class="columns is-center">
+        <label id="{{name}}_validation" hidden="hidden" class="text-error"></label>
+    </div>
 </div>
 {{/each}}
 {{/inline}}
