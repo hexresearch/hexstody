@@ -73,59 +73,24 @@
         height: 56px;
         background-color: #409EFF !Important;
     }
+    .d-flex{
+        display: flex;
+    }
+    .p-tb-1em{
+        padding-top: 0.75em;
+        padding-bottom: 0.75em;
+    }
+    .width-100{
+        width: 100%;
+    }
+    .p-1em{
+        padding: 1em;
+    }
 </style>
 <div class="full-height" style="background-color: #ECEFF4;">
     <div class="container" style="padding-top: 15%;">
-        <div class="box"
-            style="box-shadow: none !Important; width: 560px; padding: 85px; margin-left: auto; margin-right: auto;">
-
-            <div class="field">
-                <h1 class="login-title">Sign up</h1>
-            </div>
-
-            <div class="field login-field-email" style="margin-top: 25px;">
-                <label for="" class="label form-group-label">Username</label>
-                <div class="control has-icons-left">
-                    <input id="username-input" type="text" placeholder="username" class="input"
-                        style="height: 50px;" value="" value="">
-                    <span class="icon is-small is-left">
-                        <i class="fa fa-envelope"></i>
-                    </span>
-                </div>
-            </div>
-
-            <div class="field login-field-pswd" style="margin-top: 25px;">
-                <div class="control has-icons-left">
-                    <input id="password-input" type="password" placeholder="********" class="input"
-                        style="height: 50px;" value="">
-                    <span class="icon is-small is-left">
-                        <i class="fa fa-lock"></i>
-                    </span>
-                </div>
-            </div>
-
-            <div class="field login-field-invite" style="margin-top: 25px;">
-                <label for="" class="label form-group-label">Invite</label>
-                <div class="control has-icons-left">
-                    <input id="invite-input" type="text" class="input"
-                        style="height: 50px;" value="" value="">
-                    <span class="icon is-small is-left">
-                        <i class="fa fa-envelope"></i>
-                    </span>
-                </div>
-            </div>
-
-            <div class="field login-field-pswd validationError" hidden="true" style=" margin-top: 25px;">
-                <div id = "validation-error" class="notification is-danger">
-                    Username already taken
-                </div>
-            </div>
-
-            <div class="field">
-                <button id="submit" style="margin-top: 25px;" class="button is-info login-button-login">SIGN
-                    UP</button>
-            </div>
-
+        <div id="signup-box" class="box"
+            style="box-shadow: none !Important; width: fit-content; padding: 85px; margin-left: auto; margin-right: auto;">
         </div>
     </div>
 </div>

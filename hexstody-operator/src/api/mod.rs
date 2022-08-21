@@ -1,4 +1,5 @@
 use figment::Figment;
+use hexstody_sig::SignatureVerificationConfig;
 use rocket::{
     fs::FileServer,
     response::status,
@@ -52,7 +53,7 @@ async fn index() -> Template {
 #[get("/currencies")]
 async fn get_supported_currencies(
     signature_data: SignatureData,
-    config: &RocketState<Config>,
+    config: &RocketState<SignatureVerificationConfig>,
 ) -> error::Result<Json<Vec<Currency>>> {
     guard_op_signature_nomsg(
         &config,
@@ -67,7 +68,7 @@ async fn get_supported_currencies(
 #[get("/confirmations")]
 async fn get_required_confrimations(
     signature_data: SignatureData,
-    config: &RocketState<Config>,
+    config: &RocketState<SignatureVerificationConfig>,
 ) -> error::Result<Json<i16>> {
     guard_op_signature_nomsg(
         &config,
@@ -82,7 +83,7 @@ async fn get_required_confrimations(
 #[get("/hot-wallet-balance/<currency_name>")]
 async fn get_hot_wallet_balance(
     signature_data: SignatureData,
-    config: &RocketState<Config>,
+    config: &RocketState<SignatureVerificationConfig>,
     btc_client: &RocketState<BtcClient>,
     eth_client: &RocketState<EthClient>,
     currency_name: &str,
@@ -115,7 +116,7 @@ async fn get_hot_wallet_balance(
 async fn list(
     state: &RocketState<Arc<Mutex<HexstodyState>>>,
     signature_data: SignatureData,
-    config: &RocketState<Config>,
+    config: &RocketState<SignatureVerificationConfig>,
     currency_name: &str,
 ) -> error::Result<Json<Vec<WithdrawalRequest>>> {
     guard_op_signature_nomsg(
@@ -137,24 +138,6 @@ async fn list(
                 }
             }),
     );
-    // let adr = CurrencyAddress::BTC(hexstody_api::domain::BtcAddress{addr: "bc1q8xsxrzmkvlv7d742uqcztfq6qywesrqfwvd5jl".to_string()});
-    // let withdrawal_requests = vec![
-    //     WithdrawalRequest{
-    //         id: Uuid::new_v4(),
-    //         user: "todo!()".to_string(),
-    //         address: adr.clone(),
-    //         created_at: "now".to_string(),
-    //         amount: 12345678,
-    //         confirmation_status: WithdrawalRequestStatus::InProgress { confirmations: 1 }
-    //     },
-    //     WithdrawalRequest{
-    //         id: Uuid::new_v4(),
-    //         user: "todo!()".to_string(),
-    //         address: adr.clone(),
-    //         created_at: "now".to_string(),
-    //         amount: 12345678,
-    //         confirmation_status: WithdrawalRequestStatus::InProgress { confirmations: 2 }
-    //     }];
     Ok(Json(withdrawal_requests))
 }
 
@@ -165,7 +148,7 @@ async fn create(
     update_sender: &RocketState<mpsc::Sender<StateUpdate>>,
     signature_data: SignatureData,
     withdrawal_request_info: Json<WithdrawalRequestInfo>,
-    config: &RocketState<Config>,
+    config: &RocketState<SignatureVerificationConfig>,
 ) -> error::Result<Created<Json<WithdrawalRequest>>> {
     let withdrawal_request_info = withdrawal_request_info.into_inner();
     guard_op_signature(
@@ -191,7 +174,7 @@ async fn confirm(
     update_sender: &RocketState<mpsc::Sender<StateUpdate>>,
     signature_data: SignatureData,
     confirmation_data: Json<ConfirmationData>,
-    config: &RocketState<Config>,
+    config: &RocketState<SignatureVerificationConfig>,
 ) -> error::Result<()> {
     let confirmation_data = confirmation_data.into_inner();
     guard_op_signature(
@@ -223,7 +206,7 @@ async fn reject(
     update_sender: &RocketState<mpsc::Sender<StateUpdate>>,
     signature_data: SignatureData,
     confirmation_data: Json<ConfirmationData>,
-    config: &RocketState<Config>,
+    config: &RocketState<SignatureVerificationConfig>,
 ) -> error::Result<()> {
     let confirmation_data = confirmation_data.into_inner();
     guard_op_signature(
@@ -254,7 +237,7 @@ async fn reject(
 async fn gen_invite(
     update_sender: &RocketState<mpsc::Sender<StateUpdate>>,
     state: &RocketState<Arc<Mutex<HexstodyState>>>,
-    config: &RocketState<Config>,
+    config: &RocketState<SignatureVerificationConfig>,
     signature_data: SignatureData,
     req: Json<InviteRequest>,
 ) -> error::Result<Json<InviteResp>> {
@@ -294,7 +277,7 @@ async fn gen_invite(
 #[get("/invite/listmy")]
 async fn list_ops_invites(
     state: &RocketState<Arc<Mutex<HexstodyState>>>,
-    config: &RocketState<Config>,
+    config: &RocketState<SignatureVerificationConfig>,
     signature_data: SignatureData,
 ) -> error::Result<Json<Vec<InviteResp>>> {
     guard_op_signature_nomsg(&config, uri!(list_ops_invites).to_string(), signature_data)?;
@@ -322,7 +305,7 @@ async fn list_ops_invites(
 #[get("/changes")]
 async fn get_all_changes(
     state: &RocketState<Arc<Mutex<HexstodyState>>>,
-    config: &RocketState<Config>,
+    config: &RocketState<SignatureVerificationConfig>,
     signature_data: SignatureData,
 ) -> error::Result<Json<Vec<LimitChangeOpResponse>>> {
     guard_op_signature_nomsg(&config, uri!(get_all_changes).to_string(), signature_data)?;
@@ -370,7 +353,7 @@ async fn confirm_limits(
     update_sender: &RocketState<mpsc::Sender<StateUpdate>>,
     signature_data: SignatureData,
     confirmation_data: Json<LimitConfirmationData>,
-    config: &RocketState<Config>,
+    config: &RocketState<SignatureVerificationConfig>,
 ) -> error::Result<()> {
     let confirmation_data = confirmation_data.into_inner();
     guard_op_signature(
@@ -401,7 +384,7 @@ async fn reject_limits(
     update_sender: &RocketState<mpsc::Sender<StateUpdate>>,
     signature_data: SignatureData,
     confirmation_data: Json<LimitConfirmationData>,
-    config: &RocketState<Config>,
+    config: &RocketState<SignatureVerificationConfig>,
 ) -> error::Result<()> {
     let confirmation_data = confirmation_data.into_inner();
     guard_op_signature(
@@ -474,7 +457,7 @@ pub async fn serve_api(
         .manage(update_sender)
         .manage(btc_client)
         .manage(eth_client)
-        .attach(AdHoc::config::<Config>())
+        .attach(AdHoc::config::<SignatureVerificationConfig>())
         .attach(Template::fairing())
         .attach(on_ready)
         .launch()

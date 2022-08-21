@@ -1439,6 +1439,7 @@ dependencies = [
 name = "hexstody-public"
 version = "0.1.0"
 dependencies = [
+ "base64",
  "chrono",
  "env_logger",
  "figment",
@@ -1451,7 +1452,9 @@ dependencies = [
  "hexstody-client",
  "hexstody-db",
  "hexstody-eth-client",
+ "hexstody-sig",
  "log",
+ "p256",
  "pwhash",
  "reqwest",
  "rocket",
@@ -1472,8 +1475,10 @@ name = "hexstody-sig"
 version = "0.1.0"
 dependencies = [
  "hexstody-api",
+ "log",
  "p256",
  "rand_core 0.6.3",
+ "serde",
 ]
 
 [[package]]

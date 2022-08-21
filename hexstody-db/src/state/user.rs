@@ -12,6 +12,7 @@ use hexstody_api::domain::TgName;
 use hexstody_api::domain::{Currency, CurrencyAddress};
 use hexstody_api::types::Invite;
 use hexstody_api::types::LimitInfo;
+use p256::PublicKey;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
@@ -49,7 +50,9 @@ pub struct UserInfo {
     /// Limit change requests
     pub limit_change_requests: HashMap<Currency, LimitChangeData>,
     /// User's config
-    pub config: UserConfig
+    pub config: UserConfig,
+    /// User's public key for public key authroization
+    pub public_key: Option<PublicKey>
 }
 
 impl UserInfo {
@@ -66,7 +69,8 @@ impl UserInfo {
                 .map(|c| (c.clone(), UserCurrencyInfo::new(c)))
                 .collect(),
             limit_change_requests: HashMap::new(),
-            config: UserConfig::default()
+            config: UserConfig::default(),
+            public_key: Option::default()
         }
     }
 

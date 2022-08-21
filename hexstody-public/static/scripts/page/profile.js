@@ -1,5 +1,8 @@
-import { loadTemplate, initTabs } from "./common.js";
+import { loadTemplate, initTabs, initCollapsibles, getUserName, chunkifyTransposed, indexArrayFromOne } from "./common.js";
 import { localizeChangeStatus, localizeSpan, getLanguage } from "./localize.js";
+import { hasKeyPairStored, generateKeyPair, keyToMnemonic, storeKeyPair, retrievePrivateKey, removeStoredKeyPair } from "../crypto.js";
+
+const errorBox = document.getElementById("error-box")
 
 var tabs = [];
 let tokensTemplate = null;
@@ -10,6 +13,8 @@ let tokensDict = null;
 let settingsDict = null;
 let origLimits = null;
 let origConfig = null;
+let keyTemplate = null;
+let mnemonicTemplate = null;
 
 const emailRegex = /^([a-z0-9_+]([a-z0-9_+.]*[a-z0-9_+])?)@([a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,6})/;
 const phoneRegex = /^(\+\d{1,2}\s?)?1?\-?\.?\s?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$|^(\+\d{1,2}\s?)?1?\-?\.?\s?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{2}[\s.-]?\d{2}$/;
@@ -65,12 +70,51 @@ async function postLimitsChange(changes){
     });
 }
 
+async function postPasswordChange(oldPass, newPass){
+    const body = {old_password: oldPass, new_password: newPass}
+    return await fetch("/password",
+    {
+        method: "POST",
+        body: JSON.stringify(body)
+    });
+}
+
 async function postChangeCancel(currency){
     return await fetch("/profile/limits/cancel",
     {
         method: "POST",
         body: JSON.stringify(currency)
     });
+}
+
+function postPublicKeyDer(keyPair, password){
+    return async function(){
+        const pubDer = await keyPair.publicKey.export('der');
+        const encPubDer = Base64.fromUint8Array(pubDer)
+        const username = getUserName();
+        const resp = await fetch("/profile/key",
+        {
+            method: "POST",
+            body: JSON.stringify(encPubDer)
+        });
+        if (resp.ok){
+            await storeKeyPair(username, password, keyPair)
+            loadKeyTab()
+        }
+    }
+}
+
+async function clearPublicKey(){
+    const username = getUserName();
+    removeStoredKeyPair(username);
+    const resp = await fetch("/profile/key",
+        {
+            method: "POST",
+            body: null
+        });
+    if (resp.ok){
+        loadKeyTab()
+    }
 }
 
 function changeCancelHandler(currency){
@@ -91,13 +135,15 @@ function getCurName(val){
 }
 
 async function initTemplates() {
-    const [tokensTemp, tokensD, limitsTemp, limitsD, settingsTemp, settingsD] = await Promise.allSettled([
+    const [tokensTemp, tokensD, limitsTemp, limitsD, settingsTemp, settingsD, keyTemp, mnemTemp] = await Promise.allSettled([
         await loadTemplate("/templates/token.html.hbs"),
         await fetch("/lang/token.json").then(r => r.json()),
         await loadTemplate("/templates/limits.html.hbs"),
         await fetch("/lang/limits.json").then(r => r.json()),
         await loadTemplate("/templates/settings.html.hbs"),
         await fetch("/lang/settings.json").then(r => r.json()),
+        await loadTemplate("/templates/key.html.hbs"),
+        await loadTemplate("/templates/mnemonic.html.hbs")
     ]);
 
     tokensTemplate = tokensTemp.value;
@@ -106,6 +152,8 @@ async function initTemplates() {
     limitsDict = limitsD.value;
     tokensDict = tokensD.value;
     settingsDict = settingsD.value;
+    keyTemplate = keyTemp.value;
+    mnemonicTemplate = mnemTemp.value;
     Handlebars.registerHelper('tokenFormatName', function () { return this.token.ticker; });
     Handlebars.registerHelper('limitsFormatName', function () { return getCurName(this) });
     Handlebars.registerHelper('changesFormatName', function () { return getCurName(this) });
@@ -184,13 +232,12 @@ async function loadSettings(editable, load){
 }
 
 function displayError(errMsg){
-    const errEl = document.getElementById("error-box");
-    errEl.style.display = "block";
-    errEl.getElementsByTagName("span")[0].innerText = errMsg;
+    errorBox.style.display = "block";
+    errorBox.getElementsByTagName("span")[0].innerText = errMsg;
 }
 
 function hideError(){
-    document.getElementById("error-box").style.display = "none";
+    errorBox.style.display = "none";
 }
 
 async function confirmCfgChanges(){
@@ -311,6 +358,81 @@ function checkLimitsChange() {
     }
 }
 
+async function performPasswordChange(){
+    hideError()
+    const oldPassEl = document.getElementById("old-password");
+    const oldPass = oldPassEl.value;
+    const newPassEl = document.getElementById("new-password");
+    const newPass = newPassEl.value;
+    const newPassRepEl = document.getElementById("new-password-rep");
+    const newPassRep = newPassRepEl.value;
+
+    if (newPass !== newPassRep){
+        displayError("Passwords do not match")
+    } else {
+        const resp = await postPasswordChange(oldPass, newPass);
+        if(resp.ok) {
+            oldPassEl.value = "";
+            newPassEl.value = "";
+            newPassRepEl.value = "";
+            document.getElementById("pass-change-label-btn").click();
+        } else {
+            const errMsg = await resp.json();
+            displayError(errMsg)
+        }
+    }
+}
+
+async function displayMnemonic(privateKey){
+    const mnemonic = await keyToMnemonic(privateKey)
+    const chunks = chunkifyTransposed(indexArrayFromOne(mnemonic), 4)
+    const mnemDraw = mnemonicTemplate({chunks:chunks})
+    document.getElementById("mnemonic-display").innerHTML = mnemDraw;
+    document.getElementById("mnemonic-password-box").style.display = "none";
+    document.getElementById("mnemonic-box").style.display = "block";
+}
+
+async function genMnemonic(){
+    hideError()
+    const mnemPass = document.getElementById("gen-mnemonic-password").value;
+    const mnemPassRep = document.getElementById("gen-mnemonic-password-rep").value;
+    if (mnemPass != mnemPassRep) {
+        displayError("Passwords do not match!")
+    } else {
+        const key = await generateKeyPair()
+        displayMnemonic(key.privateKey)
+        const submitBtn = document.getElementById("set-key");
+        submitBtn.onclick = postPublicKeyDer(key, mnemPass);
+    }
+}
+
+async function showMnemonic(){
+    const username = getUserName()
+    const password = document.getElementById("show-mnemonic-password").value;
+    const keyPair = await retrievePrivateKey(username, password)
+    displayMnemonic(keyPair.privateKey)
+    const clearBtn = document.getElementById("clear-key");
+    clearBtn.onclick = clearPublicKey;
+}
+
+async function loadKeyTab(){
+    const name = getUserName();
+    const hasKey = hasKeyPairStored(name);
+    const keyDrawUpdate = keyTemplate({hasKey: hasKey});
+    const keyElement = document.getElementById("key-tab-body");
+    keyElement.style.width = "100%"
+    keyElement.innerHTML = keyDrawUpdate
+    initCollapsibles()
+    document.getElementById("password-change-btn").onclick = performPasswordChange;
+    if (hasKey){
+        const showMnemBtn = document.getElementById("show-mnemonic-btn");
+        showMnemBtn.onclick = showMnemonic;
+    } else {
+        const genMnemBtn = document.getElementById("gen-mnemonic-btn");
+        genMnemBtn.onclick = genMnemonic;
+    }
+}
+
 async function tabUrlHook(tabid){
     const tab = tabid.replace("-tab","")
     const name = document.getElementById(tabid).getElementsByTagName("a")[0].innerText.toLowerCase();
@@ -330,6 +452,9 @@ async function tabUrlHook(tabid){
             break;
         case "settings-tab":
             await loadSettings(false, true);
+            break;
+        case "key-tab":
+            await loadKeyTab();
             break;
     }
 }

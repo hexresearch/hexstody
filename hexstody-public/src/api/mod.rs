@@ -4,6 +4,7 @@ pub mod profile;
 pub mod helpers;
 
 use hexstody_api::domain::Language;
+use hexstody_sig::SignatureVerificationConfig;
 use profile::*;
 use auth::*;
 use figment::Figment;
@@ -34,6 +35,8 @@ use hexstody_db::state::State as DbState;
 use hexstody_db::update::*;
 use hexstody_db::Pool;
 use wallet::*;
+
+use crate::state::RuntimeState;
 
 struct StaticPath(PathBuf);
 
@@ -249,6 +252,7 @@ pub async fn serve_api(
     api_config: Figment,
     is_test: bool
 ) -> Result<(), rocket::Error> {
+    let runtime_state = Arc::new(Mutex::new(RuntimeState::new()));
     let on_ready = AdHoc::on_liftoff("API Start!", |_| {
         Box::pin(async move {
             start_notify.notify_one();
@@ -286,7 +290,11 @@ pub async fn serve_api(
                 set_language,
                 get_dict,
                 get_user_config,
-                set_user_config
+                set_user_config,
+                change_password,
+                set_user_public_key,
+                get_challenge,
+                redeem_challenge
             ],
         )
         .mount(
@@ -305,11 +313,13 @@ pub async fn serve_api(
         .manage(update_sender)
         .manage(btc_client)
         .manage(eth_client)
+        .manage(runtime_state)
         .manage(IsTestFlag(is_test))
         .manage(StaticPath(static_path))
         .attach(Template::custom(|engine|{
             engine.handlebars.register_helper("isEqString", Box::new(helpers::is_eq_string))
         }))
+        .attach(AdHoc::config::<SignatureVerificationConfig>())
         .attach(on_ready)
         .launch()
         .await?;

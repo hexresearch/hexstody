@@ -1,11 +1,12 @@
-use std::sync::Arc;
-
+use std::{sync::Arc, fmt::Debug};
+use base64;
 use hexstody_api::{types::{LimitApiResp, LimitChangeReq, LimitChangeResponse, ConfigChangeRequest}, domain::{Currency, Language, Email, PhoneNumber, TgName}};
-use rocket::{get, http::CookieJar, State, serde::json::Json, response::Redirect, post};
+use rocket::{get, http::{CookieJar, Status}, State, serde::json::Json, response::Redirect, post};
 use rocket_okapi::openapi;
 use tokio::sync::{Mutex, mpsc};
-use hexstody_db::{state::{State as DbState, UserConfig}, update::{StateUpdate, limit::{LimitChangeUpd, LimitCancelData}, UpdateBody, misc::{SetLanguage, ConfigUpdateData}}};
+use hexstody_db::{state::{State as DbState, UserConfig}, update::{StateUpdate, limit::{LimitChangeUpd, LimitCancelData}, UpdateBody, misc::{SetLanguage, ConfigUpdateData, SetPublicKey}}};
 use hexstody_api::error;
+use p256::{pkcs8::DecodePublicKey, PublicKey};
 use super::auth::{require_auth_user, goto_signin};
 
 #[openapi(skip)]
@@ -147,7 +148,7 @@ pub async fn set_user_config(
     state: &State<Arc<Mutex<DbState>>>,
     updater: &State<mpsc::Sender<StateUpdate>>,
     request: Json<ConfigChangeRequest>
-) -> error::Result<()>{
+) -> error::Result<()> {
     require_auth_user(cookies, state, |_, user| async move {
         let req = request.into_inner();
         let mut upd_data = ConfigUpdateData::default();
@@ -175,5 +176,40 @@ pub async fn set_user_config(
         upd_data.tg_name = req.tg_name.map(|tg_name| if tg_name.is_empty() {Err(())} else {Ok(TgName{tg_name})});
         let _ = updater.send(StateUpdate::new(UpdateBody::ConfigUpdate(upd_data))).await;
         Ok(())
+    }).await
+}
+
+fn to_generic_error<T, E>(e: E) -> Result<T,(Status, rocket::serde::json::Json<error::ErrorMessage>)>
+where
+E: Debug
+{
+    Err(error::Error::GenericError(format!("{:?}", e)).into())
+}
+
+#[openapi(skip)]
+#[post("/profile/key", data="<key_b64>")]
+pub async fn set_user_public_key(
+    cookies: &CookieJar<'_>,
+    state: &State<Arc<Mutex<DbState>>>,
+    updater: &State<mpsc::Sender<StateUpdate>>,
+    key_b64: Option<Json<String>>
+) -> error::Result<()> {
+    require_auth_user(cookies, state, |_, user| async move {
+    let mut upd = SetPublicKey { user: user.username, public_key: None };
+    if let Some(key_bytes) = key_b64 {
+        match base64::decode(key_bytes.into_inner()){
+            Ok(key_der) => {
+                match PublicKey::from_public_key_der(&key_der){
+                    Ok(public_key) => {
+                        upd.public_key = Some(public_key);
+                    },
+                    Err(e) => return to_generic_error(e),
+                }
+            },
+            Err(e) => return to_generic_error(e),
+        }
+    };
+    let _ = updater.send(StateUpdate::new(UpdateBody::SetPublicKey(upd))).await;
+    Ok(())
     }).await
 }

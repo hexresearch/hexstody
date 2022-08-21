@@ -1,0 +1,110 @@
+{{#if viaKey}}
+    <div class="field">
+        <div class="d-flex width-100">
+            <h1 class="login-title">{{lang.login}}</h1>
+            <div class="d-flex p-tb-1em">
+                <select class="p-1em" name="lang-sel" id="lang-sel">
+                    <option value="en">English</option>
+                    <option value="ru">Russian</option>
+                </select>
+            </div>
+        </div>
+        <div class="m-t-2em">
+            <h2 class="font-mid-size d-inline">{{lang.as}}</h2>
+            {{#if (isOneElem keys) }}
+                <div id="username-selector" class="font-mid-size d-inline">{{this.keys.[0]}}</div>
+            {{else}}
+                <select name="key" id="username-selector" class="p-05em mr-2em">
+                    {{#each this.keys}}
+                    <option value={{this}}>{{this}}</option>
+                    {{/each}}
+                </select>
+            {{/if}}
+        </div>
+    </div>
+
+    <div class="field login-field-pswd" style="margin-top: 25px;">
+        <label for="" class="label form-group-label">{{lang.keypassword}}</label>
+        <div class="control has-icons-left">
+            <input id="signInPassword" type="password" placeholder="********" class="input"
+                style="height: 50px;" value="">
+            <span class="icon is-small is-left">
+                <i class="fa fa-lock"></i>
+            </span>
+        </div>
+    </div>
+
+    <div class="field login-field-pswd" id="validationError" hidden="true" style=" margin-top: 25px;">
+        <div class="notification is-danger">
+            <span>
+                {{lang.incorrect}}
+            </span>
+        </div>
+    </div>
+
+    <div class="field">
+        <button id="submit" style="margin-top: 25px;"
+            class="button is-info login-button-login">{{lang.loginbtn}}</button>
+    </div>
+    <div class="field login-field-agree" style="margin-top: 30px;">
+        <a id="signin-login">{{lang.vialogin}}</a>
+    </div>
+    <div class="field login-field-agree" style="margin-top: 30px;">
+        <a href="/signup">{{lang.signup}}</a>
+    </div>
+{{else}}
+<div class="field">
+    <div class="d-flex width-100">
+        <h1 class="login-title">{{lang.login}}</h1>
+        <div class="d-flex p-tb-1em">
+            <select class="p-1em" name="lang-sel" id="lang-sel">
+                <option value="en">English</option>
+                <option value="ru">Russian</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<div class="field login-field-email" style="margin-top: 25px;">
+    <label for="" class="label form-group-label">{{lang.login}}</label>
+    <div class="control has-icons-left">
+        <input id="signInEmail" type="text" class="input"
+            style="height: 50px;" value="" value="">
+        <span class="icon is-small is-left">
+            <i class="fa fa-envelope"></i>
+        </span>
+    </div>
+</div>
+
+<div class="field login-field-pswd" style="margin-top: 25px;">
+    <label for="" class="label form-group-label">{{lang.password}}</label>
+    <div class="control has-icons-left">
+        <input id="signInPassword" type="password" placeholder="********" class="input"
+            style="height: 50px;" value="">
+        <span class="icon is-small is-left">
+            <i class="fa fa-lock"></i>
+        </span>
+    </div>
+</div>
+
+<div class="field login-field-pswd" id="validationError" hidden="true" style=" margin-top: 25px;">
+    <div class="notification is-danger">
+        <span>
+            {{lang.incorrect}}
+        </span>
+    </div>
+</div>
+
+<div class="field">
+    <button id="submit" style="margin-top: 25px;"
+        class="button is-info login-button-login">{{lang.loginbtn}}</button>
+</div>
+{{#if hasKey}}
+    <div class="field login-field-agree" style="margin-top: 30px;">
+        <a id="signin-key">{{lang.viakey}}</a>
+    </div>
+{{/if}}
+<div class="field login-field-agree" style="margin-top: 30px;">
+    <a href="/signup">{{lang.signup}}</a>
+</div>
+{{/if}}

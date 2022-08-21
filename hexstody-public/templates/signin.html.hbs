@@ -9,6 +9,12 @@
 
 {{#*inline "page"}}
 <style>
+    .font-mid-size {
+        font-weight: 400;
+        font-size: 18px;
+        line-height: 24px; 
+    }
+
     body {
         background-color: #ECEFF4;
     }
@@ -72,54 +78,30 @@
         height: 56px;
         background-color: #409EFF !Important;
     }
+    .m-t-2em{
+        margin-top: 2em;
+    }
+    .d-inline{
+        display: inline;
+    }
+    .d-flex{
+        display: flex;
+    }
+    .p-tb-1em{
+        padding-top: 0.75em;
+        padding-bottom: 0.75em;
+    }
+    .width-100{
+        width: 100%;
+    }
+    .p-1em{
+        padding: 1em;
+    }
 </style>
 <div class="full-height" style="background-color: #ECEFF4;">
     <div class="container" style="padding-top: 15%;">
-        <div class="box"
+        <div id="signin-box" class="box"
             style="box-shadow: none !Important; width: 560px; height: 560px; padding: 85px; margin-left: auto; margin-right: auto;">
-
-            <div class="field">
-                <h1 class="login-title">Login</h1>
-            </div>
-
-            <div class="field login-field-email" style="margin-top: 25px;">
-                <label for="" class="label form-group-label">E-mail</label>
-                <div class="control has-icons-left">
-                    <input id="signInEmail" type="text" class="input"
-                        style="height: 50px;" value="" value="">
-                    <span class="icon is-small is-left">
-                        <i class="fa fa-envelope"></i>
-                    </span>
-                </div>
-            </div>
-
-            <div class="field login-field-pswd" style="margin-top: 25px;">
-                <div class="control has-icons-left">
-                    <input id="signInPassword" type="password" placeholder="********" class="input"
-                        style="height: 50px;" value="">
-                    <span class="icon is-small is-left">
-                        <i class="fa fa-lock"></i>
-                    </span>
-                </div>
-            </div>
-
-            <div class="field login-field-pswd" id="validationError" hidden="true" style=" margin-top: 25px;">
-                <div class="notification is-danger">
-                    <span>
-                        Incorrecnt login/password
-                    </span>
-                </div>
-            </div>
-
-            <div class="field">
-                <button onclick="(function(){alert('hahaha')})" id="submit" style="margin-top: 25px;"
-                    class="button is-info login-button-login">LOG IN</button>
-            </div>
-
-            <div class="field login-field-agree" style="margin-top: 30px;">
-                <a href="/signup">or sign up</a>
-            </div>
-
         </div>
     </div>
 </div>
