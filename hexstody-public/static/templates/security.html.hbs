@@ -1,0 +1,71 @@
+<div class="margin-b-24px">
+    <span class="font-big-size font-dark-grey">{{lang.title}}</span>
+</div>
+<button id="pass-change-label-btn" class="collapsible m-t-05em">{{lang.changepass}}</button>
+<div class="collapsible-content">
+    <div class="row is-center fit-content" id="{{this.id}}-tab-body" style="display:block">
+    <div class="content-row mt-5">
+        <div class="font-mid-size font-bold m-b-05em mr-2em">{{lang.oldpass}}</div>
+        <input id="old-password" type="text" class="input secure-input" type="password" placeholder="********">
+    </div>
+    <div class="content-row mt-5">
+        <div class="font-mid-size font-bold m-b-05em mr-2em">{{lang.newpass}}</div>
+        <input id="new-password" type="text" class="input secure-input" type="password" placeholder="********">
+    </div>
+    <div class="content-row mt-5">
+        <div class="font-mid-size font-bold m-b-05em mr-2em">{{lang.repnewpass}}</div>
+        <input id="new-password-rep" type="text" class="input secure-input" type="password" placeholder="********">
+    </div>
+    <button id="password-change-btn" type="button" class="button is-primary deposit-button margin-t-24px"> {{lang.confirm}} </button>
+    </div>
+</div>
+{{#if hasKey}}
+<button class="collapsible m-t-05em">{{lang.diplaymnem}}</button>
+<div class="collapsible-content">
+    <div id="mnemonic-password-box">
+        <div class="font-mid-size font-dark-grey m-b-05em">{{lang.displaypass}}</div>
+        <div class="inline-flex">
+            <input id="show-mnemonic-password" type="text" class="input secure-input mr-2em" type="password" placeholder="********">
+            <button id="show-mnemonic-btn" type="button" class="button is-primary deposit-button"> {{lang.confirm}} </button>
+        </div>
+    </div>
+    <div id="mnemonic-box" class="m-t-1em" style="display: none;">
+        <div id="mnemonic-display" class="font-small-size font-dark-grey m-b-05em"></div>
+        <button id="clear-key" type="button" class="button is-primary deposit-button"> {{lang.clear}} </button>
+    </div>
+</div>
+{{else}}
+<button class="collapsible m-t-05em">{{lang.restoreTitle}}</button>
+<div class="collapsible-content">
+    <div id="mnemonic-restore-input-box">
+        <div class="font-mid-size font-dark-grey m-b-05em">{{lang.enter24}}</div>
+        <textarea id="mnemonic-input" class="input mr-2em m-b-1em mnemonic" rows="4" cols="50"></textarea>
+        <button id="restore-mnemonic-btn" type="button" class="button is-primary deposit-button" style="display: none;"> {{lang.restore}} </button>
+    </div>
+    <div id="mnemonic-restore-display-box" class="m-t-1em" style="display: none;">
+        <div id="mnemonic-restore-display" class="font-small-size font-dark-grey m-b-05em"></div>
+    </div>
+    <div id="mnemonic-restore-password-box" style="display: none;">
+        <div class="font-mid-size font-dark-grey m-b-05em">{{lang.restorepass}}</div>
+        <input id="mnemonic-restore-password" type="text" class="input secure-input mr-2em m-b-1em" type="password" placeholder="********">
+        <div class="font-small-size font-dark-grey m-b-05em"> {{lang.reppass}} </div>
+        <input id="mnemonic-restore-password-rep" type="text" class="input secure-input mr-2em m-b-1em" type="password" placeholder="********">
+        <button id="mnemonic-restore-btn" type="button" class="button is-primary deposit-button"> {{lang.setkey}} </button>
+    </div>
+</div>
+
+<button class="collapsible m-t-05em">{{lang.genPrivKey}}</button>
+<div class="collapsible-content">
+    <div id="mnemonic-password-box">
+        <div class="font-mid-size font-dark-grey m-b-05em">{{lang.genPassword}}</div>
+        <input id="gen-mnemonic-password" type="text" class="input secure-input mr-2em m-b-1em" type="password" placeholder="********">
+        <div class="font-small-size font-dark-grey m-b-05em"> {{lang.reppass}} </div>
+        <input id="gen-mnemonic-password-rep" type="text" class="input secure-input mr-2em m-b-1em" type="password" placeholder="********">
+        <button id="gen-mnemonic-btn" type="button" class="button is-primary deposit-button"> {{lang.generate}} </button>
+    </div>
+    <div id="mnemonic-box" class="m-t-1em" style="display: none;">
+        <div id="mnemonic-display" class="font-small-size font-dark-grey m-b-05em"></div>
+        <button id="set-key" type="button" class="button is-primary deposit-button"> {{lang.setkey}} </button>
+    </div>
+</div>
+{{/if}}

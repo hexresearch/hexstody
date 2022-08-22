@@ -2,5 +2,5 @@
     {"id": "tokens", "label": "токены"}, 
     {"id": "limits", "label": "лимиты"},
     {"id": "settings", "label": "настройки"},
-    {"id": "key", "label":"ключи"}
+    {"id": "security", "label":"безопасность"}
 ]

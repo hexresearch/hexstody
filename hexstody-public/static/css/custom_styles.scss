@@ -425,3 +425,9 @@ span.is-danger{
     padding-top: 0.5em;
     padding-bottom: 0.5em;
 }
+
+textarea.mnemonic{
+    height: auto;
+    resize: none;
+    width: 50%;
+}
