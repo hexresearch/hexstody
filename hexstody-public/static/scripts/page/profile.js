@@ -318,6 +318,14 @@ function commitChanges(changes){
     }
 }
 
+function hideAllPasswordFields(){
+    const els = document.querySelectorAll("input[type='text']")
+    console.log(els.length)
+    els.forEach(e => {
+        e.setAttribute("type", "password")
+    })
+}
+
 function checkLimitsChange() {
     var changes = [];
     origLimits.forEach(ol => {
@@ -474,6 +482,7 @@ async function loadSecurityTab(){
         document.getElementById("mnemonic-input").onkeyup = checkMnemonic;
         document.getElementById("restore-mnemonic-btn").onclick = restoreMnemonic;
     }
+    hideAllPasswordFields()
 }
 
 async function tabUrlHook(tabid){
