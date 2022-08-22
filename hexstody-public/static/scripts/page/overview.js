@@ -88,7 +88,7 @@ async function loadBalance() {
 
 async function loadHistoryETH() {
     const userData = await getUserData();
-    const histFull = userData.data.historyEth.concat(userData.data.historyTokens.slice(0, userData.data.tokens.length));
+    const histFull = userData.data.historyTokens.reduce((acc, curr) => acc.concat(curr.history), userData.data.historyEth);
 
     const historyBTCpred = await getHistory(0, 20);
     let histBTCready = [];
