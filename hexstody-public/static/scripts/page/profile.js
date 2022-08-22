@@ -8,12 +8,10 @@ var tabs = [];
 let tokensTemplate = null;
 let limitsTemplate = null;
 let settingsTemplate = null
-let limitsDict = null;
-let tokensDict = null;
-let settingsDict = null;
 let origLimits = null;
 let origConfig = null;
-let keyTemplate = null;
+let securityTemplate = null;
+let dict = null;
 let mnemonicTemplate = null;
 
 const emailRegex = /^([a-z0-9_+]([a-z0-9_+.]*[a-z0-9_+])?)@([a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,6})/;
@@ -97,7 +95,7 @@ async function postPublicKeyDer(privateKey, password){
     });
     if (resp.ok){
         await storePrivateKey(username, password, privateKey)
-        loadKeyTab()
+        loadSecurityTab()
     }
 }
 
@@ -110,7 +108,7 @@ async function clearPublicKey(){
             body: null
         });
     if (resp.ok){
-        loadKeyTab()
+        loadSecurityTab()
     }
 }
 
@@ -132,25 +130,21 @@ function getCurName(val){
 }
 
 async function initTemplates() {
-    const [tokensTemp, tokensD, limitsTemp, limitsD, settingsTemp, settingsD, keyTemp, mnemTemp] = await Promise.allSettled([
+    const [tokensTemp, limitsTemp, settingsTemp, securityTemp, mnemTemp, dictD] = await Promise.allSettled([
         await loadTemplate("/templates/token.html.hbs"),
-        await fetch("/lang/token.json").then(r => r.json()),
         await loadTemplate("/templates/limits.html.hbs"),
-        await fetch("/lang/limits.json").then(r => r.json()),
         await loadTemplate("/templates/settings.html.hbs"),
-        await fetch("/lang/settings.json").then(r => r.json()),
-        await loadTemplate("/templates/key.html.hbs"),
-        await loadTemplate("/templates/mnemonic.html.hbs")
+        await loadTemplate("/templates/security.html.hbs"),
+        await loadTemplate("/templates/mnemonic.html.hbs"),
+        await fetch("/lang/profile.json").then(r => r.json()),
     ]);
 
     tokensTemplate = tokensTemp.value;
     limitsTemplate = limitsTemp.value;
     settingsTemplate = settingsTemp.value
-    limitsDict = limitsD.value;
-    tokensDict = tokensD.value;
-    settingsDict = settingsD.value;
-    keyTemplate = keyTemp.value;
+    securityTemplate = securityTemp.value;
     mnemonicTemplate = mnemTemp.value;
+    dict = dictD.value;
     Handlebars.registerHelper('tokenFormatName', function () { return this.token.ticker; });
     Handlebars.registerHelper('limitsFormatName', function () { return getCurName(this) });
     Handlebars.registerHelper('changesFormatName', function () { return getCurName(this) });
@@ -180,7 +174,7 @@ async function checkboxHandler(event, token) {
 
 async function loadTokens() {
     const tokens = await getTokens();
-    const tokensDrawUpdate = tokensTemplate({tokens: tokens.tokens, lang: tokensDict});
+    const tokensDrawUpdate = tokensTemplate({tokens: tokens.tokens, lang: dict.tokens});
     const tokensElem = document.getElementById("tokens-tab-body");
     tokensElem.innerHTML = tokensDrawUpdate;
     const tokensArray = tokens.tokens;
@@ -194,7 +188,7 @@ async function loadLimits(){
     const limits = await getLimits();
     const changes = await getMyChanges();
     origLimits = limits;
-    const limitsDrawUpdate = limitsTemplate({limits: limits, changes: changes, lang: limitsDict});
+    const limitsDrawUpdate = limitsTemplate({limits: limits, changes: changes, lang: dict.limits});
     const limitsElem = document.getElementById("limits-tab-body");
     limitsElem.innerHTML = limitsDrawUpdate;
     limits.forEach(limit => { 
@@ -213,7 +207,7 @@ async function loadSettings(editable, load){
     if (load){
         origConfig = await getMyConfig()
     }
-    const settingsDrawUpdate = settingsTemplate({config: origConfig, lang: settingsDict, editable: editable});
+    const settingsDrawUpdate = settingsTemplate({config: origConfig, lang: dict.settings, editable: editable});
     const settingsElement = document.getElementById("settings-tab-body");
     settingsElement.innerHTML = settingsDrawUpdate
 
@@ -463,13 +457,13 @@ async function restoreMnemonic(){
     }
 }
 
-async function loadKeyTab(){
+async function loadSecurityTab(){
     const name = getUserName();
     const hasKey = hasKeyPairStored(name);
-    const keyDrawUpdate = keyTemplate({hasKey: hasKey});
-    const keyElement = document.getElementById("key-tab-body");
-    keyElement.style.width = "100%"
-    keyElement.innerHTML = keyDrawUpdate
+    const keyDrawUpdate = securityTemplate({hasKey: hasKey, lang: dict.security});
+    const securityEl = document.getElementById("security-tab-body");
+    securityEl.style.width = "100%"
+    securityEl.innerHTML = keyDrawUpdate
     initCollapsibles()
     document.getElementById("password-change-btn").onclick = performPasswordChange;
     if (hasKey){
@@ -502,8 +496,8 @@ async function tabUrlHook(tabid){
         case "settings-tab":
             await loadSettings(false, true);
             break;
-        case "key-tab":
-            await loadKeyTab();
+        case "security-tab":
+            await loadSecurityTab();
             break;
     }
 }
