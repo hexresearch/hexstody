@@ -1,6 +1,6 @@
 import { loadTemplate, initTabs, initCollapsibles, getUserName, chunkifyTransposed, indexArrayFromOne } from "./common.js";
 import { localizeChangeStatus, localizeSpan, getLanguage } from "./localize.js";
-import { hasKeyPairStored, generateKeyPair, keyToMnemonic, storeKeyPair, retrievePrivateKey, removeStoredKeyPair } from "../crypto.js";
+import { hasKeyPairStored, generateKeyPair, privateKeyToMnemonic, mnemonicToPrivateKey, retrievePrivateKey, removeStoredKeyPair, storePrivateKey } from "../crypto.js";
 
 const errorBox = document.getElementById("error-box")
 
@@ -36,7 +36,6 @@ async function getMyConfig(){
 }
 
 async function postConfigChanges(body){
-    console.log(body)
     return await fetch("/profile/settings/config",
     {
         method: "POST",
@@ -87,20 +86,18 @@ async function postChangeCancel(currency){
     });
 }
 
-function postPublicKeyDer(keyPair, password){
-    return async function(){
-        const pubDer = await keyPair.publicKey.export('der');
-        const encPubDer = Base64.fromUint8Array(pubDer)
-        const username = getUserName();
-        const resp = await fetch("/profile/key",
-        {
-            method: "POST",
-            body: JSON.stringify(encPubDer)
-        });
-        if (resp.ok){
-            await storeKeyPair(username, password, keyPair)
-            loadKeyTab()
-        }
+async function postPublicKeyDer(privateKey, password){
+    const pubDer = await privateKey.export('der', {outputPublic: true});
+    const encPubDer = Base64.fromUint8Array(pubDer)
+    const username = getUserName();
+    const resp = await fetch("/profile/key",
+    {
+        method: "POST",
+        body: JSON.stringify(encPubDer)
+    });
+    if (resp.ok){
+        await storePrivateKey(username, password, privateKey)
+        loadKeyTab()
     }
 }
 
@@ -384,7 +381,7 @@ async function performPasswordChange(){
 }
 
 async function displayMnemonic(privateKey){
-    const mnemonic = await keyToMnemonic(privateKey)
+    const mnemonic = await privateKeyToMnemonic(privateKey)
     const chunks = chunkifyTransposed(indexArrayFromOne(mnemonic), 4)
     const mnemDraw = mnemonicTemplate({chunks:chunks})
     document.getElementById("mnemonic-display").innerHTML = mnemDraw;
@@ -402,17 +399,68 @@ async function genMnemonic(){
         const key = await generateKeyPair()
         displayMnemonic(key.privateKey)
         const submitBtn = document.getElementById("set-key");
-        submitBtn.onclick = postPublicKeyDer(key, mnemPass);
+        submitBtn.onclick = async function() {
+            await postPublicKeyDer(key.privateKey, mnemPass);
+
+        };
     }
 }
 
 async function showMnemonic(){
     const username = getUserName()
     const password = document.getElementById("show-mnemonic-password").value;
-    const keyPair = await retrievePrivateKey(username, password)
-    displayMnemonic(keyPair.privateKey)
+    const privateKey = await retrievePrivateKey(username, password)
+    displayMnemonic(privateKey)
     const clearBtn = document.getElementById("clear-key");
     clearBtn.onclick = clearPublicKey;
+}
+
+function checkMnemonic(){
+    const input = document.getElementById("mnemonic-input").value;
+    const restoreBtn = document.getElementById("restore-mnemonic-btn");
+    const mnem = input.split(" ");
+    if (mnem.length == 24){
+        if (mnem[23] != ""){
+            restoreBtn.style.display = 'block'
+        } else {
+            restoreBtn.style.display = 'none'
+        }
+    } else {
+        restoreBtn.style.display = 'none'
+    }
+}
+
+function restoreMnemonicBtn(privateKey){
+    return async function(){
+        const mnemPass = document.getElementById("mnemonic-restore-password").value;
+        const mnemPassRep = document.getElementById("mnemonic-restore-password-rep").value;
+        if (mnemPass != mnemPassRep) {
+            displayError("Passwords do not match!")
+        } else {
+            await postPublicKeyDer(privateKey, mnemPass);
+        }
+    }
+}
+
+async function restoreMnemonic(){
+    const input = document.getElementById("mnemonic-input").value;
+    const mnemonicArray = input.split(" ");
+    const res = await mnemonicToPrivateKey(mnemonicArray);
+    console.log(res)
+    if(res.ok){
+        const privateKey = res.value;
+        const mnemonic = await privateKeyToMnemonic(privateKey)
+        const chunks = chunkifyTransposed(indexArrayFromOne(mnemonic), 4)
+        const mnemDraw = mnemonicTemplate({chunks:chunks})
+        document.getElementById("mnemonic-restore-display").innerHTML = mnemDraw;
+        document.getElementById("mnemonic-restore-input-box").style.display = "none";
+        document.getElementById("mnemonic-restore-display-box").style.display = "block";
+        document.getElementById("mnemonic-restore-password-box").style.display = "block";
+        const submitBtn = document.getElementById("mnemonic-restore-btn");
+        submitBtn.onclick = restoreMnemonicBtn(privateKey);
+    } else {
+        displayError(res.error)
+    }
 }
 
 async function loadKeyTab(){
@@ -428,8 +476,9 @@ async function loadKeyTab(){
         const showMnemBtn = document.getElementById("show-mnemonic-btn");
         showMnemBtn.onclick = showMnemonic;
     } else {
-        const genMnemBtn = document.getElementById("gen-mnemonic-btn");
-        genMnemBtn.onclick = genMnemonic;
+        document.getElementById("gen-mnemonic-btn").onclick = genMnemonic;
+        document.getElementById("mnemonic-input").onkeyup = checkMnemonic;
+        document.getElementById("restore-mnemonic-btn").onclick = restoreMnemonic;
     }
 }
 
