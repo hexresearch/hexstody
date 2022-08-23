@@ -19,6 +19,9 @@ export function formattedCurrencyValue(currency, value) {
         case "CRV":
             const newc = value / 1000000000000000000
             return newc.toFixed(8);
+        case "TUSDT":
+            const newc = value / 1000000000000000000
+            return newc.toFixed(8);
         default:
             return value;
     }
@@ -95,7 +98,7 @@ export function initTabs(tabIds, hook, selected) {
 export function initCollapsibles(){
     var coll = document.getElementsByClassName("collapsible");
     var i;
-    
+
     for (i = 0; i < coll.length; i++) {
       coll[i].addEventListener("click", function() {
         this.classList.toggle("active");
