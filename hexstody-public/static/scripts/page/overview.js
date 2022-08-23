@@ -113,7 +113,7 @@ async function loadHistoryETH() {
 
     const hist = { histories: histFull }
     for (const h of hist.histories) {
-        f.timeStamp = timeStampToTime(parseInt(h.timeStamp));
+        h.timeStamp = timeStampToTime(parseInt(h.timeStamp));
         const isDeposit = h.addr.toUpperCase() != h.from.toUpperCase();
         const sign = isDeposit ? '+' : '-';
         h.valuetoshow = `${sign + formattedCurrencyValue(h.tokenName, h.value)} ${h.tokenName}`;
