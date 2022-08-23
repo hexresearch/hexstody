@@ -28,7 +28,7 @@ impl Currency {
         Currency::ERC20(Erc20Token {
             ticker: "USDT".to_string(),
             name: "USDT".to_string(),
-            contract: "0xa1D9C76c438E8Fa6066950BE285b892D72536301".to_string(),
+            contract: "0x5bF7700B03631a8D917446586Df091CF72F6ebf0".to_string(),
         })
     }
 
