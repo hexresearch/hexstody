@@ -19,9 +19,6 @@ export function formattedCurrencyValue(currency, value) {
         case "CRV":
             const newc = value / 1000000000000000000
             return newc.toFixed(8);
-        case "TUSDT":
-            const newtu = value / 1000000000000000000
-            return newtu.toFixed(8);
         default:
             return value;
     }

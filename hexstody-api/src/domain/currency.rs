@@ -28,7 +28,7 @@ impl Currency {
         Currency::ERC20(Erc20Token {
             ticker: "USDT".to_string(),
             name: "USDT".to_string(),
-            contract: "0xdAC17F958D2ee523a2206206994597C13D831ec7".to_string(),
+            contract: "0xa1D9C76c438E8Fa6066950BE285b892D72536301".to_string(),
         })
     }
 
@@ -36,15 +36,7 @@ impl Currency {
         Currency::ERC20(Erc20Token {
             ticker: "CRV".to_string(),
             name: "CRV".to_string(),
-            contract: "0xD533a949740bb3306d119CC777fa900bA034cd52".to_string(),
-        })
-    }
-
-    pub fn tusdt_erc20() -> Currency {
-        Currency::ERC20(Erc20Token {
-            ticker: "TUSDT".to_string(),
-            name: "TUSDT".to_string(),
-            contract: "0xa1D9C76c438E8Fa6066950BE285b892D72536301".to_string(),
+            contract: "0x7413679bCD0B2cD7c1492Bf9Ca8743f64316a582".to_string(),
         })
     }
 
@@ -72,7 +64,6 @@ impl Currency {
             Currency::ETH,
             Currency::usdt_erc20(),
             Currency::crv_erc20(),
-            Currency::tusdt_erc20(),
             Currency::gtech_erc20(),
         ]
     }
@@ -96,7 +87,7 @@ impl Currency {
     }
 
     pub fn default_tokens() -> Vec<Erc20Token> {
-        let supported_tickers = vec!["USDT".to_string(), "GTECH".to_string(), "TUSDT".to_string()];
+        let supported_tickers = vec!["USDT".to_string(), "GTECH".to_string()];
         Currency::supported()
             .into_iter()
             .filter_map(|c| match c {
