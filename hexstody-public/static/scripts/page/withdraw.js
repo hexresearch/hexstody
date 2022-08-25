@@ -101,7 +101,7 @@ function calcAvailableBalance(balanceObj) {
 
 function cryptoToFiat(currencyName, value, rate, decimals) {
     // This means ticker is not available
-    if ('code' in rate) {
+    if (!rate || 'code' in rate) {
         return "-";
     };
     const val = value * rate.USD / currencyPrecision(currencyName);
@@ -119,8 +119,15 @@ async function updateActiveTab() {
     const currency = currencyNameToCurrency(currencyNameUppercase);
     const balanceObj = await getBalance(currencyNameToCurrency(activeCurrencyName));
     const fee = await getFee(activeCurrencyName);
-    const tikerResponse = await getCurrencyExchangeRate(currency);
+    // GTECH is not listed on any exchange for now
+    let tikerResponse;
+    if (activeCurrencyName === "gtech") {
+        tikerResponse = null;
+    } else {
+        tikerResponse = await getCurrencyExchangeRate(currency);
+    };
     let feeCurrencyTickerResponse;
+    // For ERC20 tokens fee is paid in ETH
     if (isErc20Token(activeCurrencyName)) {
         feeCurrencyTickerResponse = await getCurrencyExchangeRate(feeCurrency(activeCurrencyName));
     } else {
