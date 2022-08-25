@@ -10,7 +10,7 @@ use hexstody_api::types::{
     self as api, BalanceItem, GetTokensResponse, TokenActionRequest, TokenInfo,
 };
 use hexstody_btc_client::client::{BtcClient, BTC_BYTES_PER_TRANSACTION};
-use hexstody_db::state::{State as DbState};
+use hexstody_db::state::State as DbState;
 use hexstody_db::state::{Transaction, WithdrawalRequest, REQUIRED_NUMBER_OF_CONFIRMATIONS};
 use hexstody_db::update::deposit::DepositAddress;
 use hexstody_db::update::misc::{TokenAction, TokenUpdate};
@@ -131,18 +131,20 @@ pub async fn ticker(
     currency: Json<Currency>,
 ) -> error::Result<Json<api::TickerETH>> {
     require_auth(cookies, |_| async move {
-        let currency_literal = match currency.0 {
-            Currency::BTC => "BTC",
-            Currency::ETH => "ETH",
-            _ => todo!("ERC20"),
+        let currency = currency.into_inner();
+        let currency_literal = match currency.clone() {
+            Currency::BTC => "BTC".to_owned(),
+            Currency::ETH => "ETH".to_owned(),
+            Currency::ERC20(token) => token.ticker,
         };
         let url = format!(
             "https://min-api.cryptocompare.com/data/price?fsym={}&tsyms=USD,RUB",
             currency_literal
         );
-        let tick_btc_str = reqwest::get(url).await.unwrap().text().await.unwrap();
-        let ticker_btc: api::TickerETH = (serde_json::from_str(&tick_btc_str)).unwrap();
-        Ok(Json(ticker_btc))
+        let ticker_str = reqwest::get(url).await.unwrap().text().await.unwrap();
+        let ticker: api::TickerETH =
+            serde_json::from_str(&ticker_str).or(Err(error::Error::ExchangeRateError(currency)))?;
+        Ok(Json(ticker))
     })
     .await
 }
@@ -160,23 +162,6 @@ pub async fn get_user_data(
             .await
             .map_err(|e| error::Error::FailedETHConnection(e.to_string()).into())
             .map(|user_data| Json(user_data))
-    })
-    .await
-}
-
-#[openapi(tag = "wallet")]
-#[get("/erc20ticker/<token>")]
-pub async fn erc20_ticker(
-    cookies: &CookieJar<'_>,
-    token: &str,
-) -> error::Result<Json<api::TickerETH>> {
-    require_auth(cookies, |_| async move {
-        let url_req = "https://min-api.cryptocompare.com/data/price?fsym=".to_owned()
-            + token
-            + "&tsyms=USD,RUB";
-        let ticker_erc20_str = reqwest::get(url_req).await.unwrap().text().await.unwrap();
-        let ticker_erc20: api::TickerETH = (serde_json::from_str(&ticker_erc20_str)).unwrap();
-        Ok(Json(ticker_erc20))
     })
     .await
 }
@@ -409,7 +394,8 @@ pub async fn get_deposit_address(
                 .currencies
                 .get(&currency)
                 .ok_or(error::Error::NoUserCurrency(currency.clone()))?
-                .deposit_info.clone();
+                .deposit_info
+                .clone();
             if deposit_addresses.is_empty() {
                 allocate_address(btc_client, eth_client, updater, user_id, currency.clone()).await
             } else {

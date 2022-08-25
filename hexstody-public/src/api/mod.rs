@@ -224,7 +224,6 @@ async fn deposit(
             .iter()
             .map(|c| c.ticker_lowercase())
             .collect();
-
         let selected_tab = match tab {
             None => user_currencies[0].ticker_lowercase(),
             Some(t) => {
@@ -291,36 +290,48 @@ async fn withdraw(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
     static_path: &State<StaticPath>,
-    tab: String,
+    tab: Option<String>,
 ) -> Result<error::Result<Template>, Redirect> {
     let resp = require_auth_user(cookies, state, |_, user| async move {
         let title = match user.config.language {
             Language::English => "Withdraw",
             Language::Russian => "Вывод",
         };
-        let tabs: Vec<String> = user
-            .currencies
-            .keys()
-            .cloned()
-            .map(|c| c.ticker_lowercase())
-            .collect();
         let header_dict = get_dict_json(
             static_path.inner(),
             user.config.language,
             PathBuf::from_str("header.json").unwrap(),
-        );
-        if let Err(e) = header_dict {
-            return Err(e);
+        )?;
+        let withdraw_dict = get_dict_json(
+            static_path.inner(),
+            user.config.language,
+            PathBuf::from_str("withdraw.json").unwrap(),
+        )?;
+        let user_currencies: Vec<Currency> = user.currencies.keys().cloned().collect();
+        let tabs: Vec<String> = user_currencies
+            .iter()
+            .map(|c| c.ticker_lowercase())
+            .collect();
+        let selected_tab = match tab {
+            None => user_currencies[0].ticker_lowercase(),
+            Some(t) => {
+                if tabs.contains(&t) {
+                    t
+                } else {
+                    user_currencies[0].ticker_lowercase()
+                }
+            }
         };
         let context = context! {
             title,
             parent: "base_with_header",
-            tabs: tabs,
-            selected: tab,
+            tabs,
+            selected: selected_tab,
             username: &user.username,
             lang: context! {
                 lang: user.config.language.to_alpha().to_uppercase(),
-                header: header_dict.unwrap(),
+                header: header_dict,
+                withdraw: withdraw_dict,
             }
         };
         Ok(Template::render("withdraw", context))
@@ -380,7 +391,6 @@ pub async fn serve_api(
                 get_balance_by_currency,
                 ticker,
                 get_user_data,
-                erc20_ticker,
                 ethfee,
                 btcfee,
                 get_history,
@@ -431,11 +441,7 @@ pub async fn serve_api(
         .manage(eth_client)
         .manage(IsTestFlag(is_test))
         .manage(StaticPath(static_path))
-        .attach(Template::custom(|engine| {
-            engine
-                .handlebars
-                .register_helper("isEqString", Box::new(helpers::is_eq_string))
-        }))
+        .attach(Template::fairing())
         .attach(on_ready)
         .launch()
         .await?;

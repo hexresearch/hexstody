@@ -8,19 +8,14 @@
 {{/inline}}
 
 {{#*inline "page"}}
-<style>
-    body {
-        background-color: #ECEFF4;
-    }
-
-    .is-horizontal-center {
-        justify-content: center;
-    }
-</style>
 <div class="tabs is-large is-centered">
-    <ul>
+    <ul id="tabs-ul">
         {{#each tabs}}
+        {{#if (eq this ../selected)}}
+        <li id="{{this}}-tab" class="is-active"><a class="is-uppercase">{{this}}</a></li>
+        {{else}}
         <li id="{{this}}-tab"><a class="is-uppercase">{{this}}</a></li>
+        {{/if}}
         {{/each}}
     </ul>
 </div>
@@ -31,50 +26,50 @@
         <div class='card-content'>
             <div class="columns is-center">
                 <div class="column">
-                    {{lang.avaliable}}: <span id="{{name}}_balance">{{balance}}</span>
+                    {{../lang.withdraw.avaliable}}: <span id="{{this}}-balance">{{balance}}</span>
                 </div>
                 <div class="column has-text-right">
-                    {{lang.fee}}: <span id="{{name}}_fee">{{fee}}</span>
+                    {{../lang.withdraw.fee}}: <span id="{{this}}-fee">{{fee}}</span>
                 </div>
             </div>
             <div class="columns is-center">
                 <div class="column">
-                    {{lang.limit}}: <span id="{{name}}_limit">{{this.limit}}</span>
+                    {{../lang.withdraw.limit}}: <span id="{{this}}-limit">{{this.limit}}</span>
                 </div>
                 <div class="column has-text-right">
-                    {{lang.spent}}: <span id="{{name}}_spent">{{this.spent}}</span>
+                    {{../lang.withdraw.spent}}: <span id="{{this}}-spent">{{this.spent}}</span>
                 </div>
             </div>
             <div class="columns is-center">
                 <div class="column is-3">
-                    {{lang.address}}:
+                    {{../lang.withdraw.address}}:
                 </div>
                 <div class="column is-9">
-                    <input class="input is-fullwidth" id="{{name}}_address" type="text">
+                    <input class="input is-fullwidth" id="{{this}}-address" type="text">
                 </div>
             </div>
             <div class="columns is-center">
                 <div class="column is-3">
-                    {{lang.amount}}:
+                    {{../lang.withdraw.amount}}:
                 </div>
                 <div class="column is-6">
-                    <input class="input" id="{{name}}_send_amount" type="text">
+                    <input class="input" id="{{this}}-send-amount" type="text">
                 </div>
                 <div class="column is-3">
-                    <button id="max_{{name}}" type="button" class="button is-fullwidth">
-                        {{lang.max}}
+                    <button id="max-{{this}}" type="button" class="button is-fullwidth">
+                        {{../lang.withdraw.max}}
                     </button>
                 </div>
             </div>
             <div class="columns is-center">
                 <div class="column">
-                    <button id="send_{{name}}" type="button" class="button is-info is-fullwidth item-buttom-d">
-                        {{lang.send}}
+                    <button id="send-{{this}}" type="button" class="button is-info is-fullwidth item-buttom-d">
+                        {{../lang.withdraw.send}}
                     </button>
                 </div>
             </div>
         </div class="columns is-center">
-        <label id="{{name}}_validation" hidden="hidden" class="text-error"></label>
+        <label id="{{this}}-validation" hidden="hidden" class="text-error"></label>
     </div>
 </div>
 {{/each}}
