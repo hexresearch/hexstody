@@ -44,7 +44,7 @@ impl Currency {
         Currency::ERC20(Erc20Token {
             ticker: "GTECH".to_string(),
             name: "GTECH".to_string(),
-            contract: "0xD533a949740bb3306d119CC777fa900bA034cd52".to_string(),
+            contract: "0xf4904d8c93d7Fd72eff00f7F7A1195E9875da4D1".to_string(),
         })
     }
 
