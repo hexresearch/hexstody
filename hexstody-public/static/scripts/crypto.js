@@ -1,15 +1,6 @@
 import { wordlist } from "./wordlist.js";
 
-function arrayBufferToBase64(arrayBuffer) {
-    var byteArray = new Uint8Array(arrayBuffer);
-    var byteString = '';
-    for(var i=0; i < byteArray.byteLength; i++) {
-        byteString += String.fromCharCode(byteArray[i]);
-    }
-    var b64 = window.btoa(byteString);
-
-    return b64;
-}
+const wordlistArray = Object.keys(wordlist)
 
 export function hasKeyPairStored(username){
     return (null != localStorage.getItem('hexstody_key_' + username)) 
@@ -30,56 +21,50 @@ export function listUsers(){
     return keys
 }
 
-export async function storeKeyPair(username, password, keyPair){
-    const pubDer = await keyPair.publicKey.export('der', {encryptParams: {passphrase: password}});
-    const encPubDer = Base64.fromUint8Array(pubDer)
-    const privDer = await keyPair.privateKey.export('der', {encryptParams: {passphrase: password}})
-    const envPrivDer = Base64.fromUint8Array(privDer)
-    const storeObj = {priv: envPrivDer, pub: encPubDer}
-    localStorage.setItem('hexstody_key_' + username, JSON.stringify(storeObj))
+export async function storePrivateKey(username, password, privateKey){
+    const privDer = await privateKey.export('der', {encryptParams: {passphrase: password}})
+    const encPrivDer = Base64.fromUint8Array(privDer)
+    localStorage.setItem('hexstody_key_' + username, JSON.stringify(encPrivDer))
 }
 
 export async function retrievePrivateKey(username, password){
     const storedStr = localStorage.getItem("hexstody_key_"+username)
-    const storedObj = JSON.parse(storedStr)
-    const privBytes = Uint8Array.from(atob(storedObj.priv), c => c.charCodeAt(0));
-    const pubBytes = Uint8Array.from(atob(storedObj.pub), c => c.charCodeAt(0));
+    const encPrivDer = JSON.parse(storedStr)
+    const privBytes = Uint8Array.from(atob(encPrivDer), c => c.charCodeAt(0));
     let privKey = new window.jscu.Key('der', privBytes);
-    let pubKey = new window.jscu.Key('der', pubBytes);
     if (privKey.isEncrypted){
         await privKey.decrypt(password)
     }
-    if (pubKey.isEncrypted){
-        await pubKey.decrypt(password)
-    }
-    const keyPair = {publicKey: pubKey, privateKey: privKey}
-    return keyPair
+    return privKey
 }
 
-function toUint11Array(input) {
-    var buffer = 0, numbits = 0;
-    var output = [];
-
-    for (var i = 0; i < input.length; i++) {
-        // prepend bits to buffer
-        buffer |= input[i] << numbits;
-        numbits += 8;
-        // if there are enough bits, extract 11bit chunk
-        if (numbits >= 11) {
-            output.push(buffer & 0x7FF);
-            // drop chunk from buffer
-            buffer = buffer >> 11;
-            numbits -= 11;
-        }
+// Transform decimal to bitwise representation and fill to size with leading zeroes
+function dec2binFillN(dec, n){
+    const str = dec.toString(2);
+    if (str.length < n){
+        return "0".repeat(n - str.length) + str
+    } else {
+        return str
     }
-    // also output leftover bits
-    if (numbits != 0)
-        output.push(buffer);
-
-    return output;
 }
 
-export async function keyToMnemonic(key){
+function toUint11Array(input){
+    let inpStr = "";
+    for (let i=0; i<input.length; i++){
+        inpStr += dec2binFillN(input[i],8)
+    }
+    return inpStr.match(/.{1,11}/g).map(b => parseInt(b,2));
+}
+
+function fromUint11Array(input){
+    let inpStr = "";
+    for (let i=0; i<input.length; i++){
+        inpStr += dec2binFillN(input[i],11)
+    }
+    return new Uint8Array(inpStr.match(/.{1,8}/g).map(b => parseInt(b,2)))
+}
+
+export async function privateKeyToMnemonic(key){
     let oct = await key.oct;
     let bytes = Uint8Array.from(oct.match(/.{1,2}/g).map((byte) => parseInt(byte, 16)));
     const hashBuffer = await crypto.subtle.digest('SHA-256', bytes);
@@ -90,9 +75,34 @@ export async function keyToMnemonic(key){
     const uint11 = toUint11Array(seed);
     var mnemonic = [];
     for (var i = 0; i < uint11.length; i++) {
-        mnemonic.push(wordlist[uint11[i]])
+        mnemonic.push(wordlistArray[uint11[i]])
     }
     return mnemonic
+}
+
+export async function mnemonicToPrivateKey(mnemonicArray){
+    if (mnemonicArray.length != 24) {
+        return {ok: false, error: "Not enough words!"}
+    }
+    var mnemBytes = []
+    for (var i = 0; i < mnemonicArray.length; i++) {
+        const byte = wordlist[mnemonicArray[i]]
+        if(byte){
+            mnemBytes.push(byte)
+        } else{
+            return {ok: false, error: mnemonicArray[i] + " is not a valid mnemonic word"}
+        }
+    }
+    const bytes = fromUint11Array(mnemBytes)
+    const keyBytes = bytes.slice(0, 32);
+    const checkSum = bytes[32];
+    const hashBuffer = await crypto.subtle.digest('SHA-256', keyBytes);
+    const hashByte = new Uint8Array(hashBuffer)[0];
+    if (hashByte != checkSum){
+        return {ok: false, error: "Checksum failure"}
+    }
+    const priv_key = new window.jscu.Key('oct', keyBytes, {namedCurve: 'P-256'});
+    return {ok: true, value: priv_key}
 }
 
 export async function generateKeyPair(){
@@ -100,33 +110,7 @@ export async function generateKeyPair(){
 }
 
 async function init(){
-    const cat = localStorage.getItem('hexstody_key');
-    const yourPassphrase = "qweqwe"
-    // console.log(cat)
-    
-    if (false){
-        const key = new window.jscu.Key('pem', cat);
-        console.log(key)
-        if (key.isEncrypted){
-            console.log("enc")
-            await key.decrypt(yourPassphrase);
-            console.log(key.isEncrypted)
-        } else {
-            console.log("??")
-        }
-    } else{
-
-        // case of RSA
-        jscu.pkc.generateKey(  // key generation
-        'EC', // ECDSA or ECDH key pair
-        {namedCurve: 'P-256'} // or 'P-384', 'P-521', 'P-256K'
-        )
-        .then( async (keyPair) => {
-            let key = keyPair.privateKey;
-            const mnemonic = await keyToMnemonic(key)
-            // console.log(keyPair)
-        });
-    }
+    const keyPair = await generateKeyPair();
 }
 
 document.addEventListener("headerLoaded", init);

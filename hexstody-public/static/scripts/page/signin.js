@@ -142,9 +142,9 @@ async function loginViaKey(){
     }
     const password = document.getElementById("signInPassword").value;
     try {
-        const keyPair = await retrievePrivateKey(username, password)
+        const privateKey = await retrievePrivateKey(username, password)
 
-        await performKeyAuth(keyPair.privateKey, username)
+        await performKeyAuth(privateKey, username)
 
     } catch (error){ displayErr(error) }
 }

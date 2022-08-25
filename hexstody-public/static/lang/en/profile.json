@@ -1,0 +1,48 @@
+{
+    "tokens": {
+        "title": "Enable/disable token"
+    },
+    "limits": {
+        "setup": "Set up limits",
+        "setuphelp": "Enter the integer amount in minimal values, i.e. satoshis",
+        "per": "per",
+        "day": "Day",
+        "week": "Week",
+        "month": "Month",
+        "commit": "Commit changes",
+        "clear": "Clear changes",
+        "mychanges": "My requested changes",
+        "status": "Status",
+        "cancelreq": "Cancel request"
+    },
+    "settings": {
+        "settings": "Settings",
+        "email": "E-mail",
+        "phone": "Phone",
+        "tgnick": "Telegram name",
+        "notdefined": "Not filled",
+        "change": "Change settings",
+        "confirm": "Confirm",
+        "clear": "Clear changes"
+    },
+    "security": {
+        "title": "Security settings",
+        "changepass": "Change password",
+        "oldpass": "Old password",
+        "newpass": "New password",
+        "repnewpass": "Repeat new password",
+        "diplaymnem": "Display private key mnemonic",
+        "displaypass": "Enther the key password to show the mnemonic",
+        "confirm": "Confirm",
+        "clear": "Remove the key",
+        "restoreTitle": "Restore the key from the mnemonic",
+        "enter24": "Enther 24 words of the mnemonic phrase",
+        "restore": "Restore",
+        "restorepass": "Enther a key password",
+        "reppass": "Repeat the password",
+        "setkey": "Set key",
+        "genPrivKey": "Generate a private key",
+        "genPassword": "Enter a key password to generate mnemonic",
+        "generate": "Generate"
+    }
+}

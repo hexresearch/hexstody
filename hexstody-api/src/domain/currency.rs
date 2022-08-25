@@ -28,7 +28,7 @@ impl Currency {
         Currency::ERC20(Erc20Token {
             ticker: "USDT".to_string(),
             name: "USDT".to_string(),
-            contract: "0xdAC17F958D2ee523a2206206994597C13D831ec7".to_string(),
+            contract: "0x5bF7700B03631a8D917446586Df091CF72F6ebf0".to_string(),
         })
     }
 
@@ -36,7 +36,7 @@ impl Currency {
         Currency::ERC20(Erc20Token {
             ticker: "CRV".to_string(),
             name: "CRV".to_string(),
-            contract: "0xD533a949740bb3306d119CC777fa900bA034cd52".to_string(),
+            contract: "0x7413679bCD0B2cD7c1492Bf9Ca8743f64316a582".to_string(),
         })
     }
 
