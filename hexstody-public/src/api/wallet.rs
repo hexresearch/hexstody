@@ -1,15 +1,19 @@
 use std::sync::Arc;
 
 use super::auth::{require_auth, require_auth_user};
+use chrono::NaiveDateTime;
 use hexstody_api::domain::{
-    filter_tokens, BtcAddress, Currency, CurrencyAddress, CurrencyTxId, Erc20Token,
+    filter_tokens, BtcAddress, Currency, CurrencyAddress, CurrencyTxId, Erc20Token, EthAccount, ETHTxid,
 };
 use hexstody_api::error;
-use hexstody_api::types::{self as api, GetTokensResponse, TokenActionRequest, TokenInfo, BalanceItem};
+use hexstody_api::types::{
+    self as api, BalanceItem, GetTokensResponse, TokenActionRequest, TokenInfo,
+};
 use hexstody_btc_client::client::{BtcClient, BTC_BYTES_PER_TRANSACTION};
 use hexstody_db::state::State as DbState;
 use hexstody_db::state::{Transaction, WithdrawalRequest, REQUIRED_NUMBER_OF_CONFIRMATIONS};
 use hexstody_db::update::deposit::DepositAddress;
+use hexstody_db::update::misc::{TokenAction, TokenUpdate};
 use hexstody_db::update::withdrawal::WithdrawalRequestInfo;
 use hexstody_db::update::{StateUpdate, UpdateBody};
 use hexstody_eth_client::client::EthClient;
@@ -19,8 +23,7 @@ use rocket::http::CookieJar;
 use rocket::serde::json::Json;
 use rocket::{get, post, State};
 use rocket_okapi::openapi;
-use hexstody_db::update::misc::{TokenUpdate, TokenAction};
-use tokio::sync::{Mutex, mpsc};
+use tokio::sync::{mpsc, Mutex};
 use uuid::Uuid;
 
 #[openapi(tag = "wallet")]
@@ -49,7 +52,9 @@ pub async fn get_balance(
                     Currency::ERC20(token) => {
                         for tok in &user_data.data.balanceTokens {
                             if tok.tokenName == token.ticker {
-                                bal = tok.tokenBalance.parse::<u64>().unwrap();
+                                info!("{}", tok.tokenName);
+                                info!("{}", tok.tokenBalance);
+                                bal = tok.tokenBalance.parse::<u64>().unwrap_or(0);
                             }
                         }
                     }
@@ -57,7 +62,7 @@ pub async fn get_balance(
                 api::BalanceItem {
                     currency: cur.clone(),
                     value: bal,
-                    limit_info: info.limit_info.clone()
+                    limit_info: info.limit_info.clone(),
                 }
             })
             .collect();
@@ -66,13 +71,13 @@ pub async fn get_balance(
     .await
 }
 
-#[openapi(tag="wallet")]
-#[post("/balance", data="<currency>")]
+#[openapi(tag = "wallet")]
+#[post("/balance", data = "<currency>")]
 pub async fn get_balance_by_currency(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
     eth_client: &State<EthClient>,
-    currency: Json<Currency>
+    currency: Json<Currency>,
 ) -> error::Result<Json<api::BalanceItem>> {
     let cur = currency.into_inner();
     let currency = cur.clone();
@@ -81,8 +86,8 @@ pub async fn get_balance_by_currency(
         match user.currencies.get(&cur) {
             Some(info) => {
                 let limit_info = info.limit_info.clone();
-                if cur == Currency::BTC{
-                    return Ok((info.balance(), limit_info))
+                if cur == Currency::BTC {
+                    return Ok((info.balance(), limit_info));
                 } else {
                     let user_data_resp = eth_client.get_user_data(&user.username).await;
                     if let Err(e) = user_data_resp {
@@ -91,25 +96,35 @@ pub async fn get_balance_by_currency(
                     let user_data = user_data_resp.unwrap();
                     match cur.clone() {
                         Currency::BTC => return nofound_err, // this should not happen
-                        Currency::ETH => return Ok((user_data.data.balanceEth.parse().unwrap(), limit_info)),
+                        Currency::ETH => {
+                            return Ok((user_data.data.balanceEth.parse().unwrap(), limit_info))
+                        }
                         Currency::ERC20(token) => {
-                            for tok in user_data.data.balanceTokens{
-                                if tok.tokenName == token.ticker{
-                                    return Ok((tok.tokenBalance.parse::<u64>().unwrap(), limit_info))
+                            for tok in user_data.data.balanceTokens {
+                                if tok.tokenName == token.ticker {
+                                    return Ok((
+                                        tok.tokenBalance.parse::<u64>().unwrap(),
+                                        limit_info,
+                                    ));
                                 }
                             }
                             return nofound_err;
-                        },
+                        }
                     }
                 }
-            },
+            }
             None => return nofound_err,
         }
     })
     .await;
-    resp.map(|(value, limit_info)| Json(BalanceItem{currency, value, limit_info}))
+    resp.map(|(value, limit_info)| {
+        Json(BalanceItem {
+            currency,
+            value,
+            limit_info,
+        })
+    })
 }
-
 
 #[openapi(tag = "wallet")]
 #[post("/deposit", data = "<currency>")]
@@ -238,6 +253,7 @@ pub async fn btcfee(cookies: &CookieJar<'_>, btc: &State<BtcClient>) -> error::R
 pub async fn get_history(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
+    eth_client: &State<EthClient>,
     skip: usize,
     take: usize,
 ) -> error::Result<Json<api::History>> {
@@ -285,7 +301,46 @@ pub async fn get_history(
                     .collect::<Vec<_>>()
             })
             .collect::<Vec<_>>();
+        let x: Json<api::UserEth> = eth_client
+            .get_user_data(&user.username)
+            .await
+            .map(|user_data| Json(user_data))
+            .unwrap();
+        let mut t = x
+            .data
+            .historyTokens
+            .iter()
+            .flat_map(|x| x.history.iter())
+            .map(|h| {
+                let curr = match h.tokenName.as_str() {
+                    "USDT" => Currency::usdt_erc20(),
+                    "CRV" => Currency::crv_erc20(),
+                    "GTECH" => Currency::gtech_erc20(),
+                    _ => Currency::ETH,
+                };
 
+                let time  = NaiveDateTime::from_timestamp(h.timeStamp.parse().unwrap(), 0);
+                let val  = h.value.parse().unwrap();
+                if h.addr.to_uppercase() != h.from.to_ascii_uppercase() {
+                    api::HistoryItem::Deposit(api::DepositHistoryItem {
+                        currency: curr,
+                        date: time,
+                        number_of_confirmations: 0,
+                        value: val,
+                        to_address: CurrencyAddress::ETH(EthAccount{account : h.addr.to_owned()}),
+                        txid: CurrencyTxId::ETH(ETHTxid {txid : h.hash.to_owned()}),
+                    })
+                } else {
+                    api::HistoryItem::Withdrawal(api::WithdrawalHistoryItem {
+                        currency: curr,
+                        date: time,
+                        status: api::WithdrawalRequestStatus::OpRejected,
+                        value: val,
+                    })
+                }
+            }).collect::<Vec<_>>();
+
+        history.append(&mut t);
         history.sort_by(|a, b| api::history_item_time(b).cmp(api::history_item_time(a)));
 
         let history_slice = history.iter().skip(skip).take(take).cloned().collect();
@@ -344,8 +399,9 @@ pub async fn post_withdraw(
                 .await
                 .map_err(|_| error::Error::FailedGetFee(Currency::BTC))?
                 .fee_rate;
-            let required_amount = withdraw_request.amount + btc_fee_per_byte * BTC_BYTES_PER_TRANSACTION;
-            if  required_amount <= btc_balance {
+            let required_amount =
+                withdraw_request.amount + btc_fee_per_byte * BTC_BYTES_PER_TRANSACTION;
+            if required_amount <= btc_balance {
                 let withdrawal_request = WithdrawalRequestInfo {
                     id: Uuid::new_v4(),
                     user: user.username,
