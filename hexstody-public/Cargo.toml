@@ -47,6 +47,8 @@ schemars = "0.8.8"
 pwhash = "1.0.0"
 figment = { version = "0.10", features = ["toml", "env"] }
 uuid = { version = "0.8.2", features = ["v4"]}
+p256 = { version = "0.11.1", features = ["serde"] }
+hexstody-sig = { path = "../hexstody-sig" }
 qrcode-generator = "4.1.6"
 base64 = "0.13.0"
 

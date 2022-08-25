@@ -22,6 +22,14 @@
     </ul>
 </div>
 <div class="full-height" style="background-color: #ECEFF4;">
+    <div id="error-box" style="display: none;" class="container" style="padding-top: 25px;">
+        <div class="box balance-box display-flex">
+            <span class="font-big-size is-danger"></span>
+            <a class="m-l-a"><img src="/images/close.svg?size=18" class="icon-36px display-flex"
+                onclick='document.getElementById("error-box").style.display = "none"'
+            ></img></a>
+        </div>
+    </div>
     <div class="container" style="padding-top: 25px;">
         <div class="box balance-box">
             {{#each tabs}}
@@ -33,12 +41,6 @@
             {{/each}}
         </div>
     </div>
-    <div id="error-box" style="display: none;" class="container" style="padding-top: 25px;">
-        <div class="box balance-box">
-            <span class="font-big-size is-danger"></span>
-        </div>
-    </div>
-
 </div>
 {{/inline}}
 

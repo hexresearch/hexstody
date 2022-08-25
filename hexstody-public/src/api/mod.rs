@@ -33,8 +33,11 @@ use hexstody_api::{
 use hexstody_btc_client::client::BtcClient;
 use hexstody_db::{state::State as DbState, update::*, Pool};
 use hexstody_eth_client::client::EthClient;
+use hexstody_sig::SignatureVerificationConfig;
 use profile::*;
 use wallet::*;
+
+use crate::state::RuntimeState;
 
 struct StaticPath(PathBuf);
 
@@ -375,6 +378,7 @@ pub async fn serve_api(
     api_config: Figment,
     is_test: bool,
 ) -> Result<(), rocket::Error> {
+    let runtime_state = Arc::new(Mutex::new(RuntimeState::new()));
     let on_ready = AdHoc::on_liftoff("API Start!", |_| {
         Box::pin(async move {
             start_notify.notify_one();
@@ -394,8 +398,6 @@ pub async fn serve_api(
                 ethfee,
                 btcfee,
                 get_history,
-                get_history_eth,
-                get_history_erc20,
                 withdraw_eth,
                 post_withdraw,
                 signup_email,
@@ -412,7 +414,11 @@ pub async fn serve_api(
                 set_language,
                 get_dict,
                 get_user_config,
-                set_user_config
+                set_user_config,
+                change_password,
+                set_user_public_key,
+                get_challenge,
+                redeem_challenge
             ],
         )
         .mount(
@@ -439,9 +445,11 @@ pub async fn serve_api(
         .manage(update_sender)
         .manage(btc_client)
         .manage(eth_client)
+        .manage(runtime_state)
         .manage(IsTestFlag(is_test))
         .manage(StaticPath(static_path))
         .attach(Template::fairing())
+        .attach(AdHoc::config::<SignatureVerificationConfig>())
         .attach(on_ready)
         .launch()
         .await?;

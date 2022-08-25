@@ -145,6 +145,80 @@ export function initTabs(tabIds, hook, selected) {
     tabClicked(tabIds[i]);
 }
 
+export function initCollapsibles(){
+    var coll = document.getElementsByClassName("collapsible");
+    var i;
+    
+    for (i = 0; i < coll.length; i++) {
+      coll[i].addEventListener("click", function() {
+        this.classList.toggle("active");
+        var content = this.nextElementSibling;
+        if (content.style.display === "block") {
+          content.style.display = "none";
+        } else {
+          content.style.display = "block";
+        }
+      });
+    }
+}
+
+export function getUserName(){
+    const el = document.getElementById("navbarlogin")
+    if(el) {
+        return el.innerText
+    } else {
+        return "anon"
+    }
+}
+
+export function chunkify(array, chunkSize){
+    var chunks = []
+    for (let i = 0; i < array.length; i += chunkSize) {
+        const chunk = array.slice(i, i + chunkSize);
+        chunks.push(chunk)
+    }
+    return chunks
+}
+
+export function transpose(array){
+    var transposed = [];
+    if (array.length > 0){
+        for (let i = 0; i < array[0].length; i++){
+            transposed.push([])
+        }
+
+        for(let i = 0; i < array[0].length;i++){
+            for(let j=0;j<array.length;j++){
+                transposed[j].push(array[i][j])
+            }
+        }
+    }
+    return transposed
+}
+
+export function chunkifyTransposed(array, chunkSize){
+    var res = []
+    for (let i = 0; i < chunkSize; i++){
+        res.push([])
+    }
+
+    for (let i = 0; i < array.length; i += chunkSize) {
+        const chunk = array.slice(i, i + chunkSize);
+        for (let j = 0 ; j < chunkSize; j++) {
+            res[j].push(chunk[j])
+        }
+    }
+
+    return res
+}
+
+export function indexArrayFromOne(array) {
+    var res = [];
+    for (let i = 0; i < array.length; i++) {
+        res.push({ix: i+1, value:array[i]})
+    }
+    return res
+}
 export function currencyNameToCurrency(currencyName) {
     switch (currencyName.toUpperCase()) {
         case "BTC":

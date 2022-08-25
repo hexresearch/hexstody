@@ -64,3 +64,11 @@ impl PhoneNumber {
     Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash
 )]
 pub struct TgName {pub tg_name: String}
+
+#[derive(
+    Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash
+)]
+pub struct ChallengeResponse {
+    pub user: String,
+    pub challenge: String
+}

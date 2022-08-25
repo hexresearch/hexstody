@@ -85,8 +85,7 @@ async function getCurrencyExchangeRate(currency) {
         {
             method: "POST",
             body: JSON.stringify(currency)
-        })
-        .then(r => r.json());
+        }).then(r => r.json());
 };
 
 function calcAvailableBalance(balanceObj) {

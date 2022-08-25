@@ -1,0 +1,14 @@
+<table>
+    <tbody>
+        {{#each chunks}}
+        <tr>
+            {{#each this}}
+            <td class="p-lr-1em p-tb-05em"> 
+                <span class="m-r-05.em">{{this.ix}}</span>.
+                <span class="font-bold font-black">{{this.value}}</span>
+            </td>
+            {{/each}}
+        </tr>
+        {{/each}}
+    </tbody>
+</table>

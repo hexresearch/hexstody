@@ -244,6 +244,12 @@ pub struct SigninEmail {
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct PasswordChange {
+    pub old_password: String,
+    pub new_password: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct WithdrawalRequestInfo {
     /// User which initiated withdrawal request
     #[schemars(example = "example_user")]

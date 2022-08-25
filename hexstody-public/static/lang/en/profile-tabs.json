@@ -1,5 +1,6 @@
 [
     {"id": "tokens", "label": "tokens"}, 
     {"id": "limits", "label": "limits"},
-    {"id": "settings", "label": "settings"}
+    {"id": "settings", "label": "settings"},
+    {"id": "key", "label":"key"}
 ]

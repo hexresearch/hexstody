@@ -2,6 +2,13 @@ use p256::{
     ecdsa::{signature::Verifier, Signature, VerifyingKey},
     PublicKey,
 };
+use serde::Deserialize;
+
+#[derive(Deserialize)]
+pub struct SignatureVerificationConfig {
+    pub domain: String,
+    pub operator_public_keys: Vec<PublicKey>,
+}
 
 #[derive(Debug, PartialEq)]
 pub enum SignatureError {
