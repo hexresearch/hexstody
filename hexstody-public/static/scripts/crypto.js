@@ -80,7 +80,6 @@ function toUint11Array(input) {
 }
 
 export async function keyToMnemonic(key){
-    console.log(key)
     let oct = await key.oct;
     let bytes = Uint8Array.from(oct.match(/.{1,2}/g).map((byte) => parseInt(byte, 16)));
     const hashBuffer = await crypto.subtle.digest('SHA-256', bytes);
