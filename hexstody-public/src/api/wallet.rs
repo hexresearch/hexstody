@@ -311,6 +311,7 @@ pub async fn get_history(
             .historyTokens
             .iter()
             .flat_map(|x| x.history.iter())
+            .chain(x.data.historyEth.iter())
             .map(|h| {
                 let curr = match h.tokenName.as_str() {
                     "USDT" => Currency::usdt_erc20(),
@@ -318,9 +319,9 @@ pub async fn get_history(
                     "GTECH" => Currency::gtech_erc20(),
                     _ => Currency::ETH,
                 };
-
+                info!("{}", h.tokenName);
                 let time  = NaiveDateTime::from_timestamp(h.timeStamp.parse().unwrap(), 0);
-                let val  = h.value.parse().unwrap();
+                let val  = h.value.parse().unwrap_or(1488);
                 if h.addr.to_uppercase() != h.from.to_ascii_uppercase() {
                     api::HistoryItem::Deposit(api::DepositHistoryItem {
                         currency: curr,
@@ -339,7 +340,6 @@ pub async fn get_history(
                     })
                 }
             }).collect::<Vec<_>>();
-
         history.append(&mut t);
         history.sort_by(|a, b| api::history_item_time(b).cmp(api::history_item_time(a)));
 

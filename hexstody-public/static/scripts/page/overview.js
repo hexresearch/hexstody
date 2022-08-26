@@ -16,10 +16,6 @@ async function getHistory(skip, take) {
     return fetch(`/history/${skip}/${take}`).then(r => r.json());
 }
 
-async function getUserData() {
-    return fetch("/userdata/").then(r => r.json());
-}
-
 async function getCourseForCurrency(currency) {
     return await fetch("/ticker",
         {
@@ -87,50 +83,52 @@ async function loadBalance() {
 }
 
 async function loadHistoryETH() {
-    const userData = await getUserData();
-    const histFull = userData.data.historyTokens.reduce((acc, curr) => acc.concat(curr.history), userData.data.historyEth);
-
-    const historyBTCpred = await getHistory(0, 20);
-    let histBTCready = [];
-    for (const htb of historyBTCpred.history_items) {
-        htb.timeStamp = timeStampToTime(Math.round(Date.parse(htb.date) / 1000));
-        const isDeposit = htb.type == "deposit";
-        const sign = isDeposit ? '+' : '-';
-        htb.valuetoshow = `${sign}${formattedCurrencyValue(htb.currency, htb.value)} ${htb.currency}`;
-        htb.hash = isDeposit ? htb.txid.txid : dict.txdoesntexist;
-        htb.explorerLink = isDeposit ? `https://mempool.space/tx/${htb.txid.txid}` : "";
-        htb.flowClass = isDeposit ? 'is-deposit' : 'is-withdrawal';
-        if (!isDeposit) {
-            htb.arrow = "mdi-arrow-up";
-            htb.flowType = `${dict.withdraw} ${htb.currency}`;
+    function mapHistory(historyItem) {
+        const isDeposit = historyItem.type == "deposit";
+        const timeStamp = timeStampToTime(Math.round(Date.parse(historyItem.date) / 1000));
+        if (isDeposit) {
+            let explorerLink;
+            switch (historyItem.currency) {
+                case "BTC":
+                    explorerLink = `https://mempool.space/tx/${historyItem.txid.txid}`;
+                    break;
+                default:
+                    explorerLink = `https://etherscan.io/tx/${historyItem.txid.txid}`;
+                    break;
+            }
+            return {
+                timeStamp: timeStamp,
+                valueToShow: `+${formattedCurrencyValue(historyItem.currency, historyItem.value)} ${historyItem.currency}`,
+                hash: historyItem.txid.txid,
+                explorerLink: explorerLink,
+                flowClass: "is-deposit",
+                arrow: "mdi-arrow-collapse-down",
+                flowType: `${dict.deposit} ${historyItem.currency}`
+            }
+        } else {
+            let explorerLink;
+            switch (historyItem.currency) {
+                case "BTC":
+                    explorerLink = "";
+                    break;
+                default:
+                    explorerLink = `https://etherscan.io/tx/${historyItem.txid.txid}`;
+                    break;
+            }
+            return {
+                timeStamp: timeStamp,
+                valueToShow: `-${formattedCurrencyValue(historyItem.currency, historyItem.value)} ${historyItem.currency}`,
+                hash: dict.txdoesntexist,
+                explorerLink: explorerLink,
+                flowClass: "is-withdrawal",
+                arrow: "mdi-arrow-up",
+                flowType: `${dict.withdraw} ${historyItem.currency}`
+            }
         }
-        else {
-            htb.arrow = "mdi-arrow-collapse-down"
-            htb.flowType = `${dict.deposit} ${htb.currency}`;
-        }
-        histBTCready.push(htb);
     }
-
-    const hist = { histories: histFull }
-    for (const h of hist.histories) {
-        h.timeStamp = timeStampToTime(parseInt(h.timeStamp));
-        const isDeposit = h.addr.toUpperCase() != h.from.toUpperCase();
-        const sign = isDeposit ? '+' : '-';
-        h.valuetoshow = `${sign + formattedCurrencyValue(h.tokenName, h.value)} ${h.tokenName}`;
-        h.explorerLink = `https://etherscan.io/tx/${h.hash}`;
-        h.flowClass = isDeposit ? 'is-deposit' : 'is-withdrawal';
-        if (!isDeposit) {
-            h.arrow = "mdi-arrow-up"
-            h.flowType = `${dict.withdraw} ${h.tokenName}`;
-        }
-        else {
-            h.arrow = "mdi-arrow-collapse-down"
-            h.flowType = `${dict.deposit} ${h.tokenName}`;
-        }
-    };
-
-    hist.histories = histBTCready.concat(hist.histories);
-    const historyDrawUpdate = historyTemplate(hist);
+    const historyBTCpred = await getHistory(0, 20);
+    const mappedHistory = historyBTCpred.history_items.map(mapHistory);
+    const historyDrawUpdate = historyTemplate({ histories: mappedHistory });
     const historyElem = document.getElementById("history-table");
     historyElem.innerHTML = historyDrawUpdate;
     enableCopyBtns(historyElem);
@@ -138,22 +136,18 @@ async function loadHistoryETH() {
 
 function enableCopyBtns(historyElem) {
     let tableRows = historyElem.getElementsByTagName('tr');
-    for (var row of tableRows) {
-        let txId = row.getElementsByTagName('a')[0].innerHTML;
-        let copyBtn = row.getElementsByTagName('button')[0];
-        copyBtn.addEventListener("click", () => {
-            navigator.clipboard.writeText(txId).then(function () { }, function (err) {
-                console.error('Could not copy text: ', err);
-            });
-        });
+    for (const row of tableRows) {
+        const txId = row.getElementsByTagName('a')[0].innerHTML;
+        const copyBtn = row.getElementsByTagName('button')[0];
+        copyBtn.addEventListener("click", () => navigator.clipboard.writeText(txId).then(() => { }, function (err) {
+            console.error('Could not copy text: ', err);
+        }));
         tippy(copyBtn, {
             content: dict.copied,
             trigger: "click",
             hideOnClick: false,
             onShow(instance) {
-                setTimeout(() => {
-                    instance.hide();
-                }, 1000);
+                setTimeout(() => instance.hide(), 1000);
             }
         });
     };
@@ -164,19 +158,15 @@ function enableDepositWithdrawBtns(balancesElem) {
     for (var item of balanceItems) {
         let depositBtn = item.getElementsByTagName('button')[0];
         let withdrawBtn = item.getElementsByTagName('button')[1];
-        depositBtn.addEventListener("click", () => {
-            window.location.href = "/deposit";
-        });
-        withdrawBtn.addEventListener("click", () => {
-            window.location.href = "/withdraw";
-        });
+        depositBtn.addEventListener("click", () => window.location.href = "/deposit");
+        withdrawBtn.addEventListener("click", () => window.location.href = "/withdraw");
     };
 }
 
 function timeStampToTime(unix_timestamp) {
-    var date = new Date(unix_timestamp * 1000);
-    var dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    var timeStr = date.toLocaleTimeString();
+    const date = new Date(unix_timestamp * 1000);
+    const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    const timeStr = date.toLocaleTimeString();
     return `${dateStr} ${timeStr}`;
 }
 
@@ -197,7 +187,7 @@ async function updateLoop() {
 
     const jsonresBTC = await getCourseForCurrency("BTC");
     const usdToBtc = document.getElementById("usd-BTC");
-    let currValBtc = document.getElementById("curr-val-BTC").textContent;
+    const currValBtc = document.getElementById("curr-val-BTC").textContent;
     usdToBtc.textContent = `(${(currValBtc * jsonresBTC.USD).toFixed(2)} USD)`
 
     const jsonres = await getCourseForCurrency("ETH");
