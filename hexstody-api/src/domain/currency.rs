@@ -44,7 +44,7 @@ impl Currency {
         Currency::ERC20(Erc20Token {
             ticker: "GTECH".to_string(),
             name: "GTECH".to_string(),
-            contract: "0xD533a949740bb3306d119CC777fa900bA034cd52".to_string(),
+            contract: "0xcF191Be712dd4d20002Cd3FD6490245ceF8Db722".to_string(),
         })
     }
 
@@ -181,8 +181,8 @@ pub enum CurrencyAddress {
     Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
 )]
 pub struct Erc20 {
-    token: Erc20Token,
-    account: EthAccount,
+    pub token: Erc20Token,
+    pub account: EthAccount,
 }
 
 impl CurrencyAddress {

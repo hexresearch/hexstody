@@ -485,9 +485,9 @@ async function loadSecurityTab(){
     hideAllPasswordFields()
 }
 
-async function tabUrlHook(tabid){
-    const tab = tabid.replace("-tab","")
-    const name = document.getElementById(tabid).getElementsByTagName("a")[0].innerText.toLowerCase();
+async function tabUrlHook(tabId){
+    const tab = tabId.replace("-tab","")
+    const name = document.getElementById(tabId).getElementsByTagName("a")[0].innerText.toLowerCase();
     const properName = name.charAt(0).toUpperCase() + name.slice(1);
     const titleEl = document.getElementsByTagName("title")[0];
     const titleOld = titleEl.innerText.split(":");
@@ -495,7 +495,7 @@ async function tabUrlHook(tabid){
     window.history.pushState("", "", `/profile?tab=${tab}`);
     titleEl.innerText = titleOld[0] + ": " + properName;
 
-    switch(tabid){
+    switch(tabId){
         case "tokens-tab": 
             await loadTokens();
             break;
@@ -530,6 +530,5 @@ async function init() {
     const selectedTab = preInitTabs();
     initTabs(tabs, tabUrlHook, selectedTab);
 };
-
 
 document.addEventListener("headerLoaded", init);

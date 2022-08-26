@@ -71,7 +71,9 @@ pub enum Error {
     #[error("Invalid e-mail")]
     InvalidEmail,
     #[error("Invalid phone number")]
-    InvalidPhoneNumber
+    InvalidPhoneNumber,
+    #[error("Failed to get {0} exchange rate")]
+    ExchangeRateError(Currency),
 }
 
 impl Error {
@@ -105,6 +107,7 @@ impl Error {
             Error::LangNotChanged => 25,
             Error::InvalidEmail => 26,
             Error::InvalidPhoneNumber => 27,
+            Error::ExchangeRateError(_) => 28,
         }
     }
 
@@ -138,6 +141,7 @@ impl Error {
             Error::LangNotChanged => Status::from_code(400).unwrap(),
             Error::InvalidEmail => Status::from_code(400).unwrap(),
             Error::InvalidPhoneNumber => Status::from_code(400).unwrap(),
+            Error::ExchangeRateError(_) => Status::from_code(404).unwrap(),
         }
     }
 }

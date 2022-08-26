@@ -40,7 +40,7 @@ bitcoin-cli -rpcuser=regtest -rpcpassword=regtest -rpcport=9806 -named sendtoadd
 bitcoin-cli -rpcuser=regtest -rpcpassword=regtest -rpcport=9806 getnewaddress
 ```
 
-# Tips and trics
+# Tips and tricks
 
 Run vscode with export to allow rust extension to validate sqlx macros
 

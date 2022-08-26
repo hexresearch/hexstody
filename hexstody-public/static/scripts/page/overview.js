@@ -1,4 +1,4 @@
-import { loadTemplate, formattedCurrencyValue, formattedElapsedTime } from "./common.js";
+import { loadTemplate, formattedCurrencyValue, formattedElapsedTime, currencyNameToCurrency } from "./common.js";
 
 let balanceTemplate = null;
 let historyTemplate = null;
@@ -20,7 +20,7 @@ async function getUserData() {
     return fetch("/userdata/").then(r => r.json());
 }
 
-async function getCourseForCurrency(currency) {
+async function getCurrencyExchangeRate(currency) {
     return await fetch("/ticker",
         {
             method: "POST",
@@ -76,6 +76,7 @@ async function initTemplates() {
         return formattedElapsedTime(this.date);
     });
     Handlebars.registerHelper('isInProgress', (req_confirmations, confirmations) => req_confirmations > confirmations);
+    Handlebars.registerHelper('toLowerCase', (s) => s.toLowerCase());
 }
 
 async function loadBalance() {
@@ -83,7 +84,6 @@ async function loadBalance() {
     const balanceDrawUpdate = balanceTemplate({ balances: balances.balances, lang: dict });
     const balancesElem = document.getElementById("balances");
     balancesElem.innerHTML = balanceDrawUpdate;
-    enableDepositWithdrawBtns(balancesElem);
 }
 
 async function loadHistoryETH() {
@@ -159,20 +159,6 @@ function enableCopyBtns(historyElem) {
     };
 }
 
-function enableDepositWithdrawBtns(balancesElem) {
-    let balanceItems = balancesElem.getElementsByClassName('balances-item');
-    for (var item of balanceItems) {
-        let depositBtn = item.getElementsByTagName('button')[0];
-        let withdrawBtn = item.getElementsByTagName('button')[1];
-        depositBtn.addEventListener("click", () => {
-            window.location.href = "/deposit";
-        });
-        withdrawBtn.addEventListener("click", () => {
-            window.location.href = "/withdraw";
-        });
-    };
-}
-
 function timeStampToTime(unix_timestamp) {
     var date = new Date(unix_timestamp * 1000);
     var dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -195,16 +181,16 @@ async function loadMoreHistory() {
 async function updateLoop() {
     await Promise.allSettled([loadBalance(), loadHistoryETH()]);
 
-    const jsonresBTC = await getCourseForCurrency("BTC");
+    const jsonresBTC = await getCurrencyExchangeRate(currencyNameToCurrency("BTC"));
     const usdToBtc = document.getElementById("usd-BTC");
     let currValBtc = document.getElementById("curr-val-BTC").textContent;
     usdToBtc.textContent = `(${(currValBtc * jsonresBTC.USD).toFixed(2)} USD)`
 
-    const jsonres = await getCourseForCurrency("ETH");
+    const jsonres = await getCurrencyExchangeRate(currencyNameToCurrency("ETH"));
     const usdToEth = document.getElementById("usd-ETH");
     const currValEth = document.getElementById("curr-val-ETH").textContent;
     usdToEth.textContent = `(${(currValEth * jsonres.USD).toFixed(2)} USD)`;
-    const jsonresUSDT = await getCourseForCurrency("USDT");
+    const jsonresUSDT = await getCurrencyExchangeRate(currencyNameToCurrency("USDT"));
     const usdToUSDT = document.getElementById("usd-USDT");
     const currValUSDT = document.getElementById("curr-val-USDT").textContent;
     usdToUSDT.textContent = `(${(currValUSDT * 1.0).toFixed(2)} USD)`;

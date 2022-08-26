@@ -124,21 +124,6 @@ impl HexstodyClient {
         Ok(serde_json::from_str(&response)?)
     }
 
-    pub async fn get_deposit_eth(&self, currency: Currency) -> Result<DepositInfo> {
-        let path = "/deposit_eth";
-        let endpoint = format!("{}{}", self.server, path);
-        let request = self.client.post(endpoint).json(&currency).build()?;
-        let response = self
-            .client
-            .execute(request)
-            .await?
-            .error_for_status()?
-            .text()
-            .await?;
-        debug!("Response {path}: {}", response);
-        Ok(serde_json::from_str(&response)?)
-    }
-
     pub async fn eth_ticker(&self, currency: Currency) -> Result<TickerETH> {
         let path = "/ethticker";
         let endpoint = format!("{}{}", self.server, path);

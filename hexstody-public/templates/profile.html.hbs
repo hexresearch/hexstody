@@ -13,7 +13,7 @@
 <div class="tabs is-large is-centered">
     <ul id="tabs-ul">
         {{#each tabs}}
-        {{#if (isEqString this.id ../selected)}}
+        {{#if (eq this.id ../selected)}}
             <li id="{{this.id}}-tab" class="is-active"><a class="is-uppercase">{{this.label}}</a></li>
         {{else}}
             <li id="{{this.id}}-tab"><a class="is-uppercase">{{this.label}}</a></li>
@@ -33,7 +33,7 @@
     <div class="container" style="padding-top: 25px;">
         <div class="box balance-box">
             {{#each tabs}}
-            {{#if isEqString this.id ../selected}}
+            {{#if eq this.id ../selected}}
                 <div class="row is-center fit-content" id="{{this.id}}-tab-body" style="display:block"></div>
             {{else}}
                 <div class="row is-center fit-content" id="{{this.id}}-tab-body" style="display:none"></div>

@@ -1,16 +1,11 @@
 pub mod auth;
-pub mod wallet;
-pub mod profile;
 pub mod helpers;
+pub mod profile;
+pub mod wallet;
 
-use hexstody_api::domain::Language;
-use hexstody_sig::SignatureVerificationConfig;
-use profile::*;
-use auth::*;
+use base64;
 use figment::Figment;
-use hexstody_eth_client::client::EthClient;
-use serde_json::json;
-use std::collections::HashMap;
+use qrcode_generator::QrCodeEcc;
 use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
@@ -26,14 +21,20 @@ use rocket::response::Redirect;
 use rocket::serde::json::Json;
 use rocket::uri;
 use rocket::{get, routes, State};
-use rocket_dyn_templates::Template;
+use rocket_dyn_templates::{context, Template};
 use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
 
-use hexstody_api::error::{self, ErrorMessage};
+use auth::*;
+use hexstody_api::{
+    domain::{Currency, Language},
+    error::{self, ErrorMessage},
+    types::DepositInfo,
+};
 use hexstody_btc_client::client::BtcClient;
-use hexstody_db::state::State as DbState;
-use hexstody_db::update::*;
-use hexstody_db::Pool;
+use hexstody_db::{state::State as DbState, update::*, Pool};
+use hexstody_eth_client::client::EthClient;
+use hexstody_sig::SignatureVerificationConfig;
+use profile::*;
 use wallet::*;
 
 use crate::state::RuntimeState;
@@ -41,19 +42,24 @@ use crate::state::RuntimeState;
 struct StaticPath(PathBuf);
 
 fn get_dict_json(
-    static_path: &StaticPath, 
-    lang: Language, 
-    path: PathBuf
-) -> error::Result<serde_json::Value>{
-    let file_path = format!("{}/lang/{}/{}", static_path.0.display(), lang.to_alpha(), path.display());
+    static_path: &StaticPath,
+    lang: Language,
+    path: PathBuf,
+) -> error::Result<serde_json::Value> {
+    let file_path = format!(
+        "{}/lang/{}/{}",
+        static_path.0.display(),
+        lang.to_alpha(),
+        path.display()
+    );
     let file = File::open(file_path);
-    if let Err(e) = file { 
-        return Err(error::Error::GenericError(format!("Failed to open file: {:?}", e)).into())
+    if let Err(e) = file {
+        return Err(error::Error::GenericError(format!("Failed to open file: {:?}", e)).into());
     };
     let mut file = file.unwrap();
     let mut data = String::new();
-    if let Err(e) = file.read_to_string(&mut data){
-       return Err(error::Error::GenericError(format!("Failed to read file: {:?}", e)).into()) 
+    if let Err(e) = file.read_to_string(&mut data) {
+        return Err(error::Error::GenericError(format!("Failed to read file: {:?}", e)).into());
     };
     Ok(serde_json::from_str(&data).unwrap())
 }
@@ -66,10 +72,8 @@ fn ping() -> Json<()> {
 
 #[openapi(skip)]
 #[get("/")]
-async fn index(
-    cookies: &CookieJar<'_>,
-) -> Redirect {
-    require_auth(cookies, |_| async {Ok(())})
+async fn index(cookies: &CookieJar<'_>) -> Redirect {
+    require_auth(cookies, |_| async { Ok(()) })
         .await
         .map_or(goto_signin(), |_| Redirect::to(uri!(overview)))
 }
@@ -79,29 +83,43 @@ async fn index(
 async fn overview(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
-    static_path: &State<StaticPath>
+    static_path: &State<StaticPath>,
 ) -> Result<Template, Redirect> {
     require_auth_user(cookies, state, |_, user| async move {
-        let title = match user.config.language{
+        let title = match user.config.language {
             Language::English => "Overview",
             Language::Russian => "Главная",
         };
-        let header_dict = get_dict_json(static_path.inner(), user.config.language, PathBuf::from_str("header.json").unwrap());
-        let overview_dict = get_dict_json(static_path.inner(), user.config.language, PathBuf::from_str("overview.json").unwrap());
-        if let Err(e) = header_dict { return Err(e) };
-        if let Err(e) = overview_dict { return Err(e) };
-        let context = json!({
-            "title":title, 
-            "username": &user.username, 
-            "parent": "base_with_header",
-            "lang": json!({
-                "lang": user.config.language.to_alpha().to_uppercase(),
-                "header": header_dict.unwrap(),
-                "overview": overview_dict.unwrap()
-            })
-        });
+        let header_dict = get_dict_json(
+            static_path.inner(),
+            user.config.language,
+            PathBuf::from_str("header.json").unwrap(),
+        );
+        let overview_dict = get_dict_json(
+            static_path.inner(),
+            user.config.language,
+            PathBuf::from_str("overview.json").unwrap(),
+        );
+        if let Err(e) = header_dict {
+            return Err(e);
+        };
+        if let Err(e) = overview_dict {
+            return Err(e);
+        };
+        let context = context! {
+            title,
+            username: &user.username,
+            parent: "base_with_header",
+            lang: context! {
+                lang: user.config.language.to_alpha().to_uppercase(),
+                header: header_dict.unwrap(),
+                overview: overview_dict.unwrap()
+            }
+        };
         Ok(Template::render("overview", context))
-    }).await.map_err(|_| goto_signin())
+    })
+    .await
+    .map_err(|_| goto_signin())
 }
 
 #[openapi(skip)]
@@ -110,121 +128,228 @@ async fn profile_page(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
     static_path: &State<StaticPath>,
-    tab: Option<String>
+    tab: Option<String>,
 ) -> Result<Template, Redirect> {
     require_auth_user(cookies, state, |_, user| async move {
-        let title = match user.config.language{
+        let title = match user.config.language {
             Language::English => "Profile",
             Language::Russian => "Профиль",
         };
-        let tabs = get_dict_json(static_path.inner(), user.config.language, PathBuf::from_str("profile-tabs.json").unwrap());
-        if let Err(e) = tabs { return Err(e) };
-        let header_dict = get_dict_json(static_path.inner(), user.config.language, PathBuf::from_str("header.json").unwrap());
-        if let Err(e) = header_dict { return Err(e) };
-        let context = json!({
-            "title" : title,
-            "parent": "base_footer_header",
-            "tabs"  : tabs.unwrap(),
-            "selected": tab.unwrap_or("tokens".to_string()),
-            "username": &user.username,
-            "lang": json!({
-                "lang": user.config.language.to_alpha().to_uppercase(),
-                "header": header_dict.unwrap(),
-            })
-        }
+        let tabs = get_dict_json(
+            static_path.inner(),
+            user.config.language,
+            PathBuf::from_str("profile-tabs.json").unwrap(),
         );
+        if let Err(e) = tabs {
+            return Err(e);
+        };
+        let header_dict = get_dict_json(
+            static_path.inner(),
+            user.config.language,
+            PathBuf::from_str("header.json").unwrap(),
+        );
+        if let Err(e) = header_dict {
+            return Err(e);
+        };
+        let context = context! {
+            title,
+            parent: "base_with_header",
+            tabs: tabs.unwrap(),
+            selected: tab.unwrap_or("tokens".to_string()),
+            username: &user.username,
+            lang: context! {
+                lang: user.config.language.to_alpha().to_uppercase(),
+                header: header_dict.unwrap(),
+            }
+        };
         Ok(Template::render("profile", context))
-    }).await.map_err(|_| goto_signin())
+    })
+    .await
+    .map_err(|_| goto_signin())
 }
 
 #[openapi(skip)]
 #[get("/signup")]
 fn signup() -> Template {
-    let context = HashMap::from([("title", "Sign Up"), ("parent", "base")]);
+    let context = context! {title: "Sign Up", parent: "base"};
     Template::render("signup", context)
 }
 
 #[openapi(tag = "auth")]
 #[get("/logout")]
-pub async fn logout(cookies: &CookieJar<'_>) 
--> Result<Redirect, (Status, Json<ErrorMessage>)> {
+pub async fn logout(cookies: &CookieJar<'_>) -> Result<Redirect, (Status, Json<ErrorMessage>)> {
     let resp = require_auth(cookies, |cookie| async move {
         cookies.remove(cookie);
         Ok(Json(()))
-    }).await;
+    })
+    .await;
     match resp {
         Ok(_) => Ok(goto_signin()),
         // Error code 8 => NoUserFound (not logged in). 7 => Requires auth
-        Err(err) => if err.1.code == 8 || err.1.code == 7 {
-            Ok(goto_signin())
-        } else {
-            Err(err)
-        },
+        Err(err) => {
+            if err.1.code == 8 || err.1.code == 7 {
+                Ok(goto_signin())
+            } else {
+                Err(err)
+            }
+        }
     }
 }
 
 #[openapi(skip)]
-#[get("/deposit")]
+#[get("/deposit?<tab>")]
 async fn deposit(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
-    static_path: &State<StaticPath>
-) -> Result<Template, Redirect> {
-    require_auth_user(cookies, state, |_, user| async move {
-        let title = match user.config.language{
+    static_path: &State<StaticPath>,
+    btc_client: &State<BtcClient>,
+    eth_client: &State<EthClient>,
+    update_sender: &State<mpsc::Sender<StateUpdate>>,
+    tab: Option<String>,
+) -> Result<error::Result<Template>, Redirect> {
+    let resp = require_auth_user(cookies, state, |_, user| async move {
+        let title = match user.config.language {
             Language::English => "Deposit",
             Language::Russian => "Депозит",
         };
-        let header_dict = get_dict_json(static_path.inner(), user.config.language, PathBuf::from_str("header.json").unwrap());
-        if let Err(e) = header_dict { return Err(e) };
-        let context = json!({
-            "title" : title,
-            "parent": "base_footer_header",
-            "username": &user.username,
-            "lang": json!({
-                "lang": user.config.language.to_alpha().to_uppercase(),
-                "header": header_dict.unwrap(),
-            })
-        });
-        Ok(Template::render("deposit", context))
-    }).await.map_err(|_| goto_signin())
-}
-
-#[openapi(skip)]
-#[get("/withdraw")]
-async fn withdraw(
-    cookies: &CookieJar<'_>,
-    state: &State<Arc<Mutex<DbState>>>,
-    static_path: &State<StaticPath>
-) -> Result<error::Result<Template>, Redirect> {
-    let resp = require_auth_user(cookies, state, |_, user| async move {
-        let title = match user.config.language{
-            Language::English => "Withdraw",
-            Language::Russian => "Вывод",
+        let header_dict = get_dict_json(
+            static_path.inner(),
+            user.config.language,
+            PathBuf::from_str("header.json").unwrap(),
+        )?;
+        let deposit_dict = get_dict_json(
+            static_path.inner(),
+            user.config.language,
+            PathBuf::from_str("deposit.json").unwrap(),
+        )?;
+        let user_currencies: Vec<Currency> = user.currencies.keys().cloned().collect();
+        let tabs: Vec<String> = user_currencies
+            .iter()
+            .map(|c| c.ticker_lowercase())
+            .collect();
+        let selected_tab = match tab {
+            None => user_currencies[0].ticker_lowercase(),
+            Some(t) => {
+                if tabs.contains(&t) {
+                    t
+                } else {
+                    user_currencies[0].ticker_lowercase()
+                }
+            }
         };
-        let header_dict = get_dict_json(static_path.inner(), user.config.language, PathBuf::from_str("header.json").unwrap());
-        if let Err(e) = header_dict { return Err(e) };
-        let context = json!({
-            "title" : title,
-            "parent": "base_footer_header",
-            "tabs"   : ["btc", "eth"],
-            "username": &user.username,
-            "lang": json!({
-                "lang": user.config.language.to_alpha().to_uppercase(),
-                "header": header_dict.unwrap(),
-            })
+        let mut deposit_addresses: Vec<DepositInfo> = vec![];
+        for user_currency in user_currencies.iter() {
+            let deposit_address = get_deposit_address(
+                btc_client,
+                eth_client,
+                update_sender,
+                state,
+                &user.username,
+                user_currency.clone(),
+            )
+            .await?;
+            let qr_code: Vec<u8> =
+                qrcode_generator::to_png_to_vec(deposit_address.to_string(), QrCodeEcc::Low, 256)
+                    .unwrap();
+            deposit_addresses.push(DepositInfo {
+                address: deposit_address.to_string(),
+                qr_code_base64: base64::encode(qr_code),
+                tab: user_currency.ticker_lowercase(),
+                currency: user_currency.to_string(),
+            });
         }
-        );
-        Ok(Template::render("withdraw", context))
-    }).await;
+        let context = context! {
+            title,
+            parent: "base_with_header",
+            deposit_addresses,
+            tabs,
+            selected: selected_tab,
+            username: &user.username,
+            lang: context! {
+                lang: user.config.language.to_alpha().to_uppercase(),
+                header: header_dict,
+                deposit: deposit_dict,
+            }
+        };
+        Ok(Template::render("deposit", context))
+    })
+    .await;
     match resp {
         Ok(v) => Ok(Ok(v)),
         // Error code 8 => NoUserFound (not logged in). 7 => Requires auth
-        Err(err) => if err.1.code == 8 || err.1.code == 7 {
-            Err(goto_signin())
-        } else {
-            Ok(Err(err))
-        },
+        Err(err) => {
+            if err.1.code == 8 || err.1.code == 7 {
+                Err(goto_signin())
+            } else {
+                Ok(Err(err))
+            }
+        }
+    }
+}
+
+#[openapi(skip)]
+#[get("/withdraw?<tab>")]
+async fn withdraw(
+    cookies: &CookieJar<'_>,
+    state: &State<Arc<Mutex<DbState>>>,
+    static_path: &State<StaticPath>,
+    tab: Option<String>,
+) -> Result<error::Result<Template>, Redirect> {
+    let resp = require_auth_user(cookies, state, |_, user| async move {
+        let title = match user.config.language {
+            Language::English => "Withdraw",
+            Language::Russian => "Вывод",
+        };
+        let header_dict = get_dict_json(
+            static_path.inner(),
+            user.config.language,
+            PathBuf::from_str("header.json").unwrap(),
+        )?;
+        let withdraw_dict = get_dict_json(
+            static_path.inner(),
+            user.config.language,
+            PathBuf::from_str("withdraw.json").unwrap(),
+        )?;
+        let user_currencies: Vec<Currency> = user.currencies.keys().cloned().collect();
+        let tabs: Vec<String> = user_currencies
+            .iter()
+            .map(|c| c.ticker_lowercase())
+            .collect();
+        let selected_tab = match tab {
+            None => user_currencies[0].ticker_lowercase(),
+            Some(t) => {
+                if tabs.contains(&t) {
+                    t
+                } else {
+                    user_currencies[0].ticker_lowercase()
+                }
+            }
+        };
+        let context = context! {
+            title,
+            parent: "base_with_header",
+            tabs,
+            selected: selected_tab,
+            username: &user.username,
+            lang: context! {
+                lang: user.config.language.to_alpha().to_uppercase(),
+                header: header_dict,
+                withdraw: withdraw_dict,
+            }
+        };
+        Ok(Template::render("withdraw", context))
+    })
+    .await;
+    match resp {
+        Ok(v) => Ok(Ok(v)),
+        // Error code 8 => NoUserFound (not logged in). 7 => Requires auth
+        Err(err) => {
+            if err.1.code == 8 || err.1.code == 7 {
+                Err(goto_signin())
+            } else {
+                Ok(Err(err))
+            }
+        }
     }
 }
 
@@ -234,11 +359,12 @@ async fn get_dict(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
     static_path: &State<StaticPath>,
-    path: PathBuf
+    path: PathBuf,
 ) -> error::Result<serde_json::Value> {
     require_auth_user(cookies, state, |_, user| async move {
         get_dict_json(static_path.inner(), user.config.language, path)
-    }).await
+    })
+    .await
 }
 
 pub async fn serve_api(
@@ -250,7 +376,7 @@ pub async fn serve_api(
     btc_client: BtcClient,
     eth_client: EthClient,
     api_config: Figment,
-    is_test: bool
+    is_test: bool,
 ) -> Result<(), rocket::Error> {
     let runtime_state = Arc::new(Mutex::new(RuntimeState::new()));
     let on_ready = AdHoc::on_liftoff("API Start!", |_| {
@@ -267,8 +393,6 @@ pub async fn serve_api(
                 ping,
                 get_balance,
                 get_balance_by_currency,
-                get_deposit,
-                get_deposit_eth,
                 ticker,
                 get_user_data,
                 ethfee,
@@ -299,7 +423,15 @@ pub async fn serve_api(
         )
         .mount(
             "/",
-            routes![index, overview, profile_page, signup, signin_page, deposit, withdraw],
+            routes![
+                index,
+                overview,
+                profile_page,
+                signup,
+                signin_page,
+                deposit,
+                withdraw
+            ],
         )
         .mount(
             "/swagger/",
@@ -316,9 +448,7 @@ pub async fn serve_api(
         .manage(runtime_state)
         .manage(IsTestFlag(is_test))
         .manage(StaticPath(static_path))
-        .attach(Template::custom(|engine|{
-            engine.handlebars.register_helper("isEqString", Box::new(helpers::is_eq_string))
-        }))
+        .attach(Template::fairing())
         .attach(AdHoc::config::<SignatureVerificationConfig>())
         .attach(on_ready)
         .launch()
