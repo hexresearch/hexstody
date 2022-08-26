@@ -19,21 +19,21 @@ const currencyUsdt = {
     "ERC20": {
         "ticker": "USDT",
         "name": "USDT",
-        "contract": "0x5bF7700B03631a8D917446586Df091CF72F6ebf0"
+        "contract": "0xfD8ef4113c5f54BE9Cb103eB437b710b8e1d6885"
     }
 };
 const currencyCrv = {
     "ERC20": {
         "ticker": "CRV",
         "name": "CRV",
-        "contract": "0x7413679bCD0B2cD7c1492Bf9Ca8743f64316a582"
+        "contract": "0x817805F0f818237c73Fde5dEc91dbB650A7E7612"
     }
 };
 const currencyGtech = {
     "ERC20": {
         "ticker": "GTECH",
         "name": "GTECH",
-        "contract": "0xcF191Be712dd4d20002Cd3FD6490245ceF8Db722"
+        "contract": "0x866A4Da32007BA71aA6CcE9FD85454fCF48B140c"
     }
 };
 
