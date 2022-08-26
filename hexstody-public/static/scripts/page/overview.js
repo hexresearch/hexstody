@@ -27,9 +27,9 @@ async function getCourseForCurrency(currency) {
 async function initTemplates() {
 
     const [balanceTemp, historyTemp, dictTemp] = await Promise.allSettled([
-        await loadTemplate("/templates/balance.html.hbs"),
-        await loadTemplate("/templates/history.html.hbs"),
-        await fetch("/lang/overview-extra.json").then(r => r.json())
+        loadTemplate("/templates/balance.html.hbs"),
+        loadTemplate("/templates/history.html.hbs"),
+        fetch("/lang/overview-extra.json").then(r => r.json())
     ]);
 
     balanceTemplate = balanceTemp.value;
@@ -39,9 +39,7 @@ async function initTemplates() {
     Handlebars.registerHelper('isDeposit', (historyItem) => historyItem.type === "deposit");
     Handlebars.registerHelper('isWithdrawal', (historyItem) => historyItem.type === "withdrawal");
     Handlebars.registerHelper('formatCurrencyValue', function () {
-        if (
-            typeof this.currency === 'object'
-        ) {
+        if (typeof this.currency === 'object') {
             return formattedCurrencyValue(this.currency.ERC20.ticker, this.value);
         } else {
             return formattedCurrencyValue(this.currency, this.value);
@@ -58,9 +56,7 @@ async function initTemplates() {
         }
     })
     Handlebars.registerHelper('formatCurrencyName', function () {
-        if (
-            typeof this.currency === 'object'
-        ) {
+        if (typeof this.currency === 'object') {
             return this.currency.ERC20.ticker;
         } else {
             return this.currency;
@@ -82,7 +78,7 @@ async function loadBalance() {
     enableDepositWithdrawBtns(balancesElem);
 }
 
-async function loadHistoryETH() {
+async function loadHistory() {
     function mapHistory(historyItem) {
         const isDeposit = historyItem.type == "deposit";
         const timeStamp = timeStampToTime(Math.round(Date.parse(historyItem.date) / 1000));
@@ -139,9 +135,9 @@ function enableCopyBtns(historyElem) {
     for (const row of tableRows) {
         const txId = row.getElementsByTagName('a')[0].innerHTML;
         const copyBtn = row.getElementsByTagName('button')[0];
-        copyBtn.addEventListener("click", () => navigator.clipboard.writeText(txId).then(() => { }, function (err) {
-            console.error('Could not copy text: ', err);
-        }));
+        copyBtn.addEventListener("click", () => navigator.clipboard.writeText(txId).then(() => { }, err =>
+            console.error('Could not copy text: ', err)
+        ));
         tippy(copyBtn, {
             content: dict.copied,
             trigger: "click",
@@ -155,9 +151,8 @@ function enableCopyBtns(historyElem) {
 
 function enableDepositWithdrawBtns(balancesElem) {
     let balanceItems = balancesElem.getElementsByClassName('balances-item');
-    for (var item of balanceItems) {
-        let depositBtn = item.getElementsByTagName('button')[0];
-        let withdrawBtn = item.getElementsByTagName('button')[1];
+    for (const item of balanceItems) {
+        const [depositBtn, withdrawBtn] = item.getElementsByTagName('button');
         depositBtn.addEventListener("click", () => window.location.href = "/deposit");
         withdrawBtn.addEventListener("click", () => window.location.href = "/withdraw");
     };
@@ -183,18 +178,22 @@ async function loadMoreHistory() {
 }
 
 async function updateLoop() {
-    await Promise.allSettled([loadBalance(), loadHistoryETH()]);
+    await Promise.allSettled([loadBalance(), loadHistory()]);
 
-    const jsonresBTC = await getCourseForCurrency("BTC");
+    const [jsonresBTC, jsonres, jsonresUSDT] = await Promise.allSettled([
+        getCourseForCurrency("BTC"),
+        getCourseForCurrency("ETH"),
+        getCourseForCurrency("USDT")
+    ]);
+
     const usdToBtc = document.getElementById("usd-BTC");
     const currValBtc = document.getElementById("curr-val-BTC").textContent;
     usdToBtc.textContent = `(${(currValBtc * jsonresBTC.USD).toFixed(2)} USD)`
 
-    const jsonres = await getCourseForCurrency("ETH");
     const usdToEth = document.getElementById("usd-ETH");
     const currValEth = document.getElementById("curr-val-ETH").textContent;
     usdToEth.textContent = `(${(currValEth * jsonres.USD).toFixed(2)} USD)`;
-    const jsonresUSDT = await getCourseForCurrency("USDT");
+
     const usdToUSDT = document.getElementById("usd-USDT");
     const currValUSDT = document.getElementById("curr-val-USDT").textContent;
     usdToUSDT.textContent = `(${(currValUSDT * 1.0).toFixed(2)} USD)`;

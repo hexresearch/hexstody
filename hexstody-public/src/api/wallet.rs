@@ -3,7 +3,8 @@ use std::sync::Arc;
 use super::auth::{require_auth, require_auth_user};
 use chrono::NaiveDateTime;
 use hexstody_api::domain::{
-    filter_tokens, BtcAddress, Currency, CurrencyAddress, CurrencyTxId, Erc20Token, EthAccount, ETHTxid,
+    filter_tokens, BtcAddress, Currency, CurrencyAddress, CurrencyTxId, ETHTxid, Erc20Token,
+    EthAccount,
 };
 use hexstody_api::error;
 use hexstody_api::types::{
@@ -301,17 +302,17 @@ pub async fn get_history(
                     .collect::<Vec<_>>()
             })
             .collect::<Vec<_>>();
-        let x: Json<api::UserEth> = eth_client
+        let user_data: Json<api::UserEth> = eth_client
             .get_user_data(&user.username)
             .await
             .map(|user_data| Json(user_data))
             .unwrap();
-        let mut t = x
+        let mut eth_and_tokens_history = user_data
             .data
             .historyTokens
             .iter()
-            .flat_map(|x| x.history.iter())
-            .chain(x.data.historyEth.iter())
+            .flat_map(|h| h.history.iter())
+            .chain(user_data.data.historyEth.iter())
             .map(|h| {
                 let curr = match h.tokenName.as_str() {
                     "USDT" => Currency::usdt_erc20(),
@@ -320,27 +321,32 @@ pub async fn get_history(
                     _ => Currency::ETH,
                 };
                 info!("{}", h.tokenName);
-                let time  = NaiveDateTime::from_timestamp(h.timeStamp.parse().unwrap(), 0);
-                let val  = h.value.parse().unwrap_or(1488);
+                let time = NaiveDateTime::from_timestamp(h.timeStamp.parse().unwrap(), 0);
+                let val = h.value.parse().unwrap_or(1488);
                 if h.addr.to_uppercase() != h.from.to_ascii_uppercase() {
                     api::HistoryItem::Deposit(api::DepositHistoryItem {
                         currency: curr,
                         date: time,
                         number_of_confirmations: 0,
                         value: val,
-                        to_address: CurrencyAddress::ETH(EthAccount{account : h.addr.to_owned()}),
-                        txid: CurrencyTxId::ETH(ETHTxid {txid : h.hash.to_owned()}),
+                        to_address: CurrencyAddress::ETH(EthAccount {
+                            account: h.addr.to_owned(),
+                        }),
+                        txid: CurrencyTxId::ETH(ETHTxid {
+                            txid: h.hash.to_owned(),
+                        }),
                     })
                 } else {
                     api::HistoryItem::Withdrawal(api::WithdrawalHistoryItem {
                         currency: curr,
                         date: time,
-                        status: api::WithdrawalRequestStatus::OpRejected,
+                        status: api::WithdrawalRequestStatus::InProgress { confirmations: 0 },
                         value: val,
                     })
                 }
-            }).collect::<Vec<_>>();
-        history.append(&mut t);
+            })
+            .collect::<Vec<_>>();
+        history.append(&mut eth_and_tokens_history);
         history.sort_by(|a, b| api::history_item_time(b).cmp(api::history_item_time(a)));
 
         let history_slice = history.iter().skip(skip).take(take).cloned().collect();
