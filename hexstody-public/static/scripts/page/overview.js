@@ -80,6 +80,7 @@ async function loadBalance() {
 
 async function loadHistory() {
     function mapHistory(historyItem) {
+        console.log("tx");
         const isDeposit = historyItem.type == "deposit";
         const timeStamp = timeStampToTime(Math.round(Date.parse(historyItem.date) / 1000));
         if (isDeposit) {
@@ -114,7 +115,7 @@ async function loadHistory() {
             return {
                 timeStamp: timeStamp,
                 valueToShow: `-${formattedCurrencyValue(historyItem.currency, historyItem.value)} ${historyItem.currency}`,
-                hash: dict.txdoesntexist,
+                hash: historyItem.txid.txid,
                 explorerLink: explorerLink,
                 flowClass: "is-withdrawal",
                 arrow: "mdi-arrow-up",
@@ -180,27 +181,31 @@ async function loadMoreHistory() {
 async function updateLoop() {
     await Promise.allSettled([loadBalance(), loadHistory()]);
 
-    const [jsonresBTC, jsonres, jsonresUSDT] = await Promise.allSettled([
+    const [jsonresBTC, jsonresETH, jsonresUSDT] = await Promise.allSettled([
         getCourseForCurrency("BTC"),
         getCourseForCurrency("ETH"),
         getCourseForCurrency("USDT")
     ]);
 
+    const btcTicker = jsonresBTC.value;
+    const ethTicker = jsonresETH.value;
+    const usdtTicker = jsonresUSDT.value;
+
     const usdToBtc = document.getElementById("usd-BTC");
     const currValBtc = document.getElementById("curr-val-BTC").textContent;
-    usdToBtc.textContent = `(${(currValBtc * jsonresBTC.USD).toFixed(2)} USD)`
+    usdToBtc.textContent = `(${(currValBtc * btcTicker.USD).toFixed(2)} USD)`
 
     const usdToEth = document.getElementById("usd-ETH");
     const currValEth = document.getElementById("curr-val-ETH").textContent;
-    usdToEth.textContent = `(${(currValEth * jsonres.USD).toFixed(2)} USD)`;
+    usdToEth.textContent = `(${(currValEth * ethTicker.USD).toFixed(2)} USD)`;
 
     const usdToUSDT = document.getElementById("usd-USDT");
     const currValUSDT = document.getElementById("curr-val-USDT").textContent;
     usdToUSDT.textContent = `(${(currValUSDT * 1.0).toFixed(2)} USD)`;
 
 
-    const awBal = parseFloat(currValUSDT) + currValEth * jsonres.USD + currValBtc * jsonresBTC.USD;
-    const awBalRub = currValUSDT * jsonresUSDT.RUB + currValEth * jsonres.RUB + currValBtc * jsonresBTC.RUB;
+    const awBal = parseFloat(currValUSDT) + currValEth * ethTicker.USD + currValBtc * btcTicker.USD;
+    const awBalRub = currValUSDT * usdtTicker.RUB + currValEth * ethTicker.RUB + currValBtc * btcTicker.RUB;
 
     const totalUsd = document.getElementById("total-balance-usd");
     const totalRub = document.getElementById("total-balance-rub");

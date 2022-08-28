@@ -195,6 +195,8 @@ pub struct WithdrawalHistoryItem {
     pub date: NaiveDateTime,
     pub value: u64,
     pub status: WithdrawalRequestStatus,
+    //temp field to give txid for ETH and tokens while status not working
+    pub txid: Option<CurrencyTxId>, 
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]

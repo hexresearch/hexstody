@@ -283,6 +283,7 @@ pub async fn get_history(
             date: withdrawal.created_at,
             status: withdrawal_status,
             value: withdrawal.amount,
+            txid: None,
         })
     }
     require_auth_user(cookies, state, |_, user| async move {
@@ -342,6 +343,9 @@ pub async fn get_history(
                         date: time,
                         status: api::WithdrawalRequestStatus::InProgress { confirmations: 0 },
                         value: val,
+                        txid: Some(CurrencyTxId::ETH(ETHTxid {
+                            txid: h.hash.to_owned(),
+                        })),
                     })
                 }
             })
