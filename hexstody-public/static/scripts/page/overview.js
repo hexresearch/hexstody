@@ -24,6 +24,8 @@ async function getCourseForCurrency(currency) {
         }).then(r => r.json());
 };
 
+
+
 async function initTemplates() {
 
     const [balanceTemp, historyTemp, dictTemp] = await Promise.allSettled([
@@ -83,9 +85,10 @@ async function loadHistory() {
         console.log("tx");
         const isDeposit = historyItem.type == "deposit";
         const timeStamp = timeStampToTime(Math.round(Date.parse(historyItem.date) / 1000));
+        const currencyName = typeof historyItem.currency === 'object' ? historyItem.currency.ERC20.ticker : historyItem.currency;
         if (isDeposit) {
             let explorerLink;
-            switch (historyItem.currency) {
+            switch (currencyName) {
                 case "BTC":
                     explorerLink = `https://mempool.space/tx/${historyItem.txid.txid}`;
                     break;
@@ -95,16 +98,16 @@ async function loadHistory() {
             }
             return {
                 timeStamp: timeStamp,
-                valueToShow: `+${formattedCurrencyValue(historyItem.currency, historyItem.value)} ${historyItem.currency}`,
+                valueToShow: `+${formattedCurrencyValue(currencyName, historyItem.value)} ${currencyName}`,
                 hash: historyItem.txid.txid,
                 explorerLink: explorerLink,
                 flowClass: "is-deposit",
                 arrow: "mdi-arrow-collapse-down",
-                flowType: `${dict.deposit} ${historyItem.currency}`
+                flowType: `${dict.deposit} ${currencyName}`
             }
         } else {
             let explorerLink;
-            switch (historyItem.currency) {
+            switch (currencyName) {
                 case "BTC":
                     explorerLink = "";
                     break;
@@ -114,12 +117,12 @@ async function loadHistory() {
             }
             return {
                 timeStamp: timeStamp,
-                valueToShow: `-${formattedCurrencyValue(historyItem.currency, historyItem.value)} ${historyItem.currency}`,
+                valueToShow: `-${formattedCurrencyValue(currencyName, historyItem.value)} ${currencyName}`,
                 hash: historyItem.txid.txid,
                 explorerLink: explorerLink,
                 flowClass: "is-withdrawal",
                 arrow: "mdi-arrow-up",
-                flowType: `${dict.withdraw} ${historyItem.currency}`
+                flowType: `${dict.withdraw} ${currencyName}`
             }
         }
     }
