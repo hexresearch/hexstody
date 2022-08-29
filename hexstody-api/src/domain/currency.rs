@@ -42,7 +42,7 @@ impl Currency {
         Currency::ERC20(Erc20Token {
             ticker: "USDT".to_string(),
             name: "USDT".to_string(),
-            contract: "0x5bF7700B03631a8D917446586Df091CF72F6ebf0".to_string(),
+            contract: "0xfD8ef4113c5f54BE9Cb103eB437b710b8e1d6885".to_string(),
         })
     }
 
@@ -50,7 +50,7 @@ impl Currency {
         Currency::ERC20(Erc20Token {
             ticker: "CRV".to_string(),
             name: "CRV".to_string(),
-            contract: "0x7413679bCD0B2cD7c1492Bf9Ca8743f64316a582".to_string(),
+            contract: "0x817805F0f818237c73Fde5dEc91dbB650A7E7612".to_string(),
         })
     }
 
@@ -58,7 +58,7 @@ impl Currency {
         Currency::ERC20(Erc20Token {
             ticker: "GTECH".to_string(),
             name: "GTECH".to_string(),
-            contract: "0xD533a949740bb3306d119CC777fa900bA034cd52".to_string(),
+            contract: "0x866A4Da32007BA71aA6CcE9FD85454fCF48B140c".to_string(),
         })
     }
 
@@ -195,8 +195,8 @@ pub enum CurrencyAddress {
     Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
 )]
 pub struct Erc20 {
-    token: Erc20Token,
-    account: EthAccount,
+    pub token: Erc20Token,
+    pub account: EthAccount,
 }
 
 impl CurrencyAddress {

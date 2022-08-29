@@ -1,4 +1,4 @@
-import { loadTemplate, formattedCurrencyValue, formattedElapsedTime } from "./common.js";
+import { loadTemplate, formattedCurrencyValue, formattedElapsedTime, currencyNameToCurrency } from "./common.js";
 
 let balanceTemplate = null;
 let historyTemplate = null;
@@ -70,6 +70,7 @@ async function initTemplates() {
         return formattedElapsedTime(this.date);
     });
     Handlebars.registerHelper('isInProgress', (req_confirmations, confirmations) => req_confirmations > confirmations);
+    Handlebars.registerHelper('toLowerCase', (s) => s.toLowerCase());
 }
 
 async function loadBalance() {
@@ -77,7 +78,6 @@ async function loadBalance() {
     const balanceDrawUpdate = balanceTemplate({ balances: balances.balances, lang: dict });
     const balancesElem = document.getElementById("balances");
     balancesElem.innerHTML = balanceDrawUpdate;
-    enableDepositWithdrawBtns(balancesElem);
 }
 
 async function loadHistory() {
@@ -185,9 +185,9 @@ async function updateLoop() {
     await Promise.allSettled([loadBalance(), loadHistory()]);
 
     const [jsonresBTC, jsonresETH, jsonresUSDT] = await Promise.allSettled([
-        getCourseForCurrency("BTC"),
-        getCourseForCurrency("ETH"),
-        getCourseForCurrency("USDT")
+        getCourseForCurrency(currencyNameToCurrency("BTC")),
+        getCourseForCurrency(currencyNameToCurrency("ETH")),
+        getCourseForCurrency(currencyNameToCurrency("USDT"))
     ]);
 
     const btcTicker = jsonresBTC.value;

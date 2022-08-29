@@ -8,9 +8,9 @@ use hexstody_db::state::*;
 use hexstody_db::update::misc::PasswordChangeUpd;
 use hexstody_db::update::signup::*;
 use hexstody_db::update::*;
-use hexstody_sig::SignatureVerificationConfig;
 use hexstody_eth_client::client::EthClient;
 use hexstody_sig::verify_signature;
+use hexstody_sig::SignatureVerificationConfig;
 use pwhash::bcrypt;
 use rocket::get;
 use rocket::http::{Cookie, CookieJar};
@@ -18,16 +18,16 @@ use rocket::post;
 use rocket::response::Redirect;
 use rocket::serde;
 use rocket::serde::json::Json;
-use rocket::State as RState;
 use rocket::uri;
-use rocket_dyn_templates::Template;
+use rocket::State as RState;
+use rocket_dyn_templates::{context, Template};
 use rocket_okapi::openapi;
-use uuid::Uuid;
-use std::collections::HashMap;
+
 use std::future::Future;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio::sync::{Mutex, MutexGuard};
+use uuid::Uuid;
 
 use crate::state::RuntimeState;
 
@@ -38,7 +38,7 @@ pub struct IsTestFlag(pub bool);
 pub async fn signup_email(
     state: &RState<Arc<Mutex<State>>>,
     updater: &RState<mpsc::Sender<StateUpdate>>,
-    eth_client:&RState<EthClient>,
+    eth_client: &RState<EthClient>,
     data: Json<api::SignupEmail>,
 ) -> error::Result<Json<()>> {
     if data.user.len() < error::MIN_USER_NAME_LEN {
@@ -58,23 +58,25 @@ pub async fn signup_email(
         let state = state.lock().await;
         let ue = state.users.contains_key(&data.user);
         let iv = state.invites.contains_key(&data.invite);
-        (ue,iv)
+        (ue, iv)
     };
     if user_exists {
         return Err(error::Error::SignupExistedUser.into());
-    } 
-    if !invite_valid {
-        return Err(error::Error::InviteNotFound.into())
     }
-    else {
+    if !invite_valid {
+        return Err(error::Error::InviteNotFound.into());
+    } else {
         // Create user
-        if let Err(e) = eth_client.createuser(&data.user).await{
-            return Err(error::Error::FailedETHConnection(e.to_string()).into())
+        if let Err(e) = eth_client.createuser(&data.user).await {
+            return Err(error::Error::FailedETHConnection(e.to_string()).into());
         }
 
         // Set user's default tokens
-        if let Err(e) = eth_client.post_tokens(&data.user, &Currency::default_tokens()).await{
-            return Err(error::Error::FailedETHConnection(e.to_string()).into())
+        if let Err(e) = eth_client
+            .post_tokens(&data.user, &Currency::default_tokens())
+            .await
+        {
+            return Err(error::Error::FailedETHConnection(e.to_string()).into());
         }
         let pass_hash = bcrypt::hash(&data.password).map_err(|e| error::Error::from(e))?;
         let upd = StateUpdate::new(UpdateBody::Signup(SignupInfo {
@@ -94,12 +96,19 @@ pub async fn change_password(
     cookies: &CookieJar<'_>,
     updater: &RState<mpsc::Sender<StateUpdate>>,
     data: Json<api::PasswordChange>,
-) -> error::Result<()>{
-    let PasswordChange{old_password, new_password} = data.into_inner();
-    require_auth_user(cookies, state, |_,user| async move {
-        if let UserInfo{auth: SignupAuth::Password(pass_hash),..} = user{
-            if !bcrypt::verify(&old_password, &pass_hash){
-                return Err(error::Error::UserNameTooShort.into())
+) -> error::Result<()> {
+    let PasswordChange {
+        old_password,
+        new_password,
+    } = data.into_inner();
+    require_auth_user(cookies, state, |_, user| async move {
+        if let UserInfo {
+            auth: SignupAuth::Password(pass_hash),
+            ..
+        } = user
+        {
+            if !bcrypt::verify(&old_password, &pass_hash) {
+                return Err(error::Error::UserNameTooShort.into());
             }
         };
         if new_password.len() < error::MIN_USER_PASSWORD_LEN {
@@ -109,17 +118,14 @@ pub async fn change_password(
             return Err(error::Error::UserPasswordTooLong.into());
         }
         let new_pass_hash = bcrypt::hash(&new_password).map_err(|e| error::Error::from(e))?;
-        let upd = StateUpdate::new(
-            UpdateBody::PasswordChange(
-                PasswordChangeUpd{ 
-                    user: user.username, 
-                    new_password: new_pass_hash
-                }
-            )
-        );
+        let upd = StateUpdate::new(UpdateBody::PasswordChange(PasswordChangeUpd {
+            user: user.username,
+            new_password: new_pass_hash,
+        }));
         updater.send(upd).await.unwrap();
         Ok(())
-    }).await
+    })
+    .await
 }
 
 const AUTH_COOKIE: &str = "user_id";
@@ -203,10 +209,9 @@ where
 #[openapi(skip)]
 #[get("/signin")]
 pub fn signin_page() -> Template {
-    let context = HashMap::from([("title", "Sign In"), ("parent", "base")]);
+    let context = context! {title: "Sign In", parent: "base"};
     Template::render("signin", context)
 }
-
 
 #[openapi(skip)]
 #[get("/removeuser/<user>")]
@@ -214,7 +219,7 @@ pub async fn remove_user(
     eth_client: &RState<EthClient>,
     state: &RState<Arc<Mutex<hexstody_db::state::State>>>,
     is_test: &RState<IsTestFlag>,
-    user: &str
+    user: &str,
 ) -> Result<(), Redirect> {
     if is_test.0 {
         let _ = eth_client.remove_user(&user).await;
@@ -224,58 +229,69 @@ pub async fn remove_user(
     } else {
         Err(Redirect::to(uri!(signin_page)))
     }
-
 }
 
 #[openapi(skip)]
-#[post("/signin/challenge/get", data="<user>")]
+#[post("/signin/challenge/get", data = "<user>")]
 pub async fn get_challenge(
     runtime_state: &RState<Arc<Mutex<RuntimeState>>>,
     state: &RState<Arc<Mutex<State>>>,
-    user: Json<String>
-) -> error::Result<Json<String>>{
+    user: Json<String>,
+) -> error::Result<Json<String>> {
     let user = user.into_inner();
     let user_exist = state.lock().await.users.contains_key(&user);
     if user_exist {
         let challenge = Uuid::new_v4().to_string();
-        runtime_state.lock().await.challenges.insert(user, challenge.clone());
+        runtime_state
+            .lock()
+            .await
+            .challenges
+            .insert(user, challenge.clone());
         Ok(Json(challenge))
     } else {
-        return Err(error::Error::NoUserFound.into())
+        return Err(error::Error::NoUserFound.into());
     }
 }
 
 #[openapi(skip)]
-#[post("/signin/challenge/redeem", data="<resp>")]
+#[post("/signin/challenge/redeem", data = "<resp>")]
 pub async fn redeem_challenge(
     runtime_state: &RState<Arc<Mutex<RuntimeState>>>,
     state: &RState<Arc<Mutex<State>>>,
     cookies: &CookieJar<'_>,
     resp: Json<ChallengeResponse>,
     signature_data: SignatureData,
-    config: &RState<SignatureVerificationConfig>
-) -> error::Result<()>{
+    config: &RState<SignatureVerificationConfig>,
+) -> error::Result<()> {
     let url = [config.domain.clone(), uri!(redeem_challenge).to_string()].join("");
     let user = resp.user.clone();
     let challenge = resp.challenge.clone();
     let user_exist = state.lock().await.users.contains_key(&user);
     if user_exist {
         let message = [url, serde::json::to_string(&resp.into_inner()).unwrap()].join(":");
-        let v = verify_signature(None,&signature_data.public_key, &signature_data.nonce, message, &signature_data.signature);
+        let v = verify_signature(
+            None,
+            &signature_data.public_key,
+            &signature_data.nonce,
+            message,
+            &signature_data.signature,
+        );
         match v {
             Ok(_) => {
                 let mut rstate = runtime_state.lock().await;
-                match rstate.challenges.get(&user){
-                    Some(stored_challenge) => if stored_challenge.clone() == challenge {
-                        rstate.challenges.remove(&user);
-                        cookies.add_private(Cookie::new(AUTH_COOKIE, user.clone()));
-                        Ok(())
-                    } else {
-                        Err(error::Error::NoUserFound.into())
-                    },
+                match rstate.challenges.get(&user) {
+                    Some(stored_challenge) => {
+                        if stored_challenge.clone() == challenge {
+                            rstate.challenges.remove(&user);
+                            cookies.add_private(Cookie::new(AUTH_COOKIE, user.clone()));
+                            Ok(())
+                        } else {
+                            Err(error::Error::NoUserFound.into())
+                        }
+                    }
                     None => Err(error::Error::NoUserFound.into()),
                 }
-            },
+            }
             Err(e) => Err(error::Error::SignatureError(format!("{:?}", e)).into()),
         }
     } else {
@@ -283,8 +299,7 @@ pub async fn redeem_challenge(
     }
 }
 
-
 /// Redirect to signin page
-pub fn goto_signin() -> Redirect{
+pub fn goto_signin() -> Redirect {
     Redirect::to(uri!(signin_page))
 }
