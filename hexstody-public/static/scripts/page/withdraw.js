@@ -3,7 +3,6 @@ import {
     currencyPrecision,
     currencyNameToCurrency,
     formattedCurrencyValue,
-    formattedCurrencyValueFixed,
     feeCurrency,
     isErc20Token,
     ETH_TX_GAS_LIMIT,
@@ -99,17 +98,17 @@ function calcAvailableBalance(balanceObj) {
     };
 }
 
-function cryptoToFiat(currencyName, value, rate, decimals) {
+function cryptoToFiat(currencyName, value, rate) {
     // This means ticker is not available
     if (!rate || 'code' in rate) {
         return "-";
     };
     const val = value * rate.USD / currencyPrecision(currencyName);
-    if (decimals) {
-        return val.toFixed(decimals);
-    } else {
-        return val;
-    }
+    const numberFormat = Intl.NumberFormat('ru-RU', {
+        style: 'currency',
+        currency: 'USD'
+    });
+    return numberFormat.format(val);
 }
 
 async function updateActiveTab() {
@@ -136,22 +135,22 @@ async function updateActiveTab() {
 
     const availableBalance = calcAvailableBalance(balanceObj);
 
-    const fiatAvailableBalance = cryptoToFiat(activeCurrencyName, availableBalance, tikerResponse, 2);
-    const fiatFee = cryptoToFiat(feeCurrency(activeCurrencyName), fee, feeCurrencyTickerResponse, 2);
-    const fiatLimit = cryptoToFiat(activeCurrencyName, balanceObj.limit_info.limit.amount, tikerResponse, 2);
-    const fiatSpent = cryptoToFiat(activeCurrencyName, balanceObj.limit_info.spent, tikerResponse, 2);
+    const fiatAvailableBalance = cryptoToFiat(activeCurrencyName, availableBalance, tikerResponse);
+    const fiatFee = cryptoToFiat(feeCurrency(activeCurrencyName), fee, feeCurrencyTickerResponse);
+    const fiatLimit = cryptoToFiat(activeCurrencyName, balanceObj.limit_info.limit.amount, tikerResponse);
+    const fiatSpent = cryptoToFiat(activeCurrencyName, balanceObj.limit_info.spent, tikerResponse);
 
     const availableBalanceElement = document.getElementById(`${activeCurrencyName}-balance`);
-    availableBalanceElement.innerHTML = `${formattedCurrencyValue(currencyNameUppercase, availableBalance)} ${currencyNameUppercase} ($ ${fiatAvailableBalance})`;
+    availableBalanceElement.innerHTML = `${formattedCurrencyValue(currencyNameUppercase, availableBalance)} ${currencyNameUppercase} (${fiatAvailableBalance})`;
 
     const feeElement = document.getElementById(`${activeCurrencyName}-fee`);
-    feeElement.innerHTML = `${formattedCurrencyValueFixed(feeCurrency(activeCurrencyName), fee, 5)} ${feeCurrency(activeCurrencyName)} ($ ${fiatFee})`;
+    feeElement.innerHTML = `${formattedCurrencyValue(feeCurrency(activeCurrencyName), fee)} ${feeCurrency(activeCurrencyName)} (${fiatFee})`;
 
     const limitElement = document.getElementById(`${activeCurrencyName}-limit`);
-    limitElement.innerHTML = `${formattedCurrencyValue(currencyNameUppercase, balanceObj.limit_info.limit.amount)} ${currencyNameUppercase} ($ ${fiatLimit})/${localizeSpan(balanceObj.limit_info.limit.span)}`;
+    limitElement.innerHTML = `${formattedCurrencyValue(currencyNameUppercase, balanceObj.limit_info.limit.amount)} ${currencyNameUppercase} (${fiatLimit}) / ${localizeSpan(balanceObj.limit_info.limit.span)}`;
 
     const spentElement = document.getElementById(`${activeCurrencyName}-spent`);
-    spentElement.innerHTML = `${formattedCurrencyValue(currencyNameUppercase, balanceObj.limit_info.spent)} ${currencyNameUppercase} ($ ${fiatSpent})`;
+    spentElement.innerHTML = `${formattedCurrencyValue(currencyNameUppercase, balanceObj.limit_info.spent)} ${currencyNameUppercase} (${fiatSpent})`;
 
     const maxAmountBtn = document.getElementById(`max-${activeCurrencyName}`);
     const sendBtn = document.getElementById(`send-${activeCurrencyName}`);
