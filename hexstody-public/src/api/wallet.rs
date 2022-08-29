@@ -53,8 +53,6 @@ pub async fn get_balance(
                     Currency::ERC20(token) => {
                         for tok in &user_data.data.balanceTokens {
                             if tok.tokenName == token.ticker {
-                                info!("{}", tok.tokenName);
-                                info!("{}", tok.tokenBalance);
                                 bal = tok.tokenBalance.parse::<u64>().unwrap_or(0);
                             }
                         }

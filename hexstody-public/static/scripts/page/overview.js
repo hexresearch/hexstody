@@ -7,7 +7,6 @@ const refreshInterval = 20000;
 const historyPageSize = 50;
 let historyPagesToLoad = 1;
 
-
 async function getBalances() {
     return await fetch("/balance").then(r => r.json());
 };
@@ -23,8 +22,6 @@ async function getCourseForCurrency(currency) {
             body: JSON.stringify(currency)
         }).then(r => r.json());
 };
-
-
 
 async function initTemplates() {
 
@@ -82,7 +79,6 @@ async function loadBalance() {
 
 async function loadHistory() {
     function mapHistory(historyItem) {
-        console.log("tx");
         const isDeposit = historyItem.type == "deposit";
         const timeStamp = timeStampToTime(Math.round(Date.parse(historyItem.date) / 1000));
         const currencyName = typeof historyItem.currency === 'object' ? historyItem.currency.ERC20.ticker : historyItem.currency;
