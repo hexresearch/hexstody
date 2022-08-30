@@ -1,13 +1,14 @@
+use std::str::FromStr;
 use std::sync::Arc;
 
 use super::auth::{require_auth, require_auth_user};
+use chrono::NaiveDateTime;
 use hexstody_api::domain::{
-    filter_tokens, BtcAddress, Currency, CurrencyAddress, CurrencyTxId, Erc20, Erc20Token,
-    EthAccount,
+    filter_tokens, BtcAddress, Currency, CurrencyAddress, CurrencyTxId, Erc20, ETHTxid, Erc20Token, EthAccount
 };
 use hexstody_api::error;
 use hexstody_api::types::{
-    self as api, BalanceItem, GetTokensResponse, TokenActionRequest, TokenInfo,
+    self as api, BalanceItem, Erc20HistUnitU, GetTokensResponse, TokenActionRequest, TokenInfo,
 };
 use hexstody_btc_client::client::{BtcClient, BTC_BYTES_PER_TRANSACTION};
 use hexstody_db::state::State as DbState;
@@ -52,7 +53,7 @@ pub async fn get_balance(
                     Currency::ERC20(token) => {
                         for tok in &user_data.data.balanceTokens {
                             if tok.tokenName == token.ticker {
-                                bal = tok.tokenBalance.parse::<u64>().unwrap();
+                                bal = tok.tokenBalance.parse::<u64>().unwrap_or(0);
                             }
                         }
                     }
@@ -204,6 +205,7 @@ pub async fn btcfee(cookies: &CookieJar<'_>, btc: &State<BtcClient>) -> error::R
 pub async fn get_history(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
+    eth_client: &State<EthClient>,
     skip: usize,
     take: usize,
 ) -> error::Result<Json<api::History>> {
@@ -232,8 +234,40 @@ pub async fn get_history(
             date: withdrawal.created_at,
             status: withdrawal_status,
             value: withdrawal.amount,
+            txid: None,
         })
     }
+
+    fn to_eth_history(h: &Erc20HistUnitU) -> api::HistoryItem {
+        let curr = Currency::from_str(&h.tokenName).unwrap();
+        let time = NaiveDateTime::from_timestamp(h.timeStamp.parse().unwrap(), 0);
+        let val = h.value.parse().unwrap_or(u64::MAX); // MAX for strange entries with value bigger than u64
+        if h.addr.to_uppercase() != h.from.to_ascii_uppercase() {
+            api::HistoryItem::Deposit(api::DepositHistoryItem {
+                currency: curr,
+                date: time,
+                number_of_confirmations: 0,
+                value: val,
+                to_address: CurrencyAddress::ETH(EthAccount {
+                    account: h.addr.to_owned(),
+                }),
+                txid: CurrencyTxId::ETH(ETHTxid {
+                    txid: h.hash.to_owned(),
+                }),
+            })
+        } else {
+            api::HistoryItem::Withdrawal(api::WithdrawalHistoryItem {
+                currency: curr,
+                date: time,
+                status: api::WithdrawalRequestStatus::InProgress { confirmations: 0 },
+                value: val,
+                txid: Some(CurrencyTxId::ETH(ETHTxid {
+                    txid: h.hash.to_owned(),
+                })),
+            })
+        }
+    }
+
     require_auth_user(cookies, state, |_, user| async move {
         let mut history = user
             .currencies
@@ -251,7 +285,20 @@ pub async fn get_history(
                     .collect::<Vec<_>>()
             })
             .collect::<Vec<_>>();
-
+        let user_data: Json<api::UserEth> = eth_client
+            .get_user_data(&user.username)
+            .await
+            .map(|user_data| Json(user_data))
+            .unwrap();
+        let mut eth_and_tokens_history = user_data
+            .data
+            .historyTokens
+            .iter()
+            .flat_map(|h| h.history.iter())
+            .chain(user_data.data.historyEth.iter())
+            .map(|h| to_eth_history(h))
+            .collect();
+        history.append(&mut eth_and_tokens_history);
         history.sort_by(|a, b| api::history_item_time(b).cmp(api::history_item_time(a)));
 
         let history_slice = history.iter().skip(skip).take(take).cloned().collect();

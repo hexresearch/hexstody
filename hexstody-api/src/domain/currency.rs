@@ -1,7 +1,7 @@
 use bitcoin;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::{fmt, vec};
+use std::{fmt, str::FromStr, vec};
 
 /// A currency that custody understands. Can be extended in future.
 #[derive(
@@ -19,6 +19,20 @@ impl fmt::Display for Currency {
             Currency::BTC => write!(f, "Bitcoin"),
             Currency::ETH => write!(f, "Ethereum"),
             Currency::ERC20(token) => write!(f, "{} ERC-20", token),
+        }
+    }
+}
+
+impl FromStr for Currency {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "TUSDT" => Ok(Currency::usdt_erc20()),
+            "TCRV" => Ok(Currency::crv_erc20()),
+            "TGTECH" => Ok(Currency::gtech_erc20()),
+            "ETH" => Ok(Currency::ETH),
+            _ => Err(format!("unknown currency{}", s)),
         }
     }
 }
@@ -120,17 +134,17 @@ impl Currency {
             .collect()
     }
 
-    pub fn get_by_name(name_orig: &str) -> Option<Currency>{
+    pub fn get_by_name(name_orig: &str) -> Option<Currency> {
         let name = name_orig.to_uppercase();
         if name == "BTC" {
-            return Some(Currency::BTC)
+            return Some(Currency::BTC);
         } else if name == "ETH" {
             return Some(Currency::ETH);
         } else {
             let tokens = Currency::supported_tokens();
             for token in tokens {
-                if name == token.ticker{
-                    return Some(Currency::ERC20(token))
+                if name == token.ticker {
+                    return Some(Currency::ERC20(token));
                 };
             }
             return None;
