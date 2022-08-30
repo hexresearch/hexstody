@@ -48,53 +48,36 @@ export async function loadTemplate(path) {
 }
 
 export function formattedCurrencyValue(currency, value) {
-    let result;
+    let numberFormat;
     switch (currency) {
         case "BTC":
-            // const nf = new Intl.NumberFormat('en-US');
-            // return nf.format(value);
-            result = value / BTC_PRECISION;
-            return result.toFixed(8)
+            numberFormat = Intl.NumberFormat('en', {
+                maximumFractionDigits: Math.log10(BTC_PRECISION),
+            });
+            return numberFormat.format(value / BTC_PRECISION);
         case "ETH":
-            result = value / ETH_PRECISION;
-            return result.toFixed(8);
+            numberFormat = Intl.NumberFormat('en', {
+                maximumFractionDigits: Math.log10(ETH_PRECISION),
+            });
+            return numberFormat.format(value / ETH_PRECISION);
         case "USDT":
-            result = value / USDT_PRECISION;
-            return result.toFixed(8);
+            numberFormat = Intl.NumberFormat('en', {
+                maximumFractionDigits: Math.log10(USDT_PRECISION),
+            });
+            return numberFormat.format(value / USDT_PRECISION);
         case "CRV":
-            result = value / CRV_PRECISION;
-            return result.toFixed(8);
+            numberFormat = Intl.NumberFormat('en', {
+                maximumFractionDigits: Math.log10(CRV_PRECISION),
+            });
+            return numberFormat.format(value / CRV_PRECISION);
         case "GTECH":
-            result = value / GTECH_PRECISION;
-            return result.toFixed(8);
+            numberFormat = Intl.NumberFormat('en', {
+                maximumFractionDigits: Math.log10(GTECH_PRECISION),
+            });
+            return numberFormat.format(value / GTECH_PRECISION);
         default:
             return value;
     };
-}
-
-export function formattedCurrencyValueFixed(currency, value, fixed) {
-    let result;
-    switch (currency) {
-        case "BTC":
-            // const nf = new Intl.NumberFormat('en-US');
-            // return nf.format(value);
-            result = value / BTC_PRECISION;
-            return result.toFixed(fixed);
-        case "ETH":
-            result = value / ETH_PRECISION;
-            return result.toFixed(fixed);
-        case "USDT":
-            result = value / USDT_PRECISION;
-            return result.toFixed(fixed);
-        case "CRV":
-            result = value / CRV_PRECISION;
-            return result.toFixed(fixed);
-        case "GTECH":
-            result = value / GTECH_PRECISION;
-            return result.toFixed(fixed);
-        default:
-            return value;
-    }
 }
 
 export function formattedElapsedTime(dateTimeString) {
@@ -145,33 +128,33 @@ export function initTabs(tabIds, hook, selected) {
     tabClicked(tabIds[i]);
 }
 
-export function initCollapsibles(){
+export function initCollapsibles() {
     var coll = document.getElementsByClassName("collapsible");
     var i;
 
     for (i = 0; i < coll.length; i++) {
-      coll[i].addEventListener("click", function() {
-        this.classList.toggle("active");
-        var content = this.nextElementSibling;
-        if (content.style.display === "block") {
-          content.style.display = "none";
-        } else {
-          content.style.display = "block";
-        }
-      });
+        coll[i].addEventListener("click", function () {
+            this.classList.toggle("active");
+            var content = this.nextElementSibling;
+            if (content.style.display === "block") {
+                content.style.display = "none";
+            } else {
+                content.style.display = "block";
+            }
+        });
     }
 }
 
-export function getUserName(){
+export function getUserName() {
     const el = document.getElementById("navbarlogin")
-    if(el) {
+    if (el) {
         return el.innerText
     } else {
         return "anon"
     }
 }
 
-export function chunkify(array, chunkSize){
+export function chunkify(array, chunkSize) {
     var chunks = []
     for (let i = 0; i < array.length; i += chunkSize) {
         const chunk = array.slice(i, i + chunkSize);
@@ -180,15 +163,15 @@ export function chunkify(array, chunkSize){
     return chunks
 }
 
-export function transpose(array){
+export function transpose(array) {
     var transposed = [];
-    if (array.length > 0){
-        for (let i = 0; i < array[0].length; i++){
+    if (array.length > 0) {
+        for (let i = 0; i < array[0].length; i++) {
             transposed.push([])
         }
 
-        for(let i = 0; i < array[0].length;i++){
-            for(let j=0;j<array.length;j++){
+        for (let i = 0; i < array[0].length; i++) {
+            for (let j = 0; j < array.length; j++) {
                 transposed[j].push(array[i][j])
             }
         }
@@ -196,15 +179,15 @@ export function transpose(array){
     return transposed
 }
 
-export function chunkifyTransposed(array, chunkSize){
+export function chunkifyTransposed(array, chunkSize) {
     var res = []
-    for (let i = 0; i < chunkSize; i++){
+    for (let i = 0; i < chunkSize; i++) {
         res.push([])
     }
 
     for (let i = 0; i < array.length; i += chunkSize) {
         const chunk = array.slice(i, i + chunkSize);
-        for (let j = 0 ; j < chunkSize; j++) {
+        for (let j = 0; j < chunkSize; j++) {
             res[j].push(chunk[j])
         }
     }
@@ -215,7 +198,7 @@ export function chunkifyTransposed(array, chunkSize){
 export function indexArrayFromOne(array) {
     var res = [];
     for (let i = 0; i < array.length; i++) {
-        res.push({ix: i+1, value:array[i]})
+        res.push({ ix: i + 1, value: array[i] })
     }
     return res
 }

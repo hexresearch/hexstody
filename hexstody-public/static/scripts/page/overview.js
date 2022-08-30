@@ -190,17 +190,24 @@ async function updateLoop() {
     const ethTicker = jsonresETH.value;
     const usdtTicker = jsonresUSDT.value;
 
+    const usdNumberFormat1 = Intl.NumberFormat('ru-RU', {
+        style: 'currency',
+        currency: 'USD',
+        currencyDisplay: 'code'
+    });
+
+    const jsonresBTC = await getCurrencyExchangeRate(currencyNameToCurrency("BTC"));
     const usdToBtc = document.getElementById("usd-BTC");
-    const currValBtc = document.getElementById("curr-val-BTC").textContent;
-    usdToBtc.textContent = `(${(currValBtc * btcTicker.USD).toFixed(2)} USD)`
+    let currValBtc = document.getElementById("curr-val-BTC").textContent;
+    usdToBtc.textContent = `(${usdNumberFormat1.format((currValBtc *btcTicker.USD))})`
 
     const usdToEth = document.getElementById("usd-ETH");
     const currValEth = document.getElementById("curr-val-ETH").textContent;
-    usdToEth.textContent = `(${(currValEth * ethTicker.USD).toFixed(2)} USD)`;
-
+    usdToEth.textContent = `(${usdNumberFormat1.format((currValEth * ethTicker.USD))})`;
+    const jsonresUSDT = await getCurrencyExchangeRate(currencyNameToCurrency("USDT"));
     const usdToUSDT = document.getElementById("usd-USDT");
     const currValUSDT = document.getElementById("curr-val-USDT").textContent;
-    usdToUSDT.textContent = `(${(currValUSDT * 1.0).toFixed(2)} USD)`;
+    usdToUSDT.textContent = `(${usdNumberFormat1.format(currValUSDT)})`;
 
 
     const awBal = parseFloat(currValUSDT) + currValEth * ethTicker.USD + currValBtc * btcTicker.USD;
@@ -208,8 +215,18 @@ async function updateLoop() {
 
     const totalUsd = document.getElementById("total-balance-usd");
     const totalRub = document.getElementById("total-balance-rub");
-    totalUsd.textContent = `${awBal.toFixed(2)} $`;
-    totalRub.textContent = `(${awBalRub.toFixed(2)} ₽)`
+
+    const usdNumberFormat2 = Intl.NumberFormat('ru-RU', {
+        style: 'currency',
+        currency: 'USD'
+    });
+    const rubNumberFormat = Intl.NumberFormat('ru-RU', {
+        style: 'currency',
+        currency: 'RUB'
+    });
+
+    totalUsd.textContent = `${usdNumberFormat2.format(awBal)}`;
+    totalRub.textContent = `(${rubNumberFormat.format(awBalRub)})`;
 
     await new Promise((resolve) => setTimeout(resolve, refreshInterval));
     updateLoop();
