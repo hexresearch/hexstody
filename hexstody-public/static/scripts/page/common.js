@@ -13,29 +13,33 @@ const GTECH_PRECISION = 10 ** 18;
 
 export const GWEI = 10 ** 9;
 
-const currencyBtc = "BTC";
-const currencyEth = "ETH";
-const currencyUsdt = {
-    "ERC20": {
-        "ticker": "USDT",
-        "name": "USDT",
-        "contract": "0xfD8ef4113c5f54BE9Cb103eB437b710b8e1d6885"
+export const currencyEnum = Object.freeze({
+    btc: "BTC",
+    eth: "ETH",
+    erc20: {
+        usdt: {
+            "ERC20": {
+                "ticker": "USDT",
+                "name": "USDT",
+                "contract": "0xfD8ef4113c5f54BE9Cb103eB437b710b8e1d6885"
+            }
+        },
+        crv: {
+            "ERC20": {
+                "ticker": "CRV",
+                "name": "CRV",
+                "contract": "0x817805F0f818237c73Fde5dEc91dbB650A7E7612"
+            }
+        },
+        gtech: {
+            "ERC20": {
+                "ticker": "GTECH",
+                "name": "GTECH",
+                "contract": "0x866A4Da32007BA71aA6CcE9FD85454fCF48B140c"
+            }
+        }
     }
-};
-const currencyCrv = {
-    "ERC20": {
-        "ticker": "CRV",
-        "name": "CRV",
-        "contract": "0x817805F0f818237c73Fde5dEc91dbB650A7E7612"
-    }
-};
-const currencyGtech = {
-    "ERC20": {
-        "ticker": "GTECH",
-        "name": "GTECH",
-        "contract": "0x866A4Da32007BA71aA6CcE9FD85454fCF48B140c"
-    }
-};
+});
 
 // Gas limit for ETH transfer transaction
 export const ETH_TX_GAS_LIMIT = 21_000;
@@ -129,20 +133,17 @@ export function initTabs(tabIds, hook, selected) {
 }
 
 export function initCollapsibles() {
-    var coll = document.getElementsByClassName("collapsible");
-    var i;
-
-    for (i = 0; i < coll.length; i++) {
-        coll[i].addEventListener("click", function () {
+    document.getElementsByClassName("collapsible").forEach(function (coll) {
+        coll.addEventListener("click", function () {
             this.classList.toggle("active");
-            var content = this.nextElementSibling;
+            const content = this.nextElementSibling;
             if (content.style.display === "block") {
                 content.style.display = "none";
             } else {
                 content.style.display = "block";
             }
         });
-    }
+    });
 }
 
 export function getUserName() {
@@ -206,15 +207,15 @@ export function indexArrayFromOne(array) {
 export function currencyNameToCurrency(currencyName) {
     switch (currencyName.toUpperCase()) {
         case "BTC":
-            return currencyBtc;
+            return currencyEnum.btc;
         case "ETH":
-            return currencyEth;
+            return currencyEnum.eth;
         case "USDT":
-            return currencyUsdt;
+            return currencyEnum.erc20.usdt;
         case "CRV":
-            return currencyCrv;
+            return currencyEnum.erc20.crv;
         case "GTECH":
-            return currencyGtech;
+            return currencyEnum.erc20.gtech;
         default:
             return null;
     }
