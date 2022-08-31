@@ -16,27 +16,25 @@ export const GWEI = 10 ** 9;
 export const currencyEnum = Object.freeze({
     btc: "BTC",
     eth: "ETH",
-    erc20: {
-        usdt: {
-            "ERC20": {
-                "ticker": "USDT",
-                "name": "USDT",
-                "contract": "0xfD8ef4113c5f54BE9Cb103eB437b710b8e1d6885"
-            }
-        },
-        crv: {
-            "ERC20": {
-                "ticker": "CRV",
-                "name": "CRV",
-                "contract": "0x817805F0f818237c73Fde5dEc91dbB650A7E7612"
-            }
-        },
-        gtech: {
-            "ERC20": {
-                "ticker": "GTECH",
-                "name": "GTECH",
-                "contract": "0x866A4Da32007BA71aA6CcE9FD85454fCF48B140c"
-            }
+    erc20_usdt: {
+        "ERC20": {
+            "ticker": "USDT",
+            "name": "USDT",
+            "contract": "0xfD8ef4113c5f54BE9Cb103eB437b710b8e1d6885"
+        }
+    },
+    erc20_crv: {
+        "ERC20": {
+            "ticker": "CRV",
+            "name": "CRV",
+            "contract": "0x817805F0f818237c73Fde5dEc91dbB650A7E7612"
+        }
+    },
+    erc20_gtech: {
+        "ERC20": {
+            "ticker": "GTECH",
+            "name": "GTECH",
+            "contract": "0x866A4Da32007BA71aA6CcE9FD85454fCF48B140c"
         }
     }
 });
