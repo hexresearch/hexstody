@@ -196,7 +196,6 @@ async function updateLoop() {
         currencyDisplay: 'code'
     });
 
-    const jsonresBTC = await getCurrencyExchangeRate(currencyNameToCurrency("BTC"));
     const usdToBtc = document.getElementById("usd-BTC");
     let currValBtc = document.getElementById("curr-val-BTC").textContent;
     usdToBtc.textContent = `(${usdNumberFormat1.format((currValBtc *btcTicker.USD))})`
@@ -204,7 +203,7 @@ async function updateLoop() {
     const usdToEth = document.getElementById("usd-ETH");
     const currValEth = document.getElementById("curr-val-ETH").textContent;
     usdToEth.textContent = `(${usdNumberFormat1.format((currValEth * ethTicker.USD))})`;
-    const jsonresUSDT = await getCurrencyExchangeRate(currencyNameToCurrency("USDT"));
+
     const usdToUSDT = document.getElementById("usd-USDT");
     const currValUSDT = document.getElementById("curr-val-USDT").textContent;
     usdToUSDT.textContent = `(${usdNumberFormat1.format(currValUSDT)})`;
