@@ -367,6 +367,17 @@ async fn get_dict(
     .await
 }
 
+
+#[openapi(skip)]
+#[get("/swap")]
+pub async fn swap(cookies: &CookieJar<'_>) ->  Result<Template, Redirect> {
+    require_auth(cookies, |_| async { 
+        let context = context! {};
+        Ok(Template::render("swap", context)) })
+    .await
+    .map_err(|_| goto_signin())
+}
+
 pub async fn serve_api(
     pool: Pool,
     state: Arc<Mutex<DbState>>,
@@ -418,7 +429,7 @@ pub async fn serve_api(
                 change_password,
                 set_user_public_key,
                 get_challenge,
-                redeem_challenge
+                redeem_challenge,
             ],
         )
         .mount(
@@ -430,7 +441,8 @@ pub async fn serve_api(
                 signup,
                 signin_page,
                 deposit,
-                withdraw
+                withdraw,
+                swap
             ],
         )
         .mount(
