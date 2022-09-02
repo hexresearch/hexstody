@@ -12,8 +12,8 @@ async function postLang(lang){
     })
 }
 
-function alpha_to_lang(alpha){
-    switch (alpha){
+export function alphaToLang(alpha){
+    switch (alpha) {
         case "EN": return "English";
         case "RU": return "Russian";
         default: return alpha;
@@ -23,7 +23,7 @@ function alpha_to_lang(alpha){
 function handleLangChange(lang){
     return async function(){
         const alpha = document.getElementById("lang-span").innerText;
-        if (lang !== alpha_to_lang(alpha)){
+        if (lang !== alphaToLang(alpha)){
             await postLang(lang)
             location.reload()
         }

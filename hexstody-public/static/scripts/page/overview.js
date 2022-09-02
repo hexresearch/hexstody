@@ -28,7 +28,7 @@ async function initTemplates() {
     const [balanceTemp, historyTemp, dictTemp] = await Promise.allSettled([
         loadTemplate("/templates/balance.html.hbs"),
         loadTemplate("/templates/history.html.hbs"),
-        fetch("/lang/overview-extra.json").then(r => r.json())
+        fetch("/translations/overview-extra.json").then(r => r.json())
     ]);
 
     balanceTemplate = balanceTemp.value;

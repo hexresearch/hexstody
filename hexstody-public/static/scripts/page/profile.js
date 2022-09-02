@@ -136,7 +136,7 @@ async function initTemplates() {
         await loadTemplate("/templates/settings.html.hbs"),
         await loadTemplate("/templates/security.html.hbs"),
         await loadTemplate("/templates/mnemonic.html.hbs"),
-        await fetch("/lang/profile.json").then(r => r.json()),
+        await fetch("/translations/profile.json").then(r => r.json()),
     ]);
 
     tokensTemplate = tokensTemp.value;

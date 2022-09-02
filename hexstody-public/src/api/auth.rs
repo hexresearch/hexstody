@@ -209,7 +209,7 @@ where
 #[openapi(skip)]
 #[get("/signin")]
 pub fn signin_page() -> Template {
-    let context = context! {title: "Sign In", parent: "base"};
+    let context = context! {};
     Template::render("signin", context)
 }
 

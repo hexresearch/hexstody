@@ -1,12 +1,14 @@
 <div class="header">
     <div class="header-start">
-        <a class="header-logo" href="/overview">
+        <a class="header-logo" href="/">
             LOGO
         </a>
         <div class="dropdown">
             <div class="dropdown-trigger">
                 <button class="button header-dropdown header-lang">
-                    <span id="lang-span">{{lang.lang}}</span>
+                    <span id="lang-span">
+                        {{lang.selected_lang}}
+                    </span>
                     <span class="icon">
                         <i class="mdi mdi-chevron-down"></i>
                     </span>
@@ -15,10 +17,10 @@
             <div class="dropdown-menu">
                 <div class="dropdown-content">
                     <a id="lang-en" href="#" class="dropdown-item">
-                        English
+                        {{lang.header.english}}
                     </a>
                     <a id="lang-ru" href="#" class="dropdown-item">
-                        Русский
+                        {{lang.header.russian}}
                     </a>
                 </div>
             </div>
@@ -28,7 +30,9 @@
         <div class="dropdown is-right">
             <div class="dropdown-trigger">
                 <button class="button header-dropdown header-email">
-                    <span id="navbarlogin">{{username}}</span>
+                    <span id="navbarlogin">
+                        {{username}}
+                    </span>
                     <span class="icon">
                         <i class="mdi mdi-chevron-down"></i>
                     </span>
@@ -45,7 +49,7 @@
                     <a href="/profile?tab=settings" class="dropdown-item">
                         {{lang.header.settings}}
                     </a>
-                    <hr class="dropdown-divider">
+                    <hr class="dropdown-divider" />
                     <a href="/logout" class="dropdown-item" id="logout-btn">
                         {{lang.header.logout}}
                     </a>

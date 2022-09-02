@@ -1,16 +1,18 @@
 pub mod currency;
 
+use std::str::FromStr;
 pub use currency::*;
 use schemars::JsonSchema;
 use serde::{Serialize, Deserialize};
 use regex::Regex;
-
+use thiserror::Error;
 
 /// Languages used for the frontend
 #[derive(
-    Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Copy
+    Debug, Default, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Copy
 )]
 pub enum Language {
+    #[default]
     English,
     Russian
 }
@@ -20,6 +22,24 @@ impl Language {
         match self {
             Language::English => "en",
             Language::Russian => "ru",
+        }
+    }
+}
+
+#[derive(Error, Debug)]
+pub enum LanguageError {
+    #[error("Invalid language `{0}`")]
+    ParseLanguageError(String),
+}
+
+impl FromStr for Language {
+    type Err = LanguageError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "en" => Ok(Language::English),
+            "ru" => Ok(Language::Russian),
+            lang => Err(LanguageError::ParseLanguageError(lang.to_owned()))
         }
     }
 }

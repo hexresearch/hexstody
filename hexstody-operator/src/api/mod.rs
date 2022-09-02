@@ -42,7 +42,7 @@ use helpers::*;
 #[get("/")]
 async fn index() -> Template {
     let context = context! {
-        title: "Operator dashboard",
+        page_title: "Operator dashboard",
         parent: "base",
     };
     Template::render("index", context)

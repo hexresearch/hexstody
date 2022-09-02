@@ -86,7 +86,7 @@ async fn overview(
     static_path: &State<StaticPath>,
 ) -> Result<Template, Redirect> {
     require_auth_user(cookies, state, |_, user| async move {
-        let title = match user.config.language {
+        let page_title = match user.config.language {
             Language::English => "Overview",
             Language::Russian => "Главная",
         };
@@ -107,11 +107,11 @@ async fn overview(
             return Err(e);
         };
         let context = context! {
-            title,
-            username: &user.username,
+            page_title,
             parent: "base_with_header",
+            username: &user.username,
             lang: context! {
-                lang: user.config.language.to_alpha().to_uppercase(),
+                selected_lang: user.config.language.to_alpha().to_uppercase(),
                 header: header_dict.unwrap(),
                 overview: overview_dict.unwrap()
             }
@@ -131,7 +131,7 @@ async fn profile_page(
     tab: Option<String>,
 ) -> Result<Template, Redirect> {
     require_auth_user(cookies, state, |_, user| async move {
-        let title = match user.config.language {
+        let page_title = match user.config.language {
             Language::English => "Profile",
             Language::Russian => "Профиль",
         };
@@ -152,13 +152,13 @@ async fn profile_page(
             return Err(e);
         };
         let context = context! {
-            title,
+            page_title,
             parent: "base_with_header",
             tabs: tabs.unwrap(),
             selected: tab.unwrap_or("tokens".to_string()),
             username: &user.username,
             lang: context! {
-                lang: user.config.language.to_alpha().to_uppercase(),
+                selected_lang: user.config.language.to_alpha().to_uppercase(),
                 header: header_dict.unwrap(),
             }
         };
@@ -171,7 +171,7 @@ async fn profile_page(
 #[openapi(skip)]
 #[get("/signup")]
 fn signup() -> Template {
-    let context = context! {title: "Sign Up", parent: "base"};
+    let context = context! {page_title: "Sign Up", parent: "base"};
     Template::render("signup", context)
 }
 
@@ -208,7 +208,7 @@ async fn deposit(
     tab: Option<String>,
 ) -> Result<error::Result<Template>, Redirect> {
     let resp = require_auth_user(cookies, state, |_, user| async move {
-        let title = match user.config.language {
+        let page_title = match user.config.language {
             Language::English => "Deposit",
             Language::Russian => "Депозит",
         };
@@ -259,14 +259,14 @@ async fn deposit(
             });
         }
         let context = context! {
-            title,
+            page_title,
             parent: "base_with_header",
             deposit_addresses,
             tabs,
             selected: selected_tab,
             username: &user.username,
             lang: context! {
-                lang: user.config.language.to_alpha().to_uppercase(),
+                selected_lang: user.config.language.to_alpha().to_uppercase(),
                 header: header_dict,
                 deposit: deposit_dict,
             }
@@ -296,7 +296,7 @@ async fn withdraw(
     tab: Option<String>,
 ) -> Result<error::Result<Template>, Redirect> {
     let resp = require_auth_user(cookies, state, |_, user| async move {
-        let title = match user.config.language {
+        let page_title = match user.config.language {
             Language::English => "Withdraw",
             Language::Russian => "Вывод",
         };
@@ -326,13 +326,13 @@ async fn withdraw(
             }
         };
         let context = context! {
-            title,
+            page_title,
             parent: "base_with_header",
             tabs,
             selected: selected_tab,
             username: &user.username,
             lang: context! {
-                lang: user.config.language.to_alpha().to_uppercase(),
+                selected_lang: user.config.language.to_alpha().to_uppercase(),
                 header: header_dict,
                 withdraw: withdraw_dict,
             }
@@ -354,7 +354,7 @@ async fn withdraw(
 }
 
 #[openapi(skip)]
-#[get("/lang/<path..>")]
+#[get("/translations/<path..>")]
 async fn get_dict(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,

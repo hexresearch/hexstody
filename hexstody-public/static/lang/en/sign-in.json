@@ -1,0 +1,12 @@
+{
+    "pageTitle": "Sign In",
+    "login": "Sign In",
+    "as": "as",
+    "keypassword": "Key password",
+    "incorrect": "Incorrecnt login/password",
+    "loginbtn": "Sign In",
+    "vialogin": "or sign in via login/password",
+    "viakey": "or sign in via stored key",
+    "signup": "or sign up",
+    "password": "Password"
+}
