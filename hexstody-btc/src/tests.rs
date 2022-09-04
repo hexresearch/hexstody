@@ -363,6 +363,30 @@ async fn process_withdrawal_request() {
 }
 
 #[tokio::test]
+async fn withdraw_under_limit(){
+    run_test(|btc, api| async move {
+        fund_wallet(&btc);
+        let addr = new_address(&btc).to_string();
+        let id = uuid::Uuid::new_v4();
+        let user = "test_user".to_owned();
+        let address = CurrencyAddress::BTC(hexstody_api::domain::BtcAddress { addr });
+        let created_at = "now".to_owned();
+        let amount = 10000000;
+        let cw = ConfirmedWithdrawal {
+            id,
+            user,
+            address,
+            created_at,
+            amount,
+            confirmations: vec![],
+            rejections: vec![],
+        };
+        let resp = api.withdraw_under_limit(cw).await;
+        assert!(resp.is_ok(), "Failed to post tx");
+    }).await;
+}
+
+#[tokio::test]
 async fn reject_withdrawal_request() {
     run_test(|btc, api| async move {
         fund_wallet(&btc);

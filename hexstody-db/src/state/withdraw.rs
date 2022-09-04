@@ -72,6 +72,12 @@ impl Into<WithdrawalRequestStatusApi> for WithdrawalRequestStatus {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+pub enum WithdrawalRequestType{
+    UnderLimit,
+    OverLimit
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct WithdrawalRequest {
     /// Request ID
     pub id: WithdrawalRequestId,
@@ -89,6 +95,8 @@ pub struct WithdrawalRequest {
     pub confirmations: Vec<WithdrawalRequestDecision>,
     /// Rejections received from operators
     pub rejections: Vec<WithdrawalRequestDecision>,
+    /// Withdrawal request type
+    pub request_type: WithdrawalRequestType 
 }
 
 impl From<(NaiveDateTime, WithdrawalRequestInfo)> for WithdrawalRequest {
@@ -102,6 +110,7 @@ impl From<(NaiveDateTime, WithdrawalRequestInfo)> for WithdrawalRequest {
             status: WithdrawalRequestStatus::InProgress(0),
             confirmations: vec![],
             rejections: vec![],
+            request_type: value.1.request_type
         }
     }
 }

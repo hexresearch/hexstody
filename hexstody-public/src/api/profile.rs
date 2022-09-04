@@ -1,6 +1,7 @@
 use std::{sync::Arc, fmt::Debug};
 use base64;
 use hexstody_api::{types::{LimitApiResp, LimitChangeReq, LimitChangeResponse, ConfigChangeRequest}, domain::{Currency, Language, Email, PhoneNumber, TgName}};
+use log::info;
 use rocket::{get, http::{CookieJar, Status}, State, serde::json::Json, response::Redirect, post};
 use rocket_okapi::openapi;
 use tokio::sync::{Mutex, mpsc};
@@ -16,6 +17,8 @@ pub async fn get_user_limits(
     state: &State<Arc<Mutex<DbState>>>,
 ) -> Result<Json<Vec<LimitApiResp>>, Redirect>{
     require_auth_user(cookies, state, |_, user| async move {
+        let a : Vec<Vec<hexstody_db::state::Transaction>> = user.currencies.values().map(|e| e.transactions.clone()).collect();
+        info!("TXS: {:?}", a);
         let infos = user.currencies.values().map(|cur_info| 
             LimitApiResp{ 
                 limit_info: cur_info.limit_info.clone(), 

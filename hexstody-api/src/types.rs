@@ -249,19 +249,6 @@ pub struct PasswordChange {
     pub new_password: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct WithdrawalRequestInfo {
-    /// User which initiated withdrawal request
-    #[schemars(example = "example_user")]
-    pub user: String,
-    /// Receiving address
-    #[schemars(example = "example_address")]
-    pub address: CurrencyAddress,
-    /// Amount of tokens to transfer
-    #[schemars(example = "example_amount")]
-    pub amount: u64,
-}
-
 /// Auxiliary data type to display `WithdrawalRequest` on the page
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct WithdrawalRequest {
@@ -704,7 +691,7 @@ impl Default for LimitInfo {
     fn default() -> Self {
         Self {
             limit: Limit {
-                amount: 1000000,
+                amount: 0,
                 span: LimitSpan::Day,
             },
             spent: Default::default(),

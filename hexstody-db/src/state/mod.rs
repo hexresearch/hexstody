@@ -35,8 +35,6 @@ use hexstody_api::types::{WithdrawalRequestDecisionType, Invite, LimitChangeStat
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct State {
     /// All known users of the system.
-    /// TODO: There is possible DDoS attack on signup of million of users.
-    ///     We need to implement rate limits for it and auto cleanup of unused empty accounts.
     pub users: HashMap<UserId, UserInfo>,
     /// Tracks when the state was last updated
     pub last_changed: NaiveDateTime,
@@ -129,9 +127,10 @@ impl State {
                 Ok(None)
             }
             UpdateBody::CreateWithdrawalRequest(withdrawal_request) => {
-                self.with_new_withdrawal_request(update.created, withdrawal_request)?;
+                let res = self.with_new_withdrawal_request(update.created, withdrawal_request)?;
                 self.last_changed = update.created;
-                Ok(None)
+                info!("Res: {:?}", res);
+                Ok(res)
             }
             UpdateBody::WithdrawalRequestDecision(withdrawal_request_decision) => {
                 let res = self.with_withdrawal_request_decision(withdrawal_request_decision)?;
@@ -249,20 +248,31 @@ impl State {
         &mut self,
         timestamp: NaiveDateTime,
         withdrawal_request_info: WithdrawalRequestInfo,
-    ) -> Result<(), StateUpdateErr> {
+    ) -> Result<Option<UpdateResult>, StateUpdateErr> {
         let withdrawal_request: WithdrawalRequest =
             (timestamp, withdrawal_request_info.clone()).into();
+        info!("withdrawal_request: {:?}", withdrawal_request);
         if let Some(user) = self.users.get_mut(&withdrawal_request.user) {
             let currency = withdrawal_request.address.currency();
             if let Some(cur_info) = user.currencies.get_mut(&currency) {
-                if cur_info.limit_info.limit.amount < cur_info.limit_info.spent + withdrawal_request.amount {
-                    return Err(StateUpdateErr::LimitOverflow)
+                match withdrawal_request.request_type {
+                    WithdrawalRequestType::UnderLimit => {
+                        if cur_info.limit_info.limit.amount < cur_info.limit_info.spent + withdrawal_request.amount {
+                            return Err(StateUpdateErr::LimitOverflow)
+                        } else {
+                            cur_info
+                            .withdrawal_requests
+                            .insert(withdrawal_request_info.id, withdrawal_request.clone());
+                            Ok(Some(UpdateResult::WithdrawalUnderlimit(withdrawal_request.clone())))
+                        }
+                    },
+                    WithdrawalRequestType::OverLimit => {
+                        cur_info
+                            .withdrawal_requests
+                            .insert(withdrawal_request_info.id, withdrawal_request);
+                        Ok(None)
+                    },
                 }
-                cur_info.limit_info.spent += withdrawal_request.amount;
-                cur_info
-                    .withdrawal_requests
-                    .insert(withdrawal_request_info.id, withdrawal_request);
-                Ok(())
             } else {
                 Err(StateUpdateErr::UserMissingCurrency(
                     withdrawal_request.user,
@@ -851,6 +861,7 @@ mod tests {
                 addr: "bc1qpv8tczdsft9lmlz4nhz8058jdyl96velqqlwgj".to_owned(),
             }),
             amount: 1,
+            request_type: WithdrawalRequestType::OverLimit,
         };
         let _ = apply_state_update(
             StateUpdate::new(UpdateBody::Signup(signup_info.clone())),
@@ -887,7 +898,8 @@ mod tests {
                 amount: withdrawal_request_info.amount,
                 status: WithdrawalRequestStatus::InProgress(0),
                 confirmations: vec![],
-                rejections: vec![]
+                rejections: vec![],
+                request_type: WithdrawalRequestType::OverLimit
             }
         );
     }
@@ -910,6 +922,7 @@ mod tests {
                 addr: "bc1qpv8tczdsft9lmlz4nhz8058jdyl96velqqlwgj".to_owned(),
             }),
             amount: 1,
+            request_type: WithdrawalRequestType::OverLimit,
         };
         let _ = apply_state_update(
             StateUpdate::new(UpdateBody::Signup(signup_info.clone())),
