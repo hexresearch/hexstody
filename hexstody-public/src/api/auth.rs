@@ -68,9 +68,9 @@ pub async fn signup_email(
     }
     else {
         // Create user
-        // if let Err(e) = eth_client.createuser(&data.user).await{
-        //     return Err(error::Error::FailedETHConnection(e.to_string()).into())
-        // }
+        if let Err(e) = eth_client.createuser(&data.user).await{
+            return Err(error::Error::FailedETHConnection(e.to_string()).into())
+        }
 
         // Set user's default tokens
         if let Err(e) = eth_client.post_tokens(&data.user, &Currency::default_tokens()).await{
