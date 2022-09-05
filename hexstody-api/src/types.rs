@@ -17,6 +17,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::domain::CurrencyTxId;
+use crate::types::Currency::{BTC,ETH};
 
 use super::domain::currency::{BtcAddress, Currency, CurrencyAddress, Erc20Token};
 
@@ -196,7 +197,7 @@ pub struct WithdrawalHistoryItem {
     pub value: u64,
     pub status: WithdrawalRequestStatus,
     //temp field to give txid for ETH and tokens while status not working
-    pub txid: Option<CurrencyTxId>, 
+    pub txid: Option<CurrencyTxId>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -223,6 +224,39 @@ impl Balance {
     pub fn by_currency(&self, curr: &Currency) -> Option<&BalanceItem> {
         self.balances.iter().find(|i| i.currency == *curr)
     }
+}
+
+
+/// Auxiliary data type to display `WithdrawalRequest` on the page
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct SwapRequest {
+    /// Request ID
+    #[schemars(example = "example_uuid")]
+    pub id: Uuid,
+    /// User which initiated request
+    #[schemars(example = "example_user")]
+    pub user: String,
+    /// Sending currency
+    #[schemars(example = "example_sending_currency")]
+    pub sending_currency: Currency,
+    /// Receiving currency
+    #[schemars(example = "example_receiving_currency")]
+    pub receiving_currency: Currency,
+    /// Receiving address
+    #[schemars(example = "example_address")]
+    pub receiving_address: CurrencyAddress,
+    /// Sending address
+    #[schemars(example = "example_address")]
+    pub sending_address: CurrencyAddress,
+    /// When the request was created
+    #[schemars(example = "example_datetime")]
+    pub created_at: String,
+    /// Amount of tokens to transfer
+    #[schemars(example = "example_amount")]
+    pub amount_sending: u64,
+    /// Amount of tokens to transfer
+    #[schemars(example = "example_amount")]
+    pub amount_receiving: u64,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
@@ -310,6 +344,14 @@ pub struct ConfirmationData {
     /// Amount of tokens to transfer
     #[schemars(example = "example_amount")]
     pub amount: u64,
+}
+
+fn example_sending_currency() -> &'static Currency {
+    &BTC
+}
+
+fn example_receiving_currency() -> &'static Currency {
+    &ETH
 }
 
 fn example_uuid() -> &'static str {
