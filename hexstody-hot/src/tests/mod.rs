@@ -91,7 +91,7 @@ async fn test_btc_deposit() {
 
         let dep_info = env
             .hot_client
-            .get_deposit(Currency::BTC)
+            .get_deposit_address(Currency::BTC)
             .await
             .expect("Deposit address");
 
@@ -120,7 +120,7 @@ async fn test_btc_unconfirmed_deposit() {
 
         let dep_info = env
             .hot_client
-            .get_deposit(Currency::BTC)
+            .get_deposit_address(Currency::BTC)
             .await
             .expect("Deposit address");
 
@@ -149,7 +149,7 @@ async fn test_btc_rbf_0conf_deposit() {
 
         let dep_info = env
             .hot_client
-            .get_deposit(Currency::BTC)
+            .get_deposit_address(Currency::BTC)
             .await
             .expect("Deposit address");
 
@@ -182,7 +182,7 @@ async fn test_btc_rbf_1conf_deposit() {
 
         let dep_info = env
             .hot_client
-            .get_deposit(Currency::BTC)
+            .get_deposit_address(Currency::BTC)
             .await
             .expect("Deposit address");
 

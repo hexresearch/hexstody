@@ -4,7 +4,8 @@ use std::sync::Arc;
 use super::auth::{require_auth, require_auth_user};
 use chrono::NaiveDateTime;
 use hexstody_api::domain::{
-    filter_tokens, BtcAddress, Currency, CurrencyAddress, CurrencyTxId, Erc20, ETHTxid, Erc20Token, EthAccount
+    filter_tokens, BtcAddress, Currency, CurrencyAddress, CurrencyTxId, ETHTxid, Erc20, Erc20Token,
+    EthAccount,
 };
 use hexstody_api::error;
 use hexstody_api::types::{
@@ -19,6 +20,7 @@ use hexstody_db::update::withdrawal::WithdrawalRequestInfo;
 use hexstody_db::update::{StateUpdate, UpdateBody};
 use hexstody_eth_client::client::EthClient;
 use log::*;
+use qrcode_generator::QrCodeEcc;
 use reqwest;
 use rocket::http::CookieJar;
 use rocket::serde::json::Json;
@@ -376,6 +378,41 @@ pub async fn post_withdraw(
                 Err(error::Error::InsufficientFunds(Currency::BTC).into())
             }
         }
+    })
+    .await
+}
+
+// This handle is used for testing only for now
+#[openapi(tag = "wallet")]
+#[post("/deposit/address", data = "<currency>")]
+pub async fn get_deposit_address_handle(
+    cookies: &CookieJar<'_>,
+    state: &State<Arc<Mutex<DbState>>>,
+    btc_client: &State<BtcClient>,
+    eth_client: &State<EthClient>,
+    update_sender: &State<mpsc::Sender<StateUpdate>>,
+    currency: Json<Currency>,
+) -> error::Result<Json<api::DepositInfo>> {
+    require_auth_user(cookies, state, |_, user| async move {
+        let currency = currency.into_inner();
+        let deposit_address = get_deposit_address(
+            btc_client,
+            eth_client,
+            update_sender,
+            state,
+            &user.username,
+            currency.clone(),
+        )
+        .await?;
+        let qr_code: Vec<u8> =
+            qrcode_generator::to_png_to_vec(deposit_address.to_string(), QrCodeEcc::Low, 256)
+                .unwrap();
+        Ok(Json(api::DepositInfo {
+            address: deposit_address.to_string(),
+            qr_code_base64: base64::encode(qr_code),
+            tab: currency.ticker_lowercase(),
+            currency: currency.to_string(),
+        }))
     })
     .await
 }

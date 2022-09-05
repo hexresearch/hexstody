@@ -400,6 +400,7 @@ pub async fn serve_api(
                 get_history,
                 withdraw_eth,
                 post_withdraw,
+                get_deposit_address_handle,
                 signup_email,
                 signin_email,
                 logout,
