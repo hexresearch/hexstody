@@ -148,20 +148,12 @@ function displayErr(error) {
 
 async function loginViaKey() {
     hideError()
-    let usernameEl = document.getElementById("username-selector")
-    var username;
-    if (usernameEl.tagName === "DIV") {
-        username = usernameEl.innerText
-    } else {
-        username = usernameEl.value
-    }
+    let usernameEl = document.getElementById("username-selector");
+    let username = usernameEl.value;
     const password = document.getElementById("signInPassword").value;
-    try {
-        const privateKey = await retrievePrivateKey(username, password)
-
-        await performKeyAuth(privateKey, username)
-
-    } catch (error) { displayErr(error) }
+    await retrievePrivateKey(username, password)
+        .then(privateKey => performKeyAuth(privateKey, username).catch(err => displayErr(err)))
+        .catch(_err => displayErr(signInPageTranslations.incorrect));
 }
 
 function handleLangChange(lang, hasKeyOverride) {
@@ -223,9 +215,22 @@ async function initTemplates(hasKeyOverride, lang) {
     }
 }
 
+function languageCodeToLanguage(language) {
+    switch (language.toLowerCase()) {
+        case "ru":
+        case "ru-ru":
+            return "ru";
+        case "en":
+        case "en-us":
+        case "en-gb":
+        default:
+            return "en";
+    };
+}
+
 async function init() {
     let browserLanguage = navigator.language || navigator.userLanguage;
-    initTemplates(true, browserLanguage);
+    initTemplates(true, languageCodeToLanguage(browserLanguage));
 };
 
 document.addEventListener("DOMContentLoaded", init);

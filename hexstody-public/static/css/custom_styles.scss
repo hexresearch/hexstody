@@ -165,6 +165,7 @@
     .header-dropdown {
         font-weight: 500;
         background-color: transparent;
+        color: $custom-grey-dark;
 
         .icon {
             font-size: 24px;
@@ -278,99 +279,50 @@
     }
 }
 
-// {{!-- <style>
-//     .font-mid-size {
-//         font-weight: 400;
-//         font-size: 18px;
-//         line-height: 24px; 
-//     }
+#signin-box {
+    padding: 96px 85px;
 
-//     body {
-//         background-color: #ECEFF4;
-//     }
+    .button {
+        height: 54px;
+        font-weight: 700;
+        font-size: 12px;
+        line-height: 20px;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+    }
 
-//     .login-title {
-//         width: 100%;
-//         height: 64px;
+    .control input, select {
+        height: 54px;
+        font-weight: 500;
+        font-size: 16px;
+        line-height: 20px;
+    }
 
-//         font-family: 'Inter';
-//         font-style: normal;
-//         font-weight: 700;
-//         font-size: 60px;
-//         line-height: 64px;
+    .select {
+        height: 54px;
+    }
 
-//         color: #282143;
-//     }
+    .control input {
+        padding: 15px 23px; // calc(16px - #{$control-border-width}) calc(24px - #{$control-border-width});
+    }
 
-//     .login-field-email {
-//         font-family: 'Inter';
-//         font-style: normal;
-//         font-weight: 500;
-//         font-size: 16px;
-//         line-height: 20px;
+    .login-title {
+        font-weight: 700;
+        font-size: 56px;
+        line-height: 64px;
+        margin-bottom: 24px;
+    }
 
-//         align-items: center;
+    .field:not(:last-child) {
+        margin-bottom: 32px;
+    }
+}
 
-//         color: #282143;
-//     }
-
-//     .form-group-label {
-//         top: -1px;
-//         left: 20px;
-//         background-color: white;
-//     }
-
-//     .login-field-pswd {
-//         font-family: 'Inter';
-//         font-style: normal;
-//         font-weight: 500;
-//         font-size: 12px;
-//         line-height: 16px;
-
-//         align-items: center;
-//         letter-spacing: 0.1em;
-
-//         color: #282143;
-//     }
-
-//     .login-field-agree {
-//         font-family: 'Inter';
-//         font-style: normal;
-//         font-weight: 500;
-//         font-size: 14px;
-//         line-height: 20px;
-
-//         color: #282143;
-//     }
-
-//     .login-button-login {
-//         width: 100%;
-//         height: 56px;
-//         background-color: #409EFF !Important;
-//     }
-//     .m-t-2em{
-//         margin-top: 2em;
-//     }
-//     .d-inline{
-//         display: inline;
-//     }
-//     .d-flex{
-//         display: flex;
-//     }
-//     .p-tb-1em{
-//         padding-top: 0.75em;
-//         padding-bottom: 0.75em;
-//     }
-//     .width-100{
-//         width: 100%;
-//     }
-//     .p-1em{
-//         padding: 1em;
-//     }
-// </style> --}}
-// {{!-- style="box-shadow: none !Important; width: 560px; height: 560px; padding: 85px; margin-left: auto; margin-right: auto;" --}}
-
-
+.font-mid-size {
+    font-weight: 400;
+    font-size: 18px;
+    line-height: 24px; 
+}
 
 .fit-content{
     width: fit-content;
