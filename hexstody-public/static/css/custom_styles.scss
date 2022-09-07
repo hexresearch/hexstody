@@ -279,7 +279,7 @@
     }
 }
 
-#signin-box {
+#signin-box, #signup-box {
     padding: 96px 85px;
 
     .button {
@@ -316,12 +316,6 @@
     .field:not(:last-child) {
         margin-bottom: 32px;
     }
-}
-
-.font-mid-size {
-    font-weight: 400;
-    font-size: 18px;
-    line-height: 24px; 
 }
 
 .fit-content{

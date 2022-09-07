@@ -171,7 +171,7 @@ async fn profile_page(
 #[openapi(skip)]
 #[get("/signup")]
 fn signup() -> Template {
-    let context = context! {page_title: "Sign Up", parent: "base"};
+    let context = context! {};
     Template::render("signup", context)
 }
 

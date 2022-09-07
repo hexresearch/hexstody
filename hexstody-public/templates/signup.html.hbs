@@ -1,99 +1,28 @@
-{{#*inline "css"}}
-{{/inline}}
+<!doctype html>
+<html lang="en">
 
-{{#*inline "scripts"}}
-<script type="module" src="/scripts/page/common.js"></script>
-<script type="module" src="/scripts/page/signup.js"></script>
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js" defer></script>
-<script src="/scripts/handlebars.min-v4.7.7.js" defer></script>
-{{/inline}}
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title></title>
+    <link rel="icon" href="/images/favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" type="text/css" href="/css/styles.css" />
+    <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/@mdi/font@6.9.96/css/materialdesignicons.min.css">
+    <script type="module" src="/scripts/localize.js"></script>
+    <script type="module" src="/scripts/common.js"></script>
+    <script type="module" src="/scripts/page/signup.js"></script>
+    <script src="/scripts/handlebars.min-v4.7.7.js" defer></script>
+</head>
 
-{{#*inline "page"}}
-<style>
-    body {
-        background-color: #ECEFF4;
-    }
-
-    .login-title {
-        width: 100%;
-        height: 64px;
-
-        font-family: 'Inter';
-        font-style: normal;
-        font-weight: 700;
-        font-size: 60px;
-        line-height: 64px;
-
-        color: #282143;
-    }
-
-    .login-field-email {
-        font-family: 'Inter';
-        font-style: normal;
-        font-weight: 500;
-        font-size: 16px;
-        line-height: 20px;
-
-        align-items: center;
-
-        color: #282143;
-    }
-
-    .form-group-label {
-        top: -1px;
-        left: 20px;
-        background-color: white;
-    }
-
-    .login-field-pswd {
-        font-family: 'Inter';
-        font-style: normal;
-        font-weight: 500;
-        font-size: 12px;
-        line-height: 16px;
-
-        align-items: center;
-        letter-spacing: 0.1em;
-
-        color: #282143;
-    }
-
-    .login-field-agree {
-        font-family: 'Inter';
-        font-style: normal;
-        font-weight: 500;
-        font-size: 14px;
-        line-height: 20px;
-
-        color: #282143;
-    }
-
-    .login-button-login {
-        width: 100%;
-        height: 56px;
-        background-color: #409EFF !Important;
-    }
-    .d-flex{
-        display: flex;
-    }
-    .p-tb-1em{
-        padding-top: 0.75em;
-        padding-bottom: 0.75em;
-    }
-    .width-100{
-        width: 100%;
-    }
-    .p-1em{
-        padding: 1em;
-    }
-</style>
-<div class="full-height" style="background-color: #ECEFF4;">
-    <div class="container" style="padding-top: 15%;">
-        <div id="signup-box" class="box"
-            style="box-shadow: none !Important; width: fit-content; padding: 85px; margin-left: auto; margin-right: auto;">
+<body>
+    <div class="header" id="header"></div>
+    <div class="container">
+        <div class="columns is-centered">
+            <div class="column is-narrow">
+                <div class="box" id="signup-box"></div>
+            </div>
         </div>
     </div>
-</div>
-{{/inline}}
+</body>
 
-{{> base}}
+</html>

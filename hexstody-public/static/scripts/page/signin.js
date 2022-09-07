@@ -1,54 +1,15 @@
 import { listUsers, retrievePrivateKey } from "../crypto.js";
+import { getBrowserLanguage } from "../localize.js";
+import { loadTemplate, initDropDowns } from "../common.js";
 
 var emailEl = null;
 var passwordEl = null;
 
-var signinTemplate = null;
 var headerTemplate = null;
+var signinTemplate = null;
+
 var headerTranslations = null;
 var signInPageTranslations = null;
-
-function initDropDowns() {
-    var $dropdowns = getAll('.dropdown:not(.is-hoverable)');
-
-    if ($dropdowns.length > 0) {
-        $dropdowns.forEach(function ($el) {
-            $el.addEventListener('click', function (event) {
-                event.stopPropagation();
-                $el.classList.toggle('is-active');
-            });
-        });
-
-        document.addEventListener('click', function (event) {
-            closeDropdowns();
-        });
-    }
-
-    function closeDropdowns() {
-        $dropdowns.forEach(function ($el) {
-            $el.classList.remove('is-active');
-        });
-    }
-
-    // Close dropdowns if ESC pressed
-    document.addEventListener('keydown', function (event) {
-        var e = event || window.event;
-        if (e.key === "Escape") {
-            closeDropdowns();
-        }
-    });
-
-    // Functions
-
-    function getAll(selector) {
-        return Array.prototype.slice.call(document.querySelectorAll(selector), 0);
-    }
-}
-
-async function loadTemplate(path) {
-    const template = await (await fetch(path)).text();
-    return Handlebars.compile(template);
-}
 
 async function postSignIn(email, password) {
     return await fetch("/signin/email",
@@ -156,10 +117,8 @@ async function loginViaKey() {
         .catch(_err => displayErr(signInPageTranslations.incorrect));
 }
 
-function handleLangChange(lang, hasKeyOverride) {
-    return async function () {
-        await initTemplates(hasKeyOverride, lang);
-    }
+async function handleLangChange(lang, hasKeyOverride) {
+    await initTemplates(hasKeyOverride, lang);
 }
 
 async function initTemplates(hasKeyOverride, lang) {
@@ -169,12 +128,11 @@ async function initTemplates(hasKeyOverride, lang) {
     if (!signinTemplate) {
         const [headerTemp, singinTemp] = await Promise.allSettled([
             loadTemplate("/templates/header_unauthorized.html.hbs"),
-            loadTemplate("/templates/signin.html.hbs"),
+            loadTemplate("/templates/signin.html.hbs")
+        ]);
 
-        ])
         signinTemplate = singinTemp.value;
         headerTemplate = headerTemp.value;
-
     };
 
     const [headerTransl, signInPageTransl] = await Promise.allSettled([
@@ -193,8 +151,8 @@ async function initTemplates(hasKeyOverride, lang) {
     // Handle language change
     const enEl = document.getElementById("lang-en");
     const ruEl = document.getElementById("lang-ru");
-    enEl.onclick = handleLangChange("en", hasKeyOverride);
-    ruEl.onclick = handleLangChange("ru", hasKeyOverride);
+    enEl.onclick = async () => { await handleLangChange("en", hasKeyOverride) };
+    ruEl.onclick = async () => { await handleLangChange("ru", hasKeyOverride) };
 
     document.getElementById("signin-box").innerHTML = singinDraw;
     if (viaKey) {
@@ -215,22 +173,4 @@ async function initTemplates(hasKeyOverride, lang) {
     }
 }
 
-function languageCodeToLanguage(language) {
-    switch (language.toLowerCase()) {
-        case "ru":
-        case "ru-ru":
-            return "ru";
-        case "en":
-        case "en-us":
-        case "en-gb":
-        default:
-            return "en";
-    };
-}
-
-async function init() {
-    let browserLanguage = navigator.language || navigator.userLanguage;
-    initTemplates(true, languageCodeToLanguage(browserLanguage));
-};
-
-document.addEventListener("DOMContentLoaded", init);
+window.addEventListener('load', () => { initTemplates(true, getBrowserLanguage()); });

@@ -1,25 +1,25 @@
 var lang = "en";
 
-export function setPageLang(language){
+export function setPageLang(language) {
     const l = language.toLowerCase();
-    if (l === "en" || l === "ru"){
+    if (l === "en" || l === "ru") {
         lang = l;
     }
 }
 
-export function getLang(){
+export function getLang() {
     const langSpan = document.getElementById("lang-span");
-    if(langSpan){
+    if (langSpan) {
         return langSpan.innerText.toLowerCase()
     } else {
         return "en"
     }
 }
 
-export function localizeSpan(span){
+export function localizeSpan(span) {
     switch (lang) {
         case "en": return span;
-        case "ru": switch (span){
+        case "ru": switch (span) {
             case "Day": return "день"
             case "Week": return "неделю"
             case "Month": return "месяц"
@@ -27,27 +27,27 @@ export function localizeSpan(span){
     }
 }
 
-export function localizeChangeStatus(status){
+export function localizeChangeStatus(status) {
     switch (Object.keys(status)[0]) {
         case "InProgress":
             let body = status["InProgress"];
-            switch(lang){
+            switch (lang) {
                 case "en": return "In progress (+" + body.confirmations + "/-" + body.rejections + " of 2)";
                 case "ru": return "В процессе (+" + body.confirmations + "/-" + body.rejections + " из 2)";
             }
         case "Confirmed":
-            case "en": return "Confirmed";
-            case "ru": return "Принято";
+        case "en": return "Confirmed";
+        case "ru": return "Принято";
         case "Rejected":
-            case "en": return "Rejected by operators";
-            case "ru": return "Отвергнуто операторами";
+        case "en": return "Rejected by operators";
+        case "ru": return "Отвергнуто операторами";
         default:
-           "Unknown";
+            "Unknown";
     };
 }
 
 export function localizeWithdrawalStatus(status) {
-    switch(lang){
+    switch (lang) {
         case "en": switch (status.type) {
             case "InProgress":
                 return "In progress";
@@ -79,6 +79,24 @@ export function localizeWithdrawalStatus(status) {
     }
 }
 
-export function getLanguage(){
+export function getLanguage() {
     return lang
+}
+
+function languageCodeToLanguage(language) {
+    switch (language.toLowerCase()) {
+        case "ru":
+        case "ru-ru":
+            return "ru";
+        case "en":
+        case "en-us":
+        case "en-gb":
+        default:
+            return "en";
+    };
+}
+
+export function getBrowserLanguage() {
+    let browserLanguage = navigator.language || navigator.userLanguage;
+    return languageCodeToLanguage(browserLanguage);
 }

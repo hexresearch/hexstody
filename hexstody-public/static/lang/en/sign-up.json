@@ -1,0 +1,14 @@
+{
+    "pageTitle": "Sign up",
+    "signup": "Sign up",
+    "username": "Username",
+    "password": "Password",
+    "reppassword": "Repeate password",
+    "invite": "Invite",
+    "alreadyTaken": "Username already taken",
+    "signupbtn": "Sign up",
+    "or": "or",
+    "signin": "sign in",
+    "inviteError": "Malformed invite, UUID is expected",
+    "passwordError": "Passwords do not match"
+}
