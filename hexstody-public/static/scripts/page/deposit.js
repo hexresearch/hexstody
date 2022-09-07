@@ -8,16 +8,11 @@ async function tabUrlHook(tabId) {
 }
 
 function preInitTabs() {
-    var selectedIndex = 0;
-    const tabEls = document.getElementById("tabs-ul").getElementsByTagName("li");
-    for (let i = 0; i < tabEls.length; i++) {
-        tabs.push(tabEls[i].id);
-    }
-    const selectedTab = document.getElementById("tabs-ul").getElementsByClassName("is-active");
-    if (selectedTab.length != 0) {
-        selectedIndex = tabs.indexOf(selectedTab[0].id);
-    }
-    return selectedIndex;
+    const tabIds = Array.from(document.getElementById("tabs-ul").getElementsByTagName("li"), el => el.id);
+    tabs.push(...tabIds);
+
+    const [selectedTab] = document.getElementById("tabs-ul").getElementsByClassName("is-active");
+    return selectedTab !== undefined ? tabs.indexOf(selectedTab.id) : 0;
 }
 
 async function init() {
