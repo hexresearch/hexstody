@@ -39,6 +39,14 @@ export const currencyEnum = Object.freeze({
     }
 });
 
+export function* getAllCurrencies() {
+    for (const currencyKey in currencyEnum) {
+       const currency = currencyEnum[currencyKey]
+       if(typeof currency === "string") yield currency; 
+       if(typeof currency === "object" && currency.ERC20 !== undefined) yield currency.ERC20.ticker;
+    }
+}
+
 // Gas limit for ETH transfer transaction
 export const ETH_TX_GAS_LIMIT = 21_000;
 // Gas limit for ERC20 transfer transaction
