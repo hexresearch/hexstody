@@ -41,8 +41,8 @@ use helpers::*;
 #[get("/")]
 async fn index() -> Template {
     let context = context! {
-        title: "Operator dashboard".to_owned(),
-        parent: "base".to_owned(),
+        title: "Operator dashboard",
+        parent: "base",
     };
     Template::render("index", context)
 }

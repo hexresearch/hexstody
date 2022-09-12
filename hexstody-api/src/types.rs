@@ -195,6 +195,8 @@ pub struct WithdrawalHistoryItem {
     pub date: NaiveDateTime,
     pub value: u64,
     pub status: WithdrawalRequestStatus,
+    //temp field to give txid for ETH and tokens while status not working
+    pub txid: Option<CurrencyTxId>, 
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -355,6 +357,9 @@ pub enum WithdrawalRequestStatus {
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct DepositInfo {
     pub address: String,
+    pub qr_code_base64: String,
+    pub tab: String,
+    pub currency: String,
 }
 
 /// Signature data that comes from operators
@@ -721,7 +726,7 @@ pub enum LimitChangeDecisionType {
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
-pub struct ConfigChangeRequest{
+pub struct ConfigChangeRequest {
     pub email: Option<String>,
     pub phone: Option<String>,
     pub tg_name: Option<String>,

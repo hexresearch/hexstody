@@ -1,7 +1,7 @@
 use bitcoin;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::{fmt, vec};
+use std::{fmt, str::FromStr, vec};
 
 /// A currency that custody understands. Can be extended in future.
 #[derive(
@@ -23,12 +23,26 @@ impl fmt::Display for Currency {
     }
 }
 
+impl FromStr for Currency {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "TUSDT" => Ok(Currency::usdt_erc20()),
+            "TCRV" => Ok(Currency::crv_erc20()),
+            "TGTECH" => Ok(Currency::gtech_erc20()),
+            "ETH" => Ok(Currency::ETH),
+            _ => Err(format!("unknown currency{}", s)),
+        }
+    }
+}
+
 impl Currency {
     pub fn usdt_erc20() -> Currency {
         Currency::ERC20(Erc20Token {
             ticker: "USDT".to_string(),
             name: "USDT".to_string(),
-            contract: "0xdAC17F958D2ee523a2206206994597C13D831ec7".to_string(),
+            contract: "0xfD8ef4113c5f54BE9Cb103eB437b710b8e1d6885".to_string(),
         })
     }
 
@@ -36,7 +50,7 @@ impl Currency {
         Currency::ERC20(Erc20Token {
             ticker: "CRV".to_string(),
             name: "CRV".to_string(),
-            contract: "0xD533a949740bb3306d119CC777fa900bA034cd52".to_string(),
+            contract: "0x817805F0f818237c73Fde5dEc91dbB650A7E7612".to_string(),
         })
     }
 
@@ -44,7 +58,7 @@ impl Currency {
         Currency::ERC20(Erc20Token {
             ticker: "GTECH".to_string(),
             name: "GTECH".to_string(),
-            contract: "0xD533a949740bb3306d119CC777fa900bA034cd52".to_string(),
+            contract: "0x866A4Da32007BA71aA6CcE9FD85454fCF48B140c".to_string(),
         })
     }
 
@@ -120,17 +134,17 @@ impl Currency {
             .collect()
     }
 
-    pub fn get_by_name(name_orig: &str) -> Option<Currency>{
+    pub fn get_by_name(name_orig: &str) -> Option<Currency> {
         let name = name_orig.to_uppercase();
         if name == "BTC" {
-            return Some(Currency::BTC)
+            return Some(Currency::BTC);
         } else if name == "ETH" {
             return Some(Currency::ETH);
         } else {
             let tokens = Currency::supported_tokens();
             for token in tokens {
-                if name == token.ticker{
-                    return Some(Currency::ERC20(token))
+                if name == token.ticker {
+                    return Some(Currency::ERC20(token));
                 };
             }
             return None;
@@ -181,8 +195,8 @@ pub enum CurrencyAddress {
     Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
 )]
 pub struct Erc20 {
-    token: Erc20Token,
-    account: EthAccount,
+    pub token: Erc20Token,
+    pub account: EthAccount,
 }
 
 impl CurrencyAddress {
