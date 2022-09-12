@@ -340,7 +340,7 @@ pub async fn post_withdraw(
 ) -> error::Result<()> {
     require_auth_user(cookies, state, |_, user| async move {
         if let CurrencyAddress::ETH(eth_withdraw) = &withdraw_request.address {
-            let send_url = "http://node.desolator.net/sendtx/".to_owned()
+            let send_url = "http://127.0.0.1:8540/sendtx/".to_owned()
                 + &eth_withdraw.to_string()
                 + "/"
                 + &withdraw_request.amount.to_string();

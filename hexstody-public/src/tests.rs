@@ -31,7 +31,7 @@ where
     let (sender, receiver) = tokio::sync::oneshot::channel();
     let (update_sender, _) = tokio::sync::mpsc::channel(1000);
     let btc_client = BtcClient::new("127.0.0.1");
-    let eth_client = EthClient::new("http://node.desolator.net");
+    let eth_client = EthClient::new("http://127.0.0.1");
     let api_config = rocket::Config::figment()
         .merge(("port", SERVICE_TEST_PORT))
         .merge(("static_path", relative!("static")))
