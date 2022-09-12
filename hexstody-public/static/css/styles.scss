@@ -21,6 +21,16 @@ $text: $custom-grey-dark;
 $border: $custom-grey-lighter;
 $box-shadow: none;
 
+// Inputs
+$input-color: $custom-grey-dark;
+$input-border-color: $custom-grey-lighter;
+$input-hover-border-color: $custom-grey-light;
+$input-focus-border-color: $custom-blue;
+$input-placeholder-color: $custom-grey-light;
+$input-shadow: none;
+$input-focus-box-shadow-size: 0;
+$input-arrow: $custom-grey-dark;
+
 @import "bulma/bulma.sass";
 
 @import "custom_styles.scss";

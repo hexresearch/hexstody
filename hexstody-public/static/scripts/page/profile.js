@@ -1,5 +1,5 @@
-import { loadTemplate, initTabs, initCollapsibles, getUserName, chunkifyTransposed, indexArrayFromOne } from "./common.js";
-import { localizeChangeStatus, localizeSpan, getLanguage } from "./localize.js";
+import { loadTemplate, initTabs, initCollapsibles, getUserName, chunkifyTransposed, indexArrayFromOne } from "../common.js";
+import { localizeChangeStatus, localizeSpan, getLanguage } from "../localize.js";
 import { hasKeyPairStored, generateKeyPair, privateKeyToMnemonic, mnemonicToPrivateKey, retrievePrivateKey, removeStoredKeyPair, storePrivateKey } from "../crypto.js";
 
 const errorBox = document.getElementById("error-box")
@@ -19,7 +19,7 @@ const phoneRegex = /^(\+\d{1,2}\s?)?1?\-?\.?\s?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{
 
 async function getTokens() {
     return await fetch("/profile/tokens/list").then(r => r.json());
-};
+}
 
 async function getLimits(){
     return await fetch("/profile/limits/get").then(r => r.json());
@@ -136,7 +136,7 @@ async function initTemplates() {
         await loadTemplate("/templates/settings.html.hbs"),
         await loadTemplate("/templates/security.html.hbs"),
         await loadTemplate("/templates/mnemonic.html.hbs"),
-        await fetch("/lang/profile.json").then(r => r.json()),
+        await fetch("/translations/profile.json").then(r => r.json()),
     ]);
 
     tokensTemplate = tokensTemp.value;

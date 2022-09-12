@@ -1,39 +1,15 @@
 import { listUsers, retrievePrivateKey } from "../crypto.js";
+import { getBrowserLanguage } from "../localize.js";
+import { loadTemplate, initDropDowns } from "../common.js";
 
 var emailEl = null;
 var passwordEl = null;
 
+var headerTemplate = null;
 var signinTemplate = null;
 
-const dict = {
-    "en": {
-        login: "Login",
-        as: "as",
-        keypassword: "Key password",
-        incorrect: "Incorrecnt login/password",
-        loginbtn: "LOG IN",
-        vialogin: "or sign in via login/password",
-        viakey: "or sign in via stored key",
-        signup: "or sign up",
-        password: "Password"
-    },
-    "ru": {
-        login: "Войти",
-        as: "как",
-        keypassword: "Пароль от ключа",
-        incorrect: "Неверный логин/пароль",
-        loginbtn: "ВОЙТИ",
-        vialogin: "войти с помощью логина и пароля",
-        viakey: "войти с помощью сохранённого ключа",
-        signup: "зарегистрироваться",
-        password: "Пароль"
-    }
-}
-
-async function loadTemplate(path) {
-    const template = await (await fetch(path)).text();
-    return Handlebars.compile(template);
-}
+var headerTranslations = null;
+var signInPageTranslations = null;
 
 async function postSignIn(email, password) {
     return await fetch("/signin/email",
@@ -73,7 +49,7 @@ function trySubmitPKeyOnEnter(e) {
 async function makeSignedRequest(privKey, requestBody, url, method) {
     const privateKeyJwk = await privKey.export('jwk');
     const publicKeyDer = await privKey.export('der', { outputPublic: true, compact: true });
-    const full_url = window.location.href + url.replace("signin/","");
+    const full_url = window.location.href + url.replace("signin/", "");
     const nonce = Date.now();
     const msg_elements = requestBody ? [full_url, JSON.stringify(requestBody), nonce] : [full_url, nonce];
     const msg = msg_elements.join(':');
@@ -106,61 +82,81 @@ async function makeSignedRequest(privKey, requestBody, url, method) {
     return response;
 }
 
-async function performKeyAuth(privateKey, username){
-    const challengeResp = await fetch("/signin/challenge/get", {method: "POST", body: JSON.stringify(username)});
+async function performKeyAuth(privateKey, username) {
+    const challengeResp = await fetch("/signin/challenge/get", { method: "POST", body: JSON.stringify(username) });
     if (challengeResp.ok) {
         const challenge = await challengeResp.json()
-        const loginResp = await makeSignedRequest(privateKey, {user: username, challenge: challenge}, "/signin/challenge/redeem", "POST")
-        if (loginResp.ok){
+        const loginResp = await makeSignedRequest(privateKey, { user: username, challenge: challenge }, "/signin/challenge/redeem", "POST")
+        if (loginResp.ok) {
             window.location.href = "/overview"
         } else {
-            displayErr((await loginResp.json()).message) 
+            displayErr((await loginResp.json()).message)
         }
     } else {
         displayErr((await challengeResp.json()).message)
     }
 }
 
-function hideError(){
+function hideError() {
     document.getElementById("validationError").hidden = true;
 }
 
-function displayErr(error){
+function displayErr(error) {
     const validationDisplay = document.getElementById("validationError");
     validationDisplay.getElementsByTagName("span")[0].textContent = error;
     validationDisplay.hidden = false;
 }
 
-async function loginViaKey(){
+async function loginViaKey() {
     hideError()
-    let usernameEl = document.getElementById("username-selector")
-    var username;
-    if (usernameEl.tagName === "DIV"){
-        username = usernameEl.innerText
-    } else {
-        username = usernameEl.value
-    }
+    let usernameEl = document.getElementById("username-selector");
+    let username = usernameEl.value;
     const password = document.getElementById("signInPassword").value;
-    try {
-        const privateKey = await retrievePrivateKey(username, password)
-
-        await performKeyAuth(privateKey, username)
-
-    } catch (error){ displayErr(error) }
+    await retrievePrivateKey(username, password)
+        .then(privateKey => performKeyAuth(privateKey, username).catch(err => displayErr(err)))
+        .catch(_err => displayErr(signInPageTranslations.incorrect));
 }
 
-async function initTemplates(hasKeyOverride, lang){
+async function handleLangChange(lang, hasKeyOverride) {
+    await initTemplates(hasKeyOverride, lang);
+}
+
+async function initTemplates(hasKeyOverride, lang) {
     const keys = listUsers();
-    const hasKeys = keys.length != 0
+    const hasKeys = keys.length != 0;
     const viaKey = hasKeys && hasKeyOverride;
-    if(!signinTemplate){
-        const [singinTemp] = await Promise.allSettled([loadTemplate("/templates/signin.html.hbs")])
+    if (!signinTemplate) {
+        const [headerTemp, singinTemp] = await Promise.allSettled([
+            loadTemplate("/templates/header_unauthorized.html.hbs"),
+            loadTemplate("/templates/signin.html.hbs")
+        ]);
+
         signinTemplate = singinTemp.value;
-    }
-    const singinDraw = signinTemplate({viaKey: viaKey, hasKey: hasKeys, keys: keys, lang: dict[lang]});
-    document.getElementById("signin-box").innerHTML = singinDraw
+        headerTemplate = headerTemp.value;
+    };
+
+    const [headerTransl, signInPageTransl] = await Promise.allSettled([
+        fetch(`/lang/${lang}/header.json`).then(r => r.json()),
+        fetch(`/lang/${lang}/sign-in.json`).then(r => r.json()),
+    ]);
+    headerTranslations = headerTransl.value;
+    signInPageTranslations = signInPageTransl.value;
+    document.title = signInPageTranslations.pageTitle;
+
+    const headerDraw = headerTemplate({ selected_lang: lang.toUpperCase(), lang: headerTranslations });
+    const singinDraw = signinTemplate({ viaKey: viaKey, hasKey: hasKeys, keys: keys, lang: signInPageTranslations });
+    document.getElementById("header").innerHTML = headerDraw;
+    initDropDowns();
+
+    // Handle language change
+    const enEl = document.getElementById("lang-en");
+    const ruEl = document.getElementById("lang-ru");
+    enEl.onclick = async () => { await handleLangChange("en", hasKeyOverride) };
+    ruEl.onclick = async () => { await handleLangChange("ru", hasKeyOverride) };
+
+    document.getElementById("signin-box").innerHTML = singinDraw;
     if (viaKey) {
-        document.getElementById("signin-login").onclick = async function () {await initTemplates(false, lang)}
+        document.getElementById("signin-login").onclick = async function () { await initTemplates(false, lang) }
         document.getElementById("submit").onclick = loginViaKey
         passwordEl = document.getElementById("signInPassword");
         passwordEl.addEventListener("keyup", trySubmitPKeyOnEnter);
@@ -171,24 +167,10 @@ async function initTemplates(hasKeyOverride, lang){
         passwordEl = document.getElementById("signInPassword");
         emailEl.addEventListener("keyup", trySubmitOnEnter);
         passwordEl.addEventListener("keyup", trySubmitOnEnter);
-        if (hasKeys){
-            document.getElementById("signin-key").onclick = async function () {await initTemplates(true, lang)}
+        if (hasKeys) {
+            document.getElementById("signin-key").onclick = async function () { await initTemplates(true, lang) }
         }
     }
-    document.getElementById("lang-sel").onchange = handleLangChange(hasKeyOverride);
 }
 
-function handleLangChange(hasKeyOverride){
-    return async function(){
-        const lang = document.getElementById("lang-sel").value;
-        await initTemplates(hasKeyOverride, lang)
-        document.getElementById("lang-sel").value = lang
-    }
-}
-
-async function init() {
-    Handlebars.registerHelper('isOneElem', function(){return this.keys.length == 1})
-    initTemplates(true, "en");
-};
-
-document.addEventListener("DOMContentLoaded", init);
+window.addEventListener('load', () => { initTemplates(true, getBrowserLanguage()); });
