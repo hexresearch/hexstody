@@ -9,12 +9,17 @@ use thiserror::Error;
 
 /// Languages used for the frontend
 #[derive(
-    Debug, Default, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Copy
+    Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Copy
 )]
 pub enum Language {
-    #[default]
     English,
     Russian
+}
+
+impl Default for Language {
+    fn default() -> Self {
+        Language::English
+    }
 }
 
 impl Language {

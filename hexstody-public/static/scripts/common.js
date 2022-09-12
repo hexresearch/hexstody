@@ -131,8 +131,11 @@ export function initTabs(tabIds, hook, selected) {
 }
 
 export function initCollapsibles() {
-    document.getElementsByClassName("collapsible").forEach(function (coll) {
-        coll.addEventListener("click", function () {
+    console.log("A")
+    const cols = document.getElementsByClassName("collapsible")
+    console.log(cols)
+    for (let col of cols){
+        col.addEventListener("click", function () {
             this.classList.toggle("active");
             const content = this.nextElementSibling;
             if (content.style.display === "block") {
@@ -141,7 +144,10 @@ export function initCollapsibles() {
                 content.style.display = "block";
             }
         });
-    });
+    }
+    // .forEach(function (coll) {
+
+    // });
 }
 
 export function initDropDowns() {
