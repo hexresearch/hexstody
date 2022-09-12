@@ -1,14 +1,12 @@
 use chrono::NaiveDateTime;
 use p256::{ecdsa::Signature, PublicKey};
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
-use crate::state::withdraw::WithdrawalRequestId;
+use crate::state::withdraw::{WithdrawalRequestId, WithdrawalRequestType};
 use crate::update::signup::UserId;
 use hexstody_api::domain::{Currency, CurrencyAddress, CurrencyTxId};
 use hexstody_api::types::{
     ConfirmationData, SignatureData, WithdrawalRequestDecisionType,
-    WithdrawalRequestInfo as WithdrawalRequestInfoApi,
 };
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -21,17 +19,8 @@ pub struct WithdrawalRequestInfo {
     pub address: CurrencyAddress,
     /// Amount of tokens to transfer
     pub amount: u64,
-}
-
-impl From<WithdrawalRequestInfoApi> for WithdrawalRequestInfo {
-    fn from(value: WithdrawalRequestInfoApi) -> WithdrawalRequestInfo {
-        WithdrawalRequestInfo {
-            id: Uuid::new_v4(),
-            user: value.user,
-            address: value.address,
-            amount: value.amount,
-        }
-    }
+    /// Withdrawal request type
+    pub request_type: WithdrawalRequestType 
 }
 
 // This data type is used to create DB state update
@@ -129,6 +118,7 @@ pub struct WithdrawCompleteInfo {
     pub fee: Option<u64>,
     pub input_addresses: Vec<CurrencyAddress>,
     pub output_addresses: Vec<CurrencyAddress>,
+    pub request_type: WithdrawalRequestType
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
