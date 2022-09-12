@@ -158,44 +158,7 @@ async function loadKeyFile(event) {
     };
 }
 
-async function makeSignedRequest(requestBody, url, method) {
-    const full_url = window.location.href + url;
-    const nonce = Date.now();
-    const msg_elements = requestBody ? [full_url, JSON.stringify(requestBody), nonce] : [full_url, nonce];
-    const msg = msg_elements.join(':');
-    const encoder = new TextEncoder();
-    const binaryMsg = encoder.encode(msg);
-    const signature = await window.jscec.sign(binaryMsg, privateKeyJwk, 'SHA-256', 'der').catch(error => {
-        alert(error);
-    });
-    const signature_data_elements = [
-        Base64.fromUint8Array(signature),
-        nonce.toString(),
-        Base64.fromUint8Array(publicKeyDer)
-    ];
-    const signature_data = signature_data_elements.join(':');
-    const params = requestBody ?
-        {
-            method: method,
-            body: JSON.stringify(requestBody),
-            headers: {
-                'Content-Type': 'application/json',
-                'Signature-Data': signature_data
-            }
-        } : {
-            method: method,
-            headers: {
-                'Signature-Data': signature_data
-            }
-        };
-    const response = await fetch(url, params);
-    return response;
-}
 
-async function getSupportedCurrencies() {
-    const response = await makeSignedRequest(null, "currencies", 'GET');
-    return response;
-}
 
 async function getRequiredConfirmations() {
     const response = await makeSignedRequest(null, "confirmations", 'GET');

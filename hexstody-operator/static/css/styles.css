@@ -48,6 +48,29 @@
     flex-wrap: wrap;
 }
 
-.action-buttons-wrapper .button + .button {
+.action-buttons-wrapper .button+.button {
     margin: 0px;
+}
+
+
+/* Loading circle */
+.loading-circle {
+    height: 20px;
+    width: 20px;
+    position: relative;
+    display: inline-block;
+    border: 2px solid;
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: rotate 1s linear infinite;
+}
+
+@keyframes rotate {
+    0% {
+        transform: rotate(0);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
 }

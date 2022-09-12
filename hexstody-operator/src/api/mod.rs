@@ -1,14 +1,12 @@
 use figment::Figment;
-use hexstody_sig::SignatureVerificationConfig;
 use rocket::{
-    fs::FileServer,
+    fs::{FileServer, NamedFile},
     response::status,
     serde::json::Json,
     State as RocketState,
     {fairing::AdHoc, response::status::Created},
     {get, post, routes, uri},
 };
-use rocket_dyn_templates::{context, Template};
 use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
 use std::{path::PathBuf, str, sync::Arc};
 use tokio::sync::{mpsc, Mutex, Notify};
@@ -34,18 +32,18 @@ use hexstody_db::{
     Pool,
 };
 use hexstody_eth_client::client::EthClient;
+use hexstody_sig::SignatureVerificationConfig;
 
 mod helpers;
 use helpers::*;
 
 #[openapi(skip)]
 #[get("/")]
-async fn index() -> Template {
-    let context = context! {
-        title: "Operator dashboard",
-        parent: "base",
-    };
-    Template::render("index", context)
+async fn index(static_path: &RocketState<PathBuf>) -> NamedFile {
+    let mut path = static_path.inner().clone();
+    path.push("html");
+    path.push("index.html");
+    NamedFile::open(path).await.unwrap()
 }
 
 /// # Get all supported currencies
@@ -93,8 +91,9 @@ async fn get_hot_wallet_balance(
         uri!(get_hot_wallet_balance(currency_name)).to_string(),
         signature_data,
     )?;
-    let currency = Currency::get_by_name(currency_name)
-        .ok_or(error::Error::UnknownCurrency(format!("{:?}", currency_name)))?;
+    let currency = Currency::get_by_name(currency_name).ok_or(error::Error::UnknownCurrency(
+        format!("{:?}", currency_name),
+    ))?;
     if currency == Currency::BTC {
         btc_client
             .get_hot_wallet_balance()
@@ -426,7 +425,7 @@ pub async fn serve_api(
     });
     let static_path: PathBuf = api_config.extract_inner("static_path").unwrap();
     let _ = rocket::custom(api_config)
-        .mount("/", FileServer::from(static_path))
+        .mount("/", FileServer::from(static_path.clone()))
         .mount("/", routes![index])
         .mount(
             "/",
@@ -457,8 +456,8 @@ pub async fn serve_api(
         .manage(update_sender)
         .manage(btc_client)
         .manage(eth_client)
+        .manage(static_path)
         .attach(AdHoc::config::<SignatureVerificationConfig>())
-        .attach(Template::fairing())
         .attach(on_ready)
         .launch()
         .await?;
