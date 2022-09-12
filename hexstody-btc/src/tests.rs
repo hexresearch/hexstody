@@ -366,6 +366,7 @@ async fn process_withdrawal_request() {
 async fn withdraw_under_limit(){
     run_test(|btc, api| async move {
         fund_wallet(&btc);
+        let HotBalanceResponse{balance: orig_balance} = api.get_hot_wallet_balance().await.expect("Failed to get balance");
         let addr = new_address(&btc).to_string();
         let id = uuid::Uuid::new_v4();
         let user = "test_user".to_owned();
@@ -381,8 +382,10 @@ async fn withdraw_under_limit(){
             confirmations: vec![],
             rejections: vec![],
         };
-        let resp = api.withdraw_under_limit(cw).await;
-        assert!(resp.is_ok(), "Failed to post tx");
+        let resp = api.withdraw_under_limit(cw).await.expect("Failed to post tx");
+        let HotBalanceResponse{balance} = api.get_hot_wallet_balance().await.expect("Failed to get balance");
+        // We send the amount to ourself, so the only "loss" is the fee
+        assert!(orig_balance == balance + resp.fee.unwrap_or(0), "Balance does not add up!");
     }).await;
 }
 

@@ -349,7 +349,6 @@ pub async fn post_withdraw(
                     .fee_rate;
                 let required_amount = withdraw_request.amount + btc_fee_per_byte * BTC_BYTES_PER_TRANSACTION;
                 if required_amount <= btc_balance {
-                    info!("{}:{}:{}",limit, spent, required_amount);
                     let req_type = if limit - spent >= required_amount {
                         WithdrawalRequestType::UnderLimit
                     } else {WithdrawalRequestType::OverLimit};
