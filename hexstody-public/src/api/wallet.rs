@@ -454,11 +454,11 @@ async fn allocate_eth_address(
     user_id: &str,
 ) -> Result<CurrencyAddress, error::Error> {
     let user_data = eth_client
-        .get_user_data(&user_id)
+        .allocate_address(&user_id)
         .await
         .map_err(|e| error::Error::FailedETHConnection(e.to_string()))?;
     let packed_address = CurrencyAddress::ETH(EthAccount {
-        account: user_data.address,
+        account: user_data,
     });
     updater
         .send(StateUpdate::new(UpdateBody::DepositAddress(

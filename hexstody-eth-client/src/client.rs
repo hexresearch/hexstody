@@ -45,6 +45,19 @@ impl EthClient {
         Ok(())
     }
 
+    pub async fn allocate_address(&self, user: &str) -> Result<String> {
+        let path = "/allocate_address";
+        let endpoint = format!("{}{}/{}", self.server, path, user);
+        let request = self.client.get(endpoint).build()?;
+        let response = self.client.execute(request)
+            .await?
+            .error_for_status()?
+            .text()
+            .await?;
+        debug!("Response {path}: {:?}", response);
+        Ok(response)
+    }
+
     pub async fn post_tokens(&self, user: &str, tokens: &Vec<Erc20Token>) -> Result<()> {
         let path = "/tokens";
         let endpoint = format!("{}{}/{}", self.server, path, user);

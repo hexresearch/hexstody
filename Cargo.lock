@@ -926,16 +926,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "erc20"
-version = "0.1.2"
-source = "git+https://github.com/nazgull08/erc20/?rev=993ee4d1b49e4d88271feb3810a22b20259ae767#993ee4d1b49e4d88271feb3810a22b20259ae767"
-dependencies = [
- "maplit",
- "serde",
- "web3",
-]
-
-[[package]]
 name = "ethabi"
 version = "16.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1610,6 +1600,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "hexstody-eth"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "clap",
+ "env_logger",
+ "hex-literal",
+ "log",
+ "reqwest",
+ "rocket",
+ "rocket_db_pools",
+ "rocket_okapi 0.8.0-rc.2 (git+https://github.com/GREsau/okapi?rev=5cb59b3fddcf24294b4c6110882d89a68eaf01c1)",
+ "schemars",
+ "secp256k1 0.21.3",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "tokio",
+ "ureq",
+ "web3",
+]
+
+[[package]]
 name = "hexstody-eth-client"
 version = "0.1.0"
 dependencies = [
@@ -2158,12 +2171,6 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
 ]
-
-[[package]]
-name = "maplit"
-version = "1.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3e2e65a1a2e43cfcb47a895c4c8b10d1f4a61097f9f254f183aee60cad9c651d"
 
 [[package]]
 name = "matchers"
@@ -3432,30 +3439,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bfa0f585226d2e68097d4f95d113b15b83a82e819ab25717ec0590d9584ef366"
 dependencies = [
  "semver",
-]
-
-[[package]]
-name = "rusteth"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "clap",
- "env_logger",
- "erc20",
- "hex-literal",
- "log",
- "reqwest",
- "rocket",
- "rocket_db_pools",
- "rocket_okapi 0.8.0-rc.2 (git+https://github.com/GREsau/okapi?rev=5cb59b3fddcf24294b4c6110882d89a68eaf01c1)",
- "schemars",
- "secp256k1 0.21.3",
- "serde",
- "serde_json",
- "sqlx",
- "tokio",
- "ureq",
- "web3",
 ]
 
 [[package]]
