@@ -380,10 +380,13 @@ static_path: &State<StaticPath>,) ->  Result<Template, Redirect> {
             PathBuf::from_str("header.json").unwrap(),
         )?;
         let context = context! {
-            title : "swap",
+            title:"swap",
             parent: "base_with_header",
-            lang: user.config.language.to_alpha().to_uppercase(),
-            header: header_dict,
+            username: &user.username,
+            lang: context! {
+                lang: user.config.language.to_alpha().to_uppercase(),
+                header: header_dict,
+            }
         };
         Ok(Template::render("swap", context)) })
     .await

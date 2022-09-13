@@ -3,40 +3,55 @@
 
 {{#*inline "scripts"}}
 <script type="module" src="/scripts/page/common.js"></script>
+<script type="module" src="/scripts/page/request.js"></script>
 <script type="module" src="/scripts/page/swap.js"></script>
 <script src="/scripts/handlebars.min-v4.7.7.js" defer></script>
 {{/inline}}
 
 {{#*inline "page"}}
+<div>
+    <label>Send</label>
+    <div class="dropdown">
+        <div class="dropdown-trigger">
+            <button class="button header-dropdown header-lang">
+                <span id="currency-selection-from">choose currency</span>
+                <span class="icon">
+                    <i class="mdi mdi-chevron-down"></i>
+                </span>
+            </button>
+        </div>
+        <div class="dropdown-menu">
+            <div id="currency-from" class="dropdown-content">
+            </div>
+        </div>
+    </div>
+    <label id="from_max"></label>
+    <input>
+</div>
 
+
+<div>
+<label>Receive</label>
 <div class="dropdown">
     <div class="dropdown-trigger">
         <button class="button header-dropdown header-lang">
-            <span id="currency-selection">choose currency</span>
+            <span id="currency-selection-to">choose currency</span>
             <span class="icon">
                 <i class="mdi mdi-chevron-down"></i>
             </span>
         </button>
     </div>
     <div class="dropdown-menu">
-        <div id="currency-from" class="dropdown-content">
+        <div id="currency-to" class="dropdown-content">
         </div>
     </div>
 </div>
-<div class="dropdown">
-    <div class="dropdown-trigger">
-        <button class="button header-dropdown header-lang">
-            <span id="lang-span">choose currency</span>
-            <span class="icon">
-                <i class="mdi mdi-chevron-down"></i>
-            </span>
-        </button>
-    </div>
-    <div class="dropdown-menu">
-        <div  id="currency-to" class="dropdown-content">
-        </div>
-    </div>
+<label id="to_max">Max</label>
+<input>
+
 </div>
+
+<button>Swap</button>
 {{/inline}}
 
 {{> base_with_header}}

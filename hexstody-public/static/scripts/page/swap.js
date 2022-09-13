@@ -1,58 +1,63 @@
-import { getAllCurrencies } from "./common.js";
+import { getAllCurrencies, currencyNameToCurrency , formattedCurrencyValue} from "./common.js";
+import { getBalance } from "./request.js";
+
+var cFrom = null;
+var cTo = null;
 
 
+function calcAvailableBalance(balanceObj) {
+    const lim = balanceObj.limit_info.limit.amount;
+    const spent = balanceObj.limit_info.spent;
+    const value = balanceObj.value;
+    if (value < (lim - spent)) {
+        return value;
+    } else {
+        return (lim - spent);
+    };
+}
 
 async function init() {
-    // Init dropdowns
-    const x = [...getAllCurrencies()];
+    const allCurrencies = [...getAllCurrencies()];
+    const optionTemplate = Handlebars.compile('<a href="#" class="dropdown-item"> {{this}} </a>');
+    const renderedOptions = allCurrencies.reduce((acc, opt) => acc + (optionTemplate(opt)), "");
 
-    const templ = Handlebars.compile('<a href="#" class="dropdown-item" dropdown-id> {{this}} </a>');
-    const g = x.reduce((acc, e) => acc + (templ(e)), "");
-    document.getElementById("currency-from").innerHTML = g;
-    document.getElementById("currency-to").innerHTML = g;
+    function initDrop(idPostfix, options) {
+        document.getElementById(`currency-${idPostfix}`).innerHTML = options;
+        const optionElements = Array
+            .from(document.getElementById(`currency-${idPostfix}`)
+                .getElementsByClassName("dropdown-item"));
 
-    const k = Array.from(document.getElementById("currency-from").getElementsByClassName("dropdown-item"));
+        for (const opt of optionElements) {
+            opt.addEventListener("click", async event => {
+                const currency = event.target.innerText;
+                document.getElementById(`currency-selection-${idPostfix}`).innerText = currency;
 
-    for (const k1 of k) {
-          k1.addEventListener("click", event => {
-            document.getElementById("currency-selection").innerText = event.target.innerText;
-          });
-    }
+                switch(idPostfix){
+                    case "from":
+                        cFrom = currency;
+                        break;
+                    case "to":
+                        cTo = currency;
+                        break;
+                }
 
-    var $dropdowns = getAll('.dropdown:not(.is-hoverable)');
-
-    if ($dropdowns.length > 0) {
-        $dropdowns.forEach(function ($el) {
-            $el.addEventListener('click', function (event) {
-                event.stopPropagation();
-                $el.classList.toggle('is-active');
+                if(cFrom !== null){
+                    const bal = await getBalance(currencyNameToCurrency(cFrom));
+                    const balPretty = formattedCurrencyValue(cFrom, calcAvailableBalance(bal));
+                    document.getElementById("from_max").innerText = `Max ${balPretty}`;
+                     if(cTo !== null){
+                        const ticker = await fetch(`https://min-api.cryptocompare.com/data/price?fsym=${cFrom}&tsyms=${cTo}`).then(r => r.json());
+                        const t = formattedCurrencyValue(cTo, calcAvailableBalance(bal) * ticker[cTo]);
+                        document.getElementById("to_max").innerText = `Max ${t}`;
+                     }
+                }
             });
-        });
-
-        document.addEventListener('click', function (event) {
-            closeDropdowns();
-        });
-    }
-
-    function closeDropdowns() {
-        $dropdowns.forEach(function ($el) {
-            $el.classList.remove('is-active');
-        });
-    }
-
-    // Close dropdowns if ESC pressed
-    document.addEventListener('keydown', function (event) {
-        var e = event || window.event;
-        if (e.key === "Escape") {
-            closeDropdowns();
         }
-    });
-
-    // Functions
-
-    function getAll(selector) {
-        return Array.prototype.slice.call(document.querySelectorAll(selector), 0);
     }
+
+    initDrop("from", renderedOptions);
+    initDrop("to", renderedOptions);
+
 }
 
 document.addEventListener("DOMContentLoaded", init);

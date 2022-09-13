@@ -217,11 +217,11 @@ export function currencyNameToCurrency(currencyName) {
         case "ETH":
             return currencyEnum.eth;
         case "USDT":
-            return currencyEnum.erc20.usdt;
+            return currencyEnum.erc20_usdt;
         case "CRV":
-            return currencyEnum.erc20.crv;
+            return currencyEnum.erc20_crv;
         case "GTECH":
-            return currencyEnum.erc20.gtech;
+            return currencyEnum.erc20_gtech;
         default:
             return null;
     }
