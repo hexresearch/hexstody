@@ -108,7 +108,7 @@ pub struct UserCurrencyInfo {
     pub transactions: Vec<Transaction>,
     /// Users can create withdrawal requests that in some cases require manual confirmation from operators
     pub withdrawal_requests: HashMap<WithdrawalRequestId, WithdrawalRequest>,
-    /// User's limit info. 
+    /// User's limit info.
     pub limit_info: LimitInfo
 }
 
@@ -145,8 +145,8 @@ impl UserCurrencyInfo {
         // Do not count rejected withdrawals
         let pending_withdrawals: u64 = self.withdrawal_requests
             .iter()
-            .map(|(_, w)| 
-                if w.is_rejected() {0} 
+            .map(|(_, w)|
+                if w.is_rejected() {0}
                 else {
                     w.amount + w.fee().unwrap_or(0)
                 })
@@ -172,8 +172,8 @@ impl UserCurrencyInfo {
         // Do not count rejected withdrawals
         let pending_withdrawals: u64 = self.withdrawal_requests
             .iter()
-            .map(|(_, w)| 
-                if w.is_rejected() {0} 
+            .map(|(_, w)|
+                if w.is_rejected() {0}
                 else {
                     w.amount + w.fee().unwrap_or(0)
                 })

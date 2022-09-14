@@ -219,7 +219,7 @@ pub async fn get_history(
                 to_address: CurrencyAddress::from(btc_deposit.address.clone()),
                 txid: CurrencyTxId::from(btc_deposit.txid),
             }),
-            Transaction::Eth() => todo!("Eth deposit history mapping"),
+            Transaction::Eth(eth_deposit) => todo!("Eth deposit history mapping"),
         }
     }
 
@@ -340,12 +340,18 @@ pub async fn post_withdraw(
 ) -> error::Result<()> {
     require_auth_user(cookies, state, |_, user| async move {
         if let CurrencyAddress::ETH(eth_withdraw) = &withdraw_request.address {
-            let send_url = "http://127.0.0.1:8540/sendtx/".to_owned()
-                + &eth_withdraw.to_string()
-                + "/"
-                + &withdraw_request.amount.to_string();
-            reqwest::get(send_url).await.unwrap().text().await.unwrap();
-            Ok(())
+            let withdrawal_request = WithdrawalRequestInfo {
+                id: Uuid::new_v4(),
+                user: user.username,
+                address: withdraw_request.address.to_owned(),
+                amount: withdraw_request.amount,
+            };
+            let state_update =
+                StateUpdate::new(UpdateBody::CreateWithdrawalRequest(withdrawal_request));
+            updater
+                .send(state_update)
+                .await
+                .map_err(|_| error::Error::NoUserFound.into())
         } else {
             let btc_balance = user
                 .currencies
@@ -453,12 +459,12 @@ async fn allocate_eth_address(
     updater: &State<mpsc::Sender<StateUpdate>>,
     user_id: &str,
 ) -> Result<CurrencyAddress, error::Error> {
-    let user_data = eth_client
+    let addr = eth_client
         .allocate_address(&user_id)
         .await
         .map_err(|e| error::Error::FailedETHConnection(e.to_string()))?;
     let packed_address = CurrencyAddress::ETH(EthAccount {
-        account: user_data,
+        account: addr,
     });
     updater
         .send(StateUpdate::new(UpdateBody::DepositAddress(
@@ -478,14 +484,14 @@ async fn allocate_erc20_address(
     user_id: &str,
     token: Erc20Token,
 ) -> Result<CurrencyAddress, error::Error> {
-    let user_data = eth_client
-        .get_user_data(&user_id)
+    let addr = eth_client
+        .allocate_address(&user_id)
         .await
         .map_err(|e| error::Error::FailedETHConnection(e.to_string()))?;
     let packed_address = CurrencyAddress::ERC20(Erc20 {
         token: token,
         account: EthAccount {
-            account: user_data.address,
+            account: addr
         },
     });
     updater
