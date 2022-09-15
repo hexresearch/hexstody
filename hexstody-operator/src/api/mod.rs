@@ -347,7 +347,7 @@ async fn get_all_changes(
 }
 
 #[openapi(skip)]
-#[post("/limits/confirm", data = "<confirmation_data>")]
+#[post("/limits/confirm", format = "json", data = "<confirmation_data>")]
 async fn confirm_limits(
     update_sender: &RocketState<mpsc::Sender<StateUpdate>>,
     signature_data: SignatureData,
@@ -378,7 +378,7 @@ async fn confirm_limits(
 }
 
 #[openapi(skip)]
-#[post("/limits/reject", data = "<confirmation_data>")]
+#[post("/limits/reject", format = "json", data = "<confirmation_data>")]
 async fn reject_limits(
     update_sender: &RocketState<mpsc::Sender<StateUpdate>>,
     signature_data: SignatureData,

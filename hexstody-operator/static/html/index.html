@@ -11,34 +11,29 @@
     <link rel="stylesheet" type="text/css" href="/css/chota.min.css" />
     <link rel="stylesheet" type="text/css"
         href="https://cdn.jsdelivr.net/npm/@mdi/font@6.9.96/css/materialdesignicons.min.css" />
-    <!-- Import Vue.js -->
-    <script src="https://unpkg.com/vue@next"></script>
+    <!-- Imports Libraries -->
     <script src="/scripts/jscu.bundle.js" defer></script>
-    <script type="module" src="/scripts/common.js"></script>
-    <!-- <script src="/scripts/handlebars.min-v4.7.7.js" defer></script> -->
-    <!-- <script src="/scripts/jscec.bundle.js" defer></script> -->
-    <!-- <script src="/scripts/base64.min.js" defer></script> -->
+    <script src="/scripts/jscec.bundle.js" defer></script>
+    <script src="/scripts/base64.min.js" defer></script>
+    <!-- Development -->
+    <script src="https://unpkg.com/@popperjs/core@2/dist/umd/popper.min.js" defer></script>
+    <script src="https://unpkg.com/tippy.js@6/dist/tippy-bundle.umd.js" defer></script>
+    <!-- Production -->
     <!-- <script src="https://unpkg.com/@popperjs/core@2" defer></script> -->
     <!-- <script src="https://unpkg.com/tippy.js@6" defer></script> -->
-    <!-- <script type="module" src="/scripts/index.js"></script> -->
-
+    <!-- Import Vue.js -->
+    <!-- Development -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js" defer></script>
+    <!-- Production -->
+    <!-- <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js" defer></script> -->
+    <!-- Import Vue.js Libraries -->
+    <script src="https://unpkg.com/tippy.vue@3" defer></script>
+    <!-- Initialize Vue.js App -->
+    <script type="module" src="/scripts/main.js"></script>
 </head>
 
 <body>
-    <div id="app">
-        <div class="container">
-            <keyfile-input></keyfile-input>
-            <!-- <div id="authorized-content-wrapper"></div> -->
-        </div>
-    </div>
-    <!-- Import App -->
-    <script src="/scripts/main.js"></script>
-    <!-- Import Components -->
-    <script src="/components/KeyfileInput.js"></script>
-    <!-- Mount App -->
-    <script>
-        const mountedApp = app.mount('#app');
-    </script>
+    <div id="app"></div>
 </body>
 
 </html>
