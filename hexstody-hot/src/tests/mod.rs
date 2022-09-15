@@ -91,11 +91,11 @@ async fn test_btc_deposit() {
 
         let dep_info = env
             .hot_client
-            .get_deposit(Currency::BTC)
+            .get_deposit_address(Currency::BTC)
             .await
             .expect("Deposit address");
 
-        let dep_address = Address::from_str(&dep_info.address).expect("Bitcoin address");
+        let dep_address = Address::from_str(&dep_info.address()).expect("Bitcoin address");
         let amount = Amount::from_sat(10_000);
         send_funds(&env.btc_node, &dep_address, amount);
         mine_blocks(&env.btc_node, 1);
@@ -120,11 +120,11 @@ async fn test_btc_unconfirmed_deposit() {
 
         let dep_info = env
             .hot_client
-            .get_deposit(Currency::BTC)
+            .get_deposit_address(Currency::BTC)
             .await
             .expect("Deposit address");
 
-        let dep_address = Address::from_str(&dep_info.address).expect("Bitcoin address");
+        let dep_address = Address::from_str(&dep_info.address()).expect("Bitcoin address");
         let amount = Amount::from_sat(10_000);
         send_funds(&env.btc_node, &dep_address, amount);
         // mine_blocks(&env.btc_node, 1);
@@ -149,11 +149,11 @@ async fn test_btc_rbf_0conf_deposit() {
 
         let dep_info = env
             .hot_client
-            .get_deposit(Currency::BTC)
+            .get_deposit_address(Currency::BTC)
             .await
             .expect("Deposit address");
 
-        let dep_address = Address::from_str(&dep_info.address).expect("Bitcoin address");
+        let dep_address = Address::from_str(&dep_info.address()).expect("Bitcoin address");
         let amount = Amount::from_sat(10_000);
         let dep_txid = send_funds(&env.btc_node, &dep_address, amount);
 
@@ -182,11 +182,11 @@ async fn test_btc_rbf_1conf_deposit() {
 
         let dep_info = env
             .hot_client
-            .get_deposit(Currency::BTC)
+            .get_deposit_address(Currency::BTC)
             .await
             .expect("Deposit address");
 
-        let dep_address = Address::from_str(&dep_info.address).expect("Bitcoin address");
+        let dep_address = Address::from_str(&dep_info.address()).expect("Bitcoin address");
         let amount = Amount::from_sat(10_000);
         let dep_txid = send_funds(&env.btc_node, &dep_address, amount);
 

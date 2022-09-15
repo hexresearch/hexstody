@@ -1,4 +1,4 @@
-import { loadTemplate, formattedCurrencyValue, formattedElapsedTime, currencyNameToCurrency } from "./common.js";
+import { loadTemplate, formattedCurrencyValue, formattedElapsedTime, currencyNameToCurrency } from "../common.js";
 
 let balanceTemplate = null;
 let historyTemplate = null;
@@ -9,7 +9,7 @@ let historyPagesToLoad = 1;
 
 async function getBalances() {
     return await fetch("/balance").then(r => r.json());
-};
+}
 
 async function getHistory(skip, take) {
     return fetch(`/history/${skip}/${take}`).then(r => r.json());
@@ -28,7 +28,7 @@ async function initTemplates() {
     const [balanceTemp, historyTemp, dictTemp] = await Promise.allSettled([
         loadTemplate("/templates/balance.html.hbs"),
         loadTemplate("/templates/history.html.hbs"),
-        fetch("/lang/overview-extra.json").then(r => r.json())
+        fetch("/translations/overview-extra.json").then(r => r.json())
     ]);
 
     balanceTemplate = balanceTemp.value;
@@ -198,7 +198,7 @@ async function updateLoop() {
 
     const usdToBtc = document.getElementById("usd-BTC");
     let currValBtc = document.getElementById("curr-val-BTC").textContent;
-    usdToBtc.textContent = `(${usdNumberFormat1.format((currValBtc *btcTicker.USD))})`
+    usdToBtc.textContent = `(${usdNumberFormat1.format((currValBtc * btcTicker.USD))})`
 
     const usdToEth = document.getElementById("usd-ETH");
     const currValEth = document.getElementById("curr-val-ETH").textContent;

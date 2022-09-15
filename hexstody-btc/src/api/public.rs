@@ -251,6 +251,97 @@ async fn withdraw_btc(
     }
 }
 
+#[openapi(tag = "withdraw")]
+#[post("/withdraw/under", format = "json", data = "<cw>")]
+async fn withdraw_btc_under_limit(
+    client: &State<Client>,
+    cfg: &State<WithdrawCfg>,
+    cw: Json<ConfirmedWithdrawal>,
+) -> error::Result<WithdrawalResponse> {
+    let network = cfg.network;
+    if let CurrencyAddress::BTC(hexstody_api::domain::BtcAddress { addr }) = &cw.address {
+        if let Ok(addr) = bitcoin::Address::from_str(addr.as_str()) {
+            let comment = cw.id.to_string();
+            let amount = bitcoin::Amount::from_sat(cw.amount);
+            let txid = client
+                .send_to_address(&addr, amount, Some(&comment), None, None, None, None, None)
+                .map_err(|e| {
+                    (
+                        Status::InternalServerError,
+                        Json(crate::api::error::ErrorMessage {
+                            message: format!("Failed to post the tx: {:?}", e),
+                            code: 500,
+                        }),
+                    )
+                })?;
+            let tx = client.get_transaction(&txid, None).map_err(|e| {
+                (
+                    Status::InternalServerError,
+                    Json(crate::api::error::ErrorMessage {
+                        message: format!("Tx not found: {:?}", e),
+                        code: 500,
+                    }),
+                )
+            })?;
+            let fee = tx.fee.map(|f| f.as_sat().abs() as u64);
+            let input_addresses = tx
+                .details
+                .iter()
+                .map(|x| match x.category {
+                    GetTransactionResultDetailCategory::Receive
+                    | GetTransactionResultDetailCategory::Generate
+                    | GetTransactionResultDetailCategory::Immature => {
+                        x.address.clone().map(|a| CurrencyAddress::from(a))
+                    }
+                    _ => None,
+                })
+                .flatten()
+                .collect();
+            let deserialized_tx: Transaction = encode::deserialize(&tx.hex).map_err(|e| {
+                (
+                    Status::InternalServerError,
+                    Json(crate::api::error::ErrorMessage {
+                        message: format!("Failed to deserialize tx: {:?}", e),
+                        code: 500,
+                    }),
+                )
+            })?;
+            let output_addresses = deserialized_tx
+                .output
+                .iter()
+                .map(|out| Address::from_script(&out.script_pubkey, network))
+                .flatten()
+                .map(|addr| CurrencyAddress::from(addr))
+                .collect();
+            let resp = WithdrawalResponse {
+                id: cw.id.clone(),
+                txid: BtcTxid(txid),
+                fee,
+                input_addresses,
+                output_addresses,
+            };
+            debug!("OK: {:?}", resp);
+            Ok(Json(resp))
+        } else {
+            Err((
+                Status::BadRequest,
+                Json(crate::api::error::ErrorMessage {
+                    message: "Not BTC??".to_owned(),
+                    code: 500,
+                }),
+            ))
+        }
+    } else {
+        Err((
+            Status::BadRequest,
+            Json(crate::api::error::ErrorMessage {
+                message: "Not BTC??".to_owned(),
+                code: 500,
+            }),
+        ))
+    }
+}
+
 #[openapi(tag = "Hot wallet balance")]
 #[post("/hot-wallet-balance")]
 async fn get_hot_wallet_balance(client: &State<Client>) -> error::Result<HotBalanceResponse> {
@@ -379,6 +470,7 @@ pub async fn serve_public_api(
                 get_deposit_address,
                 get_fees,
                 withdraw_btc,
+                withdraw_btc_under_limit,
                 generate_blocks,
                 new_address,
                 send_to_address,

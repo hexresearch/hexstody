@@ -15,7 +15,7 @@ use hexstody_db::{
     },
 };
 use log::*;
-use std::sync::Arc;
+use std::{sync::Arc, vec};
 use std::time::Duration;
 use tokio::sync::{mpsc, Mutex};
 use tokio::time::sleep;
@@ -68,6 +68,7 @@ pub async fn update_results_worker(
                                         fee: resp.fee,
                                         input_addresses: resp.input_addresses,
                                         output_addresses: resp.output_addresses,
+                                        request_type: hexstody_db::state::WithdrawalRequestType::OverLimit,
                                     });
                                 if let Err(e) = update_sender.send(StateUpdate::new(bod)).await {
                                     debug!("Failed to send update with confirmation: {}", e);
@@ -87,6 +88,47 @@ pub async fn update_results_worker(
                         }
                     }
                 }
+                UpdateResult::WithdrawalUnderlimit(wr) => {
+                    let cw = ConfirmedWithdrawal{
+                        id: wr.id,
+                        user: wr.user,
+                        address: wr.address,
+                        created_at: wr.created_at.to_string(),
+                        amount: wr.amount,
+                        confirmations: vec![],
+                        rejections: vec![],
+                    };
+                    match btc_client.withdraw_under_limit(cw).await {
+                        Ok(resp) => {
+                            debug!("withdraw_btc_resp: {:?}", resp);
+                            let txid = resp.txid.0.to_string();
+                            let bod =
+                                UpdateBody::WithdrawalRequestComplete(WithdrawCompleteInfo {
+                                    id: resp.id,
+                                    confirmed_at: Utc::now().naive_utc(),
+                                    txid: CurrencyTxId::BTC(BTCTxid { txid }),
+                                    fee: resp.fee,
+                                    input_addresses: resp.input_addresses,
+                                    output_addresses: resp.output_addresses,
+                                    request_type: hexstody_db::state::WithdrawalRequestType::UnderLimit,
+                                });
+                            if let Err(e) = update_sender.send(StateUpdate::new(bod)).await {
+                                debug!("Failed to send update with confirmation: {}", e);
+                            };
+                        }
+                        Err(e) => {
+                            debug!("Failed to post tx: {:?}", e);
+                            let info = WithdrawalRejectInfo {
+                                id: wr.id,
+                                reason: format!("{}", e),
+                            };
+                            let bod = UpdateBody::WithdrawalRequestNodeRejected(info);
+                            if let Err(e) = update_sender.send(StateUpdate::new(bod)).await {
+                                debug!("Failed to send update with node rejection: {}", e);
+                            };
+                        }
+                    }
+                },
             },
             None => break,
         }

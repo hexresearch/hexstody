@@ -1,65 +1,42 @@
+<h1 class="login-title">{{lang.signup}}</h1>
+
 <div class="field">
-    <div class="d-flex width-100">
-    <h1 style="margin-right: 1em" class="login-title">{{lang.signup}}</h1>
-    <div class="d-flex p-tb-1em">
-        <select class="p-1em" name="lang-sel" id="lang-sel">
-            <option value="en">English</option>
-            <option value="ru">Russian</option>
-        </select>
-    </div>
-</div>
-</div>
-
-<div class="field login-field-email" style="margin-top: 25px;">
-    <label for="" class="label form-group-label">{{lang.username}}</label>
-    <div class="control has-icons-left">
-        <input id="username-input" type="text" placeholder="username" class="input"
-            style="height: 50px;" value="" value="">
-        <span class="icon is-small is-left">
-            <i class="fa fa-envelope"></i>
-        </span>
-    </div>
-</div>
-
-<div class="field login-field-pswd" style="margin-top: 25px;">
-    <label for="" class="label form-group-label">{{lang.password}}</label>
-    <div class="control has-icons-left">
-        <input id="password-input" type="password" placeholder="********" class="input"
-            style="height: 50px;" value="">
-        <span class="icon is-small is-left">
-            <i class="fa fa-lock"></i>
-        </span>
-    </div>
-</div>
-
-<div class="field login-field-pswd" style="margin-top: 25px;">
-    <label for="" class="label form-group-label">{{lang.reppassword}}</label>
-    <div class="control has-icons-left">
-        <input id="password-rep-input" type="password" placeholder="********" class="input"
-            style="height: 50px;" value="">
-        <span class="icon is-small is-left">
-            <i class="fa fa-lock"></i>
-        </span>
-    </div>
-</div>
-
-<div class="field login-field-invite" style="margin-top: 25px;">
-    <label for="" class="label form-group-label">{{lang.invite}}</label>
-    <div class="control has-icons-left">
-        <input id="invite-input" type="text" class="input"
-            style="height: 50px;" value="" value="">
-        <span class="icon is-small is-left">
-            <i class="fa fa-envelope"></i>
-        </span>
-    </div>
-</div>
-
-<div class="field login-field-pswd validationError" hidden="true" style=" margin-top: 25px;">
-    <div id = "validation-error" class="notification is-danger">
-        {{lang.alreadytaken}}
+    <label class="label">{{lang.username}}</label>
+    <div class="control">
+        <input id="username-input" type="text" class="input">
     </div>
 </div>
 
 <div class="field">
-    <button id="submit" style="margin-top: 25px;" class="button is-info login-button-login">{{lang.signupbtn}}</button>
+    <label class="label">{{lang.password}}</label>
+    <div class="control">
+        <input id="password-input" type="password" class="input">
+    </div>
+</div>
+
+<div class="field">
+    <label class="label">{{lang.reppassword}}</label>
+    <div class="control">
+        <input id="password-rep-input" type="password" class="input">
+    </div>
+</div>
+
+<div class="field">
+    <label class="label">{{lang.invite}}</label>
+    <div class="control">
+        <input id="invite-input" type="text" class="input">
+    </div>
+</div>
+
+<div class="field" id="validation-error" hidden="true">
+    <span class="is-danger">{{lang.alreadytaken}}</span>
+</div>
+
+<div class="field">
+    <button id="submit" class="button is-primary is-fullwidth">{{lang.signupbtn}}</button>
+</div>
+
+<div class="field">
+    {{lang.or}}
+    <a href="/signin">{{lang.signin}}</a>
 </div>

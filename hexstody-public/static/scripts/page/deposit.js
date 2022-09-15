@@ -1,4 +1,4 @@
-import { initTabs } from "./common.js";
+import { initTabs } from "../common.js";
 
 var tabs = [];
 
@@ -18,6 +18,6 @@ function preInitTabs() {
 async function init() {
     const selectedTab = preInitTabs();
     initTabs(tabs, tabUrlHook, selectedTab);
-};
+}
 
 document.addEventListener("headerLoaded", init);

@@ -2,5 +2,7 @@
     "overview": "Главная",
     "profile": "Профиль",
     "logout": "Выйти",
-    "settings": "Настройки"
+    "settings": "Настройки",
+    "english": "English",
+    "russian": "Русский"
 }

@@ -8,9 +8,9 @@ import {
     ETH_TX_GAS_LIMIT,
     ERC20_TX_GAS_LIMIT,
     GWEI
-} from "./common.js";
+} from "../common.js";
 
-import { localizeSpan } from "./localize.js";
+import { localizeSpan } from "../localize.js";
 
 var tabs = [];
 const refreshInterval = 3_000_000;

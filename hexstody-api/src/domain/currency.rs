@@ -207,6 +207,14 @@ impl CurrencyAddress {
             CurrencyAddress::ERC20(erc20) => Currency::ERC20(erc20.token.clone()),
         }
     }
+
+    pub fn address(&self) -> String{
+        match self {
+            CurrencyAddress::BTC(v) => v.addr.clone(),
+            CurrencyAddress::ETH(v) => v.account.clone(),
+            CurrencyAddress::ERC20(v) => v.account.account.clone(),
+        }
+    }
 }
 
 impl fmt::Display for CurrencyAddress {

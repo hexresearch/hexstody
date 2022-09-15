@@ -109,8 +109,8 @@ impl HexstodyClient {
         Ok(serde_json::from_str(&response)?)
     }
 
-    pub async fn get_deposit(&self, currency: Currency) -> Result<DepositInfo> {
-        let path = "/deposit";
+    pub async fn get_deposit_address(&self, currency: Currency) -> Result<CurrencyAddress> {
+        let path = "/deposit/address";
         let endpoint = format!("{}{}", self.server, path);
         let request = self.client.post(endpoint).json(&currency).build()?;
         let response = self

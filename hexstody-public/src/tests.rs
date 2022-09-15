@@ -3,6 +3,7 @@ use hexstody_btc_client::client::BtcClient;
 use hexstody_db::state::*;
 use hexstody_db::Pool;
 use hexstody_eth_client::client::EthClient;
+use p256::PublicKey;
 use std::sync::Arc;
 use tokio::sync::{Mutex, Notify};
 
@@ -30,13 +31,16 @@ where
 
     let (sender, receiver) = tokio::sync::oneshot::channel();
     let (update_sender, _) = tokio::sync::mpsc::channel(1000);
+    let pub_keys : Vec<PublicKey> = vec![];
     let btc_client = BtcClient::new("127.0.0.1");
     let eth_client = EthClient::new("http://127.0.0.1");
     let api_config = rocket::Config::figment()
         .merge(("port", SERVICE_TEST_PORT))
         .merge(("static_path", relative!("static")))
         .merge(("template_dir", "templates/"))
-        .merge(("secret_key", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==".to_owned()));
+        .merge(("secret_key", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==".to_owned()))
+        .merge(("domain", format!("http://localhost:{SERVICE_TEST_PORT}")))
+        .merge(("operator_public_keys", pub_keys));
     tokio::spawn({
         let state = state_mx.clone();
         let state_notify = state_notify.clone();

@@ -2,10 +2,9 @@ use figment::Figment;
 use hexstody_sig::SignatureVerificationConfig;
 use rocket::{
     fs::FileServer,
-    response::status,
     serde::json::Json,
     State as RocketState,
-    {fairing::AdHoc, response::status::Created},
+    fairing::AdHoc,
     {get, post, routes, uri},
 };
 use rocket_dyn_templates::{context, Template};
@@ -20,7 +19,7 @@ use hexstody_api::{
     types::{
         ConfirmationData, HotBalanceResponse, Invite, InviteRequest, InviteResp,
         LimitChangeDecisionType, LimitChangeOpResponse, LimitConfirmationData, SignatureData,
-        WithdrawalRequest, WithdrawalRequestDecisionType, WithdrawalRequestInfo,
+        WithdrawalRequest, WithdrawalRequestDecisionType,
     },
 };
 use hexstody_btc_client::client::BtcClient;
@@ -28,7 +27,7 @@ use hexstody_db::{
     state::{State as HexstodyState, REQUIRED_NUMBER_OF_CONFIRMATIONS},
     update::limit::LimitChangeData,
     update::{
-        misc::InviteRec, withdrawal::WithdrawalRequestInfo as WithdrawalRequestInfoDb, StateUpdate,
+        misc::InviteRec, StateUpdate,
         UpdateBody,
     },
     Pool,
@@ -42,7 +41,7 @@ use helpers::*;
 #[get("/")]
 async fn index() -> Template {
     let context = context! {
-        title: "Operator dashboard",
+        page_title: "Operator dashboard",
         parent: "base",
     };
     Template::render("index", context)
@@ -139,32 +138,6 @@ async fn list(
             }),
     );
     Ok(Json(withdrawal_requests))
-}
-
-/// # Create new withdrawal request
-#[openapi(tag = "Withdrawal request")]
-#[post("/request", format = "json", data = "<withdrawal_request_info>")]
-async fn create(
-    update_sender: &RocketState<mpsc::Sender<StateUpdate>>,
-    signature_data: SignatureData,
-    withdrawal_request_info: Json<WithdrawalRequestInfo>,
-    config: &RocketState<SignatureVerificationConfig>,
-) -> error::Result<Created<Json<WithdrawalRequest>>> {
-    let withdrawal_request_info = withdrawal_request_info.into_inner();
-    guard_op_signature(
-        &config,
-        uri!(create).to_string(),
-        signature_data,
-        &withdrawal_request_info,
-    )?;
-    let info: WithdrawalRequestInfoDb = withdrawal_request_info.into();
-    let state_update = StateUpdate::new(UpdateBody::CreateWithdrawalRequest(info));
-    // TODO: check that state update was correctly processed
-    update_sender
-        .send(state_update)
-        .await
-        .map_err(|e| error::Error::InternalServerError(format!("{:?}", e)).into())
-        .map(|_| status::Created::new("/request"))
 }
 
 /// # Confirm withdrawal request
@@ -431,18 +404,17 @@ pub async fn serve_api(
         .mount(
             "/",
             openapi_get_routes![
-                list,
-                create,
-                confirm,
-                reject,
-                get_hot_wallet_balance,
-                get_supported_currencies,
-                get_required_confrimations,
-                gen_invite,
-                list_ops_invites,
-                get_all_changes,
-                confirm_limits,
-                reject_limits
+                list,                           // GET:  /request/${currency.toLowerCase()} 
+                confirm,                        // POST: /confirm', 
+                reject,                         // POST: /reject',
+                get_hot_wallet_balance,         // GET:  /hot-wallet-balance/${currency.toLowerCase()} 
+                get_supported_currencies,       // GET:  /currencies
+                get_required_confrimations,     // GET:  /confirmations 
+                gen_invite,                     // POST: /invite/generate 
+                list_ops_invites,               // GET:  /invite/listmy 
+                get_all_changes,                // GET:  /changes 
+                confirm_limits,                 // POST: /limits/confirm 
+                reject_limits                   // POST: /limits/reject 
             ],
         )
         .mount(
