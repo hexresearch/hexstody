@@ -165,6 +165,7 @@
     .header-dropdown {
         font-weight: 500;
         background-color: transparent;
+        color: $custom-grey-dark;
 
         .icon {
             font-size: 24px;
@@ -275,6 +276,45 @@
         .balances-item:last-child {
             margin-bottom: 0px;
         }
+    }
+}
+
+#signin-box, #signup-box {
+    padding: 96px 85px;
+
+    .button {
+        height: 54px;
+        font-weight: 700;
+        font-size: 12px;
+        line-height: 20px;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+    }
+
+    .control input, select {
+        height: 54px;
+        font-weight: 500;
+        font-size: 16px;
+        line-height: 20px;
+    }
+
+    .select {
+        height: 54px;
+    }
+
+    .control input {
+        padding: 15px 23px; // calc(16px - #{$control-border-width}) calc(24px - #{$control-border-width});
+    }
+
+    .login-title {
+        font-weight: 700;
+        font-size: 56px;
+        line-height: 64px;
+        margin-bottom: 24px;
+    }
+
+    .field:not(:last-child) {
+        margin-bottom: 32px;
     }
 }
 

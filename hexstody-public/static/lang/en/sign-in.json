@@ -1,0 +1,13 @@
+{
+    "pageTitle": "Login",
+    "login_title": "Sign in",
+    "login": "Login",
+    "keypassword": "Key password",
+    "incorrect": "Invalid login or password",
+    "loginbtn": "Sign in",
+    "vialogin": "sign in with login",
+    "viakey": "sign in with key",
+    "or": "or",
+    "signup": "create an account",
+    "password": "Password"
+}

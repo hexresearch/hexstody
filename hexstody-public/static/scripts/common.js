@@ -131,8 +131,11 @@ export function initTabs(tabIds, hook, selected) {
 }
 
 export function initCollapsibles() {
-    document.getElementsByClassName("collapsible").forEach(function (coll) {
-        coll.addEventListener("click", function () {
+    console.log("A")
+    const cols = document.getElementsByClassName("collapsible")
+    console.log(cols)
+    for (let col of cols){
+        col.addEventListener("click", function () {
             this.classList.toggle("active");
             const content = this.nextElementSibling;
             if (content.style.display === "block") {
@@ -141,7 +144,46 @@ export function initCollapsibles() {
                 content.style.display = "block";
             }
         });
+    }
+    // .forEach(function (coll) {
+
+    // });
+}
+
+export function initDropDowns() {
+    var $dropdowns = getAll('.dropdown:not(.is-hoverable)');
+
+    if ($dropdowns.length > 0) {
+        $dropdowns.forEach(function ($el) {
+            $el.addEventListener('click', function (event) {
+                event.stopPropagation();
+                $el.classList.toggle('is-active');
+            });
+        });
+
+        document.addEventListener('click', function (event) {
+            closeDropdowns();
+        });
+    }
+
+    function closeDropdowns() {
+        $dropdowns.forEach(function ($el) {
+            $el.classList.remove('is-active');
+        });
+    }
+
+    // Close dropdowns if ESC pressed
+    document.addEventListener('keydown', function (event) {
+        var e = event || window.event;
+        if (e.key === "Escape") {
+            closeDropdowns();
+        }
     });
+
+    // Functions
+    function getAll(selector) {
+        return Array.prototype.slice.call(document.querySelectorAll(selector), 0);
+    }
 }
 
 export function getUserName() {
@@ -209,11 +251,11 @@ export function currencyNameToCurrency(currencyName) {
         case "ETH":
             return currencyEnum.eth;
         case "USDT":
-            return currencyEnum.erc20.usdt;
+            return currencyEnum.erc20_usdt;
         case "CRV":
-            return currencyEnum.erc20.crv;
+            return currencyEnum.erc20_crv;
         case "GTECH":
-            return currencyEnum.erc20.gtech;
+            return currencyEnum.erc20_gtech;
         default:
             return null;
     }

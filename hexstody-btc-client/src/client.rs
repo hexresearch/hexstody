@@ -120,4 +120,19 @@ impl BtcClient {
         debug!("Response {path}: {}", response);
         Ok(serde_json::from_str(&response)?)
     }
+
+    pub async fn withdraw_under_limit(&self, withdraw_req: ConfirmedWithdrawal) -> Result<WithdrawalResponse>{
+        let path = "/withdraw/under";
+        let endpoint = format!("{}{}", self.server, path);
+        let request = self.client.post(endpoint).json(&withdraw_req).build()?;
+        let response = self
+            .client
+            .execute(request)
+            .await?
+            .error_for_status()?
+            .text()
+            .await?;
+        debug!("Response {path}: {}", response);
+        Ok(serde_json::from_str(&response)?)
+    }
 }

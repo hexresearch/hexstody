@@ -99,7 +99,7 @@ where
                         start_regtest: true,
                         operator_public_keys: keys,
                         public_api_enabled: true,
-                        public_api_domain: None,
+                        public_api_domain: Some(format!("http://localhost:{public_api_port}")),
                         public_api_port: Some(public_api_port),
                         public_api_static_path: None,
                         public_api_template_path: None,

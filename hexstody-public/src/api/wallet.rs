@@ -11,7 +11,7 @@ use hexstody_api::types::{
     self as api, BalanceItem, Erc20HistUnitU, GetTokensResponse, TokenActionRequest, TokenInfo,
 };
 use hexstody_btc_client::client::{BtcClient, BTC_BYTES_PER_TRANSACTION};
-use hexstody_db::state::State as DbState;
+use hexstody_db::state::{State as DbState, WithdrawalRequestType};
 use hexstody_db::state::{Transaction, WithdrawalRequest, REQUIRED_NUMBER_OF_CONFIRMATIONS};
 use hexstody_db::update::deposit::DepositAddress;
 use hexstody_db::update::misc::{TokenAction, TokenUpdate};
@@ -339,45 +339,73 @@ pub async fn post_withdraw(
     withdraw_request: Json<api::UserWithdrawRequest>,
 ) -> error::Result<()> {
     require_auth_user(cookies, state, |_, user| async move {
-        if let CurrencyAddress::ETH(eth_withdraw) = &withdraw_request.address {
-            let send_url = "http://node.desolator.net/sendtx/".to_owned()
+        match &withdraw_request.address {
+            CurrencyAddress::ETH(eth_withdraw) => {
+                let send_url = "http://node.desolator.net/sendtx/".to_owned()
                 + &eth_withdraw.to_string()
                 + "/"
                 + &withdraw_request.amount.to_string();
-            reqwest::get(send_url).await.unwrap().text().await.unwrap();
-            Ok(())
-        } else {
-            let btc_balance = user
-                .currencies
-                .get(&Currency::BTC)
-                .ok_or(error::Error::NoUserCurrency(Currency::BTC))?
-                .finalized_balance();
-            let btc_fee_per_byte = &btc
-                .get_fees()
-                .await
-                .map_err(|_| error::Error::FailedGetFee(Currency::BTC))?
-                .fee_rate;
-            let required_amount =
-                withdraw_request.amount + btc_fee_per_byte * BTC_BYTES_PER_TRANSACTION;
-            if required_amount <= btc_balance {
-                let withdrawal_request = WithdrawalRequestInfo {
-                    id: Uuid::new_v4(),
-                    user: user.username,
-                    address: withdraw_request.address.to_owned(),
-                    amount: withdraw_request.amount,
-                };
-                let state_update =
-                    StateUpdate::new(UpdateBody::CreateWithdrawalRequest(withdrawal_request));
-                updater
-                    .send(state_update)
+                reqwest::get(send_url).await.unwrap().text().await.unwrap();
+                Ok(())
+            },
+            CurrencyAddress::ERC20(_) => Ok(()),
+            CurrencyAddress::BTC(_) => {
+                let btc_cur = Currency::BTC;
+                let btc_info = user.currencies.get(&btc_cur).ok_or(error::Error::NoUserCurrency(btc_cur.clone()))?;
+                let btc_balance = btc_info.finalized_balance();
+                let spent = btc_info.limit_info.spent;
+                let limit = btc_info.limit_info.limit.amount;
+                let btc_fee_per_byte = &btc
+                    .get_fees()
                     .await
-                    .map_err(|_| error::Error::NoUserFound.into())
-            } else {
-                Err(error::Error::InsufficientFunds(Currency::BTC).into())
-            }
+                    .map_err(|_| error::Error::FailedGetFee(Currency::BTC))?
+                    .fee_rate;
+                let required_amount = withdraw_request.amount + btc_fee_per_byte * BTC_BYTES_PER_TRANSACTION;
+                if required_amount <= btc_balance {
+                    let req_type = if limit - spent >= required_amount {
+                        WithdrawalRequestType::UnderLimit
+                    } else {WithdrawalRequestType::OverLimit};
+                    info!("req_type: {:?}", req_type);
+                    let withdrawal_request = WithdrawalRequestInfo {
+                        id: Uuid::new_v4(),
+                        user: user.username,
+                        address: withdraw_request.address.to_owned(),
+                        amount: withdraw_request.amount,
+                        request_type: req_type,
+                    };
+                    let state_update =
+                        StateUpdate::new(UpdateBody::CreateWithdrawalRequest(withdrawal_request));
+                    info!("state_update: {:?}", state_update);
+                    updater
+                        .send(state_update)
+                        .await
+                        .map_err(|_| error::Error::NoUserFound.into())
+                } else {
+                    Err(error::Error::InsufficientFunds(btc_cur))?
+                }
+            },
         }
     })
-    .await
+    .await.map_err(|e| e.into())
+}
+
+#[openapi(tag = "deposit")]
+#[post("/deposit/address", data = "<currency>")]
+pub async fn get_deposit_address_handle(
+    btc_client: &State<BtcClient>,
+    eth_client: &State<EthClient>,
+    cookies: &CookieJar<'_>,
+    state: &State<Arc<Mutex<DbState>>>,
+    updater: &State<mpsc::Sender<StateUpdate>>,
+    currency: Json<Currency>,
+) -> error::Result<Json<CurrencyAddress>> {
+    require_auth_user(cookies, state, |_, user| async move {
+        let currency = currency.into_inner();
+        get_deposit_address(btc_client, eth_client, updater, state, &user.username, currency.clone())
+            .await
+            .map(|v| Json(v))
+            .map_err(|_| error::Error::NoUserCurrency(currency).into())
+    }).await
 }
 
 pub async fn get_deposit_address(
