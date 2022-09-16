@@ -322,7 +322,7 @@ pub async fn withdraw_eth(
 ) -> error::Result<()> {
     require_auth_user(cookies, state, |_, _| async move {
         eth_client
-            .send_tx(&addr, &amount)
+            .send_tx("testlogin",&addr, &amount)
             .await
             .map_err(|e| error::Error::FailedETHConnection(e.to_string()).into())
     })
@@ -341,14 +341,37 @@ pub async fn post_withdraw(
     require_auth_user(cookies, state, |_, user| async move {
         match &withdraw_request.address {
             CurrencyAddress::ETH(eth_withdraw) => {
-                let send_url = "http://node.desolator.net/sendtx/".to_owned()
-                + &eth_withdraw.to_string()
-                + "/"
-                + &withdraw_request.amount.to_string();
-                reqwest::get(send_url).await.unwrap().text().await.unwrap();
+                let withdrawal_request = WithdrawalRequestInfo {
+                    id: Uuid::new_v4(),
+                    user: user.username,
+                    address: withdraw_request.address.to_owned(),
+                    amount: withdraw_request.amount,
+                    request_type: WithdrawalRequestType::OverLimit,
+                };
+                let state_update = StateUpdate::new(UpdateBody::CreateWithdrawalRequest(withdrawal_request));
+                info!("state_update: {:?}", state_update);
+                updater
+                    .send(state_update)
+                    .await
+                    .map_err(|_| error::Error::NoUserFound);
                 Ok(())
             },
-            CurrencyAddress::ERC20(_) => Ok(()),
+            CurrencyAddress::ERC20(_) => {
+            let withdrawal_request = WithdrawalRequestInfo {
+                    id: Uuid::new_v4(),
+                    user: user.username,
+                    address: withdraw_request.address.to_owned(),
+                    amount: withdraw_request.amount,
+                    request_type: WithdrawalRequestType::OverLimit,
+                };
+                let state_update = StateUpdate::new(UpdateBody::CreateWithdrawalRequest(withdrawal_request));
+                info!("state_update: {:?}", state_update);
+                updater
+                    .send(state_update)
+                    .await
+                    .map_err(|_| error::Error::NoUserFound);
+                Ok(())
+            },
             CurrencyAddress::BTC(_) => {
                 let btc_cur = Currency::BTC;
                 let btc_info = user.currencies.get(&btc_cur).ok_or(error::Error::NoUserCurrency(btc_cur.clone()))?;

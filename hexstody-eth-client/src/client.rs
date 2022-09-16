@@ -46,7 +46,7 @@ impl EthClient {
     }
 
     pub async fn allocate_address(&self, user: &str) -> Result<String> {
-        let path = "/allocate_address";
+        let path = "/check_address";
         let endpoint = format!("{}{}/{}", self.server, path, user);
         let request = self.client.get(endpoint).build()?;
         let response = self.client.execute(request)
@@ -88,9 +88,9 @@ impl EthClient {
         Ok(serde_json::from_str(&response)?)
     }
 
-    pub async fn send_tx(&self, addr: &str, amount: &str) -> Result<()> {
-        let path = "/sendtx";
-        let endpoint = format!("{}{}/{}/{}", self.server, path, addr, amount);
+    pub async fn send_tx(&self, user: &str, addr: &str, amount: &str) -> Result<()> {
+        let path = "/senddummy/eth/login/";
+        let endpoint = format!("{}{}/{}/{}/{}", self.server, path, user, addr, amount);
         let request = self.client.get(endpoint).build()?;
         let response = self
             .client
@@ -132,8 +132,8 @@ impl EthClient {
 
     pub async fn get_hot_wallet_balance(&self, currency: &Currency) -> Result<HotBalanceResponse> {
         let path = match currency {
-            Currency::ETH => "/totalethbalance",
-            Currency::ERC20(_) => "/totalerc20balance",
+            Currency::ETH => "/balance/eth/total",
+            Currency::ERC20(_) => "/balance/erc20/total",
             Currency::BTC => return Err(Error::InvalidCurrency(Currency::BTC)),
         };
         let endpoint = format!("{}{}", self.server, path);
