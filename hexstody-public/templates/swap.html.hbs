@@ -9,49 +9,54 @@
 {{/inline}}
 
 {{#*inline "page"}}
-<div>
-    <label>Send</label>
-    <div class="dropdown">
-        <div class="dropdown-trigger">
-            <button class="button header-dropdown header-lang">
-                <span id="currency-selection-from">choose currency</span>
-                <span class="icon">
-                    <i class="mdi mdi-chevron-down"></i>
-                </span>
-            </button>
-        </div>
-        <div class="dropdown-menu">
-            <div id="currency-from" class="dropdown-content">
+
+<div class="container box">
+    <div class="content-row">
+        <label class="mr-2em">From</label>
+        <div class="dropdown mr-2em">
+            <div class="dropdown-trigger">
+                <button class="button">
+                    <span id="currency-selection-from">choose currency</span>
+                    <span class="icon">
+                        <i class="mdi mdi-chevron-down"></i>
+                    </span>
+                </button>
+            </div>
+            <div class="dropdown-menu">
+                <div id="currency-from" class="dropdown-content">
+                </div>
             </div>
         </div>
+        <input type="text" id="from_value" class="p-05em mr-2em">
+        <label id="from_max" class=""></label>
     </div>
-    <label id="from_max"></label>
-    <input>
-</div>
-
-
-<div>
-<label>Receive</label>
-<div class="dropdown">
-    <div class="dropdown-trigger">
-        <button class="button header-dropdown header-lang">
-            <span id="currency-selection-to">choose currency</span>
-            <span class="icon">
-                <i class="mdi mdi-chevron-down"></i>
-            </span>
-        </button>
-    </div>
-    <div class="dropdown-menu">
-        <div id="currency-to" class="dropdown-content">
+    <wbr>
+    <div class="content-row">
+        <label class="mr-2em">To &nbsp; &nbsp;</label>
+        <div class="dropdown mr-2em">
+            <div class="dropdown-trigger">
+                <button class="button">
+                    <span id="currency-selection-to">choose currency</span>
+                    <span class="icon">
+                        <i class="mdi mdi-chevron-down"></i>
+                    </span>
+                </button>
+            </div>
+            <div class="dropdown-menu">
+                <div id="currency-to" class="dropdown-content">
+                </div>
+            </div>
         </div>
+        <input type="text" id="to_value" class="p-05em mr-2em">
+        <label id="to_max" class=""></label>
+    </div>
+    <wbr>
+    <div class="test">
+        <button class="button">Swap</button>
     </div>
 </div>
-<label id="to_max">Max</label>
-<input>
 
-</div>
 
-<button>Swap</button>
 {{/inline}}
 
 {{> base_with_header}}

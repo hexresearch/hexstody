@@ -1,4 +1,4 @@
-import { getAllCurrencies, currencyNameToCurrency , formattedCurrencyValue} from "./common.js";
+import { getAllCurrencies, currencyNameToCurrency, formattedCurrencyValue, currencyPrecision } from "./common.js";
 import { getBalance } from "./request.js";
 
 var cFrom = null;
@@ -16,10 +16,16 @@ function calcAvailableBalance(balanceObj) {
     };
 }
 
+
+
+
 async function init() {
     const allCurrencies = [...getAllCurrencies()];
     const optionTemplate = Handlebars.compile('<a href="#" class="dropdown-item"> {{this}} </a>');
     const renderedOptions = allCurrencies.reduce((acc, opt) => acc + (optionTemplate(opt)), "");
+
+    document.getElementById("from_value").value = 0;
+    document.getElementById("to_value").value = 0;
 
     function initDrop(idPostfix, options) {
         document.getElementById(`currency-${idPostfix}`).innerHTML = options;
@@ -29,10 +35,12 @@ async function init() {
 
         for (const opt of optionElements) {
             opt.addEventListener("click", async event => {
+                document.getElementById("from_value").value = 0;
+                document.getElementById("to_value").value = 0;
                 const currency = event.target.innerText;
                 document.getElementById(`currency-selection-${idPostfix}`).innerText = currency;
 
-                switch(idPostfix){
+                switch (idPostfix) {
                     case "from":
                         cFrom = currency;
                         break;
@@ -41,20 +49,39 @@ async function init() {
                         break;
                 }
 
-                if(cFrom !== null){
+                if (cFrom !== null) {
                     const bal = await getBalance(currencyNameToCurrency(cFrom));
                     const balPretty = formattedCurrencyValue(cFrom, calcAvailableBalance(bal));
                     document.getElementById("from_max").innerText = `Max ${balPretty}`;
-                     if(cTo !== null){
+                    if (cTo !== null) {
                         const ticker = await fetch(`https://min-api.cryptocompare.com/data/price?fsym=${cFrom}&tsyms=${cTo}`).then(r => r.json());
                         const t = formattedCurrencyValue(cTo, calcAvailableBalance(bal) * ticker[cTo]);
                         document.getElementById("to_max").innerText = `Max ${t}`;
-                     }
+                    }
                 }
             });
         }
+
     }
 
+    function tran(c, val, ticker) {
+        switch (c) {
+            case "BTC":
+                return formattedCurrencyValue("BTC", val * ticker * currencyPrecision("BTC"));
+            default:
+                return val * ticker;
+        }
+    };
+
+    document.getElementById("from_value").addEventListener("keyup", async event => {
+        const val = parseFloat(event.target.value);
+        if (val && cFrom && cTo) {
+            const ticker = await fetch(`https://min-api.cryptocompare.com/data/price?fsym=${cFrom}&tsyms=${cTo}`)
+                .then(r => r.json());
+            const to = tran(cFrom, val, ticker[cTo]);
+            document.getElementById("to_value").value = to;
+        }
+    });
     initDrop("from", renderedOptions);
     initDrop("to", renderedOptions);
 
