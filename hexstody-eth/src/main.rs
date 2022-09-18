@@ -28,7 +28,6 @@ use web3::{
     api::{Web3Api}
 };
 
-
 use std::time::Duration;
 use rocket::http::{Status, ContentType};
 use rocket::serde::json::Json;
@@ -132,7 +131,9 @@ async fn rocket() -> _ {
                     handlers::sending::unlock_eth,
                     handlers::sending::oldsend,
                     handlers::sending::senddummy_eth_from_address,
-                    handlers::sending::senddummy_eth_from_login
+                    handlers::sending::senddummy_eth_from_login,
+                    handlers::sending::signsend,
+                    handlers::sending::signsend_erc20
                     ])
                     .mount(
                         "/swagger/",

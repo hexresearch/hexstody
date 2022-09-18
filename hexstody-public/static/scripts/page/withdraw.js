@@ -169,7 +169,7 @@ async function updateActiveTab() {
     sendBtn.onclick = () => trySubmit(
         currencyNameUppercase,
         addressInput.value,
-        Number(sendAmountInput.value),
+        Number(sendAmountInput.value*1000000000000000000),
         validationDisplayEl);
 }
 

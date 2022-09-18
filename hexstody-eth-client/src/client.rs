@@ -89,8 +89,33 @@ impl EthClient {
     }
 
     pub async fn send_tx(&self, user: &str, addr: &str, amount: &str) -> Result<()> {
-        let path = "/senddummy/eth/login/";
+        let path = "/signingsend/eth/login/";
         let endpoint = format!("{}{}/{}/{}/{}", self.server, path, user, addr, amount);
+        let request = self.client.get(endpoint).build()?;
+        let response = self
+            .client
+            .execute(request)
+            .await?
+            .error_for_status()?
+            .text()
+            .await?;
+        debug!("Response {path}: {}", response);
+        Ok(())
+    }
+
+    pub async fn send_tx_erc20(&self
+                            , user: &str
+                            , addr: &str
+                            , token_addr: &str
+                            , amount: &str) -> Result<()> {
+        let path = "/signingsend/erc20/login/";
+        let endpoint = format!("{}{}/{}/{}/{}/{}"
+                            , self.server
+                            , path
+                            , user
+                            , addr
+                            , token_addr
+                            , amount);
         let request = self.client.get(endpoint).build()?;
         let response = self
             .client

@@ -23,6 +23,7 @@ pub fn estimate_eth_tx_gas(cfgp: &NodeConfig,
 pub fn send_eth_tx(cfgp: &NodeConfig,
                     tx: &EthTransactionNoData) -> Result<String, ureq::Error> {
     let cfg = cfgp.clone();
+
     let resp = ureq::post(&cfg.naddr())
         .send_json(ureq::json!({
           "jsonrpc": "2.0",

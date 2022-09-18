@@ -63,7 +63,7 @@ pub async fn update_results_worker(
                         info!("===============<UPDATE>================");
                         info!("{:}",&id);
                         info!("{:}",req.user);
-                        match(req.address.clone()){
+                        match req.address.clone() {
                             CurrencyAddress::BTC(a) => {
                                 info!("===============<BTC>================");
                                 info!("{:}",a);
@@ -121,7 +121,23 @@ pub async fn update_results_worker(
                             },
                             CurrencyAddress::ERC20(a) => {
                                 info!("===============<ERC20>================");
-                                info!("{:}",a.token);
+                                info!("{:}",a.token.contract.clone());
+                                match eth_client.send_tx_erc20(&req.user.clone(),&a.account.account,&a.token.contract,&cw.amount.to_string()).await {
+                                    Ok(resp) => {
+                                        info!("withdraw_eth_resp: {:?}", resp);
+                                    }
+                                    Err(e) => {
+                                        debug!("Failed to post tx: {:?}", e);
+                                        let info = WithdrawalRejectInfo {
+                                            id,
+                                            reason: format!("{}", e),
+                                        };
+                                        let bod = UpdateBody::WithdrawalRequestNodeRejected(info);
+                                        if let Err(e) = update_sender.send(StateUpdate::new(bod)).await {
+                                            debug!("Failed to send update with node rejection: {}", e);
+                                        };
+                                    }
+                                }
                                 info!("===============</ERC20>================");
                             },
                         }

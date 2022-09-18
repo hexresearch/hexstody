@@ -323,7 +323,7 @@ pub async fn withdraw_eth(
     require_auth_user(cookies, state, |_, _| async move {
         eth_client
             .send_tx("testlogin",&addr, &amount)
-            .awaiыt
+            .await
             .map_err(|e| error::Error::FailedETHConnection(e.to_string()).into())
     })
     .await
