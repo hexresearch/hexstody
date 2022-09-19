@@ -731,3 +731,36 @@ pub struct ConfigChangeRequest {
     pub phone: Option<String>,
     pub tg_name: Option<String>,
 }
+
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct ExchangeRequest {
+    pub currency_from: Currency,
+    pub currency_to: Currency,
+    pub amount: u64
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy, JsonSchema)]
+pub enum ExchangeStatus{
+    Completed,
+    Rejected,
+    InProgress { confirmations: i16, rejections: i16 },
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct ExchangeOrder {
+    pub user: String,
+    pub id: Uuid,
+    pub currency_from: Currency,
+    pub currency_to: Currency,
+    pub amount: u64,
+    pub status: ExchangeStatus
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct ExchangeConfirmationData {
+    pub user: String,
+    pub id: Uuid,
+    pub currency_from: Currency,
+    pub currency_to: Currency,
+    pub amount: u64
+}

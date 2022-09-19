@@ -419,7 +419,8 @@ pub async fn serve_api(
                 set_user_public_key,
                 get_challenge,
                 redeem_challenge,
-                get_deposit_address_handle
+                get_deposit_address_handle,
+                order_exchange
             ],
         )
         .mount(

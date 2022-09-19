@@ -8,9 +8,10 @@ use hexstody_api::domain::{
 };
 use hexstody_api::error;
 use hexstody_api::types::{
-    self as api, BalanceItem, Erc20HistUnitU, GetTokensResponse, TokenActionRequest, TokenInfo,
+    self as api, BalanceItem, Erc20HistUnitU, GetTokensResponse, TokenActionRequest, TokenInfo, ExchangeRequest,
 };
 use hexstody_btc_client::client::{BtcClient, BTC_BYTES_PER_TRANSACTION};
+use hexstody_db::state::exchange::ExchangeOrderUpd;
 use hexstody_db::state::{State as DbState, WithdrawalRequestType};
 use hexstody_db::state::{Transaction, WithdrawalRequest, REQUIRED_NUMBER_OF_CONFIRMATIONS};
 use hexstody_db::update::deposit::DepositAddress;
@@ -652,4 +653,27 @@ pub async fn disable_token(
         }
     })
     .await
+}
+
+#[openapi(tag = "wallet")]
+#[post("/exchange/order", data = "<req>")]
+pub async fn order_exchange(
+    cookies: &CookieJar<'_>,
+    state: &State<Arc<Mutex<DbState>>>,
+    updater: &State<mpsc::Sender<StateUpdate>>,
+    req: Json<ExchangeRequest>,
+) -> error::Result<()> {
+    require_auth_user(cookies, state, |_, user| async move {
+        let ExchangeRequest { currency_from, currency_to, amount } = req.into_inner();
+        let cinfo = user.currencies.get(&currency_from).ok_or(error::Error::NoUserCurrency(currency_from.clone()))?;
+        let balance = cinfo.balance();
+        if balance < amount {
+            return Err(error::Error::InsufficientFunds(currency_from).into())
+        } else {
+            let id = Uuid::new_v4();
+            let req = ExchangeOrderUpd{user: user.username, currency_from, currency_to, amount, id };
+            let upd = StateUpdate::new(UpdateBody::ExchangeRequest(req));
+            updater.send(upd).await.map_err(|e| error::Error::GenericError(e.to_string()).into())
+        }
+    }).await
 }

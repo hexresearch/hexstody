@@ -3,6 +3,7 @@ pub mod network;
 pub mod transaction;
 pub mod user;
 pub mod withdraw;
+pub mod exchange;
 
 pub use btc::*;
 use chrono::prelude::*;
@@ -22,6 +23,8 @@ use crate::update::signup::SignupAuth;
 use crate::update::withdrawal::{WithdrawCompleteInfo, WithdrawalRejectInfo};
 use crate::update::misc::{TokenUpdate, TokenAction, InviteRec, SetLanguage, ConfigUpdateData, PasswordChangeUpd, SetPublicKey};
 
+use self::exchange::{ExchangeOrderUpd, ExchangeOrder, ExchangeDecision};
+
 use super::update::btc::BtcTxCancel;
 use super::update::deposit::DepositAddress;
 use super::update::signup::{SignupInfo, UserId};
@@ -30,7 +33,7 @@ use super::update::withdrawal::{
 };
 use super::update::{results::UpdateResult, StateUpdate, UpdateBody};
 use hexstody_api::domain::*;
-use hexstody_api::types::{WithdrawalRequestDecisionType, Invite, LimitChangeStatus, LimitChangeDecisionType, SignatureData, LimitInfo, LimitSpan};
+use hexstody_api::types::{WithdrawalRequestDecisionType, Invite, LimitChangeStatus, LimitChangeDecisionType, SignatureData, LimitInfo, LimitSpan, ExchangeStatus};
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct State {
@@ -85,7 +88,9 @@ pub enum StateUpdateErr {
     #[error("Limit request already rejected")]
     LimitAlreadyRejected,
     #[error("The spending is over the limit")]
-    LimitOverflow
+    LimitOverflow,
+    #[error("User {0} doesn't have enough of currency {1}")]
+    InsufficientFunds(UserId, Currency)
 }
 
 impl State {
@@ -219,6 +224,16 @@ impl State {
             },
             UpdateBody::SetPublicKey(req) => {
                 self.set_user_public_key(req)?;
+                self.last_changed = update.created;
+                Ok(None)
+            },
+            UpdateBody::ExchangeRequest(req) => {
+                self.add_exchange_request(req)?;
+                self.last_changed = update.created;
+                Ok(None)
+            },
+            UpdateBody::ExchangeDecision(req) => {
+                self.apply_exchange_decision(req)?;
                 self.last_changed = update.created;
                 Ok(None)
             },
@@ -782,6 +797,31 @@ impl State {
             },
             None => Err(StateUpdateErr::UserNotFound(user)),
         }
+    }
+
+    fn add_exchange_request(&mut self, req: ExchangeOrderUpd) -> Result<(), StateUpdateErr> {
+        let ExchangeOrderUpd { user, currency_from, currency_to, amount, id } = req;
+        let uinfo = self.users.get_mut(&user).ok_or(StateUpdateErr::UserNotFound(user.clone()))?;
+        let cinfo = uinfo.currencies.get_mut(&currency_from).ok_or(StateUpdateErr::UserMissingCurrency(user.clone(), currency_from.clone()))?;
+        if cinfo.balance() < amount {
+            return Err(StateUpdateErr::InsufficientFunds(user.clone(), currency_from.clone()))
+        }
+        let order = ExchangeOrder {
+            id: id.clone(),
+            user: user,
+            currency_from: currency_from,
+            currency_to: currency_to,
+            amount: amount,
+            status: ExchangeStatus::InProgress { confirmations: 0, rejections: 0 },
+            confirmations: Vec::new(),
+            rejections: Vec::new() 
+        };
+        cinfo.exchange_requests.insert(id, order);
+        Ok(())
+    }
+
+    fn apply_exchange_decision(&self, req: ExchangeDecision) -> Result<(), StateUpdateErr> {
+        todo!()
     }
 }
 

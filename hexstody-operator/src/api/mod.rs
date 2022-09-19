@@ -19,12 +19,12 @@ use hexstody_api::{
     types::{
         ConfirmationData, HotBalanceResponse, Invite, InviteRequest, InviteResp,
         LimitChangeDecisionType, LimitChangeOpResponse, LimitConfirmationData, SignatureData,
-        WithdrawalRequest, WithdrawalRequestDecisionType,
+        WithdrawalRequest, WithdrawalRequestDecisionType, ExchangeConfirmationData,
     },
 };
 use hexstody_btc_client::client::BtcClient;
 use hexstody_db::{
-    state::{State as HexstodyState, REQUIRED_NUMBER_OF_CONFIRMATIONS},
+    state::{State as HexstodyState, REQUIRED_NUMBER_OF_CONFIRMATIONS, exchange::ExchangeDecisionType},
     update::limit::LimitChangeData,
     update::{
         misc::InviteRec, StateUpdate,
@@ -382,6 +382,68 @@ async fn reject_limits(
         .map_err(|e| error::Error::InternalServerError(format!("{:?}", e)).into())
 }
 
+#[openapi(skip)]
+#[post("/exchange/confirm", data="<confirmation_data>")]
+async fn confirm_exchange(
+    update_sender: &RocketState<mpsc::Sender<StateUpdate>>,
+    signature_data: SignatureData,
+    confirmation_data: Json<ExchangeConfirmationData>,
+    config: &RocketState<SignatureVerificationConfig>,
+) -> error::Result<()> {
+    let confirmation_data = confirmation_data.into_inner();
+    guard_op_signature(
+        &config,
+        uri!(confirm_exchange).to_string(),
+        signature_data,
+        &confirmation_data,
+    )?;
+    let url = [config.domain.clone(), uri!(confirm_exchange).to_string()].join("");
+    let state_update = StateUpdate::new(UpdateBody::ExchangeDecision(
+        (
+            confirmation_data,
+            signature_data,
+            ExchangeDecisionType::Confirm,
+            url,
+        )
+            .into(),
+    ));
+    update_sender
+        .send(state_update)
+        .await
+        .map_err(|e| error::Error::InternalServerError(format!("{:?}", e)).into())
+}
+
+#[openapi(skip)]
+#[post("/exchange/reject", data="<confirmation_data>")]
+async fn reject_exchange(
+    update_sender: &RocketState<mpsc::Sender<StateUpdate>>,
+    signature_data: SignatureData,
+    confirmation_data: Json<ExchangeConfirmationData>,
+    config: &RocketState<SignatureVerificationConfig>,
+) -> error::Result<()> {
+    let confirmation_data = confirmation_data.into_inner();
+    guard_op_signature(
+        &config,
+        uri!(reject_exchange).to_string(),
+        signature_data,
+        &confirmation_data,
+    )?;
+    let url = [config.domain.clone(), uri!(reject_exchange).to_string()].join("");
+    let state_update = StateUpdate::new(UpdateBody::ExchangeDecision(
+        (
+            confirmation_data,
+            signature_data,
+            ExchangeDecisionType::Reject,
+            url,
+        )
+            .into(),
+    ));
+    update_sender
+        .send(state_update)
+        .await
+        .map_err(|e| error::Error::InternalServerError(format!("{:?}", e)).into())
+}
+
 pub async fn serve_api(
     pool: Pool,
     state: Arc<Mutex<HexstodyState>>,
@@ -414,7 +476,9 @@ pub async fn serve_api(
                 list_ops_invites,               // GET:  /invite/listmy 
                 get_all_changes,                // GET:  /changes 
                 confirm_limits,                 // POST: /limits/confirm 
-                reject_limits                   // POST: /limits/reject 
+                reject_limits,                  // POST: /limits/reject 
+                confirm_exchange,               // POST: /exchange/confirm
+                reject_exchange,                // POST: /exchange/reject
             ],
         )
         .mount(

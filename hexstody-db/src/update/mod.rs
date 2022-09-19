@@ -13,6 +13,8 @@ use std::fmt;
 use std::str::FromStr;
 use thiserror::Error;
 
+use crate::state::exchange::{ExchangeOrderUpd, ExchangeDecision};
+
 use self::btc::{BestBtcBlock, BtcTxCancel};
 use self::deposit::DepositAddress;
 use self::limit::{LimitChangeUpd, LimitCancelData, LimitChangeDecision};
@@ -81,7 +83,11 @@ pub enum UpdateBody {
     /// Change user's password
     PasswordChange(PasswordChangeUpd),
     /// Set user's public key
-    SetPublicKey(SetPublicKey)
+    SetPublicKey(SetPublicKey),
+    /// Request an exchange from operators
+    ExchangeRequest(ExchangeOrderUpd),
+    /// Exchange decision
+    ExchangeDecision(ExchangeDecision)
 }
 
 impl UpdateBody {
@@ -107,6 +113,8 @@ impl UpdateBody {
             UpdateBody::ConfigUpdate(_) => UpdateTag::ConfigUpdate,
             UpdateBody::PasswordChange(_) => UpdateTag::PasswordChange,
             UpdateBody::SetPublicKey(_) => UpdateTag::SetPublicKey,
+            UpdateBody::ExchangeRequest(_) => UpdateTag::ExchangeRequest,
+            UpdateBody::ExchangeDecision(_) => UpdateTag::ExchangeDecision,
         }
     }
 
@@ -132,6 +140,8 @@ impl UpdateBody {
             UpdateBody::ConfigUpdate(v) => serde_json::to_value(v),
             UpdateBody::PasswordChange(v) => serde_json::to_value(v),
             UpdateBody::SetPublicKey(v) => serde_json::to_value(v),
+            UpdateBody::ExchangeRequest(v) => serde_json::to_value(v),
+            UpdateBody::ExchangeDecision(v) => serde_json::to_value(v),
         }
     }
 }
@@ -158,6 +168,8 @@ pub enum UpdateTag {
     ConfigUpdate,
     PasswordChange,
     SetPublicKey,
+    ExchangeRequest,
+    ExchangeDecision,
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -194,6 +206,8 @@ impl fmt::Display for UpdateTag {
             UpdateTag::ConfigUpdate => write!(f, "user config update"),
             UpdateTag::PasswordChange => write!(f, "password change"),
             UpdateTag::SetPublicKey => write!(f, "set public key"),
+            UpdateTag::ExchangeRequest => write!(f, "exchange request"),
+            UpdateTag::ExchangeDecision => write!(f, "exchange decision"),
         }
     }
 }
@@ -223,6 +237,8 @@ impl FromStr for UpdateTag {
             "user config update" => Ok(UpdateTag::ConfigUpdate),
             "password change" => Ok(UpdateTag::PasswordChange),
             "set public key" => Ok(UpdateTag::SetPublicKey),
+            "exchange request" => Ok(UpdateTag::ExchangeRequest),
+            "exchange decision" => Ok(UpdateTag::ExchangeDecision),
             _ => Err(UnknownUpdateTag(s.to_owned())),
         }
     }
@@ -284,6 +300,8 @@ impl UpdateTag {
             UpdateTag::ConfigUpdate => Ok(UpdateBody::ConfigUpdate(serde_json::from_value(value)?)),
             UpdateTag::PasswordChange => Ok(UpdateBody::PasswordChange(serde_json::from_value(value)?)),
             UpdateTag::SetPublicKey => Ok(UpdateBody::SetPublicKey(serde_json::from_value(value)?)),
+            UpdateTag::ExchangeRequest => Ok(UpdateBody::ExchangeRequest(serde_json::from_value(value)?)),
+            UpdateTag::ExchangeDecision => Ok(UpdateBody::ExchangeDecision(serde_json::from_value(value)?)),
         }
     }
 }
