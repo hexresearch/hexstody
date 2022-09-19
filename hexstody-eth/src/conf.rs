@@ -24,7 +24,7 @@ impl ::std::default::Default for NodeConfig {
     fn default() -> Self { Self { nodeurl: "http://localhost".into()
                                 , nodeport:8545
                                 , dbname:"accs.db".into()
-                                , dburl:"postgres://hexstody:hexstody@localhost:5432/hexstodyeth".into()
+                                , dburl:"postgres://hexstody:hexstody@localhost:5432/hexstody".into()
                                 , etherscan_api_key:"P8AXZC7V71IJA4XPMFEIIYX9S2S4D8U3T6".into()
                                 , etherscan_api_prefix:"api-ropsten".into()
                                 , alchemy_api_key:"BZqEzKfIa6KJwWUYEum4ENKcqwMpPm7Z".into()
