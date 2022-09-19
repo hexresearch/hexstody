@@ -19,7 +19,7 @@ use hexstody_api::{
     types::{
         ConfirmationData, HotBalanceResponse, Invite, InviteRequest, InviteResp,
         LimitChangeDecisionType, LimitChangeOpResponse, LimitConfirmationData, SignatureData,
-        WithdrawalRequest, WithdrawalRequestDecisionType, ExchangeConfirmationData,
+        WithdrawalRequest, WithdrawalRequestDecisionType, ExchangeConfirmationData, ExchangeFilter,
     },
 };
 use hexstody_btc_client::client::BtcClient;
@@ -444,6 +444,25 @@ async fn reject_exchange(
         .map_err(|e| error::Error::InternalServerError(format!("{:?}", e)).into())
 }
 
+/// # Get all supported currencies
+#[openapi(skip)]
+#[get("/exchange/list?<filter>")]
+async fn get_exchange_requests(
+    state: &RocketState<Arc<Mutex<HexstodyState>>>,
+    signature_data: SignatureData,
+    config: &RocketState<SignatureVerificationConfig>,
+    filter: ExchangeFilter
+) -> error::Result<Json<Vec<hexstody_api::types::ExchangeOrder>>> {
+    guard_op_signature_nomsg(
+        &config,
+        uri!(get_exchange_requests(&filter)).to_string(),
+        signature_data,
+    )?;
+    let state = state.lock().await;
+    let res = state.get_exchange_requests(filter);
+    Ok(Json(res))
+}
+
 pub async fn serve_api(
     pool: Pool,
     state: Arc<Mutex<HexstodyState>>,
@@ -479,6 +498,7 @@ pub async fn serve_api(
                 reject_limits,                  // POST: /limits/reject 
                 confirm_exchange,               // POST: /exchange/confirm
                 reject_exchange,                // POST: /exchange/reject
+                get_exchange_requests,          // GET:  /exchange/list?filter= <all, pending, completed, rejected>
             ],
         )
         .mount(

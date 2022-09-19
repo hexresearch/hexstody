@@ -33,7 +33,10 @@ use super::update::withdrawal::{
 };
 use super::update::{results::UpdateResult, StateUpdate, UpdateBody};
 use hexstody_api::domain::*;
-use hexstody_api::types::{WithdrawalRequestDecisionType, Invite, LimitChangeStatus, LimitChangeDecisionType, SignatureData, LimitInfo, LimitSpan, ExchangeStatus};
+use hexstody_api::types::{
+    WithdrawalRequestDecisionType, Invite, LimitChangeStatus, 
+    LimitChangeDecisionType, SignatureData, LimitInfo, LimitSpan, 
+    ExchangeStatus, ExchangeFilter, ExchangeOrder as ExchangeApiOrder};
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct State {
@@ -823,6 +826,19 @@ impl State {
     fn apply_exchange_decision(&self, req: ExchangeDecision) -> Result<(), StateUpdateErr> {
         todo!()
     }
+
+    pub fn get_exchange_requests(&self, filter: ExchangeFilter) -> Vec<ExchangeApiOrder>{
+        self.users.values().flat_map(|u| 
+            u.currencies.values().flat_map(|c| 
+                c.exchange_requests.values().filter_map(|eo| match filter {
+                    ExchangeFilter::All => Some(eo.clone().into()),
+                    ExchangeFilter::Completed => if eo.is_finalized() {Some(eo.clone().into())} else {None},
+                    ExchangeFilter::Rejected => if eo.is_rejected() {Some(eo.clone().into())} else {None},
+                    ExchangeFilter::Pending => if eo.is_pending() {Some(eo.clone().into())} else {None},
+                })
+            )
+        ).collect()
+    } 
 }
 
 impl Default for State {

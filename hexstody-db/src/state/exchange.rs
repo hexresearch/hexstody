@@ -33,6 +33,16 @@ impl ExchangeOrder {
     pub fn is_rejected(&self) -> bool {
         matches!(self.status, ExchangeStatus::Rejected)
     }
+    pub fn is_pending(&self) -> bool {
+        matches!(self.status, ExchangeStatus::InProgress {..})
+    }
+}
+
+impl From<ExchangeOrder> for hexstody_api::types::ExchangeOrder{
+    fn from(eo: ExchangeOrder) -> Self {
+        let ExchangeOrder { id, user, currency_from, currency_to, amount, status, .. } = eo;
+        hexstody_api::types::ExchangeOrder { user, id, currency_from, currency_to, amount, status }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
