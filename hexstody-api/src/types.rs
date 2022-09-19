@@ -16,7 +16,7 @@ use rocket_okapi::{
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::domain::CurrencyTxId;
+use crate::domain::{CurrencyTxId, Email, PhoneNumber, TgName};
 
 use super::domain::currency::{BtcAddress, Currency, CurrencyAddress, Erc20Token};
 
@@ -138,6 +138,16 @@ pub struct UserData {
     pub historyTokens: Vec<Erc20TokenHistory>,
     pub balanceEth: String,
     pub balanceTokens: Vec<Erc20TokenBalance>,
+}
+
+#[serde(rename_all = "camelCase")]
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct UserInfo {
+    pub first_name: Option<String>,
+    pub last_name: Option<String>,
+    pub email: Option<Email>,
+    pub phone: Option<PhoneNumber>,
+    pub tg_name: Option<TgName>,
 }
 
 #[allow(non_snake_case)]

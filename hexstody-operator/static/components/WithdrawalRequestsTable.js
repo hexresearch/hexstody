@@ -3,6 +3,7 @@ import {
     getRequiredConfirmations,
     confirmWithdrawalRequest,
     rejectWithdrawalRequest,
+    getUserInfo,
     copyToClipboard,
     getCurrencyName,
     formatCurrencyValue,
@@ -13,7 +14,12 @@ import {
     truncateMiddle,
 } from "../scripts/common.js"
 
+import { Modal } from "./Modal.js"
+
 export const WithdrawalRequestsTable = {
+    components: {
+        Modal
+    },
     template:
         /*html*/
         `<div>
@@ -73,12 +79,26 @@ export const WithdrawalRequestsTable = {
                             <div class="action-buttons-wrapper flex-row">
                                 <button class="button primary" @click="confirmRequest(withdrawalRequest)" :disabled="withdrawalRequest.confirmation_status.type !== 'InProgress'">Confirm</button>
                                 <button class="button error" @click="rejectRequest(withdrawalRequest)" :disabled="withdrawalRequest.confirmation_status.type !== 'InProgress'">Reject</button>
-                                <!-- <button class="button" @click="showRequestDetails(withdrawalRequest)">Details</button> -->
+                                <button class="button" @click="showRequestDetails(withdrawalRequest)">Details</button>
                             </div>
                         </td>
                     </tr>
                 </tbody>
             </table>
+            <Modal v-show="isModalVisible" @close="closeModal">
+                <template v-slot:header>
+                    <h4>Withdrawal request details</h4>
+                </template>
+                <template v-slot:body v-if="userInfo">
+                    <p><b>First name:</b> {{userInfo.firstName}}</p>
+                    <p><b>Last name:</b> {{userInfo.lastName}}</p>
+                    <p><b>Email:</b> {{userInfo.email.email}}</p>
+                    <p><b>Phone:</b> {{userInfo.phone.number}}</p>
+                    <p><b>Telegram:</b> {{userInfo.tgName}}</p>
+                </template>
+                <template v-slot:footer>
+                </template>
+            </Modal>
         </div>`,
     methods: {
         formatCurrencyValue,
@@ -121,14 +141,25 @@ export const WithdrawalRequestsTable = {
             rejectWithdrawalRequest(this.privateKeyJwk, this.publicKeyDer, confirmationData)
             this.fetchData()
         },
-        showRequestDetails(withdrawalRequest) {
-            // show additional info about user and request
+        async showRequestDetails(withdrawalRequest) {
+            const userInfoResponse = await getUserInfo(this.privateKeyJwk, this.publicKeyDer, withdrawalRequest.user)
+            let userInfo = await userInfoResponse.json()
+            this.userInfo = userInfo
+            this.showModal()
         },
+        showModal() {
+            this.isModalVisible = true
+        },
+        closeModal() {
+            this.isModalVisible = false
+        }
     },
     data() {
         return {
             withdrawalRequests: [],
             requiredConfirmations: null,
+            isModalVisible: false,
+            userInfo: null
         }
     },
     watch: {

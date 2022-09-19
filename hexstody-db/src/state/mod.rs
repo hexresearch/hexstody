@@ -112,6 +112,10 @@ impl State {
             .map(|(uid, _)| uid.clone())
     }
 
+    pub fn get_user_by_id(&self, username: &str) -> Option<&UserInfo> {
+        self.users.get(username)
+    }
+
     pub fn find_withdrawal_by_tx_id(&self, txid: CurrencyTxId) -> Option<WithdrawalRequestId> {
         self.users
             .iter()

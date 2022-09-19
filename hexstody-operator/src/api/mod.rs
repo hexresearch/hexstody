@@ -16,7 +16,7 @@ use hexstody_api::{
     types::{
         ConfirmationData, HotBalanceResponse, Invite, InviteRequest, InviteResp,
         LimitChangeDecisionType, LimitChangeOpResponse, LimitConfirmationData, SignatureData,
-        WithdrawalRequest, WithdrawalRequestDecisionType,
+        UserInfo, WithdrawalRequest, WithdrawalRequestDecisionType,
     },
 };
 use hexstody_btc_client::client::BtcClient;
@@ -69,6 +69,33 @@ async fn get_required_confrimations(
         signature_data,
     )?;
     Ok(Json(REQUIRED_NUMBER_OF_CONFIRMATIONS))
+}
+
+/// # Get user information by user ID
+#[openapi(tag = "User")]
+#[get("/user/info/<user_id>")]
+async fn get_user_info(
+    signature_data: SignatureData,
+    config: &RocketState<SignatureVerificationConfig>,
+    state: &RocketState<Arc<Mutex<HexstodyState>>>,
+    user_id: &str,
+) -> error::Result<Json<UserInfo>> {
+    guard_op_signature_nomsg(
+        &config,
+        uri!(get_user_info(user_id)).to_string(),
+        signature_data,
+    )?;
+    let hexstody_state = state.lock().await;
+    let user = hexstody_state
+        .get_user_by_id(user_id)
+        .ok_or(error::Error::NoUserFound)?;
+    Ok(Json(UserInfo {
+        first_name: None,
+        last_name: None,
+        email: user.config.email.clone(),
+        phone: user.config.phone.clone(),
+        tg_name: user.config.tg_name.clone(),
+    }))
 }
 
 /// # Hot wallet balance
@@ -399,6 +426,7 @@ pub async fn serve_api(
         .mount(
             "/",
             openapi_get_routes![
+                get_user_info,              // GET: /user/info/<user_id>
                 list,                       // GET:  /request/${currency.toLowerCase()}
                 confirm,                    // POST: /confirm',
                 reject,                     // POST: /reject',
