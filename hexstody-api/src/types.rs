@@ -140,8 +140,8 @@ pub struct UserData {
     pub balanceTokens: Vec<Erc20TokenBalance>,
 }
 
-#[serde(rename_all = "camelCase")]
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct UserInfo {
     pub first_name: Option<String>,
     pub last_name: Option<String>,
