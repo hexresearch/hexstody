@@ -35,11 +35,18 @@
 }
 
 .action-buttons-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
     flex-wrap: wrap;
 }
 
 .action-buttons-wrapper .button {
     margin: 0px !important;
+}
+
+.justify-center {
+    justify-content: center;
 }
 
 /* Loading circle */
@@ -85,4 +92,8 @@
 .modal-fade-enter-active,
 .modal-fade-leave-active {
     transition: opacity .2s ease;
+}
+
+.table-container {
+    overflow: auto;
 }

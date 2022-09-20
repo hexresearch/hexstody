@@ -9,63 +9,67 @@ export const Invites = {
                 <input type="text" id="invite-input" :class="{ 'error': hasError }" v-model="label">
                 <div v-if="hasError" class="text-error">{{errorMessage}}</div>
             </div>
-            <div class="action-buttons-wrapper flex-row">
+            <div class="action-buttons-wrapper">
                 <button class="button" @click='generateInvite'>Generate new invite</button>
                 <button class="button" @click='toggleInvites'>{{showInvites ? 'Hide invites' : 'Show invites'}}</button>
             </div>
             <div v-if='invite'>
                 <h4>Generated invite</h4>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Label</th>
-                            <th>Invite</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>{{invite.label}}</td>
-                            <td>
-                                <div class="flex-row">
-                                    {{invite.invite.invite}}
-                                    <tippy trigger="click" :hide-on-click="false" @show="hideTooltip">
-                                        Copied
-                                    </tippy>
-                                    <button class="button clear icon-only" @click='copyToClipboard(invite.invite.invite)' v-tippy>
-                                        <span class="mdi mdi-content-copy"></span>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Label</th>
+                                <th>Invite</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>{{invite.label}}</td>
+                                <td>
+                                    <div class="flex-row">
+                                        {{invite.invite.invite}}
+                                        <tippy trigger="click" :hide-on-click="false" @show="hideTooltip">
+                                            Copied
+                                        </tippy>
+                                        <button class="button clear icon-only" @click='copyToClipboard(invite.invite.invite)' v-tippy>
+                                            <span class="mdi mdi-content-copy"></span>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
             <div v-if='showInvites'>
                 <h4>Previously generated invites</h4>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Label</th>
-                            <th>Invite</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="invite in invites" :key="invite">
-                            <td>{{invite.label}}:</td>
-                            <td>
-                                <div class="flex-row">
-                                    {{invite.invite.invite}}
-                                    <tippy trigger="click" :hide-on-click="false" @show="hideTooltip">
-                                        Copied
-                                    </tippy>
-                                    <button class="button clear icon-only" @click='copyToClipboard(invite.invite.invite)' v-tippy>
-                                        <span class="mdi mdi-content-copy"></span>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Label</th>
+                                <th>Invite</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="invite in invites" :key="invite">
+                                <td>{{invite.label}}:</td>
+                                <td>
+                                    <div class="flex-row">
+                                        {{invite.invite.invite}}
+                                        <tippy trigger="click" :hide-on-click="false" @show="hideTooltip">
+                                            Copied
+                                        </tippy>
+                                        <button class="button clear icon-only" @click='copyToClipboard(invite.invite.invite)' v-tippy>
+                                            <span class="mdi mdi-content-copy"></span>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>`,
     data() {

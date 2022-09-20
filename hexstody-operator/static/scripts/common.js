@@ -125,7 +125,7 @@ export function formatWithdrawalRequestStatus(status, requiredConfirmations) {
         case "OpRejected":
             return "Rejected by operators"
         case "NodeRejected":
-            return "Rejected by node (" + status.reason + ")"
+            return "Rejected by node"
         case "Completed":
             return "Completed"
         default:
