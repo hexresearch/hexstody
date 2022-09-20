@@ -23,7 +23,7 @@ use crate::update::signup::SignupAuth;
 use crate::update::withdrawal::{WithdrawCompleteInfo, WithdrawalRejectInfo};
 use crate::update::misc::{TokenUpdate, TokenAction, InviteRec, SetLanguage, ConfigUpdateData, PasswordChangeUpd, SetPublicKey};
 
-use self::exchange::{ExchangeOrderUpd, ExchangeOrder, ExchangeDecision};
+use self::exchange::{ExchangeOrderUpd, ExchangeOrder, ExchangeDecision, ExchangeDecisionType};
 
 use super::update::btc::BtcTxCancel;
 use super::update::deposit::DepositAddress;
@@ -93,7 +93,15 @@ pub enum StateUpdateErr {
     #[error("The spending is over the limit")]
     LimitOverflow,
     #[error("User {0} doesn't have enough of currency {1}")]
-    InsufficientFunds(UserId, Currency)
+    InsufficientFunds(UserId, Currency),
+    #[error("User {0} doesn't have outstanding exchange request for {1}")]
+    UserMissingExchange(String, Currency),
+    #[error("Exchange request already signed by the operator")]
+    ExchangeAlreadySigned,
+    #[error("Exchange request already confirmed and finalized")]
+    ExchangeAlreadyConfirmed,
+    #[error("Exchange request already rejected")]
+    ExchangeAlreadyRejected,
 }
 
 impl State {
@@ -803,18 +811,19 @@ impl State {
     }
 
     fn add_exchange_request(&mut self, req: ExchangeOrderUpd) -> Result<(), StateUpdateErr> {
-        let ExchangeOrderUpd { user, currency_from, currency_to, amount, id } = req;
+        let ExchangeOrderUpd { user, currency_from, currency_to, amount_from, amount_to, id } = req;
         let uinfo = self.users.get_mut(&user).ok_or(StateUpdateErr::UserNotFound(user.clone()))?;
         let cinfo = uinfo.currencies.get_mut(&currency_from).ok_or(StateUpdateErr::UserMissingCurrency(user.clone(), currency_from.clone()))?;
-        if cinfo.balance() < amount {
+        if cinfo.balance() < amount_from {
             return Err(StateUpdateErr::InsufficientFunds(user.clone(), currency_from.clone()))
         }
         let order = ExchangeOrder {
             id: id.clone(),
-            user: user,
-            currency_from: currency_from,
-            currency_to: currency_to,
-            amount: amount,
+            user,
+            currency_from,
+            currency_to,
+            amount_from,
+            amount_to,
             status: ExchangeStatus::InProgress { confirmations: 0, rejections: 0 },
             confirmations: Vec::new(),
             rejections: Vec::new() 
@@ -823,8 +832,43 @@ impl State {
         Ok(())
     }
 
-    fn apply_exchange_decision(&self, req: ExchangeDecision) -> Result<(), StateUpdateErr> {
-        todo!()
+    pub const EXCHANGE_NUMBER_OF_CONFIRMATIONS: i16 = 1;
+
+    fn apply_exchange_decision(&mut self, req: ExchangeDecision) -> Result<(), StateUpdateErr> {
+        let user = req.user;
+        let currency_from = req.currency_from;
+        let uinfo = self.users.get_mut(&user).ok_or(StateUpdateErr::UserNotFound(user.clone()))?;
+        let cinfo = uinfo.currencies.get_mut(&currency_from).ok_or(StateUpdateErr::UserMissingCurrency(user.clone(), currency_from.clone()))?;
+        let exchange = cinfo.exchange_requests.get_mut(&req.id).ok_or(StateUpdateErr::UserMissingExchange(user.clone(), currency_from.clone()))?;
+        let sdata = SignatureData{ signature: req.signature, nonce: req.nonce, public_key: req.public_key };
+        match exchange.status {
+            ExchangeStatus::Completed => Err(StateUpdateErr::ExchangeAlreadyConfirmed),
+            ExchangeStatus::Rejected => Err(StateUpdateErr::ExchangeAlreadyRejected),
+            ExchangeStatus::InProgress { confirmations, rejections } => match req.decision {
+                ExchangeDecisionType::Confirm => if exchange.has_confirmed(req.public_key) {
+                    Err(StateUpdateErr::ExchangeAlreadyConfirmed)
+                } else {
+                    exchange.confirmations.push(sdata);
+                    if confirmations + 1 - rejections >= State::EXCHANGE_NUMBER_OF_CONFIRMATIONS {
+                        // TODO: Implement actual exchange
+                    } else {
+                        exchange.status = ExchangeStatus::InProgress { confirmations: confirmations + 1, rejections: rejections }
+                    }
+                    Ok(())
+                },
+                ExchangeDecisionType::Reject => if exchange.has_rejected(req.public_key) {
+                    Err(StateUpdateErr::ExchangeAlreadyRejected)
+                } else {
+                    exchange.confirmations.push(sdata);
+                    if rejections + 1 - confirmations >= State::EXCHANGE_NUMBER_OF_CONFIRMATIONS {
+                        exchange.status = ExchangeStatus::Rejected
+                    } else {
+                        exchange.status = ExchangeStatus::InProgress { confirmations: confirmations, rejections: rejections + 1}
+                    }
+                    Ok(())
+                },
+            }
+        }
     }
 
     pub fn get_exchange_requests(&self, filter: ExchangeFilter) -> Vec<ExchangeApiOrder>{

@@ -738,7 +738,8 @@ pub struct ConfigChangeRequest {
 pub struct ExchangeRequest {
     pub currency_from: Currency,
     pub currency_to: Currency,
-    pub amount: u64
+    pub amount_from: u64,
+    pub amount_to: u64,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy, JsonSchema)]
@@ -754,7 +755,8 @@ pub struct ExchangeOrder {
     pub id: Uuid,
     pub currency_from: Currency,
     pub currency_to: Currency,
-    pub amount: u64,
+    pub amount_from: u64,
+    pub amount_to: u64,
     pub status: ExchangeStatus
 }
 
@@ -764,7 +766,8 @@ pub struct ExchangeConfirmationData {
     pub id: Uuid,
     pub currency_from: Currency,
     pub currency_to: Currency,
-    pub amount: u64
+    pub amount_from: u64,
+    pub amount_to: u64,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema, FromFormField)]

@@ -11,7 +11,8 @@ pub struct ExchangeOrderUpd {
     pub user: String,
     pub currency_from: Currency,
     pub currency_to: Currency,
-    pub amount: u64
+    pub amount_from: u64,
+    pub amount_to: u64,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -20,7 +21,8 @@ pub struct ExchangeOrder {
     pub user: String,
     pub currency_from: Currency,
     pub currency_to: Currency,
-    pub amount: u64,
+    pub amount_from: u64,
+    pub amount_to: u64,
     pub status: ExchangeStatus,
     pub confirmations: Vec<SignatureData>,
     pub rejections: Vec<SignatureData>
@@ -36,12 +38,18 @@ impl ExchangeOrder {
     pub fn is_pending(&self) -> bool {
         matches!(self.status, ExchangeStatus::InProgress {..})
     }
+    pub fn has_confirmed(&self, pubkey: PublicKey) -> bool{
+        self.confirmations.iter().any(|sd| sd.public_key == pubkey)
+    }
+    pub fn has_rejected(&self, pubkey: PublicKey) -> bool{
+        self.rejections.iter().any(|sd| sd.public_key == pubkey)
+    }
 }
 
 impl From<ExchangeOrder> for hexstody_api::types::ExchangeOrder{
     fn from(eo: ExchangeOrder) -> Self {
-        let ExchangeOrder { id, user, currency_from, currency_to, amount, status, .. } = eo;
-        hexstody_api::types::ExchangeOrder { user, id, currency_from, currency_to, amount, status }
+        let ExchangeOrder { id, user, currency_from, currency_to, amount_from, amount_to, status, .. } = eo;
+        hexstody_api::types::ExchangeOrder { user, id, currency_from, currency_to, amount_from, amount_to, status }
     }
 }
 
@@ -57,6 +65,8 @@ pub struct ExchangeDecision {
     pub user: String,
     /// Exchange id
     pub id: Uuid,
+    /// Currency to exchange
+    pub currency_from: Currency,
     /// API URL wich was used to send the decision
     pub url: String,
     /// Operator's digital signature
@@ -88,6 +98,7 @@ impl
         ExchangeDecision {
             user: value.0.user,
             id: value.0.id,
+            currency_from: value.0.currency_from,
             url: value.3,
             signature: value.1.signature,
             nonce: value.1.nonce,

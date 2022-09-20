@@ -664,14 +664,14 @@ pub async fn order_exchange(
     req: Json<ExchangeRequest>,
 ) -> error::Result<()> {
     require_auth_user(cookies, state, |_, user| async move {
-        let ExchangeRequest { currency_from, currency_to, amount } = req.into_inner();
+        let ExchangeRequest { currency_from, currency_to, amount_from, amount_to } = req.into_inner();
         let cinfo = user.currencies.get(&currency_from).ok_or(error::Error::NoUserCurrency(currency_from.clone()))?;
         let balance = cinfo.balance();
-        if balance < amount {
+        if balance < amount_from {
             return Err(error::Error::InsufficientFunds(currency_from).into())
         } else {
             let id = Uuid::new_v4();
-            let req = ExchangeOrderUpd{user: user.username, currency_from, currency_to, amount, id };
+            let req = ExchangeOrderUpd{user: user.username, currency_from, currency_to, amount_from, amount_to, id };
             let upd = StateUpdate::new(UpdateBody::ExchangeRequest(req));
             updater.send(upd).await.map_err(|e| error::Error::GenericError(e.to_string()).into())
         }

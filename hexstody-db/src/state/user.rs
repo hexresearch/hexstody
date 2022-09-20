@@ -162,7 +162,7 @@ impl UserCurrencyInfo {
         let incoming: u64 = self.incomint_exchange_requests.values().sum();
         let outgoing: u64 = self.exchange_requests
             .values()
-            .filter_map(|v| if v.is_rejected() {None} else {Some(v.amount)})
+            .filter_map(|v| if v.is_rejected() {None} else {Some(v.amount_from)})
             .sum();
         let val = (incoming as i64) - (pending_withdrawals as i64) - (outgoing as i64);
         // zero to prevent spreading overflow bug when in less then out
@@ -194,7 +194,7 @@ impl UserCurrencyInfo {
         let incoming: u64 = self.incomint_exchange_requests.values().sum();
         let outgoing: u64 = self.exchange_requests
             .values()
-            .filter_map(|v| if v.is_rejected() {None} else {Some(v.amount)})
+            .filter_map(|v| if v.is_rejected() {None} else {Some(v.amount_from)})
             .sum();
         let val = (incoming as i64) - (pending_withdrawals as i64) - (outgoing as i64);
         // zero to prevent spreading overflow bug when in less then out
