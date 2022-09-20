@@ -1522,7 +1522,6 @@ dependencies = [
  "pwhash",
  "rand_core 0.6.3",
  "rocket",
- "rocket_dyn_templates",
  "rocket_okapi",
  "rpassword",
  "schemars",
