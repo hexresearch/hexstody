@@ -40,6 +40,17 @@ bitcoin-cli -rpcuser=regtest -rpcpassword=regtest -rpcport=9806 -named sendtoadd
 bitcoin-cli -rpcuser=regtest -rpcpassword=regtest -rpcport=9806 getnewaddress
 ```
 
+## ETH testnet node adapter
+
+run shell:
+```
+nix-shell
+```
+after entering into nix-shell run to start eth adatper
+```
+./runeth.sh
+```
+
 # Tips and tricks
 
 Run vscode with export to allow rust extension to validate sqlx macros

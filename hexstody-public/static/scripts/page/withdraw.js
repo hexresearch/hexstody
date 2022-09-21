@@ -22,7 +22,8 @@ async function postWithdrawRequest(currency, address, amount) {
             body = { address: { type: "BTC", addr: address }, amount: amount }
             break;
         case "ETH":
-            body = { address: { type: "ETH", account: address }, amount: amount };
+            body = { address: { type: "ETH", token: "ETH", account: address }, amount: amount };
+            break;
         case "USDT":
         case "CRV":
         case "GTECH":
@@ -51,7 +52,7 @@ async function trySubmit(currency, address, amount, validationDisplayEl) {
     if (result.ok) {
         window.location.href = "/overview";
     } else {
-        validationDisplayEl.textContent = (await result.json()).message;
+        validationDisplayEl.textContent = (await result);
         validationDisplayEl.hidden = false;
     }
 }
@@ -168,7 +169,7 @@ async function updateActiveTab() {
     sendBtn.onclick = () => trySubmit(
         currencyNameUppercase,
         addressInput.value,
-        Number(sendAmountInput.value),
+        Number(sendAmountInput.value*1000000000000000000),
         validationDisplayEl);
 }
 

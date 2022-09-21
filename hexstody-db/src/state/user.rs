@@ -165,8 +165,8 @@ impl UserCurrencyInfo {
         // Do not count rejected withdrawals
         let pending_withdrawals: u64 = self.withdrawal_requests
             .iter()
-            .map(|(_, w)| 
-                if w.is_rejected() {0} 
+            .map(|(_, w)|
+                if w.is_rejected() {0}
                 else {
                     w.amount + w.fee().unwrap_or(0)
                 })
@@ -197,8 +197,8 @@ impl UserCurrencyInfo {
         // Do not count rejected withdrawals
         let pending_withdrawals: u64 = self.withdrawal_requests
             .iter()
-            .map(|(_, w)| 
-                if w.is_rejected() {0} 
+            .map(|(_, w)|
+                if w.is_rejected() {0}
                 else {
                     w.amount + w.fee().unwrap_or(0)
                 })

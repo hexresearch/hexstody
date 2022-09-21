@@ -53,7 +53,6 @@ rocket_okapi = { git = "https://github.com/GREsau/okapi", rev = "ddb07a709129b24
   "uuid",
 ] }
 uuid = { version = "0.8.2", features = ["v4"] }
-rocket_dyn_templates = { version = "0.1.0-rc.2", features = ["handlebars"] }
 schemars = { version = "0.8.8", features = ["uuid"] }
 pwhash = "1.0.0"
 rpassword = "6.0.1"

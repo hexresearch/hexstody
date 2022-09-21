@@ -302,7 +302,7 @@ pub async fn run_hot_wallet(
     eth_client: EthClient,
     api_abort_reg: AbortRegistration,
     is_test: bool,
-) -> Result<(), Error> 
+) -> Result<(), Error>
 {
     info!("Connecting to database");
     let pool = create_db_pool(&args.dbconnect).await?;
@@ -334,10 +334,11 @@ pub async fn run_hot_wallet(
     let update_response_hndl = tokio::spawn({
         let state_mx = state_mx.clone();
         let btc_client = btc_client.clone();
+        let eth_client = eth_client.clone();
         let update_sender = update_sender.clone();
         async move {
-            update_results_worker(btc_client, state_mx, update_resp_receiver, update_sender).await;
-        }    
+            update_results_worker(btc_client, eth_client, state_mx, update_resp_receiver, update_sender).await;
+        }
     });
 
     let cron_workers_hndl = tokio::spawn({

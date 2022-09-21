@@ -1,13 +1,10 @@
 use figment::Figment;
-use hexstody_sig::SignatureVerificationConfig;
 use rocket::{
-    fs::FileServer,
-    serde::json::Json,
-    State as RocketState,
     fairing::AdHoc,
-    {get, post, routes, uri},
+    fs::{FileServer, NamedFile},
+    serde::json::Json,
+    State as RocketState, {get, post, routes, uri},
 };
-use rocket_dyn_templates::{context, Template};
 use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
 use std::{path::PathBuf, str, sync::Arc};
 use tokio::sync::{mpsc, Mutex, Notify};
@@ -20,32 +17,33 @@ use hexstody_api::{
     types::{
         ConfirmationData, HotBalanceResponse, Invite, InviteRequest, InviteResp,
         LimitChangeDecisionType, LimitChangeOpResponse, LimitConfirmationData, SignatureData,
+<<<<<<< HEAD
         WithdrawalRequest, WithdrawalRequestDecisionType, ExchangeConfirmationData, ExchangeFilter, ExchangeBalanceItem, ExchangeAddress,
+=======
+        UserInfo, WithdrawalRequest, WithdrawalRequestDecisionType,
+>>>>>>> cd735f46c64a4d0297ae4080225d5ed8b4b2efc9
     },
 };
 use hexstody_btc_client::client::BtcClient;
 use hexstody_db::{
     state::{State as HexstodyState, REQUIRED_NUMBER_OF_CONFIRMATIONS, exchange::ExchangeDecisionType},
     update::limit::LimitChangeData,
-    update::{
-        misc::InviteRec, StateUpdate,
-        UpdateBody,
-    },
+    update::{misc::InviteRec, StateUpdate, UpdateBody},
     Pool,
 };
 use hexstody_eth_client::client::EthClient;
+use hexstody_sig::SignatureVerificationConfig;
 
 mod helpers;
 use helpers::*;
 
 #[openapi(skip)]
 #[get("/")]
-async fn index() -> Template {
-    let context = context! {
-        page_title: "Operator dashboard",
-        parent: "base",
-    };
-    Template::render("index", context)
+async fn index(static_path: &RocketState<PathBuf>) -> NamedFile {
+    let mut path = static_path.inner().clone();
+    path.push("html");
+    path.push("index.html");
+    NamedFile::open(path).await.unwrap()
 }
 
 /// # Get all supported currencies
@@ -78,6 +76,33 @@ async fn get_required_confrimations(
     Ok(Json(REQUIRED_NUMBER_OF_CONFIRMATIONS))
 }
 
+/// # Get user information by user ID
+#[openapi(tag = "User")]
+#[get("/user/info/<user_id>")]
+async fn get_user_info(
+    signature_data: SignatureData,
+    config: &RocketState<SignatureVerificationConfig>,
+    state: &RocketState<Arc<Mutex<HexstodyState>>>,
+    user_id: &str,
+) -> error::Result<Json<UserInfo>> {
+    guard_op_signature_nomsg(
+        &config,
+        uri!(get_user_info(user_id)).to_string(),
+        signature_data,
+    )?;
+    let hexstody_state = state.lock().await;
+    let user = hexstody_state
+        .get_user_by_id(user_id)
+        .ok_or(error::Error::NoUserFound)?;
+    Ok(Json(UserInfo {
+        first_name: None,
+        last_name: None,
+        email: user.config.email.clone(),
+        phone: user.config.phone.clone(),
+        tg_name: user.config.tg_name.clone(),
+    }))
+}
+
 /// # Hot wallet balance
 #[openapi(tag = "Hot wallet balance")]
 #[get("/hot-wallet-balance/<currency_name>")]
@@ -93,8 +118,9 @@ async fn get_hot_wallet_balance(
         uri!(get_hot_wallet_balance(currency_name)).to_string(),
         signature_data,
     )?;
-    let currency = Currency::get_by_name(currency_name)
-        .ok_or(error::Error::UnknownCurrency(format!("{:?}", currency_name)))?;
+    let currency = Currency::get_by_name(currency_name).ok_or(error::Error::UnknownCurrency(
+        format!("{:?}", currency_name),
+    ))?;
     if currency == Currency::BTC {
         btc_client
             .get_hot_wallet_balance()
@@ -322,7 +348,7 @@ async fn get_all_changes(
 }
 
 #[openapi(skip)]
-#[post("/limits/confirm", data = "<confirmation_data>")]
+#[post("/limits/confirm", format = "json", data = "<confirmation_data>")]
 async fn confirm_limits(
     update_sender: &RocketState<mpsc::Sender<StateUpdate>>,
     signature_data: SignatureData,
@@ -353,7 +379,7 @@ async fn confirm_limits(
 }
 
 #[openapi(skip)]
-#[post("/limits/reject", data = "<confirmation_data>")]
+#[post("/limits/reject", format = "json", data = "<confirmation_data>")]
 async fn reject_limits(
     update_sender: &RocketState<mpsc::Sender<StateUpdate>>,
     signature_data: SignatureData,
@@ -537,7 +563,7 @@ pub async fn serve_api(
     });
     let static_path: PathBuf = api_config.extract_inner("static_path").unwrap();
     let _ = rocket::custom(api_config)
-        .mount("/", FileServer::from(static_path))
+        .mount("/", FileServer::from(static_path.clone()))
         .mount("/", routes![index])
         .mount(
             "/",
@@ -558,6 +584,7 @@ pub async fn serve_api(
                 get_exchange_requests,          // GET:  /exchange/list?filter= <all, pending, completed, rejected>
                 get_exchange_balances,          // GET:  /exchange/balances    
                 get_exchange_address            // GET:  /exchange/address
+                get_user_info,                  // GET: /user/info/<user_id>
             ],
         )
         .mount(
@@ -572,8 +599,8 @@ pub async fn serve_api(
         .manage(update_sender)
         .manage(btc_client)
         .manage(eth_client)
+        .manage(static_path)
         .attach(AdHoc::config::<SignatureVerificationConfig>())
-        .attach(Template::fairing())
         .attach(on_ready)
         .launch()
         .await?;

@@ -45,6 +45,19 @@ impl EthClient {
         Ok(())
     }
 
+    pub async fn allocate_address(&self, user: &str) -> Result<String> {
+        let path = "/check_address";
+        let endpoint = format!("{}{}/{}", self.server, path, user);
+        let request = self.client.get(endpoint).build()?;
+        let response = self.client.execute(request)
+            .await?
+            .error_for_status()?
+            .text()
+            .await?;
+        debug!("Response {path}: {:?}", response);
+        Ok(response)
+    }
+
     pub async fn post_tokens(&self, user: &str, tokens: &Vec<Erc20Token>) -> Result<()> {
         let path = "/tokens";
         let endpoint = format!("{}{}/{}", self.server, path, user);
@@ -75,9 +88,34 @@ impl EthClient {
         Ok(serde_json::from_str(&response)?)
     }
 
-    pub async fn send_tx(&self, addr: &str, amount: &str) -> Result<()> {
-        let path = "/sendtx";
-        let endpoint = format!("{}{}/{}/{}", self.server, path, addr, amount);
+    pub async fn send_tx(&self, user: &str, addr: &str, amount: &str) -> Result<()> {
+        let path = "/signingsend/eth/login/";
+        let endpoint = format!("{}{}/{}/{}/{}", self.server, path, user, addr, amount);
+        let request = self.client.get(endpoint).build()?;
+        let response = self
+            .client
+            .execute(request)
+            .await?
+            .error_for_status()?
+            .text()
+            .await?;
+        debug!("Response {path}: {}", response);
+        Ok(())
+    }
+
+    pub async fn send_tx_erc20(&self
+                            , user: &str
+                            , addr: &str
+                            , token_addr: &str
+                            , amount: &str) -> Result<()> {
+        let path = "/signingsend/erc20/login/";
+        let endpoint = format!("{}{}/{}/{}/{}/{}"
+                            , self.server
+                            , path
+                            , user
+                            , addr
+                            , token_addr
+                            , amount);
         let request = self.client.get(endpoint).build()?;
         let response = self
             .client
@@ -119,8 +157,8 @@ impl EthClient {
 
     pub async fn get_hot_wallet_balance(&self, currency: &Currency) -> Result<HotBalanceResponse> {
         let path = match currency {
-            Currency::ETH => "/totalethbalance",
-            Currency::ERC20(_) => "/totalerc20balance",
+            Currency::ETH => "/balance/eth/total",
+            Currency::ERC20(_) => "/balance/erc20/total",
             Currency::BTC => return Err(Error::InvalidCurrency(Currency::BTC)),
         };
         let endpoint = format!("{}{}", self.server, path);
