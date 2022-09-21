@@ -23,7 +23,7 @@ use crate::update::signup::SignupAuth;
 use crate::update::withdrawal::{WithdrawCompleteInfo, WithdrawalRejectInfo};
 use crate::update::misc::{TokenUpdate, TokenAction, InviteRec, SetLanguage, ConfigUpdateData, PasswordChangeUpd, SetPublicKey};
 
-use self::exchange::{ExchangeOrderUpd, ExchangeOrder, ExchangeDecision, ExchangeDecisionType};
+use self::exchange::{ExchangeOrderUpd, ExchangeOrder, ExchangeDecision, ExchangeDecisionType, ExchangeState};
 
 use super::update::btc::BtcTxCancel;
 use super::update::deposit::DepositAddress;
@@ -47,7 +47,9 @@ pub struct State {
     /// Tracks state of BTC chain
     pub btc_state: BtcState,
     /// Invites: Invite + string rep of pubk of the operator
-    pub invites: HashMap<Invite, InviteRec>
+    pub invites: HashMap<Invite, InviteRec>,
+    /// Special wallet for exchanges
+    pub exchange_state: ExchangeState
 }
 
 #[derive(Error, Debug, PartialEq)]
@@ -111,6 +113,7 @@ impl State {
             last_changed: Utc::now().naive_utc(),
             btc_state: BtcState::new(network.btc()),
             invites: HashMap::new(),
+            exchange_state: ExchangeState::new()
         }
     }
 
@@ -122,6 +125,14 @@ impl State {
             .map(|(uid, _)| uid.clone())
     }
 
+    /// Check if the address belongs to exchange wallet
+    pub fn is_exchange_address(&self, address: &CurrencyAddress) -> bool {
+        let currency = address.currency();
+        let address = address.address();
+        self.exchange_state.addresses.get(&currency).map(|addr| addr.address() == address).unwrap_or(false)
+    }
+
+    /// Find withdrawal by tx id
     pub fn find_withdrawal_by_tx_id(&self, txid: CurrencyTxId) -> Option<WithdrawalRequestId> {
         self.users
             .iter()
@@ -244,7 +255,15 @@ impl State {
                 Ok(None)
             },
             UpdateBody::ExchangeDecision(req) => {
-                self.apply_exchange_decision(req)?;
+                let b = self.apply_exchange_decision(&req)?;
+                if b {
+                    self.add_incoming_exchange(req)?;
+                }
+                self.last_changed = update.created;
+                Ok(None)
+            },
+            UpdateBody::ExchangeAddress(req) => {
+                self.set_exchange_address(req)?;
                 self.last_changed = update.created;
                 Ok(None)
             },
@@ -466,6 +485,10 @@ impl State {
         let address = CurrencyAddress::BTC(BtcAddress {
             addr: tx.address.to_string(),
         });
+        if self.is_exchange_address(&address){
+            self.exchange_state.process_incoming_btc_tx(tx);
+            return Ok(())
+        }
         if let Some(user_id) = self.find_user_address(&address) {
             if let Some(user) = self.users.get_mut(&user_id) {
                 if let Some(curr_info) = user.currencies.get_mut(&Currency::BTC) {
@@ -491,6 +514,10 @@ impl State {
         let address = CurrencyAddress::BTC(BtcAddress {
             addr: tx.address.0.to_string(),
         });
+        if self.is_exchange_address(&address) {
+            self.exchange_state.cancel_btc_tx(tx);
+            return Ok(());
+        }
         let res1 = if let Some(user_id) = self.find_user_address(&address) {
             if let Some(user) = self.users.get_mut(&user_id) {
                 if let Some(curr_info) = user.currencies.get_mut(&Currency::BTC) {
@@ -834,9 +861,11 @@ impl State {
 
     pub const EXCHANGE_NUMBER_OF_CONFIRMATIONS: i16 = 1;
 
-    fn apply_exchange_decision(&mut self, req: ExchangeDecision) -> Result<(), StateUpdateErr> {
-        let user = req.user;
-        let currency_from = req.currency_from;
+    /// Returns true if we need to update the balance for the target currency
+    /// This is required since we can't borrow user info as mutable twice
+    fn apply_exchange_decision(&mut self, req: &ExchangeDecision) -> Result<bool, StateUpdateErr> {
+        let user = req.user.clone();
+        let currency_from = req.currency_from.clone();
         let uinfo = self.users.get_mut(&user).ok_or(StateUpdateErr::UserNotFound(user.clone()))?;
         let cinfo = uinfo.currencies.get_mut(&currency_from).ok_or(StateUpdateErr::UserMissingCurrency(user.clone(), currency_from.clone()))?;
         let exchange = cinfo.exchange_requests.get_mut(&req.id).ok_or(StateUpdateErr::UserMissingExchange(user.clone(), currency_from.clone()))?;
@@ -850,11 +879,13 @@ impl State {
                 } else {
                     exchange.confirmations.push(sdata);
                     if confirmations + 1 - rejections >= State::EXCHANGE_NUMBER_OF_CONFIRMATIONS {
-                        // TODO: Implement actual exchange
+                        exchange.status = ExchangeStatus::Completed;
+                        self.exchange_state.process_order(exchange.into_exchange_upd());
+                        Ok(true)
                     } else {
-                        exchange.status = ExchangeStatus::InProgress { confirmations: confirmations + 1, rejections: rejections }
+                        exchange.status = ExchangeStatus::InProgress { confirmations: confirmations + 1, rejections: rejections };
+                        Ok(false)
                     }
-                    Ok(())
                 },
                 ExchangeDecisionType::Reject => if exchange.has_rejected(req.public_key) {
                     Err(StateUpdateErr::ExchangeAlreadyRejected)
@@ -865,23 +896,26 @@ impl State {
                     } else {
                         exchange.status = ExchangeStatus::InProgress { confirmations: confirmations, rejections: rejections + 1}
                     }
-                    Ok(())
+                    Ok(false)
                 },
             }
         }
     }
 
+    fn add_incoming_exchange(&mut self, req: ExchangeDecision) -> Result<(), StateUpdateErr> {
+        let uinfo = self.users.get_mut(&req.user).ok_or(StateUpdateErr::UserNotFound(req.user.clone()))?;
+        let cinfo = uinfo.currencies.get_mut(&req.currency_to).ok_or(StateUpdateErr::UserMissingCurrency(req.user.clone(), req.currency_to.clone()))?;
+        cinfo.incoming_exchange_requests.insert(req.id, req.amount_to);
+        Ok(())
+    }
+
     pub fn get_exchange_requests(&self, filter: ExchangeFilter) -> Vec<ExchangeApiOrder>{
-        self.users.values().flat_map(|u| 
-            u.currencies.values().flat_map(|c| 
-                c.exchange_requests.values().filter_map(|eo| match filter {
-                    ExchangeFilter::All => Some(eo.clone().into()),
-                    ExchangeFilter::Completed => if eo.is_finalized() {Some(eo.clone().into())} else {None},
-                    ExchangeFilter::Rejected => if eo.is_rejected() {Some(eo.clone().into())} else {None},
-                    ExchangeFilter::Pending => if eo.is_pending() {Some(eo.clone().into())} else {None},
-                })
-            )
-        ).collect()
+        self.users.values().flat_map(|u| u.get_exchange_requests(filter)).collect()
+    }
+
+    fn set_exchange_address(&mut self, req: CurrencyAddress) -> Result<(), StateUpdateErr> {
+        self.exchange_state.addresses.insert(req.currency(), req.clone());
+        Ok(())
     } 
 }
 

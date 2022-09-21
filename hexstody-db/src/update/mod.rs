@@ -7,6 +7,7 @@ pub mod misc;
 pub mod limit;
 
 use chrono::prelude::*;
+use hexstody_api::domain::CurrencyAddress;
 use hexstody_api::types::LimitSpan;
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -87,7 +88,9 @@ pub enum UpdateBody {
     /// Request an exchange from operators
     ExchangeRequest(ExchangeOrderUpd),
     /// Exchange decision
-    ExchangeDecision(ExchangeDecision)
+    ExchangeDecision(ExchangeDecision),
+    /// Set up exchange deposit address
+    ExchangeAddress(CurrencyAddress)
 }
 
 impl UpdateBody {
@@ -115,6 +118,7 @@ impl UpdateBody {
             UpdateBody::SetPublicKey(_) => UpdateTag::SetPublicKey,
             UpdateBody::ExchangeRequest(_) => UpdateTag::ExchangeRequest,
             UpdateBody::ExchangeDecision(_) => UpdateTag::ExchangeDecision,
+            UpdateBody::ExchangeAddress(_) => UpdateTag::ExchangeAddress,
         }
     }
 
@@ -142,6 +146,7 @@ impl UpdateBody {
             UpdateBody::SetPublicKey(v) => serde_json::to_value(v),
             UpdateBody::ExchangeRequest(v) => serde_json::to_value(v),
             UpdateBody::ExchangeDecision(v) => serde_json::to_value(v),
+            UpdateBody::ExchangeAddress(v) => serde_json::to_value(v),
         }
     }
 }
@@ -170,6 +175,7 @@ pub enum UpdateTag {
     SetPublicKey,
     ExchangeRequest,
     ExchangeDecision,
+    ExchangeAddress,
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -208,6 +214,7 @@ impl fmt::Display for UpdateTag {
             UpdateTag::SetPublicKey => write!(f, "set public key"),
             UpdateTag::ExchangeRequest => write!(f, "exchange request"),
             UpdateTag::ExchangeDecision => write!(f, "exchange decision"),
+            UpdateTag::ExchangeAddress => write!(f, "exchange address"),
         }
     }
 }
@@ -239,6 +246,7 @@ impl FromStr for UpdateTag {
             "set public key" => Ok(UpdateTag::SetPublicKey),
             "exchange request" => Ok(UpdateTag::ExchangeRequest),
             "exchange decision" => Ok(UpdateTag::ExchangeDecision),
+            "exchange address" => Ok(UpdateTag::ExchangeAddress),
             _ => Err(UnknownUpdateTag(s.to_owned())),
         }
     }
@@ -302,6 +310,7 @@ impl UpdateTag {
             UpdateTag::SetPublicKey => Ok(UpdateBody::SetPublicKey(serde_json::from_value(value)?)),
             UpdateTag::ExchangeRequest => Ok(UpdateBody::ExchangeRequest(serde_json::from_value(value)?)),
             UpdateTag::ExchangeDecision => Ok(UpdateBody::ExchangeDecision(serde_json::from_value(value)?)),
+            UpdateTag::ExchangeAddress => Ok(UpdateBody::ExchangeAddress(serde_json::from_value(value)?)),
         }
     }
 }

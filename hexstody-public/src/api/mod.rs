@@ -249,7 +249,7 @@ async fn deposit(
             )
             .await?;
             let qr_code: Vec<u8> =
-                qrcode_generator::to_png_to_vec(deposit_address.to_string(), QrCodeEcc::Low, 256)
+                qrcode_generator::to_png_to_vec(deposit_address.address(), QrCodeEcc::Low, 256)
                     .unwrap();
             deposit_addresses.push(DepositInfo {
                 address: deposit_address.to_string(),
@@ -420,7 +420,8 @@ pub async fn serve_api(
                 get_challenge,
                 redeem_challenge,
                 get_deposit_address_handle,
-                order_exchange
+                order_exchange,
+                list_my_orders
             ],
         )
         .mount(

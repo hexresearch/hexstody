@@ -12,6 +12,7 @@ use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
 use std::{path::PathBuf, str, sync::Arc};
 use tokio::sync::{mpsc, Mutex, Notify};
 use uuid::Uuid;
+use qrcode_generator::QrCodeEcc;
 
 use hexstody_api::{
     domain::Currency,
@@ -19,7 +20,7 @@ use hexstody_api::{
     types::{
         ConfirmationData, HotBalanceResponse, Invite, InviteRequest, InviteResp,
         LimitChangeDecisionType, LimitChangeOpResponse, LimitConfirmationData, SignatureData,
-        WithdrawalRequest, WithdrawalRequestDecisionType, ExchangeConfirmationData, ExchangeFilter,
+        WithdrawalRequest, WithdrawalRequestDecisionType, ExchangeConfirmationData, ExchangeFilter, ExchangeBalanceItem, ExchangeAddress,
     },
 };
 use hexstody_btc_client::client::BtcClient;
@@ -463,6 +464,62 @@ async fn get_exchange_requests(
     Ok(Json(res))
 }
 
+#[openapi(skip)]
+#[get("/exchange/balances")]
+async fn get_exchange_balances(
+    state: &RocketState<Arc<Mutex<HexstodyState>>>,
+    signature_data: SignatureData,
+    config: &RocketState<SignatureVerificationConfig>,
+) -> error::Result<Json<Vec<ExchangeBalanceItem>>> {
+    guard_op_signature_nomsg(
+        &config,
+        uri!(get_exchange_balances).to_string(),
+        signature_data,
+    )?;
+    let state = state.lock().await;
+    let res = &state.exchange_state.balances;
+    let res = res.into_iter().map(|(k, v)| ExchangeBalanceItem{ currency: k.clone(), balance: v.clone() }).collect();
+    Ok(Json(res))
+}
+
+#[openapi(skip)]
+#[post("/exchange/address", data="<currency>")]
+async fn get_exchange_address(
+    state: &RocketState<Arc<Mutex<HexstodyState>>>,
+    btc_client: &RocketState<BtcClient>,
+    eth_client: &RocketState<EthClient>,
+    update_sender: &RocketState<mpsc::Sender<StateUpdate>>,
+    signature_data: SignatureData,
+    config: &RocketState<SignatureVerificationConfig>,
+    currency: Json<Currency>
+) -> error::Result<Json<ExchangeAddress>> {
+    let currency = currency.into_inner();
+    guard_op_signature(
+        &config,
+        uri!(get_exchange_address).to_string(),
+        signature_data,
+        &currency,
+    )?;
+    let deposit_info = {
+        let state = state.lock().await;
+        state.exchange_state.addresses.get(&currency).cloned()
+    };
+    let address = match deposit_info {
+        Some(address) => Ok(address),
+        None => get_deposit_address(btc_client, eth_client, update_sender, state, currency.clone())
+                    .await
+                    .map_err(|_| error::Error::FailedGenAddress(currency.clone()))
+    }?;
+    let qr_code: Vec<u8> =
+        qrcode_generator::to_png_to_vec(address.address(), QrCodeEcc::Low, 256).unwrap();
+    let addr = ExchangeAddress{ 
+        currency: currency.ticker_lowercase(), 
+        address: address.address(), 
+        qr_code_base64: base64::encode(qr_code),
+    };
+    Ok(Json(addr))
+}
+
 pub async fn serve_api(
     pool: Pool,
     state: Arc<Mutex<HexstodyState>>,
@@ -499,6 +556,8 @@ pub async fn serve_api(
                 confirm_exchange,               // POST: /exchange/confirm
                 reject_exchange,                // POST: /exchange/reject
                 get_exchange_requests,          // GET:  /exchange/list?filter= <all, pending, completed, rejected>
+                get_exchange_balances,          // GET:  /exchange/balances    
+                get_exchange_address            // GET:  /exchange/address
             ],
         )
         .mount(

@@ -8,7 +8,7 @@ use hexstody_api::domain::{
 };
 use hexstody_api::error;
 use hexstody_api::types::{
-    self as api, BalanceItem, Erc20HistUnitU, GetTokensResponse, TokenActionRequest, TokenInfo, ExchangeRequest,
+    self as api, BalanceItem, Erc20HistUnitU, GetTokensResponse, TokenActionRequest, TokenInfo, ExchangeRequest, ExchangeFilter,
 };
 use hexstody_btc_client::client::{BtcClient, BTC_BYTES_PER_TRANSACTION};
 use hexstody_db::state::exchange::ExchangeOrderUpd;
@@ -675,5 +675,18 @@ pub async fn order_exchange(
             let upd = StateUpdate::new(UpdateBody::ExchangeRequest(req));
             updater.send(upd).await.map_err(|e| error::Error::GenericError(e.to_string()).into())
         }
+    }).await
+}
+
+#[openapi(tag = "wallet")]
+#[get("/exchange/list?<filter>")]
+pub async fn list_my_orders(
+    cookies: &CookieJar<'_>,
+    state: &State<Arc<Mutex<DbState>>>,
+    filter: ExchangeFilter,
+) -> error::Result<Json<Vec<hexstody_api::types::ExchangeOrder>>> {
+    require_auth_user(cookies, state, |_, user| async move {
+        let res = user.get_exchange_requests(filter);
+        Ok(Json(res))
     }).await
 }

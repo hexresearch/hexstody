@@ -1520,6 +1520,7 @@ dependencies = [
  "p256",
  "pkcs8",
  "pwhash",
+ "qrcode-generator",
  "rand_core 0.6.3",
  "rocket",
  "rocket_dyn_templates",

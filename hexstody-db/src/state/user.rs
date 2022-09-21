@@ -12,6 +12,7 @@ use hexstody_api::domain::Language;
 use hexstody_api::domain::PhoneNumber;
 use hexstody_api::domain::TgName;
 use hexstody_api::domain::{Currency, CurrencyAddress};
+use hexstody_api::types::ExchangeFilter;
 use hexstody_api::types::Invite;
 use hexstody_api::types::LimitInfo;
 use p256::PublicKey;
@@ -90,6 +91,17 @@ impl UserInfo {
             cur_info.find_completed_request(&txid)
         } else {None}
     }
+
+    pub fn get_exchange_requests(&self, filter: ExchangeFilter) -> Vec<hexstody_api::types::ExchangeOrder> {
+        self.currencies.values().flat_map(|c| 
+            c.exchange_requests.values().filter_map(|eo| match filter {
+                ExchangeFilter::All => Some(eo.clone().into()),
+                ExchangeFilter::Completed => if eo.is_finalized() {Some(eo.clone().into())} else {None},
+                ExchangeFilter::Rejected => if eo.is_rejected() {Some(eo.clone().into())} else {None},
+                ExchangeFilter::Pending => if eo.is_pending() {Some(eo.clone().into())} else {None},
+            })
+        ).collect()
+    }
 }
 
 impl From<(NaiveDateTime, SignupInfo)> for UserInfo {
@@ -113,7 +125,7 @@ pub struct UserCurrencyInfo {
     /// Users can create exchange requests that require manual confirmation from operators
     pub exchange_requests: HashMap<ExchangeOrderId, ExchangeOrder>,
     /// Confirmed incoming exchange requests. We store only amounts for balance calculations
-    pub incomint_exchange_requests: HashMap<ExchangeOrderId, u64>,
+    pub incoming_exchange_requests: HashMap<ExchangeOrderId, u64>,
     /// User's limit info. 
     pub limit_info: LimitInfo
 }
@@ -126,7 +138,7 @@ impl UserCurrencyInfo {
             transactions: Vec::new(),
             withdrawal_requests: HashMap::new(),
             exchange_requests: HashMap::new(),
-            incomint_exchange_requests: HashMap::new(),
+            incoming_exchange_requests: HashMap::new(),
             limit_info: LimitInfo::default()
         }
     }
@@ -159,7 +171,7 @@ impl UserCurrencyInfo {
                     w.amount + w.fee().unwrap_or(0)
                 })
             .sum();
-        let incoming: u64 = self.incomint_exchange_requests.values().sum();
+        let incoming: u64 = self.incoming_exchange_requests.values().sum();
         let outgoing: u64 = self.exchange_requests
             .values()
             .filter_map(|v| if v.is_rejected() {None} else {Some(v.amount_from)})
@@ -191,7 +203,7 @@ impl UserCurrencyInfo {
                     w.amount + w.fee().unwrap_or(0)
                 })
             .sum();
-        let incoming: u64 = self.incomint_exchange_requests.values().sum();
+        let incoming: u64 = self.incoming_exchange_requests.values().sum();
         let outgoing: u64 = self.exchange_requests
             .values()
             .filter_map(|v| if v.is_rejected() {None} else {Some(v.amount_from)})

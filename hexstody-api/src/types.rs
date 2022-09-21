@@ -770,7 +770,7 @@ pub struct ExchangeConfirmationData {
     pub amount_to: u64,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema, FromFormField)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema, FromFormField, Copy)]
 pub enum ExchangeFilter {
     All,
     Pending,
@@ -815,4 +815,17 @@ impl<'a> FromUriParam<Query, &ExchangeFilter> for ExchangeFilter {
     fn from_uri_param(filt: &ExchangeFilter) -> ExchangeFilter {
         filt.clone()
     }
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct ExchangeBalanceItem{
+    pub currency: Currency,
+    pub balance: i64
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct ExchangeAddress {
+    pub currency: String,
+    pub address: String,
+    pub qr_code_base64: String,
 }
