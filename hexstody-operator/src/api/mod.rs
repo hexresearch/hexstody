@@ -579,7 +579,7 @@ pub async fn serve_api(
                 reject_exchange,                // POST: /exchange/reject
                 get_exchange_requests,          // GET:  /exchange/list?filter= <all, pending, completed, rejected>
                 get_exchange_balances,          // GET:  /exchange/balances    
-                get_exchange_address,           // GET:  /exchange/address
+                get_exchange_address,           // POST: /exchange/address
                 get_user_info,                  // GET: /user/info/<user_id>
             ],
         )
