@@ -757,6 +757,7 @@ pub struct ExchangeOrder {
     pub currency_to: Currency,
     pub amount_from: u64,
     pub amount_to: u64,
+    pub created_at: String,
     pub status: ExchangeStatus
 }
 
@@ -768,6 +769,7 @@ pub struct ExchangeConfirmationData {
     pub currency_to: Currency,
     pub amount_from: u64,
     pub amount_to: u64,
+    pub created_at: String
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema, FromFormField, Copy)]

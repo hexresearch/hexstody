@@ -838,7 +838,7 @@ impl State {
     }
 
     fn add_exchange_request(&mut self, req: ExchangeOrderUpd) -> Result<(), StateUpdateErr> {
-        let ExchangeOrderUpd { user, currency_from, currency_to, amount_from, amount_to, id } = req;
+        let ExchangeOrderUpd { user, currency_from, currency_to, amount_from, amount_to, id, created_at } = req;
         let uinfo = self.users.get_mut(&user).ok_or(StateUpdateErr::UserNotFound(user.clone()))?;
         let cinfo = uinfo.currencies.get_mut(&currency_from).ok_or(StateUpdateErr::UserMissingCurrency(user.clone(), currency_from.clone()))?;
         if cinfo.balance() < amount_from {
@@ -853,7 +853,8 @@ impl State {
             amount_to,
             status: ExchangeStatus::InProgress { confirmations: 0, rejections: 0 },
             confirmations: Vec::new(),
-            rejections: Vec::new() 
+            rejections: Vec::new(),
+            created_at, 
         };
         cinfo.exchange_requests.insert(id, order);
         Ok(())

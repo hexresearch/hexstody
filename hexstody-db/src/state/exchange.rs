@@ -20,6 +20,7 @@ pub struct ExchangeOrderUpd {
     pub currency_to: Currency,
     pub amount_from: u64,
     pub amount_to: u64,
+    pub created_at: String
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -31,6 +32,7 @@ pub struct ExchangeOrder {
     pub amount_from: u64,
     pub amount_to: u64,
     pub status: ExchangeStatus,
+    pub created_at: String,
     pub confirmations: Vec<SignatureData>,
     pub rejections: Vec<SignatureData>
 }
@@ -53,15 +55,15 @@ impl ExchangeOrder {
     }
 
     pub fn into_exchange_upd(&self) -> ExchangeOrderUpd {
-        let ExchangeOrder { id, user, currency_from, currency_to, amount_from, amount_to, .. } = self.clone();
-        ExchangeOrderUpd { user, id, currency_from, currency_to, amount_from, amount_to }
+        let ExchangeOrder { id, user, currency_from, currency_to, amount_from, amount_to, created_at, .. } = self.clone();
+        ExchangeOrderUpd { user, id, currency_from, currency_to, amount_from, amount_to, created_at }
     }
 }
 
 impl From<ExchangeOrder> for hexstody_api::types::ExchangeOrder{
     fn from(eo: ExchangeOrder) -> Self {
-        let ExchangeOrder { id, user, currency_from, currency_to, amount_from, amount_to, status, .. } = eo;
-        hexstody_api::types::ExchangeOrder { user, id, currency_from, currency_to, amount_from, amount_to, status }
+        let ExchangeOrder { id, user, currency_from, currency_to, amount_from, amount_to, status, created_at, .. } = eo;
+        hexstody_api::types::ExchangeOrder { user, id, currency_from, currency_to, amount_from, amount_to, status, created_at }
     }
 }
 
@@ -131,9 +133,13 @@ impl
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct ExchangeState{
+    /// Slimmed down exchange orders. We keep here only completed orders 
     pub exchanges: HashMap<ExchangeOrderId, ExchangeOrderUpd>,
+    /// Deposit addresses for exchange account
     pub addresses: HashMap<Currency, CurrencyAddress>,
+    /// External deposits to exchange account
     pub deposits: Vec<Transaction>,
+    /// We keep running balance, as to not calculate it each time
     pub balances: HashMap<Currency, i64>
 }
 

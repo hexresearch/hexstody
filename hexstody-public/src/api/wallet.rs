@@ -671,7 +671,8 @@ pub async fn order_exchange(
             return Err(error::Error::InsufficientFunds(currency_from).into())
         } else {
             let id = Uuid::new_v4();
-            let req = ExchangeOrderUpd{user: user.username, currency_from, currency_to, amount_from, amount_to, id };
+            let created_at = chrono::offset::Utc::now().to_string();
+            let req = ExchangeOrderUpd{user: user.username, currency_from, currency_to, amount_from, amount_to, id, created_at };
             let upd = StateUpdate::new(UpdateBody::ExchangeRequest(req));
             updater.send(upd).await.map_err(|e| error::Error::GenericError(e.to_string()).into())
         }
