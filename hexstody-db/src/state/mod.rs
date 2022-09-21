@@ -10,17 +10,20 @@ use log::*;
 pub use network::*;
 use p256::PublicKey;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 use std::collections::HashMap;
 use thiserror::Error;
 pub use transaction::*;
 pub use user::*;
+use uuid::Uuid;
 pub use withdraw::*;
 
-use crate::update::limit::{LimitChangeData, LimitChangeUpd, LimitCancelData, LimitChangeDecision};
+use crate::update::limit::{LimitCancelData, LimitChangeData, LimitChangeDecision, LimitChangeUpd};
+use crate::update::misc::{
+    ConfigUpdateData, InviteRec, PasswordChangeUpd, SetLanguage, SetPublicKey, TokenAction,
+    TokenUpdate,
+};
 use crate::update::signup::SignupAuth;
 use crate::update::withdrawal::{WithdrawCompleteInfo, WithdrawalRejectInfo};
-use crate::update::misc::{TokenUpdate, TokenAction, InviteRec, SetLanguage, ConfigUpdateData, PasswordChangeUpd, SetPublicKey};
 
 use super::update::btc::BtcTxCancel;
 use super::update::deposit::DepositAddress;
@@ -30,7 +33,10 @@ use super::update::withdrawal::{
 };
 use super::update::{results::UpdateResult, StateUpdate, UpdateBody};
 use hexstody_api::domain::*;
-use hexstody_api::types::{WithdrawalRequestDecisionType, Invite, LimitChangeStatus, LimitChangeDecisionType, SignatureData, LimitInfo, LimitSpan};
+use hexstody_api::types::{
+    Invite, LimitChangeDecisionType, LimitChangeStatus, LimitInfo, LimitSpan, SignatureData,
+    WithdrawalRequestDecisionType,
+};
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct State {
@@ -41,7 +47,7 @@ pub struct State {
     /// Tracks state of BTC chain
     pub btc_state: BtcState,
     /// Invites: Invite + string rep of pubk of the operator
-    pub invites: HashMap<Invite, InviteRec>
+    pub invites: HashMap<Invite, InviteRec>,
 }
 
 #[derive(Error, Debug, PartialEq)]
@@ -85,7 +91,7 @@ pub enum StateUpdateErr {
     #[error("Limit request already rejected")]
     LimitAlreadyRejected,
     #[error("The spending is over the limit")]
-    LimitOverflow
+    LimitOverflow,
 }
 
 impl State {
@@ -104,6 +110,10 @@ impl State {
             .iter()
             .find(|(_, user)| user.has_address(address))
             .map(|(uid, _)| uid.clone())
+    }
+
+    pub fn get_user_by_id(&self, username: &str) -> Option<&UserInfo> {
+        self.users.get(username)
     }
 
     pub fn find_withdrawal_by_tx_id(&self, txid: CurrencyTxId) -> Option<WithdrawalRequestId> {
@@ -176,52 +186,52 @@ impl State {
                 self.update_tokens(token_update)?;
                 self.last_changed = update.created;
                 Ok(None)
-            },
+            }
             UpdateBody::GenInvite(invite_req) => {
                 self.gen_invite(invite_req)?;
                 self.last_changed = update.created;
                 Ok(None)
-            },
+            }
             UpdateBody::LimitsChangeRequest(req) => {
                 self.insert_limits_req(req)?;
                 self.last_changed = update.created;
                 Ok(None)
-            },
+            }
             UpdateBody::CancelLimitChange(cancel_req) => {
                 self.cancel_limit_change(cancel_req)?;
                 self.last_changed = update.created;
                 Ok(None)
-            },
+            }
             UpdateBody::LimitChangeDecision(limit_change_decision) => {
                 self.with_limit_change_decision(limit_change_decision)?;
                 self.last_changed = update.created;
                 Ok(None)
-            },
+            }
             UpdateBody::ClearLimits(span) => {
                 self.clear_limits(span)?;
                 self.last_changed = update.created;
                 Ok(None)
-            },
+            }
             UpdateBody::SetLanguage(req) => {
                 self.set_language(req)?;
                 self.last_changed = update.created;
                 Ok(None)
-            },
+            }
             UpdateBody::ConfigUpdate(req) => {
                 self.update_user_config(req)?;
                 self.last_changed = update.created;
                 Ok(None)
-            },
+            }
             UpdateBody::PasswordChange(req) => {
                 self.change_password(req)?;
                 self.last_changed = update.created;
                 Ok(None)
-            },
+            }
             UpdateBody::SetPublicKey(req) => {
                 self.set_user_public_key(req)?;
                 self.last_changed = update.created;
                 Ok(None)
-            },
+            }
         }
     }
 
@@ -236,8 +246,8 @@ impl State {
             return Err(StateUpdateErr::UserAlreadyExists(signup.username));
         }
 
-        if !self.invites.contains_key(&invite){
-            return Err(StateUpdateErr::InviteNotFound)
+        if !self.invites.contains_key(&invite) {
+            return Err(StateUpdateErr::InviteNotFound);
         }
         let user_info: UserInfo = (timestamp, signup).into();
         self.users.insert(user_info.username.clone(), user_info);
@@ -259,21 +269,25 @@ impl State {
             if let Some(cur_info) = user.currencies.get_mut(&currency) {
                 match withdrawal_request.request_type {
                     WithdrawalRequestType::UnderLimit => {
-                        if cur_info.limit_info.limit.amount < cur_info.limit_info.spent + withdrawal_request.amount {
-                            return Err(StateUpdateErr::LimitOverflow)
+                        if cur_info.limit_info.limit.amount
+                            < cur_info.limit_info.spent + withdrawal_request.amount
+                        {
+                            return Err(StateUpdateErr::LimitOverflow);
                         } else {
                             cur_info
-                            .withdrawal_requests
-                            .insert(withdrawal_request_info.id, withdrawal_request.clone());
-                            Ok(Some(UpdateResult::WithdrawalUnderlimit(withdrawal_request.clone())))
+                                .withdrawal_requests
+                                .insert(withdrawal_request_info.id, withdrawal_request.clone());
+                            Ok(Some(UpdateResult::WithdrawalUnderlimit(
+                                withdrawal_request.clone(),
+                            )))
                         }
-                    },
+                    }
                     WithdrawalRequestType::OverLimit => {
                         cur_info
                             .withdrawal_requests
                             .insert(withdrawal_request_info.id, withdrawal_request);
                         Ok(None)
-                    },
+                    }
                 }
             } else {
                 Err(StateUpdateErr::UserMissingCurrency(
@@ -419,7 +433,10 @@ impl State {
             let currency = dep_address.address.currency();
             if let Some(info) = user.currencies.get_mut(&currency) {
                 if info.deposit_info.contains(&dep_address.address) {
-                    Err(StateUpdateErr::DepositAddressAlreadyAllocated(user_id.clone(), dep_address.address))
+                    Err(StateUpdateErr::DepositAddressAlreadyAllocated(
+                        user_id.clone(),
+                        dep_address.address,
+                    ))
                 } else {
                     info.deposit_info.push(dep_address.address);
                     Ok(())
@@ -584,12 +601,13 @@ impl State {
         Ok(())
     }
 
-    pub fn update_tokens(
-        &mut self,
-        token_update: TokenUpdate
-    ) -> Result<(), StateUpdateErr>{
-        let TokenUpdate { user, token, action } = token_update;
-        match self.users.get_mut(&user){
+    pub fn update_tokens(&mut self, token_update: TokenUpdate) -> Result<(), StateUpdateErr> {
+        let TokenUpdate {
+            user,
+            token,
+            action,
+        } = token_update;
+        match self.users.get_mut(&user) {
             None => Err(StateUpdateErr::UserNotFound(user)),
             Some(user_info) => {
                 let cur = Currency::ERC20(token.clone());
@@ -598,24 +616,24 @@ impl State {
                         if user_info.currencies.contains_key(&cur) {
                             Err(StateUpdateErr::TokenAlreadyEnabled(token))
                         } else {
-                            user_info.currencies.insert(cur.clone(), UserCurrencyInfo::new(cur.clone()));
+                            user_info
+                                .currencies
+                                .insert(cur.clone(), UserCurrencyInfo::new(cur.clone()));
                             Ok(())
                         }
-                    },
-                    TokenAction::Disable => {
-                        match user_info.currencies.get(&cur) {
-                            Some(info) => {
-                                if info.balance() > 0 {
-                                    Err(StateUpdateErr::TokenNonZeroBalance(token))
-                                } else {
-                                    user_info.currencies.remove(&cur);
-                                    user_info.limit_change_requests.remove(&cur);
-                                    Ok(())
-                                }
-                            },
-                            None => Err(StateUpdateErr::TokenAlreadyDisabled(token))
-                        }
                     }
+                    TokenAction::Disable => match user_info.currencies.get(&cur) {
+                        Some(info) => {
+                            if info.balance() > 0 {
+                                Err(StateUpdateErr::TokenNonZeroBalance(token))
+                            } else {
+                                user_info.currencies.remove(&cur);
+                                user_info.limit_change_requests.remove(&cur);
+                                Ok(())
+                            }
+                        }
+                        None => Err(StateUpdateErr::TokenAlreadyDisabled(token)),
+                    },
                 }
             }
         }
@@ -633,24 +651,25 @@ impl State {
 
     fn insert_limits_req(&mut self, req: LimitChangeUpd) -> Result<(), StateUpdateErr> {
         let cur = req.currency.clone();
-        match self.users.get_mut(&req.user){
-            Some(usr) => {
-                match usr.currencies.get_mut(&cur){
-                    None => Err(StateUpdateErr::UserMissingCurrency(req.user, cur)),
-                    Some(_) => {
-                        let data = LimitChangeData{
-                            id: Uuid::new_v4(),
-                            user: usr.username.clone(),
-                            created_at: chrono::offset::Utc::now().to_string(),
-                            status: LimitChangeStatus::InProgress { confirmations: 0, rejections: 0 },
-                            currency: cur.clone(),
-                            limit: req.limit,
-                            confirmations: vec![],
-                            rejections: vec![],
-                        };
-                        usr.limit_change_requests.insert(cur, data);
-                        Ok(())
-                    },
+        match self.users.get_mut(&req.user) {
+            Some(usr) => match usr.currencies.get_mut(&cur) {
+                None => Err(StateUpdateErr::UserMissingCurrency(req.user, cur)),
+                Some(_) => {
+                    let data = LimitChangeData {
+                        id: Uuid::new_v4(),
+                        user: usr.username.clone(),
+                        created_at: chrono::offset::Utc::now().to_string(),
+                        status: LimitChangeStatus::InProgress {
+                            confirmations: 0,
+                            rejections: 0,
+                        },
+                        currency: cur.clone(),
+                        limit: req.limit,
+                        confirmations: vec![],
+                        rejections: vec![],
+                    };
+                    usr.limit_change_requests.insert(cur, data);
+                    Ok(())
                 }
             },
             None => Err(StateUpdateErr::UserNotFound(req.user)),
@@ -658,94 +677,117 @@ impl State {
     }
 
     fn cancel_limit_change(&mut self, cancel_req: LimitCancelData) -> Result<(), StateUpdateErr> {
-        let LimitCancelData { id: _, user, currency } = cancel_req;
-        match self.users.get_mut(&user){
+        let LimitCancelData {
+            id: _,
+            user,
+            currency,
+        } = cancel_req;
+        match self.users.get_mut(&user) {
             Some(usr) => {
                 let _ = usr.limit_change_requests.remove(&currency);
                 Ok(())
-            },
+            }
             None => Err(StateUpdateErr::UserNotFound(user)),
         }
     }
 
-    fn with_limit_change_decision(&mut self, lcd: LimitChangeDecision) -> Result<(), StateUpdateErr> {
-        match self.users.get_mut(&lcd.user){
-            Some(usr) => {
-                match usr.limit_change_requests.get_mut(&lcd.currency){
-                    Some(req) => {
-                        let sdata = SignatureData{ signature: lcd.signature, nonce: lcd.nonce, public_key: lcd.public_key };
-                        match req.status{
-                            LimitChangeStatus::Completed => Err(StateUpdateErr::LimitAlreadyConfirmed),
-                            LimitChangeStatus::Rejected => Err(StateUpdateErr::LimitAlreadyRejected),
-                            LimitChangeStatus::InProgress { confirmations, rejections } => match lcd.decision_type {
-                                LimitChangeDecisionType::Confirm => {
-                                    if req.has_confirmed(lcd.public_key){
-                                        Err(StateUpdateErr::LimitAlreadyConfirmed)
-                                    } else {
-                                        req.confirmations.push(sdata);
-                                        if confirmations + 1 - rejections >= 2 {
-                                            req.status = LimitChangeStatus::Completed;
-                                            if let Some(cinfo) = usr.currencies.get_mut(&lcd.currency) {
-                                                cinfo.limit_info = LimitInfo {
-                                                    limit: lcd.requested_limit.clone(),
-                                                    spent: 0,
-                                                } 
+    fn with_limit_change_decision(
+        &mut self,
+        lcd: LimitChangeDecision,
+    ) -> Result<(), StateUpdateErr> {
+        match self.users.get_mut(&lcd.user) {
+            Some(usr) => match usr.limit_change_requests.get_mut(&lcd.currency) {
+                Some(req) => {
+                    let sdata = SignatureData {
+                        signature: lcd.signature,
+                        nonce: lcd.nonce,
+                        public_key: lcd.public_key,
+                    };
+                    match req.status {
+                        LimitChangeStatus::Completed => Err(StateUpdateErr::LimitAlreadyConfirmed),
+                        LimitChangeStatus::Rejected => Err(StateUpdateErr::LimitAlreadyRejected),
+                        LimitChangeStatus::InProgress {
+                            confirmations,
+                            rejections,
+                        } => match lcd.decision_type {
+                            LimitChangeDecisionType::Confirm => {
+                                if req.has_confirmed(lcd.public_key) {
+                                    Err(StateUpdateErr::LimitAlreadyConfirmed)
+                                } else {
+                                    req.confirmations.push(sdata);
+                                    if confirmations + 1 - rejections >= 2 {
+                                        req.status = LimitChangeStatus::Completed;
+                                        if let Some(cinfo) = usr.currencies.get_mut(&lcd.currency) {
+                                            cinfo.limit_info = LimitInfo {
+                                                limit: lcd.requested_limit.clone(),
+                                                spent: 0,
                                             }
-                                            let _ = usr.limit_change_requests.remove(&lcd.currency);
-                                        } else {
-                                            req.status = LimitChangeStatus::InProgress { confirmations: confirmations + 1, rejections };
-                                        };
-                                        Ok(())
-                                    }
-                                },
-                                LimitChangeDecisionType::Reject => {
-                                    if req.has_rejected(lcd.public_key){
-                                        return Err(StateUpdateErr::LimitAlreadyConfirmed)
+                                        }
+                                        let _ = usr.limit_change_requests.remove(&lcd.currency);
                                     } else {
-                                        req.rejections.push(sdata);
-                                        if rejections + 1 - confirmations >= 2 {
-                                            req.status = LimitChangeStatus::Rejected;
-                                            let _ = usr.limit_change_requests.remove(&lcd.currency);
-                                        } else {
-                                            req.status = LimitChangeStatus::InProgress { confirmations, rejections: rejections + 1 };
+                                        req.status = LimitChangeStatus::InProgress {
+                                            confirmations: confirmations + 1,
+                                            rejections,
                                         };
-                                        Ok(())
-                                    }
-                                },
+                                    };
+                                    Ok(())
+                                }
                             }
-                        }
-                    },
-                    None => Err(StateUpdateErr::LimitChangeNotFound)
+                            LimitChangeDecisionType::Reject => {
+                                if req.has_rejected(lcd.public_key) {
+                                    return Err(StateUpdateErr::LimitAlreadyConfirmed);
+                                } else {
+                                    req.rejections.push(sdata);
+                                    if rejections + 1 - confirmations >= 2 {
+                                        req.status = LimitChangeStatus::Rejected;
+                                        let _ = usr.limit_change_requests.remove(&lcd.currency);
+                                    } else {
+                                        req.status = LimitChangeStatus::InProgress {
+                                            confirmations,
+                                            rejections: rejections + 1,
+                                        };
+                                    };
+                                    Ok(())
+                                }
+                            }
+                        },
+                    }
                 }
+                None => Err(StateUpdateErr::LimitChangeNotFound),
             },
             None => Err(StateUpdateErr::UserNotFound(lcd.user)),
         }
     }
 
     fn clear_limits(&mut self, span: LimitSpan) -> Result<(), StateUpdateErr> {
-        for (_, uinfo) in self.users.iter_mut(){
-            for curinfo in uinfo.currencies.values_mut(){
-                if curinfo.limit_info.limit.span == span{
+        for (_, uinfo) in self.users.iter_mut() {
+            for curinfo in uinfo.currencies.values_mut() {
+                if curinfo.limit_info.limit.span == span {
                     curinfo.limit_info.spent = 0;
                 }
             }
-        };
+        }
         Ok(())
     }
 
     fn set_language(&mut self, req: SetLanguage) -> Result<(), StateUpdateErr> {
-        match self.users.get_mut(&req.user){
+        match self.users.get_mut(&req.user) {
             Some(uinfo) => {
                 uinfo.config.language = req.language;
                 Ok(())
-            },
+            }
             None => Err(StateUpdateErr::UserNotFound(req.user)),
         }
     }
 
     fn update_user_config(&mut self, req: ConfigUpdateData) -> Result<(), StateUpdateErr> {
-        let ConfigUpdateData{ user, email, phone, tg_name } = req;
-        match self.users.get_mut(&user){
+        let ConfigUpdateData {
+            user,
+            email,
+            phone,
+            tg_name,
+        } = req;
+        match self.users.get_mut(&user) {
             Some(uinfo) => {
                 if let Some(email) = email {
                     uinfo.config.email = email.ok();
@@ -757,29 +799,29 @@ impl State {
                     uinfo.config.tg_name = tg_name.ok();
                 }
                 Ok(())
-            },
+            }
             None => Err(StateUpdateErr::UserNotFound(user)),
         }
     }
 
     fn change_password(&mut self, req: PasswordChangeUpd) -> Result<(), StateUpdateErr> {
-        let PasswordChangeUpd{ user, new_password } = req;
-        match self.users.get_mut(&user){
+        let PasswordChangeUpd { user, new_password } = req;
+        match self.users.get_mut(&user) {
             Some(uinfo) => {
                 uinfo.auth = SignupAuth::Password(new_password);
                 Ok(())
-            },
+            }
             None => Err(StateUpdateErr::UserNotFound(user)),
         }
     }
 
     fn set_user_public_key(&mut self, req: SetPublicKey) -> Result<(), StateUpdateErr> {
-        let SetPublicKey{ user, public_key } = req;
-        match self.users.get_mut(&user){
+        let SetPublicKey { user, public_key } = req;
+        match self.users.get_mut(&user) {
             Some(uinfo) => {
                 uinfo.public_key = public_key;
                 Ok(())
-            },
+            }
             None => Err(StateUpdateErr::UserNotFound(user)),
         }
     }
@@ -822,9 +864,20 @@ mod tests {
     #[sqlx_database_tester::test(pool(variable = "pool", migrations = "./migrations"))]
     async fn test_signup_update() {
         let mut state = State::default();
-        let invite = Invite{invite: Uuid::new_v4()};
-        let invite_rec = InviteRec { invite: invite.clone(), invitor: String::new(), label: String::new()};
-        let _ = apply_state_update(StateUpdate::new(UpdateBody::GenInvite(invite_rec.clone())), &mut state, &pool).await;
+        let invite = Invite {
+            invite: Uuid::new_v4(),
+        };
+        let invite_rec = InviteRec {
+            invite: invite.clone(),
+            invitor: String::new(),
+            label: String::new(),
+        };
+        let _ = apply_state_update(
+            StateUpdate::new(UpdateBody::GenInvite(invite_rec.clone())),
+            &mut state,
+            &pool,
+        )
+        .await;
         let signup_info = SignupInfo {
             username: "Alice".to_owned(),
             invite,
@@ -852,9 +905,20 @@ mod tests {
     #[sqlx_database_tester::test(pool(variable = "pool", migrations = "./migrations"))]
     async fn test_new_withdrawal_request_update() {
         let mut state = State::default();
-        let invite = Invite{invite: Uuid::new_v4()};
-        let invite_rec = InviteRec { invite: invite.clone(), invitor: String::new(), label: String::new()};
-        let _ = apply_state_update(StateUpdate::new(UpdateBody::GenInvite(invite_rec.clone())), &mut state, &pool).await;
+        let invite = Invite {
+            invite: Uuid::new_v4(),
+        };
+        let invite_rec = InviteRec {
+            invite: invite.clone(),
+            invitor: String::new(),
+            label: String::new(),
+        };
+        let _ = apply_state_update(
+            StateUpdate::new(UpdateBody::GenInvite(invite_rec.clone())),
+            &mut state,
+            &pool,
+        )
+        .await;
         let signup_info = SignupInfo {
             username: "Alice".to_owned(),
             invite,
@@ -913,9 +977,20 @@ mod tests {
     #[sqlx_database_tester::test(pool(variable = "pool", migrations = "./migrations"))]
     async fn test_new_withdrawal_request_decision_update() {
         let mut state = State::default();
-        let invite = Invite{invite: Uuid::new_v4()};
-        let invite_rec = InviteRec { invite: invite.clone(), invitor: String::new(), label: String::new()};
-        let _ = apply_state_update(StateUpdate::new(UpdateBody::GenInvite(invite_rec.clone())), &mut state, &pool).await;
+        let invite = Invite {
+            invite: Uuid::new_v4(),
+        };
+        let invite_rec = InviteRec {
+            invite: invite.clone(),
+            invitor: String::new(),
+            label: String::new(),
+        };
+        let _ = apply_state_update(
+            StateUpdate::new(UpdateBody::GenInvite(invite_rec.clone())),
+            &mut state,
+            &pool,
+        )
+        .await;
         let signup_info = SignupInfo {
             username: "Alice".to_owned(),
             invite,

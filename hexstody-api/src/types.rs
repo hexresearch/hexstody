@@ -16,7 +16,7 @@ use rocket_okapi::{
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::domain::CurrencyTxId;
+use crate::domain::{CurrencyTxId, Email, PhoneNumber, TgName};
 
 use super::domain::currency::{BtcAddress, Currency, CurrencyAddress, Erc20Token};
 
@@ -140,6 +140,16 @@ pub struct UserData {
     pub balanceTokens: Vec<Erc20TokenBalance>,
 }
 
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UserInfo {
+    pub first_name: Option<String>,
+    pub last_name: Option<String>,
+    pub email: Option<Email>,
+    pub phone: Option<PhoneNumber>,
+    pub tg_name: Option<TgName>,
+}
+
 #[allow(non_snake_case)]
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct Erc20TokenBalance {
@@ -252,6 +262,8 @@ pub struct PasswordChange {
 }
 
 /// Auxiliary data type to display `WithdrawalRequest` on the page
+// NOTE: fields order must be the same as in 'ConfirmationData' struct
+// otherwise signature verification will fail
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct WithdrawalRequest {
     /// Request ID
@@ -280,6 +292,8 @@ pub struct UserWithdrawRequest {
     pub amount: u64,
 }
 
+// NOTE: fields order must be the same as in 'WithdrawalRequest' struct
+// otherwise signature verification will fail
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct ConfirmationData {
     /// Withdrawal request ID
@@ -659,6 +673,7 @@ pub struct LimitChangeReq {
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
+#[serde(tag = "type")]
 pub enum LimitChangeStatus {
     InProgress { confirmations: i16, rejections: i16 },
     Completed,
@@ -675,6 +690,8 @@ pub struct LimitChangeResponse {
     pub status: LimitChangeStatus,
 }
 
+// NOTE: fields order must be the same as in 'LimitConfirmationData' struct
+// otherwise signature verification will fail
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
 pub struct LimitChangeOpResponse {
     pub id: Uuid,
@@ -710,12 +727,14 @@ pub struct LimitApiResp {
     pub currency: Currency,
 }
 
+// NOTE: fields order must be the same as in 'LimitChangeOpResponse' struct
+// otherwise signature verification will fail
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
 pub struct LimitConfirmationData {
     pub id: Uuid,
     pub user: String,
-    pub currency: Currency,
     pub created_at: String,
+    pub currency: Currency,
     pub requested_limit: Limit,
 }
 
