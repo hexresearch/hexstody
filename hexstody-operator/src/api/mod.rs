@@ -17,11 +17,7 @@ use hexstody_api::{
     types::{
         ConfirmationData, HotBalanceResponse, Invite, InviteRequest, InviteResp,
         LimitChangeDecisionType, LimitChangeOpResponse, LimitConfirmationData, SignatureData,
-<<<<<<< HEAD
-        WithdrawalRequest, WithdrawalRequestDecisionType, ExchangeConfirmationData, ExchangeFilter, ExchangeBalanceItem, ExchangeAddress,
-=======
-        UserInfo, WithdrawalRequest, WithdrawalRequestDecisionType,
->>>>>>> cd735f46c64a4d0297ae4080225d5ed8b4b2efc9
+        WithdrawalRequest, WithdrawalRequestDecisionType, ExchangeConfirmationData, ExchangeFilter, ExchangeBalanceItem, ExchangeAddress, UserInfo,
     },
 };
 use hexstody_btc_client::client::BtcClient;
@@ -583,7 +579,7 @@ pub async fn serve_api(
                 reject_exchange,                // POST: /exchange/reject
                 get_exchange_requests,          // GET:  /exchange/list?filter= <all, pending, completed, rejected>
                 get_exchange_balances,          // GET:  /exchange/balances    
-                get_exchange_address            // GET:  /exchange/address
+                get_exchange_address,           // GET:  /exchange/address
                 get_user_info,                  // GET: /user/info/<user_id>
             ],
         )
