@@ -7,7 +7,7 @@ use rocket_db_pools::{sqlx, Database};
 pub type Pool = sqlx::Pool<Postgres>;
 
 #[derive(Database)]
-#[database("hexstodyeth")]
+#[database("hexstody")]
 pub struct MyDb(sqlx::PgPool);
 
 
