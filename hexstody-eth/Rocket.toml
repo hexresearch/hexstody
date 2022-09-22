@@ -2,5 +2,5 @@
 [default]
 port = 8540
 
-[default.databases.hexstodyeth]
-url = "postgres://hexstody:hexstody@localhost/hexstodyeth"
+[default.databases.hexstody]
+url = "postgres://hexstody:hexstody@localhost/hexstody"
