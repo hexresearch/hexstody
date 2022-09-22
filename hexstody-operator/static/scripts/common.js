@@ -230,6 +230,11 @@ export async function getLimitRequests(privateKeyJwk, publicKeyDer) {
     return response
 }
 
+export async function getSwapRequests(privateKeyJwk, publicKeyDer, filter) {
+    const response = await makeSignedRequest(privateKeyJwk, publicKeyDer, null, `exchange/list?filter=${filter}`, 'GET')
+    return response
+}
+
 export async function getRequiredConfirmations(privateKeyJwk, publicKeyDer) {
     const response = await makeSignedRequest(privateKeyJwk, publicKeyDer, null, "confirmations", 'GET')
     return response
