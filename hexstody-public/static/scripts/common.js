@@ -1,17 +1,17 @@
-const SECOND = 1000;
-const MINUTE = 60 * SECOND;
-const HOUR = 60 * MINUTE;
-const DAY = 24 * HOUR;
+const SECOND = 1000
+const MINUTE = 60 * SECOND
+const HOUR = 60 * MINUTE
+const DAY = 24 * HOUR
 
 // Amount of satoshi in 1 BTC
-const BTC_PRECISION = 10 ** 8;
+const BTC_PRECISION = 10 ** 8
 // Amount of wei in 1 ETH
-const ETH_PRECISION = 10 ** 18;
-const USDT_PRECISION = 10 ** 6;
-const CRV_PRECISION = 10 ** 18;
-const GTECH_PRECISION = 10 ** 18;
+const ETH_PRECISION = 10 ** 18
+const USDT_PRECISION = 10 ** 6
+const CRV_PRECISION = 10 ** 18
+const GTECH_PRECISION = 10 ** 18
 
-export const GWEI = 10 ** 9;
+export const GWEI = 10 ** 9
 
 export const currencyEnum = Object.freeze({
     btc: "BTC",
@@ -37,121 +37,121 @@ export const currencyEnum = Object.freeze({
             "contract": "0x866A4Da32007BA71aA6CcE9FD85454fCF48B140c"
         }
     }
-});
+})
 
 export function* getAllCurrencies() {
     for (const currencyKey in currencyEnum) {
-       const currency = currencyEnum[currencyKey]
-       if(typeof currency === "string") yield currency; 
-       if(typeof currency === "object" && currency.ERC20 !== undefined) yield currency.ERC20.ticker;
+        const currency = currencyEnum[currencyKey]
+        if (typeof currency === "string") yield currency
+        if (typeof currency === "object" && currency.ERC20 !== undefined) yield currency.ERC20.ticker
     }
 }
 
 // Gas limit for ETH transfer transaction
-export const ETH_TX_GAS_LIMIT = 21_000;
+export const ETH_TX_GAS_LIMIT = 21_000
 // Gas limit for ERC20 transfer transaction
-export const ERC20_TX_GAS_LIMIT = 150_000;
+export const ERC20_TX_GAS_LIMIT = 150_000
 
 export async function loadTemplate(path) {
-    const template = await (await fetch(path)).text();
-    return Handlebars.compile(template);
+    const template = await (await fetch(path)).text()
+    return Handlebars.compile(template)
 }
 
 export function formattedCurrencyValue(currency, value) {
-    let numberFormat;
+    let numberFormat
     switch (currency) {
         case "BTC":
             numberFormat = Intl.NumberFormat('en', {
                 maximumFractionDigits: Math.log10(BTC_PRECISION),
-            });
-            return numberFormat.format(value / BTC_PRECISION);
+            })
+            return numberFormat.format(value / BTC_PRECISION)
         case "ETH":
             numberFormat = Intl.NumberFormat('en', {
                 maximumFractionDigits: Math.log10(ETH_PRECISION),
-            });
-            return numberFormat.format(value / ETH_PRECISION);
+            })
+            return numberFormat.format(value / ETH_PRECISION)
         case "USDT":
             numberFormat = Intl.NumberFormat('en', {
                 maximumFractionDigits: Math.log10(USDT_PRECISION),
-            });
-            return numberFormat.format(value / USDT_PRECISION);
+            })
+            return numberFormat.format(value / USDT_PRECISION)
         case "CRV":
             numberFormat = Intl.NumberFormat('en', {
                 maximumFractionDigits: Math.log10(CRV_PRECISION),
-            });
-            return numberFormat.format(value / CRV_PRECISION);
+            })
+            return numberFormat.format(value / CRV_PRECISION)
         case "GTECH":
             numberFormat = Intl.NumberFormat('en', {
                 maximumFractionDigits: Math.log10(GTECH_PRECISION),
-            });
-            return numberFormat.format(value / GTECH_PRECISION);
+            })
+            return numberFormat.format(value / GTECH_PRECISION)
         default:
-            return value;
+            return value
     };
 }
 
 export function formattedElapsedTime(dateTimeString) {
-    const date = new Date(dateTimeString);
-    const currentDate = new Date();
-    const localOffset = currentDate.getTimezoneOffset() * MINUTE;
-    const msElapsed = currentDate - date + localOffset;
+    const date = new Date(dateTimeString)
+    const currentDate = new Date()
+    const localOffset = currentDate.getTimezoneOffset() * MINUTE
+    const msElapsed = currentDate - date + localOffset
     const rtf = new Intl.RelativeTimeFormat('en', {
         numeric: 'auto'
-    });
+    })
     function fmt(constant, constantString) {
-        return rtf.format(-Math.round(msElapsed / constant), constantString);
+        return rtf.format(-Math.round(msElapsed / constant), constantString)
     }
 
     if (msElapsed < MINUTE) {
-        return fmt(SECOND, "second");
+        return fmt(SECOND, "second")
     } else if (msElapsed < HOUR) {
-        return fmt(MINUTE, "minute");
+        return fmt(MINUTE, "minute")
     } else if (msElapsed < DAY) {
-        return fmt(HOUR, "hour");
+        return fmt(HOUR, "hour")
     } else if (msElapsed < DAY * 2) {
-        return fmt(DAY, "day");
+        return fmt(DAY, "day")
     } else {
-        const localDate = date.getTime() - localOffset;
-        return new Date(localDate).toLocaleString();
+        const localDate = date.getTime() - localOffset
+        return new Date(localDate).toLocaleString()
     }
 }
 
 export function initTabs(tabIds, hook, selected) {
     function tabClicked(clickedTabId) {
         tabIds.forEach(tabId => {
-            const validationDisplay = document.getElementById(tabId + "-body");
+            const validationDisplay = document.getElementById(tabId + "-body")
             if (tabId === clickedTabId) {
-                document.getElementById(tabId).classList.add("is-active");
-                validationDisplay.style.display = "block";
+                document.getElementById(tabId).classList.add("is-active")
+                validationDisplay.style.display = "block"
             } else {
-                document.getElementById(tabId).classList.remove("is-active");
-                validationDisplay.style.display = "none";
+                document.getElementById(tabId).classList.remove("is-active")
+                validationDisplay.style.display = "none"
             }
-        });
+        })
         if (typeof hook === 'function') {
             hook(clickedTabId)
         }
     }
-    tabIds.forEach(tab => document.getElementById(tab).onclick = () => tabClicked(tab));
-    var i;
+    tabIds.forEach(tab => document.getElementById(tab).onclick = () => tabClicked(tab))
+    var i
     if (selected) { i = selected } else { i = 0 };
-    tabClicked(tabIds[i]);
+    tabClicked(tabIds[i])
 }
 
 export function initCollapsibles() {
     console.log("A")
     const cols = document.getElementsByClassName("collapsible")
     console.log(cols)
-    for (let col of cols){
+    for (let col of cols) {
         col.addEventListener("click", function () {
-            this.classList.toggle("active");
-            const content = this.nextElementSibling;
+            this.classList.toggle("active")
+            const content = this.nextElementSibling
             if (content.style.display === "block") {
-                content.style.display = "none";
+                content.style.display = "none"
             } else {
-                content.style.display = "block";
+                content.style.display = "block"
             }
-        });
+        })
     }
     // .forEach(function (coll) {
 
@@ -159,38 +159,38 @@ export function initCollapsibles() {
 }
 
 export function initDropDowns() {
-    var $dropdowns = getAll('.dropdown:not(.is-hoverable)');
+    var $dropdowns = getAll('.dropdown:not(.is-hoverable)')
 
     if ($dropdowns.length > 0) {
         $dropdowns.forEach(function ($el) {
             $el.addEventListener('click', function (event) {
-                event.stopPropagation();
-                $el.classList.toggle('is-active');
-            });
-        });
+                event.stopPropagation()
+                $el.classList.toggle('is-active')
+            })
+        })
 
         document.addEventListener('click', function (event) {
-            closeDropdowns();
-        });
+            closeDropdowns()
+        })
     }
 
     function closeDropdowns() {
         $dropdowns.forEach(function ($el) {
-            $el.classList.remove('is-active');
-        });
+            $el.classList.remove('is-active')
+        })
     }
 
     // Close dropdowns if ESC pressed
     document.addEventListener('keydown', function (event) {
-        var e = event || window.event;
+        var e = event || window.event
         if (e.key === "Escape") {
-            closeDropdowns();
+            closeDropdowns()
         }
-    });
+    })
 
     // Functions
     function getAll(selector) {
-        return Array.prototype.slice.call(document.querySelectorAll(selector), 0);
+        return Array.prototype.slice.call(document.querySelectorAll(selector), 0)
     }
 }
 
@@ -206,14 +206,14 @@ export function getUserName() {
 export function chunkify(array, chunkSize) {
     var chunks = []
     for (let i = 0; i < array.length; i += chunkSize) {
-        const chunk = array.slice(i, i + chunkSize);
+        const chunk = array.slice(i, i + chunkSize)
         chunks.push(chunk)
     }
     return chunks
 }
 
 export function transpose(array) {
-    var transposed = [];
+    var transposed = []
     if (array.length > 0) {
         for (let i = 0; i < array[0].length; i++) {
             transposed.push([])
@@ -235,7 +235,7 @@ export function chunkifyTransposed(array, chunkSize) {
     }
 
     for (let i = 0; i < array.length; i += chunkSize) {
-        const chunk = array.slice(i, i + chunkSize);
+        const chunk = array.slice(i, i + chunkSize)
         for (let j = 0; j < chunkSize; j++) {
             res[j].push(chunk[j])
         }
@@ -245,7 +245,7 @@ export function chunkifyTransposed(array, chunkSize) {
 }
 
 export function indexArrayFromOne(array) {
-    var res = [];
+    var res = []
     for (let i = 0; i < array.length; i++) {
         res.push({ ix: i + 1, value: array[i] })
     }
@@ -255,34 +255,34 @@ export function indexArrayFromOne(array) {
 export function currencyNameToCurrency(currencyName) {
     switch (currencyName.toUpperCase()) {
         case "BTC":
-            return currencyEnum.btc;
+            return currencyEnum.btc
         case "ETH":
-            return currencyEnum.eth;
+            return currencyEnum.eth
         case "USDT":
-            return currencyEnum.erc20_usdt;
+            return currencyEnum.erc20_usdt
         case "CRV":
-            return currencyEnum.erc20_crv;
+            return currencyEnum.erc20_crv
         case "GTECH":
-            return currencyEnum.erc20_gtech;
+            return currencyEnum.erc20_gtech
         default:
-            return null;
+            return null
     }
 }
 
 export function currencyPrecision(currencyName) {
     switch (currencyName.toUpperCase()) {
         case "BTC":
-            return BTC_PRECISION;
+            return BTC_PRECISION
         case "ETH":
-            return ETH_PRECISION;
+            return ETH_PRECISION
         case "USDT":
-            return USDT_PRECISION;
+            return USDT_PRECISION
         case "CRV":
-            return CRV_PRECISION;
+            return CRV_PRECISION
         case "GTECH":
-            return GTECH_PRECISION;
+            return GTECH_PRECISION
         default:
-            return null;
+            return null
     };
 }
 
@@ -290,15 +290,15 @@ export function currencyPrecision(currencyName) {
 export function feeCurrency(currencyName) {
     switch (currencyName.toUpperCase()) {
         case "BTC":
-            return "BTC";
+            return "BTC"
         case "ETH":
-            return "ETH";
+            return "ETH"
         case "USDT":
         case "CRV":
         case "GTECH":
-            return "ETH";
+            return "ETH"
         default:
-            return null;
+            return null
     };
 }
 
@@ -306,12 +306,12 @@ export function isErc20Token(currencyName) {
     switch (currencyName.toUpperCase()) {
         case "BTC":
         case "ETH":
-            return false;
+            return false
         case "USDT":
         case "CRV":
         case "GTECH":
-            return true;
+            return true
         default:
-            return null;
+            return null
     };
 }
