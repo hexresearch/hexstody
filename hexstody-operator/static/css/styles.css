@@ -1,53 +1,99 @@
-.keyfile-input-wrapper {
+.flex-row {
     display: flex;
     align-items: center;
     gap: 1rem;
 }
 
-#keyfile-input {
-    width: auto;
+.flex-column {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.keyfile-input {
+    width: auto !important;
+}
+
+.keyfile-input-wrapper {
+    justify-content: space-between;
 }
 
 .mb-1 {
     margin-bottom: 1rem;
 }
 
-.centered-cell {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
+.mb-0 {
+    margin-bottom: 1rem;
 }
 
-#currency-select-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    justify-content: flex-start;
+.ml-1 {
+    margin-left: 1rem;
 }
 
-#currency-select-wrapper h4 {
-    margin: 0px;
-}
-
-#currency-select-wrapper select {
+.currency-select-wrapper select {
     width: auto;
-}
-
-#hot-wallet-balance-wrapper h4 {
-    margin: 0px;
-}
-
-.icon-18px {
-    min-width: 18px;
 }
 
 .action-buttons-wrapper {
     display: flex;
-    gap: 1rem;
     align-items: center;
+    gap: 1rem;
     flex-wrap: wrap;
 }
 
-.action-buttons-wrapper .button + .button {
-    margin: 0px;
+.action-buttons-wrapper .button {
+    margin: 0px !important;
+}
+
+.justify-center {
+    justify-content: center;
+}
+
+/* Loading circle */
+.loading-circle {
+    height: 20px;
+    width: 20px;
+    position: relative;
+    display: inline-block;
+    border: 2px solid;
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: rotate 1s linear infinite;
+}
+
+@keyframes rotate {
+    0% {
+        transform: rotate(0);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.modal-backdrop {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: rgba(0, 0, 0, 0.3);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2;
+}
+
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+    opacity: 0;
+}
+
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+    transition: opacity .2s ease;
+}
+
+.table-container {
+    overflow: auto;
 }

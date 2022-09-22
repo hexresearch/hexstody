@@ -22,7 +22,8 @@ async function postWithdrawRequest(currency, address, amount) {
             body = { address: { type: "BTC", addr: address }, amount: amount }
             break
         case "ETH":
-            body = { address: { type: "ETH", account: address }, amount: amount }
+            body = { address: { type: "ETH", token: "ETH", account: address }, amount: amount };
+            break;
         case "USDT":
         case "CRV":
         case "GTECH":

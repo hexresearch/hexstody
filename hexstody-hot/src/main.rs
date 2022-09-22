@@ -37,7 +37,7 @@ pub struct Args {
     #[clap(
         long,
         short,
-        default_value = "http://node.desolator.net",
+        default_value = "http://127.0.0.1:8540",
         env = "ETH_MODULE_URL"
     )]
     eth_module: String,
@@ -92,9 +92,9 @@ enum SubCommand {
 }
 
 async fn run(
-    btc_client: BtcClient, 
+    btc_client: BtcClient,
     eth_client: EthClient,
-    args: &Args, 
+    args: &Args,
     start_notify: Arc<Notify>
 ) {
     let (api_abort_handle, api_abort_reg) = AbortHandle::new_pair();

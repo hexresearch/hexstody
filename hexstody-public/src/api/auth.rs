@@ -60,7 +60,9 @@ pub async fn signup_email(
         let iv = state.invites.contains_key(&data.invite);
         (ue, iv)
     };
-    if user_exists {
+
+    // Do not allow to register user with the reserved name of our exchange wallet
+    if user_exists || data.user == "hexstody-exchange" {
         return Err(error::Error::SignupExistedUser.into());
     }
     if !invite_valid {

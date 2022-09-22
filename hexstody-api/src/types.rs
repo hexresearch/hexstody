@@ -1,12 +1,14 @@
+use std::fmt;
+
 use base64;
 use chrono::NaiveDateTime;
 use hexstody_btc_api::bitcoin::txid::BtcTxid;
 use okapi::openapi3::*;
 use p256::{ecdsa::Signature, pkcs8::DecodePublicKey, PublicKey};
 use rocket::{
-    http::Status,
+    http::{Status, uri::fmt::{FromUriParam, Query, UriDisplay, Formatter}},
     request::{FromRequest, Outcome, Request},
-    serde::json::json,
+    serde::json::json, FromFormField,
 };
 use rocket_okapi::{
     gen::OpenApiGenerator,
@@ -16,7 +18,7 @@ use rocket_okapi::{
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::domain::CurrencyTxId;
+use crate::domain::{CurrencyTxId, Email, PhoneNumber, TgName};
 
 use super::domain::currency::{BtcAddress, Currency, CurrencyAddress, Erc20Token};
 
@@ -140,6 +142,16 @@ pub struct UserData {
     pub balanceTokens: Vec<Erc20TokenBalance>,
 }
 
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UserInfo {
+    pub first_name: Option<String>,
+    pub last_name: Option<String>,
+    pub email: Option<Email>,
+    pub phone: Option<PhoneNumber>,
+    pub tg_name: Option<TgName>,
+}
+
 #[allow(non_snake_case)]
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct Erc20TokenBalance {
@@ -196,7 +208,7 @@ pub struct WithdrawalHistoryItem {
     pub value: u64,
     pub status: WithdrawalRequestStatus,
     //temp field to give txid for ETH and tokens while status not working
-    pub txid: Option<CurrencyTxId>, 
+    pub txid: Option<CurrencyTxId>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -252,6 +264,8 @@ pub struct PasswordChange {
 }
 
 /// Auxiliary data type to display `WithdrawalRequest` on the page
+// NOTE: fields order must be the same as in 'ConfirmationData' struct
+// otherwise signature verification will fail
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct WithdrawalRequest {
     /// Request ID
@@ -280,6 +294,8 @@ pub struct UserWithdrawRequest {
     pub amount: u64,
 }
 
+// NOTE: fields order must be the same as in 'WithdrawalRequest' struct
+// otherwise signature verification will fail
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct ConfirmationData {
     /// Withdrawal request ID
@@ -659,6 +675,7 @@ pub struct LimitChangeReq {
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
+#[serde(tag = "type")]
 pub enum LimitChangeStatus {
     InProgress { confirmations: i16, rejections: i16 },
     Completed,
@@ -675,6 +692,8 @@ pub struct LimitChangeResponse {
     pub status: LimitChangeStatus,
 }
 
+// NOTE: fields order must be the same as in 'LimitConfirmationData' struct
+// otherwise signature verification will fail
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
 pub struct LimitChangeOpResponse {
     pub id: Uuid,
@@ -710,12 +729,14 @@ pub struct LimitApiResp {
     pub currency: Currency,
 }
 
+// NOTE: fields order must be the same as in 'LimitChangeOpResponse' struct
+// otherwise signature verification will fail
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
 pub struct LimitConfirmationData {
     pub id: Uuid,
     pub user: String,
-    pub currency: Currency,
     pub created_at: String,
+    pub currency: Currency,
     pub requested_limit: Limit,
 }
 
@@ -730,4 +751,102 @@ pub struct ConfigChangeRequest {
     pub email: Option<String>,
     pub phone: Option<String>,
     pub tg_name: Option<String>,
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct ExchangeRequest {
+    pub currency_from: Currency,
+    pub currency_to: Currency,
+    pub amount_from: u64,
+    pub amount_to: u64,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy, JsonSchema)]
+pub enum ExchangeStatus{
+    Completed,
+    Rejected,
+    InProgress { confirmations: i16, rejections: i16 },
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct ExchangeOrder {
+    pub user: String,
+    pub id: Uuid,
+    pub currency_from: Currency,
+    pub currency_to: Currency,
+    pub amount_from: u64,
+    pub amount_to: u64,
+    pub created_at: String,
+    pub status: ExchangeStatus
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct ExchangeConfirmationData {
+    pub user: String,
+    pub id: Uuid,
+    pub currency_from: Currency,
+    pub currency_to: Currency,
+    pub amount_from: u64,
+    pub amount_to: u64,
+    pub created_at: String
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema, FromFormField, Copy)]
+pub enum ExchangeFilter {
+    All,
+    Pending,
+    Completed,
+    Rejected
+}
+
+impl UriDisplay<Query> for ExchangeFilter {
+    fn fmt(&self, f: &mut Formatter<Query>) -> fmt::Result {
+        f.write_value(self.to_string().as_str())
+    }
+}
+
+impl ToString for ExchangeFilter {
+    fn to_string(&self) -> String {
+        match self {
+            ExchangeFilter::All => "all".to_owned(),
+            ExchangeFilter::Completed => "completed".to_owned(),
+            ExchangeFilter::Rejected => "rejected".to_owned(),
+            ExchangeFilter::Pending => "pending".to_owned()
+        }
+    }
+}
+
+impl<'a> FromUriParam<Query, &str> for ExchangeFilter {
+    type Target = ExchangeFilter;
+
+    fn from_uri_param(filt: &str) -> ExchangeFilter {
+        match filt.to_lowercase().as_str() {
+            "all" => ExchangeFilter::All,
+            "completed" => ExchangeFilter::Completed,
+            "rejected" => ExchangeFilter::Rejected,
+            "pending" => ExchangeFilter::Pending,
+            _ => ExchangeFilter::All
+        }
+    }
+}
+
+impl<'a> FromUriParam<Query, &ExchangeFilter> for ExchangeFilter {
+    type Target = ExchangeFilter;
+
+    fn from_uri_param(filt: &ExchangeFilter) -> ExchangeFilter {
+        filt.clone()
+    }
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct ExchangeBalanceItem{
+    pub currency: Currency,
+    pub balance: i64
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct ExchangeAddress {
+    pub currency: String,
+    pub address: String,
+    pub qr_code_base64: String,
 }
