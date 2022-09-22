@@ -71,7 +71,7 @@ export const WithdrawalRequestsTable = {
                             <td>
                                 <div class="flex-row">
                                     {{formatWithdrawalRequestStatus(withdrawalRequest.confirmation_status, requiredConfirmations)}}
-                                    <a v-if="withdrawalRequest.confirmation_status.type === 'Completed'" class="button clear icon-only" href="{{formatExplorerLink(withdrawalRequest.confirmation_status.txid)}}" v-tippy="{content: 'Block explorer link'}">
+                                    <a v-if="withdrawalRequest.confirmation_status.type === 'Completed'" class="button clear icon-only" :href="formatExplorerLink(withdrawalRequest.confirmation_status.txid)" v-tippy="{content: 'Block explorer link'}">
                                         <span class="mdi mdi-link"></span>
                                     </a>
                                 </div>
@@ -94,8 +94,8 @@ export const WithdrawalRequestsTable = {
                 <template v-slot:body v-if="userInfo">
                     <p><b>First name:</b> {{userInfo.firstName}}</p>
                     <p><b>Last name:</b> {{userInfo.lastName}}</p>
-                    <p><b>Email:</b> {{userInfo.email.email}}</p>
-                    <p><b>Phone:</b> {{userInfo.phone.number}}</p>
+                    <p><b>Email:</b> {{userInfo.email ? userInfo.email.email : ""}}</p>
+                    <p><b>Phone:</b> {{userInfo.phone ? userInfo.phone.number : ""}}</p>
                     <p><b>Telegram:</b> {{userInfo.tgName}}</p>
                 </template>
                 <template v-slot:footer>
