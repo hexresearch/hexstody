@@ -10,7 +10,7 @@ export const HotWalletBalance = {
                 <div class="loading-circle"></div>
             </h4>
             <h4 v-else-if="isBalanceLoaded">
-                {{formatCurrencyValue(currency, balance.balance)}} {{currency}}
+                {{formatCurrencyValue(currency, balance.balance)}} {{currencyUnits(currency)}}
             </h4>
             <h4 v-else class="text-error">
                 {{balance}}

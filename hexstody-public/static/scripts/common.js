@@ -286,6 +286,12 @@ export function currencyPrecision(currencyName) {
     };
 }
 
+// Converts amounts in whole units to smallest units.
+// E.g. ETH to WEI, BTC to sats and so on.
+export function convertToSmallest(currency, value) {
+    return value * currencyPrecision(currency)
+}
+
 // The currency in which transaction fees are paid
 export function feeCurrency(currencyName) {
     switch (currencyName.toUpperCase()) {
@@ -315,3 +321,5 @@ export function isErc20Token(currencyName) {
             return null
     };
 }
+
+export function currencyUnits() { }
