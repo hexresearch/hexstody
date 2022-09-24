@@ -25,8 +25,10 @@ async function getLimits(){
     return await fetch("/profile/limits/get").then(r => r.json());
 }
 
-async function getMyChanges(){
-    return await fetch("/profile/limits/changes").then(r => r.json())
+async function getMyChanges(filter){
+    var filt = null;
+    if (filter) {filt = filter} else {filt = "all"}
+    return await fetch("/profile/limits/changes?filter=" + filt).then(r => r.json())
 }
 
 async function getMyConfig(){
