@@ -62,7 +62,14 @@ impl Currency {
         })
     }
 
-    /// Check if the currency is a token
+    pub fn ticker(&self) -> String {
+        match self {
+            Currency::BTC => "BTC".to_owned(),
+            Currency::ETH => "ETH".to_owned(),
+            Currency::ERC20(token) => token.ticker.clone(),
+        }
+    }
+    
     pub fn ticker_lowercase(&self) -> String {
         match self {
             Currency::BTC => "btc".to_owned(),
@@ -309,5 +316,23 @@ impl From<bitcoin::Txid> for CurrencyTxId {
         CurrencyTxId::BTC(BTCTxid {
             txid: txid.to_string(),
         })
+    }
+}
+
+/// Supported fiat currencies. Can be extended in future.
+#[derive(
+    Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
+)]
+pub enum Fiat {
+    USD,
+    RUB
+}
+
+impl Fiat{
+    pub fn ticker(&self) -> String {
+        match self {
+            Fiat::USD => "USD".to_owned(),
+            Fiat::RUB => "RUB".to_owned(),
+        }
     }
 }

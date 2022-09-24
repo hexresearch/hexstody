@@ -1,6 +1,7 @@
 use hexstody_api::domain::ChallengeResponse;
 use hexstody_api::domain::Currency;
 use hexstody_api::error;
+use hexstody_api::state::RuntimeState;
 use hexstody_api::types as api;
 use hexstody_api::types::PasswordChange;
 use hexstody_api::types::SignatureData;
@@ -28,8 +29,6 @@ use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio::sync::{Mutex, MutexGuard};
 use uuid::Uuid;
-
-use crate::state::RuntimeState;
 
 pub struct IsTestFlag(pub bool);
 

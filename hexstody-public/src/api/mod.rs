@@ -26,6 +26,7 @@ use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
 
 use auth::*;
 use hexstody_api::{
+    state::RuntimeState,
     domain::{Currency, Language},
     error::{self, ErrorMessage},
     types::DepositInfo,
@@ -36,8 +37,6 @@ use hexstody_eth_client::client::EthClient;
 use hexstody_sig::SignatureVerificationConfig;
 use profile::*;
 use wallet::*;
-
-use crate::state::RuntimeState;
 
 struct StaticPath(PathBuf);
 
