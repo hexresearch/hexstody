@@ -370,6 +370,43 @@ pub enum WithdrawalRequestStatus {
     },
 }
 
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy, JsonSchema, FromFormField)]
+pub enum WithdrawalFilter {
+    All,
+    Pending,
+    Confirmed,
+    Completed,
+    OpRejected,
+    NodeRejected
+}
+
+impl ToString for WithdrawalFilter {
+    fn to_string(&self) -> String {
+        match self {
+            WithdrawalFilter::All => "all".to_owned(),
+            WithdrawalFilter::Pending => "pending".to_owned(),
+            WithdrawalFilter::Confirmed => "confirmed".to_owned(),
+            WithdrawalFilter::Completed => "completed".to_owned(),
+            WithdrawalFilter::OpRejected => "oprejected".to_owned(),
+            WithdrawalFilter::NodeRejected => "noderejected".to_owned(),
+        }
+    }
+}
+
+impl UriDisplay<Query> for WithdrawalFilter {
+    fn fmt(&self, f: &mut Formatter<Query>) -> fmt::Result {
+        f.write_value(self.to_string().as_str())
+    }
+}
+
+impl<'a> FromUriParam<Query, &WithdrawalFilter> for WithdrawalFilter {
+    type Target = WithdrawalFilter;
+
+    fn from_uri_param(filt: &WithdrawalFilter) -> WithdrawalFilter {
+        filt.clone()
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct DepositInfo {
     pub address: String,
@@ -681,6 +718,40 @@ pub enum LimitChangeStatus {
     Completed,
     Rejected,
 }
+
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, Copy, JsonSchema, FromFormField)]
+pub enum LimitChangeFilter {
+    All,
+    Pending,
+    Completed,
+    Rejected
+}
+
+impl ToString for LimitChangeFilter {
+    fn to_string(&self) -> String {
+        match self {
+            LimitChangeFilter::All => "all".to_owned(),
+            LimitChangeFilter::Completed => "completed".to_owned(),
+            LimitChangeFilter::Rejected => "rejected".to_owned(),
+            LimitChangeFilter::Pending => "pending".to_owned()
+        }
+    }
+}
+
+impl UriDisplay<Query> for LimitChangeFilter {
+    fn fmt(&self, f: &mut Formatter<Query>) -> fmt::Result {
+        f.write_value(self.to_string().as_str())
+    }
+}
+
+impl<'a> FromUriParam<Query, &LimitChangeFilter> for LimitChangeFilter {
+    type Target = LimitChangeFilter;
+
+    fn from_uri_param(filt: &LimitChangeFilter) -> LimitChangeFilter {
+        filt.clone()
+    }
+}
+
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
 pub struct LimitChangeResponse {

@@ -8,7 +8,7 @@ use hexstody_api::domain::{
 };
 use hexstody_api::error;
 use hexstody_api::types::{
-    self as api, BalanceItem, Erc20HistUnitU, GetTokensResponse, TokenActionRequest, TokenInfo, ExchangeRequest, ExchangeFilter,
+    self as api, BalanceItem, Erc20HistUnitU, GetTokensResponse, TokenActionRequest, TokenInfo, ExchangeRequest, ExchangeFilter, WithdrawalFilter,
 };
 use hexstody_btc_client::client::{BtcClient, BTC_BYTES_PER_TRANSACTION};
 use hexstody_db::state::exchange::ExchangeOrderUpd;
@@ -202,14 +202,16 @@ pub async fn btcfee(cookies: &CookieJar<'_>, btc: &State<BtcClient>) -> error::R
 }
 
 #[openapi(tag = "history")]
-#[get("/history/<skip>/<take>")]
+#[get("/history/<skip>/<take>?<filter>")]
 pub async fn get_history(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
     eth_client: &State<EthClient>,
     skip: usize,
     take: usize,
+    filter: Option<WithdrawalFilter>
 ) -> error::Result<Json<api::History>> {
+    let filter = filter.unwrap_or(WithdrawalFilter::All);
     fn to_deposit_history_item(deposit: &Transaction) -> api::HistoryItem {
         match deposit {
             Transaction::Btc(btc_deposit) => api::HistoryItem::Deposit(api::DepositHistoryItem {
@@ -220,7 +222,7 @@ pub async fn get_history(
                 to_address: CurrencyAddress::from(btc_deposit.address.clone()),
                 txid: CurrencyTxId::from(btc_deposit.txid),
             }),
-            Transaction::Eth(eth_deposit) => todo!("Eth deposit history mapping"),
+            Transaction::Eth(_) => todo!("Eth deposit history mapping"),
         }
     }
 
@@ -276,7 +278,7 @@ pub async fn get_history(
             .flat_map(|(currency, info)| {
                 let deposits = info.unconfirmed_transactions();
                 let deposit_history = deposits.map(to_deposit_history_item);
-                let withdrawals: Vec<_> = info.withdrawal_requests.values().collect();
+                let withdrawals: Vec<_> = info.withdrawal_requests.values().filter(|w| w.matches_filter(filter)).collect();
                 let withdrawal_history = withdrawals
                     .iter()
                     .map(|withdrawal| to_withdrawal_history_item(currency, withdrawal));
@@ -341,7 +343,7 @@ pub async fn post_withdraw(
 ) -> error::Result<()> {
     require_auth_user(cookies, state, |_, user| async move {
         match &withdraw_request.address {
-            CurrencyAddress::ETH(eth_withdraw) => {
+            CurrencyAddress::ETH(_) => {
                 let withdrawal_request = WithdrawalRequestInfo {
                     id: Uuid::new_v4(),
                     user: user.username,
@@ -354,8 +356,7 @@ pub async fn post_withdraw(
                 updater
                     .send(state_update)
                     .await
-                    .map_err(|_| error::Error::NoUserFound);
-                Ok(())
+                    .map_err(|_| error::Error::NoUserFound.into())
             },
             CurrencyAddress::ERC20(_) => {
             let withdrawal_request = WithdrawalRequestInfo {
@@ -370,8 +371,7 @@ pub async fn post_withdraw(
                 updater
                     .send(state_update)
                     .await
-                    .map_err(|_| error::Error::NoUserFound);
-                Ok(())
+                    .map_err(|_| error::Error::NoUserFound.into())
             },
             CurrencyAddress::BTC(_) => {
                 let btc_cur = Currency::BTC;
