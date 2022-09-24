@@ -6,6 +6,7 @@ pub mod wallet;
 use base64;
 use figment::Figment;
 use hexstody_runtime_db::RuntimeState;
+use hexstody_ticker::api::ticker_api;
 use hexstody_ticker_provider::client::TickerClient;
 use qrcode_generator::QrCodeEcc;
 use std::fs::File;
@@ -412,6 +413,7 @@ pub async fn serve_api(
         })
     });
     let static_path: PathBuf = api_config.extract_inner("static_path").unwrap();
+    let ticker_api = ticker_api();
     let _ = rocket::custom(api_config)
         .mount("/", FileServer::from(static_path.clone()))
         .mount(
@@ -420,7 +422,6 @@ pub async fn serve_api(
                 ping,
                 get_balance,
                 get_balance_by_currency,
-                ticker,
                 get_user_data,
                 ethfee,
                 btcfee,
@@ -451,6 +452,7 @@ pub async fn serve_api(
                 list_my_orders
             ],
         )
+        .mount("/ticker/", ticker_api)
         .mount(
             "/",
             routes![
