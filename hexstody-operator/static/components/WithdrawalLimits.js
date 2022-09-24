@@ -73,7 +73,7 @@ export const WithdrawalLimits = {
         confirmLimitRequest,
         rejectLimitRequest,
         async fetchData() {
-            const limitRequestsResponse = await getLimitRequests(this.privateKeyJwk, this.publicKeyDer)
+            const limitRequestsResponse = await getLimitRequests(this.privateKeyJwk, this.publicKeyDer, this.filter)
             // Get limit requests and sort them by date
             this.limitRequests = (await limitRequestsResponse.json()).sort(
                 function (a, b) {
@@ -116,6 +116,7 @@ export const WithdrawalLimits = {
         return {
             limitRequests: [],
             requiredConfirmations: null,
+            filter: "all"
         }
     },
     props: {

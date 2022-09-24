@@ -220,13 +220,13 @@ export async function getHotWalletBalance(privateKeyJwk, publicKeyDer, currency)
     return response
 }
 
-export async function getWithdrawalRequests(privateKeyJwk, publicKeyDer, currency) {
-    const response = await makeSignedRequest(privateKeyJwk, publicKeyDer, null, `request/${getCurrencyName(currency).toLowerCase()}`, 'GET')
+export async function getWithdrawalRequests(privateKeyJwk, publicKeyDer, currency, filter) {
+    const response = await makeSignedRequest(privateKeyJwk, publicKeyDer, null, `request/${getCurrencyName(currency).toLowerCase()}?filter=`+filter, 'GET')
     return response
 }
 
-export async function getLimitRequests(privateKeyJwk, publicKeyDer) {
-    const response = await makeSignedRequest(privateKeyJwk, publicKeyDer, null, "changes", "GET")
+export async function getLimitRequests(privateKeyJwk, publicKeyDer, filter) {
+    const response = await makeSignedRequest(privateKeyJwk, publicKeyDer, null, "changes?filter=" + filter, "GET")
     return response
 }
 

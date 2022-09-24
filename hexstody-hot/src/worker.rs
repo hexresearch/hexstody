@@ -2,7 +2,7 @@ use chrono::Utc;
 use hexstody_api::{
     domain::{BTCTxid, CurrencyTxId},
     types::{ConfirmedWithdrawal, LimitSpan},
-    domain::currency::{BtcAddress, Currency, CurrencyAddress, Erc20Token}
+    domain::currency::CurrencyAddress
 };
 use hexstody_btc_api::events::*;
 use hexstody_btc_client::client::BtcClient;

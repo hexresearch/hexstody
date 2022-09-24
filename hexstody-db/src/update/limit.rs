@@ -1,4 +1,4 @@
-use hexstody_api::{domain::Currency, types::{Limit, LimitChangeStatus, SignatureData, LimitChangeResponse, LimitChangeDecisionType, LimitConfirmationData}};
+use hexstody_api::{domain::Currency, types::{Limit, LimitChangeStatus, SignatureData, LimitChangeResponse, LimitChangeDecisionType, LimitConfirmationData, LimitChangeFilter}};
 use p256::{ecdsa::Signature, PublicKey};
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
@@ -49,6 +49,18 @@ impl LimitChangeData{
     }
     pub fn has_rejected(&self, pubkey: PublicKey) -> bool{
         self.rejections.iter().any(|sd| sd.public_key == pubkey)
+    }
+
+    pub fn matches_filter(&self, filter: LimitChangeFilter) -> bool{
+        if matches!(filter, LimitChangeFilter::All) {
+            true
+        } else {
+            match self.status{
+                LimitChangeStatus::InProgress { .. } => matches!(filter, LimitChangeFilter::Pending),
+                LimitChangeStatus::Completed => matches!(filter, LimitChangeFilter::Completed),
+                LimitChangeStatus::Rejected => matches!(filter, LimitChangeFilter::Rejected),
+            }
+        }
     }
 }
 

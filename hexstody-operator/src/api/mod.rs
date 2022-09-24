@@ -17,7 +17,7 @@ use hexstody_api::{
     types::{
         ConfirmationData, HotBalanceResponse, Invite, InviteRequest, InviteResp,
         LimitChangeDecisionType, LimitChangeOpResponse, LimitConfirmationData, SignatureData,
-        WithdrawalRequest, WithdrawalRequestDecisionType, ExchangeConfirmationData, ExchangeFilter, ExchangeBalanceItem, ExchangeAddress, UserInfo,
+        WithdrawalRequest, WithdrawalRequestDecisionType, ExchangeConfirmationData, ExchangeFilter, ExchangeBalanceItem, ExchangeAddress, UserInfo, WithdrawalFilter, LimitChangeFilter,
     },
 };
 use hexstody_btc_client::client::BtcClient;
@@ -134,16 +134,17 @@ async fn get_hot_wallet_balance(
 
 /// # Get all withdrawal requests
 #[openapi(tag = "Withdrawal request")]
-#[get("/request/<currency_name>")]
+#[get("/request/<currency_name>?<filter>")]
 async fn list(
     state: &RocketState<Arc<Mutex<HexstodyState>>>,
     signature_data: SignatureData,
     config: &RocketState<SignatureVerificationConfig>,
     currency_name: &str,
+    filter: WithdrawalFilter
 ) -> error::Result<Json<Vec<WithdrawalRequest>>> {
     guard_op_signature_nomsg(
         &config,
-        uri!(list(currency_name)).to_string(),
+        uri!(list(currency_name, &filter)).to_string(),
         signature_data,
     )?;
     let hexstody_state = state.lock().await;
@@ -153,7 +154,9 @@ async fn list(
             .values()
             .cloned()
             .filter_map(|x| {
-                if x.address.currency().ticker_lowercase() == currency_name {
+                if x.address.currency().ticker_lowercase() == currency_name 
+                    && x.matches_filter(filter) 
+                {
                     Some(x.into())
                 } else {
                     None
@@ -298,13 +301,14 @@ async fn list_ops_invites(
 }
 
 #[openapi(skip)]
-#[get("/changes")]
+#[get("/changes?<filter>")]
 async fn get_all_changes(
     state: &RocketState<Arc<Mutex<HexstodyState>>>,
     config: &RocketState<SignatureVerificationConfig>,
     signature_data: SignatureData,
+    filter: LimitChangeFilter,
 ) -> error::Result<Json<Vec<LimitChangeOpResponse>>> {
-    guard_op_signature_nomsg(&config, uri!(get_all_changes).to_string(), signature_data)?;
+    guard_op_signature_nomsg(&config, uri!(get_all_changes(&filter)).to_string(), signature_data)?;
     let hexstody_state = state.lock().await;
     let changes = hexstody_state
         .users
