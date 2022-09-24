@@ -5,6 +5,8 @@ pub mod wallet;
 
 use base64;
 use figment::Figment;
+use hexstody_runtime_db::RuntimeState;
+use hexstody_ticker_provider::client::TickerClient;
 use qrcode_generator::QrCodeEcc;
 use std::fs::File;
 use std::io::Read;
@@ -26,7 +28,6 @@ use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
 
 use auth::*;
 use hexstody_api::{
-    state::RuntimeState,
     domain::{Currency, Language},
     error::{self, ErrorMessage},
     types::DepositInfo,
@@ -400,6 +401,7 @@ pub async fn serve_api(
     update_sender: mpsc::Sender<StateUpdate>,
     btc_client: BtcClient,
     eth_client: EthClient,
+    ticker_client: TickerClient,
     api_config: Figment,
     is_test: bool,
 ) -> Result<(), rocket::Error> {
@@ -475,6 +477,7 @@ pub async fn serve_api(
         .manage(btc_client)
         .manage(eth_client)
         .manage(runtime_state)
+        .manage(ticker_client)
         .manage(IsTestFlag(is_test))
         .manage(StaticPath(static_path))
         .attach(Template::fairing())

@@ -1,0 +1,31 @@
+[package]
+name = "hexstody-runtime-db"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+chrono = { version = "0.4.19", features = ["serde"] }
+pwhash = "1.0.0"
+rocket = { version = "=0.5.0-rc.2", default-features = false, features = [
+  "json",
+  "uuid",
+] }
+okapi = { git = "https://github.com/GREsau/okapi", rev = "ddb07a709129b24ed8e106b0fbf576b6ded615ac" }
+rocket_okapi = { git = "https://github.com/GREsau/okapi", rev = "ddb07a709129b24ed8e106b0fbf576b6ded615ac", features = [
+  "rapidoc",
+  "swagger",
+  "uuid",
+] }
+schemars = { version = "0.8.10", features = ["chrono", "uuid"] }
+uuid = "0.8.2"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "1.0"
+p256 = { version = "0.11.1", features = ["serde"] }
+base64 = "0.13.0"
+hexstody-api = { path = "../hexstody-api" }
+hexstody-ticker-provider = { path = "../hexstody-ticker-provider" }
+bitcoin = "0.28.1"
+regex = "1.6.0"

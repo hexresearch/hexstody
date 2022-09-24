@@ -2,6 +2,7 @@ use figment::Figment;
 use futures::future::{join3, AbortHandle, AbortRegistration, Abortable, Aborted};
 use futures::Future;
 use hexstody_eth_client::client::EthClient;
+use hexstody_ticker_provider::client::TickerClient;
 use log::*;
 use p256::pkcs8::DecodePublicKey;
 use p256::PublicKey;
@@ -178,6 +179,7 @@ async fn serve_api(
     update_sender: mpsc::Sender<StateUpdate>,
     btc_client: BtcClient,
     eth_client: EthClient,
+    ticker_client: TickerClient,
     api_type: ApiType,
     api_config: Figment,
     abort_reg: AbortRegistration,
@@ -201,6 +203,7 @@ async fn serve_api(
                     update_sender.clone(),
                     btc_client,
                     eth_client,
+                    ticker_client,
                     api_config,
                     is_test,
                 )
@@ -235,6 +238,7 @@ pub async fn serve_apis(
     update_sender: mpsc::Sender<StateUpdate>,
     btc_client: BtcClient,
     eth_client: EthClient,
+    ticker_client: TickerClient,
     is_test: bool,
 ) -> Result<(), Aborted>
 {
@@ -250,6 +254,7 @@ pub async fn serve_apis(
         update_sender.clone(),
         btc_client.clone(),
         eth_client.clone(),
+        ticker_client.clone(),
         ApiType::Public,
         api_config.public_api_config,
         public_abort_reg,
@@ -264,6 +269,7 @@ pub async fn serve_apis(
         update_sender.clone(),
         btc_client.clone(),
         eth_client.clone(),
+        ticker_client.clone(),
         ApiType::Operator,
         api_config.operator_api_config,
         operator_abort_reg,
@@ -300,6 +306,7 @@ pub async fn run_hot_wallet(
     start_notify: Arc<Notify>,
     btc_client: BtcClient,
     eth_client: EthClient,
+    ticker_client: TickerClient,
     api_abort_reg: AbortRegistration,
     is_test: bool,
 ) -> Result<(), Error>
@@ -356,6 +363,7 @@ pub async fn run_hot_wallet(
         update_sender,
         btc_client,
         eth_client,
+        ticker_client,
         is_test
     )
     .await

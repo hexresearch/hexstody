@@ -14,5 +14,6 @@ members = [
     "hexstody-public",
     "hexstody-hot",
     "hexstody-sig",
-    "hexstody-ticker-provider"
+    "hexstody-ticker-provider",
+    "hexstody-runtime-db",
 ]

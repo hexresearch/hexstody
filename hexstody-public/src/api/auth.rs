@@ -1,7 +1,6 @@
 use hexstody_api::domain::ChallengeResponse;
 use hexstody_api::domain::Currency;
 use hexstody_api::error;
-use hexstody_api::state::RuntimeState;
 use hexstody_api::types as api;
 use hexstody_api::types::PasswordChange;
 use hexstody_api::types::SignatureData;
@@ -10,6 +9,7 @@ use hexstody_db::update::misc::PasswordChangeUpd;
 use hexstody_db::update::signup::*;
 use hexstody_db::update::*;
 use hexstody_eth_client::client::EthClient;
+use hexstody_runtime_db::RuntimeState;
 use hexstody_sig::verify_signature;
 use hexstody_sig::SignatureVerificationConfig;
 use pwhash::bcrypt;
