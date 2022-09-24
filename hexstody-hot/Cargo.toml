@@ -21,6 +21,7 @@ hexstody-public = { path = "../hexstody-public" }
 hexstody-operator = { path = "../hexstody-operator" }
 hexstody-btc-test = { path = "../hexstody-btc-test" }
 hexstody-ticker-provider = { path = "../hexstody-ticker-provider" }
+hexstody-runtime-db = { path = "../hexstody-runtime-db" }
 log = "0.4.14"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

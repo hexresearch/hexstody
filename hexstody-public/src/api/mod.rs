@@ -397,6 +397,7 @@ static_path: &State<StaticPath>,) ->  Result<Template, Redirect> {
 pub async fn serve_api(
     pool: Pool,
     state: Arc<Mutex<DbState>>,
+    runtime_state: Arc<Mutex<RuntimeState>>,
     _state_notify: Arc<Notify>,
     start_notify: Arc<Notify>,
     update_sender: mpsc::Sender<StateUpdate>,
@@ -406,7 +407,6 @@ pub async fn serve_api(
     api_config: Figment,
     is_test: bool,
 ) -> Result<(), rocket::Error> {
-    let runtime_state = Arc::new(Mutex::new(RuntimeState::new()));
     let on_ready = AdHoc::on_liftoff("API Start!", |_| {
         Box::pin(async move {
             start_notify.notify_one();
