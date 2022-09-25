@@ -1,43 +1,44 @@
-const SECOND = 1000
-const MINUTE = 60 * SECOND
-const HOUR = 60 * MINUTE
-const DAY = 24 * HOUR
+// export const currencyEnum = Object.freeze({
+//     btc: {
+//         symbol: "BTC",
+//         name: "Bitcoin",
+//         decimals: 10 ** 8,
+//         type: "native"
+//     },
+//     eth: {
+//         symbol: "ETH",
+//         name: "Ethereum",
+//         decimals: 10 ** 18,
+//         type: "native"
+//     },
+//     erc20_usdt: {
+//         symbol: "USDT",
+//         name: "Tether USD",
+//         decimals: 10 ** 6,
+//         type: "ERC20",
+//         contract: "0xfD8ef4113c5f54BE9Cb103eB437b710b8e1d6885"
+//     },
+//     erc20_crv: {
+//         symbol: "CRV",
+//         name: "Curve DAO Token",
+//         decimals: 10 ** 18,
+//         type: "ERC20",
+//         contract: "0x817805F0f818237c73Fde5dEc91dbB650A7E7612"
+//     },
+//     erc20_gtech: {
+//         symbol: "GTECH",
+//         name: "GTECH",
+//         decimals: 10 ** 18,
+//         type: "ERC20",
+//         contract: "0x866A4Da32007BA71aA6CcE9FD85454fCF48B140c"
+//     }
+// })
 
-// Amount of satoshi in 1 BTC
 const BTC_PRECISION = 10 ** 8
-// Amount of wei in 1 ETH
 const ETH_PRECISION = 10 ** 18
 const USDT_PRECISION = 10 ** 6
 const CRV_PRECISION = 10 ** 18
 const GTECH_PRECISION = 10 ** 18
-
-export const GWEI = 10 ** 9
-
-export const currencyEnum = Object.freeze({
-    btc: "BTC",
-    eth: "ETH",
-    erc20_usdt: {
-        "ERC20": {
-            "ticker": "USDT",
-            "name": "USDT",
-            "contract": "0xfD8ef4113c5f54BE9Cb103eB437b710b8e1d6885"
-        }
-    },
-    erc20_crv: {
-        "ERC20": {
-            "ticker": "CRV",
-            "name": "CRV",
-            "contract": "0x817805F0f818237c73Fde5dEc91dbB650A7E7612"
-        }
-    },
-    erc20_gtech: {
-        "ERC20": {
-            "ticker": "GTECH",
-            "name": "GTECH",
-            "contract": "0x866A4Da32007BA71aA6CcE9FD85454fCF48B140c"
-        }
-    }
-})
 
 export function isErc20Token(currency) {
     if (currency !== null && typeof currency === 'object') {
@@ -61,28 +62,28 @@ export function getCurrencyName(currency) {
 
 export function formatCurrencyValue(currency, value) {
     let numberFormat
-    switch (currency) {
-        case currencyEnum.btc:
+    switch (getCurrencyName(currency)) {
+        case "BTC":
             numberFormat = Intl.NumberFormat('en', {
                 maximumFractionDigits: Math.log10(BTC_PRECISION),
             })
             return numberFormat.format(value / BTC_PRECISION)
-        case currencyEnum.eth:
+        case "ETH":
             numberFormat = Intl.NumberFormat('en', {
                 maximumFractionDigits: Math.log10(ETH_PRECISION),
             })
             return numberFormat.format(value / ETH_PRECISION)
-        case currencyEnum.erc20_usdt:
+        case "USDT":
             numberFormat = Intl.NumberFormat('en', {
                 maximumFractionDigits: Math.log10(USDT_PRECISION),
             })
             return numberFormat.format(value / USDT_PRECISION)
-        case currencyEnum.erc20_crv:
+        case "CRV":
             numberFormat = Intl.NumberFormat('en', {
                 maximumFractionDigits: Math.log10(CRV_PRECISION),
             })
             return numberFormat.format(value / CRV_PRECISION)
-        case currencyEnum.erc20_gtech:
+        case "GTECH":
             numberFormat = Intl.NumberFormat('en', {
                 maximumFractionDigits: Math.log10(GTECH_PRECISION),
             })
@@ -225,13 +226,13 @@ export async function getExchangeBalances(privateKeyJwk, publicKeyDer) {
     return response
 }
 
-export async function getWithdrawalRequests(privateKeyJwk, publicKeyDer, currency) {
-    const response = await makeSignedRequest(privateKeyJwk, publicKeyDer, null, `request/${getCurrencyName(currency).toLowerCase()}`, 'GET')
+export async function getWithdrawalRequests(privateKeyJwk, publicKeyDer, currency, filter) {
+    const response = await makeSignedRequest(privateKeyJwk, publicKeyDer, null, `request/${getCurrencyName(currency).toLowerCase()}?filter=${filter}`, 'GET')
     return response
 }
 
-export async function getLimitRequests(privateKeyJwk, publicKeyDer) {
-    const response = await makeSignedRequest(privateKeyJwk, publicKeyDer, null, "changes", "GET")
+export async function getLimitRequests(privateKeyJwk, publicKeyDer, filter) {
+    const response = await makeSignedRequest(privateKeyJwk, publicKeyDer, null, `changes?filter=${filter}`, "GET")
     return response
 }
 
@@ -289,4 +290,11 @@ export async function getUserInfo(privateKeyJwk, publicKeyDer, userId) {
 
 export async function getExchangeDepositAddress(privateKeyJwk, publicKeyDer, currency) {
     return await makeSignedRequest(privateKeyJwk, publicKeyDer, currency, "exchange/address", "POST")
+}
+
+export async function getTicker(currency) {
+    return await fetch("/ticker/ticker", {
+        method: "POST",
+        body: JSON.stringify(currency)
+    })
 }

@@ -5,6 +5,9 @@ pub mod wallet;
 
 use base64;
 use figment::Figment;
+use hexstody_runtime_db::RuntimeState;
+use hexstody_ticker::api::ticker_api;
+use hexstody_ticker_provider::client::TickerClient;
 use qrcode_generator::QrCodeEcc;
 use std::fs::File;
 use std::io::Read;
@@ -36,8 +39,6 @@ use hexstody_eth_client::client::EthClient;
 use hexstody_sig::SignatureVerificationConfig;
 use profile::*;
 use wallet::*;
-
-use crate::state::RuntimeState;
 
 struct StaticPath(PathBuf);
 
@@ -396,21 +397,23 @@ static_path: &State<StaticPath>,) ->  Result<Template, Redirect> {
 pub async fn serve_api(
     pool: Pool,
     state: Arc<Mutex<DbState>>,
+    runtime_state: Arc<Mutex<RuntimeState>>,
     _state_notify: Arc<Notify>,
     start_notify: Arc<Notify>,
     update_sender: mpsc::Sender<StateUpdate>,
     btc_client: BtcClient,
     eth_client: EthClient,
+    ticker_client: TickerClient,
     api_config: Figment,
     is_test: bool,
 ) -> Result<(), rocket::Error> {
-    let runtime_state = Arc::new(Mutex::new(RuntimeState::new()));
     let on_ready = AdHoc::on_liftoff("API Start!", |_| {
         Box::pin(async move {
             start_notify.notify_one();
         })
     });
     let static_path: PathBuf = api_config.extract_inner("static_path").unwrap();
+    let ticker_api = ticker_api();
     let _ = rocket::custom(api_config)
         .mount("/", FileServer::from(static_path.clone()))
         .mount(
@@ -419,7 +422,6 @@ pub async fn serve_api(
                 ping,
                 get_balance,
                 get_balance_by_currency,
-                ticker,
                 get_user_data,
                 ethfee,
                 btcfee,
@@ -450,6 +452,7 @@ pub async fn serve_api(
                 list_my_orders
             ],
         )
+        .mount("/ticker/", ticker_api)
         .mount(
             "/",
             routes![
@@ -476,6 +479,7 @@ pub async fn serve_api(
         .manage(btc_client)
         .manage(eth_client)
         .manage(runtime_state)
+        .manage(ticker_client)
         .manage(IsTestFlag(is_test))
         .manage(StaticPath(static_path))
         .attach(Template::fairing())

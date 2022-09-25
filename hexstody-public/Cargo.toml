@@ -19,6 +19,9 @@ hexstody-api = { path = "../hexstody-api" }
 hexstody-btc-api = { path = "../hexstody-btc-api" }
 hexstody-btc-client = { path = "../hexstody-btc-client" }
 hexstody-eth-client = { path = "../hexstody-eth-client" }
+hexstody-runtime-db = { path = "../hexstody-runtime-db" }
+hexstody-ticker-provider = { path = "../hexstody-ticker-provider" }
+hexstody-ticker = { path = "../hexstody-ticker" }
 log = "0.4.14"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

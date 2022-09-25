@@ -1,4 +1,7 @@
 use figment::Figment;
+use hexstody_runtime_db::RuntimeState;
+use hexstody_ticker::api::ticker_api;
+use hexstody_ticker_provider::client::TickerClient;
 use rocket::{
     fairing::AdHoc,
     fs::{FileServer, NamedFile},
@@ -17,7 +20,7 @@ use hexstody_api::{
     types::{
         ConfirmationData, HotBalanceResponse, Invite, InviteRequest, InviteResp,
         LimitChangeDecisionType, LimitChangeOpResponse, LimitConfirmationData, SignatureData,
-        WithdrawalRequest, WithdrawalRequestDecisionType, ExchangeConfirmationData, ExchangeFilter, ExchangeBalanceItem, ExchangeAddress, UserInfo,
+        WithdrawalRequest, WithdrawalRequestDecisionType, ExchangeConfirmationData, ExchangeFilter, ExchangeBalanceItem, ExchangeAddress, UserInfo, WithdrawalFilter, LimitChangeFilter,
     },
 };
 use hexstody_btc_client::client::BtcClient;
@@ -134,16 +137,17 @@ async fn get_hot_wallet_balance(
 
 /// # Get all withdrawal requests
 #[openapi(tag = "Withdrawal request")]
-#[get("/request/<currency_name>")]
+#[get("/request/<currency_name>?<filter>")]
 async fn list(
     state: &RocketState<Arc<Mutex<HexstodyState>>>,
     signature_data: SignatureData,
     config: &RocketState<SignatureVerificationConfig>,
     currency_name: &str,
+    filter: WithdrawalFilter
 ) -> error::Result<Json<Vec<WithdrawalRequest>>> {
     guard_op_signature_nomsg(
         &config,
-        uri!(list(currency_name)).to_string(),
+        uri!(list(currency_name, &filter)).to_string(),
         signature_data,
     )?;
     let hexstody_state = state.lock().await;
@@ -153,7 +157,9 @@ async fn list(
             .values()
             .cloned()
             .filter_map(|x| {
-                if x.address.currency().ticker_lowercase() == currency_name {
+                if x.address.currency().ticker_lowercase() == currency_name 
+                    && x.matches_filter(filter) 
+                {
                     Some(x.into())
                 } else {
                     None
@@ -298,13 +304,14 @@ async fn list_ops_invites(
 }
 
 #[openapi(skip)]
-#[get("/changes")]
+#[get("/changes?<filter>")]
 async fn get_all_changes(
     state: &RocketState<Arc<Mutex<HexstodyState>>>,
     config: &RocketState<SignatureVerificationConfig>,
     signature_data: SignatureData,
+    filter: LimitChangeFilter,
 ) -> error::Result<Json<Vec<LimitChangeOpResponse>>> {
-    guard_op_signature_nomsg(&config, uri!(get_all_changes).to_string(), signature_data)?;
+    guard_op_signature_nomsg(&config, uri!(get_all_changes(&filter)).to_string(), signature_data)?;
     let hexstody_state = state.lock().await;
     let changes = hexstody_state
         .users
@@ -545,11 +552,13 @@ async fn get_exchange_address(
 pub async fn serve_api(
     pool: Pool,
     state: Arc<Mutex<HexstodyState>>,
+    runtime_state: Arc<Mutex<RuntimeState>>,
     _state_notify: Arc<Notify>,
     start_notify: Arc<Notify>,
     update_sender: mpsc::Sender<StateUpdate>,
     btc_client: BtcClient,
     eth_client: EthClient,
+    ticker_client: TickerClient,
     api_config: Figment,
 ) -> Result<(), rocket::Error> {
     let on_ready = AdHoc::on_liftoff("API Start!", |_| {
@@ -558,6 +567,7 @@ pub async fn serve_api(
         })
     });
     let static_path: PathBuf = api_config.extract_inner("static_path").unwrap();
+    let ticker_api = ticker_api();
     let _ = rocket::custom(api_config)
         .mount("/", FileServer::from(static_path.clone()))
         .mount("/", routes![index])
@@ -583,6 +593,7 @@ pub async fn serve_api(
                 get_user_info,                  // GET: /user/info/<user_id>
             ],
         )
+        .mount("/ticker/", ticker_api)
         .mount(
             "/swagger/",
             make_swagger_ui(&SwaggerUIConfig {
@@ -591,10 +602,12 @@ pub async fn serve_api(
             }),
         )
         .manage(state)
+        .manage(runtime_state)
         .manage(pool)
         .manage(update_sender)
         .manage(btc_client)
         .manage(eth_client)
+        .manage(ticker_client)
         .manage(static_path)
         .attach(AdHoc::config::<SignatureVerificationConfig>())
         .attach(on_ready)

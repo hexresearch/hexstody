@@ -71,7 +71,7 @@ export const WithdrawalRequestsTable = {
                             <td>
                                 <div class="flex-row">
                                     {{formatWithdrawalRequestStatus(withdrawalRequest.confirmation_status, requiredConfirmations)}}
-                                    <a v-if="withdrawalRequest.confirmation_status.type === 'Completed'" class="button clear icon-only" href="{{formatExplorerLink(withdrawalRequest.confirmation_status.txid)}}" v-tippy="{content: 'Block explorer link'}">
+                                    <a v-if="withdrawalRequest.confirmation_status.type === 'Completed'" class="button clear icon-only" :href="formatExplorerLink(withdrawalRequest.confirmation_status.txid)" v-tippy="{content: 'Block explorer link'}">
                                         <span class="mdi mdi-link"></span>
                                     </a>
                                 </div>
@@ -94,8 +94,8 @@ export const WithdrawalRequestsTable = {
                 <template v-slot:body v-if="userInfo">
                     <p><b>First name:</b> {{userInfo.firstName}}</p>
                     <p><b>Last name:</b> {{userInfo.lastName}}</p>
-                    <p><b>Email:</b> {{userInfo.email.email}}</p>
-                    <p><b>Phone:</b> {{userInfo.phone.number}}</p>
+                    <p><b>Email:</b> {{userInfo.email ? userInfo.email.email : ""}}</p>
+                    <p><b>Phone:</b> {{userInfo.phone ? userInfo.phone.number : ""}}</p>
                     <p><b>Telegram:</b> {{userInfo.tgName}}</p>
                 </template>
                 <template v-slot:footer>
@@ -112,7 +112,7 @@ export const WithdrawalRequestsTable = {
         getCurrencyName,
         copyToClipboard,
         async fetchData() {
-            const withdrawalRequestsResponse = await getWithdrawalRequests(this.privateKeyJwk, this.publicKeyDer, this.currency)
+            const withdrawalRequestsResponse = await getWithdrawalRequests(this.privateKeyJwk, this.publicKeyDer, this.currency, this.filter)
             // Get withdrawal requests and sort them by date
             this.withdrawalRequests = (await withdrawalRequestsResponse.json()).sort(
                 function (a, b) {
@@ -161,7 +161,8 @@ export const WithdrawalRequestsTable = {
             withdrawalRequests: [],
             requiredConfirmations: null,
             isModalVisible: false,
-            userInfo: null
+            userInfo: null,
+            filter: "pending",
         }
     },
     watch: {

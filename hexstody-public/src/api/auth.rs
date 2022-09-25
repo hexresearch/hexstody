@@ -9,6 +9,7 @@ use hexstody_db::update::misc::PasswordChangeUpd;
 use hexstody_db::update::signup::*;
 use hexstody_db::update::*;
 use hexstody_eth_client::client::EthClient;
+use hexstody_runtime_db::RuntimeState;
 use hexstody_sig::verify_signature;
 use hexstody_sig::SignatureVerificationConfig;
 use pwhash::bcrypt;
@@ -28,8 +29,6 @@ use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio::sync::{Mutex, MutexGuard};
 use uuid::Uuid;
-
-use crate::state::RuntimeState;
 
 pub struct IsTestFlag(pub bool);
 

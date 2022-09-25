@@ -3,7 +3,7 @@ use crate::update::{signup::UserId, withdrawal::WithdrawalRequestDecision};
 use hexstody_api::domain::{CurrencyAddress, CurrencyTxId};
 use hexstody_api::types::{
     WithdrawalRequest as WithdrawalRequestApi,
-    WithdrawalRequestStatus as WithdrawalRequestStatusApi,
+    WithdrawalRequestStatus as WithdrawalRequestStatusApi, WithdrawalFilter,
 };
 
 use chrono::prelude::*;
@@ -143,6 +143,21 @@ impl WithdrawalRequest {
         match self.status {
             WithdrawalRequestStatus::Completed { fee, .. } => fee,
             _ => None,
+        }
+    }
+
+    /// Check if a request matches the filter
+    pub fn matches_filter(&self, filter: WithdrawalFilter) -> bool {
+        if matches!(filter, WithdrawalFilter::All) {
+            true
+        } else {
+            match self.status {
+                WithdrawalRequestStatus::InProgress(_) => matches!(filter, WithdrawalFilter::Pending),
+                WithdrawalRequestStatus::Confirmed => matches!(filter, WithdrawalFilter::Confirmed),
+                WithdrawalRequestStatus::Completed { .. } => matches!(filter, WithdrawalFilter::Completed),
+                WithdrawalRequestStatus::OpRejected => matches!(filter, WithdrawalFilter::OpRejected),
+                WithdrawalRequestStatus::NodeRejected { .. } => matches!(filter, WithdrawalFilter::NodeRejected),
+            }
         }
     }
 }

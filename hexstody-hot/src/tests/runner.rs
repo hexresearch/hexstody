@@ -1,6 +1,7 @@
 use bitcoincore_rpc::Client;
 use futures::{future::AbortHandle, FutureExt};
 use hexstody_eth_client::client::EthClient;
+use hexstody_ticker_provider::client::TickerClient;
 use log::*;
 use p256::pkcs8::EncodePublicKey;
 use p256::SecretKey;
@@ -88,6 +89,7 @@ where
         let api_handle = tokio::spawn({
             let start_notify = start_notify.clone();
             let btc_client = btc_client.clone();
+            let ticker_client = TickerClient::new("https://min-api.cryptocompare.com");
             async move {
                 let (_, abort_reg) = AbortHandle::new_pair();
                 match run_hot_wallet(
@@ -95,6 +97,7 @@ where
                         dbconnect: dbconnect,
                         btc_module: "http://127.0.0.1:8180".to_owned(),
                         eth_module: eth_module,
+                        ticker_provider: "https://min-api.cryptocompare.com".to_owned(),
                         network: Network::Regtest,
                         start_regtest: true,
                         operator_public_keys: keys,
@@ -115,6 +118,7 @@ where
                     start_notify,
                     btc_client,
                     eth_client,
+                    ticker_client,
                     abort_reg,
                     true
                 )

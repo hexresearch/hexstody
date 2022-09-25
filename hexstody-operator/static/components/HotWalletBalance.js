@@ -1,4 +1,4 @@
-import { getHotWalletBalance, formatCurrencyValue } from "../scripts/common.js"
+import { getHotWalletBalance, formatCurrencyValue, getCurrencyName } from "../scripts/common.js"
 
 export const HotWalletBalance = {
     template:
@@ -10,20 +10,21 @@ export const HotWalletBalance = {
                 <div class="loading-circle"></div>
             </h4>
             <h4 v-else-if="isBalanceLoaded">
-                {{formatCurrencyValue(currency, balance.balance)}} {{currency}}
+                {{formatCurrencyValue(currency, balance.balance)}} {{getCurrencyName(currency)}}
             </h4>
             <h4 v-else class="text-error">
                 {{balance}}
             </h4>
         </div>`,
     methods: {
+        getCurrencyName,
+        formatCurrencyValue,
         async fetchData() {
             this.isLoading = true
             const response = await getHotWalletBalance(this.privateKeyJwk, this.publicKeyDer, this.currency)
             this.balance = await response.json()
             this.isLoading = false
         },
-        formatCurrencyValue
     },
     data() {
         return {
