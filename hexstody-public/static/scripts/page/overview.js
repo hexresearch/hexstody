@@ -39,7 +39,7 @@ async function initTemplates() {
     Handlebars.registerHelper('isWithdrawal', (historyItem) => historyItem.type === "withdrawal");
     Handlebars.registerHelper('formatCurrencyValue', function () {
         if (typeof this.currency === 'object') {
-            return formattedCurrencyValue(this.currency.ERC20.ticker, this.value);
+            return formattedCurrencyValue(this.currency.ERC20.ticker, this.value/1000000000000);
         } else {
             return formattedCurrencyValue(this.currency, this.value);
         }

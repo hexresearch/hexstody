@@ -2,9 +2,11 @@ use chrono::Utc;
 use hexstody_api::{
     domain::{BTCTxid, CurrencyTxId},
     types::{ConfirmedWithdrawal, LimitSpan},
+    domain::currency::{BtcAddress, Currency, CurrencyAddress, Erc20Token}
 };
 use hexstody_btc_api::events::*;
 use hexstody_btc_client::client::BtcClient;
+use hexstody_eth_client::client::EthClient;
 use hexstody_db::{
     state::State,
     update::{
@@ -23,6 +25,7 @@ use tokio_cron_scheduler::*;
 
 pub async fn update_results_worker(
     btc_client: BtcClient,
+    eth_client: EthClient,
     state_mx: Arc<Mutex<State>>,
     mut update_receiver: mpsc::Receiver<UpdateResult>,
     update_sender: mpsc::Sender<StateUpdate>,
@@ -49,43 +52,97 @@ pub async fn update_results_worker(
                             .collect();
                         let cw = ConfirmedWithdrawal {
                             id,
-                            user: req.user,
-                            address: req.address,
+                            user: req.user.clone(),
+                            address: req.address.clone(),
                             created_at: req.created_at.format("%Y-%m-%d %H:%M:%S").to_string(),
                             amount: req.amount,
                             confirmations,
                             rejections,
                         };
-                        match btc_client.withdraw_btc(cw).await {
-                            Ok(resp) => {
-                                debug!("withdraw_btc_resp: {:?}", resp);
-                                let txid = resp.txid.0.to_string();
-                                let bod =
-                                    UpdateBody::WithdrawalRequestComplete(WithdrawCompleteInfo {
-                                        id: resp.id,
-                                        confirmed_at: Utc::now().naive_utc(),
-                                        txid: CurrencyTxId::BTC(BTCTxid { txid }),
-                                        fee: resp.fee,
-                                        input_addresses: resp.input_addresses,
-                                        output_addresses: resp.output_addresses,
-                                        request_type: hexstody_db::state::WithdrawalRequestType::OverLimit,
-                                    });
-                                if let Err(e) = update_sender.send(StateUpdate::new(bod)).await {
-                                    debug!("Failed to send update with confirmation: {}", e);
-                                };
-                            }
-                            Err(e) => {
-                                debug!("Failed to post tx: {:?}", e);
-                                let info = WithdrawalRejectInfo {
-                                    id,
-                                    reason: format!("{}", e),
-                                };
-                                let bod = UpdateBody::WithdrawalRequestNodeRejected(info);
-                                if let Err(e) = update_sender.send(StateUpdate::new(bod)).await {
-                                    debug!("Failed to send update with node rejection: {}", e);
-                                };
-                            }
+                        info!("=================DEBUG=================");
+                        info!("===============<UPDATE>================");
+                        info!("{:}",&id);
+                        info!("{:}",req.user);
+                        match req.address.clone() {
+                            CurrencyAddress::BTC(a) => {
+                                info!("===============<BTC>================");
+                                info!("{:}",a);
+                                match btc_client.withdraw_btc(cw).await {
+                                    Ok(resp) => {
+                                        debug!("withdraw_btc_resp: {:?}", resp);
+                                        let txid = resp.txid.0.to_string();
+                                        let bod =
+                                            UpdateBody::WithdrawalRequestComplete(WithdrawCompleteInfo {
+                                                id: resp.id,
+                                                confirmed_at: Utc::now().naive_utc(),
+                                                txid: CurrencyTxId::BTC(BTCTxid { txid }),
+                                                fee: resp.fee,
+                                                input_addresses: resp.input_addresses,
+                                                output_addresses: resp.output_addresses,
+                                                request_type: hexstody_db::state::WithdrawalRequestType::OverLimit,
+                                            });
+                                        if let Err(e) = update_sender.send(StateUpdate::new(bod)).await {
+                                            debug!("Failed to send update with confirmation: {}", e);
+                                        };
+                                    }
+                                    Err(e) => {
+                                        debug!("Failed to post tx: {:?}", e);
+                                        let info = WithdrawalRejectInfo {
+                                            id,
+                                            reason: format!("{}", e),
+                                        };
+                                        let bod = UpdateBody::WithdrawalRequestNodeRejected(info);
+                                        if let Err(e) = update_sender.send(StateUpdate::new(bod)).await {
+                                            debug!("Failed to send update with node rejection: {}", e);
+                                        };
+                                    }
+                                }
+                                info!("===============</BTC>================");
+                            },
+                            CurrencyAddress::ETH(a) => {
+                                info!("===============<ETH>================");
+                                match eth_client.send_tx(&req.user.clone(),&a.account,&cw.amount.to_string()).await {
+                                    Ok(resp) => {
+                                        info!("withdraw_eth_resp: {:?}", resp);
+                                    }
+                                    Err(e) => {
+                                        debug!("Failed to post tx: {:?}", e);
+                                        let info = WithdrawalRejectInfo {
+                                            id,
+                                            reason: format!("{}", e),
+                                        };
+                                        let bod = UpdateBody::WithdrawalRequestNodeRejected(info);
+                                        if let Err(e) = update_sender.send(StateUpdate::new(bod)).await {
+                                            debug!("Failed to send update with node rejection: {}", e);
+                                        };
+                                    }
+                                }
+                                info!("===============</ETH>================");
+                            },
+                            CurrencyAddress::ERC20(a) => {
+                                info!("===============<ERC20>================");
+                                info!("{:}",a.token.contract.clone());
+                                match eth_client.send_tx_erc20(&req.user.clone(),&a.account.account,&a.token.contract,&cw.amount.to_string()).await {
+                                    Ok(resp) => {
+                                        info!("withdraw_eth_resp: {:?}", resp);
+                                    }
+                                    Err(e) => {
+                                        debug!("Failed to post tx: {:?}", e);
+                                        let info = WithdrawalRejectInfo {
+                                            id,
+                                            reason: format!("{}", e),
+                                        };
+                                        let bod = UpdateBody::WithdrawalRequestNodeRejected(info);
+                                        if let Err(e) = update_sender.send(StateUpdate::new(bod)).await {
+                                            debug!("Failed to send update with node rejection: {}", e);
+                                        };
+                                    }
+                                }
+                                info!("===============</ERC20>================");
+                            },
                         }
+                        info!("===============</UPDATE>================");
+                        info!("=================DEBUG=================");
                     }
                 }
                 UpdateResult::WithdrawalUnderlimit(wr) => {
@@ -240,6 +297,6 @@ pub async fn cron_workers(
             }
         })
     }).expect("Failed to create monthly job"));
-    
+
     sched.start().await.expect("Some error in scheduling");
 }

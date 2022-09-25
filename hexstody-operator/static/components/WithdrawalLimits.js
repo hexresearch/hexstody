@@ -16,50 +16,52 @@ export const WithdrawalLimits = {
         /*html*/
         `<div>
             <h4>Withdrawal limits</h4>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Time</th>
-                        <th>ID</th>
-                        <th>User</th>
-                        <th>Currency</th>
-                        <th>Current limit value</th>
-                        <th>New limit value</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="limitRequest in limitRequests">
-                        <td>{{formatLimitTime(limitRequest.created_at)}}</td>
-                        <td>
-                            <div class="flex-row">
-                                <span v-tippy="limitRequest.id">
-                                    {{truncate(limitRequest.id, 8)}}
-                                </span>
-                                <button class="button clear icon-only" @click='copyToClipboard(limitRequest.id)' v-tippy>
-                                    <span class="mdi mdi-content-copy"></span>
-                                </button>
-                                <tippy trigger="click" :hide-on-click="false" @show="hideTooltip">
-                                    Copied
-                                </tippy>
-                            </div>
-                        </td>
-                        <td>{{limitRequest.user}}</td>
-                        <td>{{getCurrencyName(limitRequest.currency)}}</td>
-                        <td>{{formatLimitValue(limitRequest.current_limit)}}</td>
-                        <td>{{formatLimitValue(limitRequest.requested_limit)}}</td>
-                        <td>{{formatLimitStatus(limitRequest.status)}}</td>
-                        <td>
-                            <div class="action-buttons-wrapper flex-row">
-                                <button class="button primary" @click="confirmRequest(limitRequest)" :disabled="limitRequest.status.type !== 'InProgress'">Confirm</button>
-                                <button class="button error" @click="rejectRequest(limitRequest)" :disabled="limitRequest.status.type !== 'InProgress'">Reject</button>
-                                <!-- <button class="button" @click="showRequestDetails(withdrawalRequest)">Details</button> -->
-                            </div>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>ID</th>
+                            <th>User</th>
+                            <th>Currency</th>
+                            <th>Current limit value</th>
+                            <th>New limit value</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="limitRequest in limitRequests">
+                            <td>{{formatLimitTime(limitRequest.created_at)}}</td>
+                            <td>
+                                <div class="flex-row">
+                                    <span v-tippy="limitRequest.id">
+                                        {{truncate(limitRequest.id, 8)}}
+                                    </span>
+                                    <button class="button clear icon-only" @click='copyToClipboard(limitRequest.id)' v-tippy>
+                                        <span class="mdi mdi-content-copy"></span>
+                                    </button>
+                                    <tippy trigger="click" :hide-on-click="false" @show="hideTooltip">
+                                        Copied
+                                    </tippy>
+                                </div>
+                            </td>
+                            <td>{{limitRequest.user}}</td>
+                            <td>{{getCurrencyName(limitRequest.currency)}}</td>
+                            <td>{{formatLimitValue(limitRequest.current_limit)}}</td>
+                            <td>{{formatLimitValue(limitRequest.requested_limit)}}</td>
+                            <td>{{formatLimitStatus(limitRequest.status)}}</td>
+                            <td>
+                                <div class="action-buttons-wrapper justify-center">
+                                    <button class="button primary" @click="confirmRequest(limitRequest)" :disabled="limitRequest.status.type !== 'InProgress'">Confirm</button>
+                                    <button class="button error" @click="rejectRequest(limitRequest)" :disabled="limitRequest.status.type !== 'InProgress'">Reject</button>
+                                    <!-- <button class="button" @click="showRequestDetails(withdrawalRequest)">Details</button> -->
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>`,
     methods: {
         truncate,

@@ -40,8 +40,8 @@ where
     Fut: Future<Output = ()>,
 {
     btc_runner::run_two_nodes_test(|btc_node, other_btc_node, btc_client| async move {
-        let eth_module = "http://node.desolator.net".to_owned();
-        let eth_client = EthClient::new(&eth_module); 
+        let eth_module = "http://127.0.0.1:8540".to_owned();
+        let eth_client = EthClient::new(&eth_module);
         let (db_port, db_dir) = setup_postgres();
         let dbconnect = format!("postgres://hexstody:hexstody@localhost:{db_port}/hexstody");
         info!("Connection to database: {dbconnect}");

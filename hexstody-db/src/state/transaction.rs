@@ -3,40 +3,41 @@ use bitcoin::{Address, Txid};
 use chrono::prelude::*;
 use hexstody_btc_api::events::{TxDirection, TxUpdate};
 use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 
 /// User data for specific currency
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub enum Transaction {
     Btc(BtcTransaction),
-    Eth(),
+    Eth(EthTransaction),
 }
 
 impl Transaction {
     pub fn amount(&self) -> i64 {
         match self {
             Transaction::Btc(tx) => tx.amount,
-            Transaction::Eth() => 0,
+            Transaction::Eth(tx) => tx.value,
         }
     }
 
     pub fn is_finalized(&self) -> bool {
         match self {
             Transaction::Btc(tx) => tx.confirmations > 3,
-            Transaction::Eth() => todo!("Eth confirmations"),
+            Transaction::Eth(tx) => tx.confirmations > 3,
         }
     }
 
     pub fn is_withdraw(&self) -> bool {
         match self {
             Transaction::Btc(tx) => tx.amount < 0,
-            Transaction::Eth() => todo!("Eth is withdraw"),
+            Transaction::Eth(tx) => tx.from == tx.addr,
         }
     }
 
     pub fn is_conflicted(&self) -> bool {
         match self {
             Transaction::Btc(tx) => tx.confirmations == 0 && !tx.conflicts.is_empty(),
-            Transaction::Eth() => todo!("Eth is conflicted"),
+            Transaction::Eth(tx) => tx.confirmations < 0,
         }
     }
 }
@@ -96,4 +97,34 @@ impl From<TxUpdate> for BtcTransaction {
             fee: val.fee
         }
     }
+}
+
+/// Ethereum transaction metainformation
+#[allow(non_snake_case)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, JsonSchema, Clone)]
+pub struct EthTransaction {
+    /// The number of block
+    pub blockNumber: String,
+    /// The tx first seen
+    pub timeStamp: String,
+    /// ID of transaction
+    pub hash: String,
+    /// Sender's address
+    pub from: String,
+    /// Recipient's address
+    pub to: String,
+    /// Amount of money
+    pub value: i64,
+    /// Name of sending token
+    pub tokenName: String,
+    /// Gas spent for this transaction
+    pub gas: String,
+    /// Gas price at the moment of transaction execution
+    pub gasPrice: String,
+    /// Address of token's contract
+    pub contractAddress: String,
+    /// Confirmations number
+    pub confirmations: i64,
+    /// Accounts address
+    pub addr: String
 }

@@ -125,7 +125,7 @@ export function formatWithdrawalRequestStatus(status, requiredConfirmations) {
         case "OpRejected":
             return "Rejected by operators"
         case "NodeRejected":
-            return "Rejected by node (" + status.reason + ")"
+            return "Rejected by node"
         case "Completed":
             return "Completed"
         default:
@@ -266,4 +266,8 @@ export async function getInvite(privateKeyJwk, publicKeyDer, inviteLabel) {
 
 export async function getInvites(privateKeyJwk, publicKeyDer) {
     return await makeSignedRequest(privateKeyJwk, publicKeyDer, null, "invite/listmy", "GET")
+}
+
+export async function getUserInfo(privateKeyJwk, publicKeyDer, userId) {
+    return await makeSignedRequest(privateKeyJwk, publicKeyDer, null, `user/info/${userId}`, "GET")
 }

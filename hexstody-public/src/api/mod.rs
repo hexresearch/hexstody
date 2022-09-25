@@ -249,7 +249,7 @@ async fn deposit(
             )
             .await?;
             let qr_code: Vec<u8> =
-                qrcode_generator::to_png_to_vec(deposit_address.to_string(), QrCodeEcc::Low, 256)
+                qrcode_generator::to_png_to_vec(deposit_address.address(), QrCodeEcc::Low, 256)
                     .unwrap();
             deposit_addresses.push(DepositInfo {
                 address: deposit_address.to_string(),
@@ -367,6 +367,32 @@ async fn get_dict(
     .await
 }
 
+
+#[openapi(skip)]
+#[get("/swap")]
+async fn swap(cookies: &CookieJar<'_>,
+state: &State<Arc<Mutex<DbState>>>,
+static_path: &State<StaticPath>,) ->  Result<Template, Redirect> {
+    require_auth_user(cookies, state, |_, user| async move {
+        let header_dict = get_dict_json(
+            static_path.inner(),
+            user.config.language,
+            PathBuf::from_str("header.json").unwrap(),
+        )?;
+        let context = context! {
+            title:"swap",
+            parent: "base_with_header",
+            username: &user.username,
+            lang: context! {
+                lang: user.config.language.to_alpha().to_uppercase(),
+                header: header_dict,
+            }
+        };
+        Ok(Template::render("swap", context)) })
+    .await
+    .map_err(|_| goto_signin())
+}
+
 pub async fn serve_api(
     pool: Pool,
     state: Arc<Mutex<DbState>>,
@@ -419,7 +445,9 @@ pub async fn serve_api(
                 set_user_public_key,
                 get_challenge,
                 redeem_challenge,
-                get_deposit_address_handle
+                get_deposit_address_handle,
+                order_exchange,
+                list_my_orders
             ],
         )
         .mount(
@@ -431,7 +459,8 @@ pub async fn serve_api(
                 signup,
                 signin_page,
                 deposit,
-                withdraw
+                withdraw,
+                swap
             ],
         )
         .mount(
