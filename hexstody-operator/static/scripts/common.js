@@ -221,13 +221,13 @@ export async function getHotWalletBalance(privateKeyJwk, publicKeyDer, currency)
     return response
 }
 
-export async function getWithdrawalRequests(privateKeyJwk, publicKeyDer, currency) {
-    const response = await makeSignedRequest(privateKeyJwk, publicKeyDer, null, `request/${getCurrencyName(currency).toLowerCase()}`, 'GET')
+export async function getWithdrawalRequests(privateKeyJwk, publicKeyDer, currency, filter) {
+    const response = await makeSignedRequest(privateKeyJwk, publicKeyDer, null, `request/${getCurrencyName(currency).toLowerCase()}?filter=`+filter, 'GET')
     return response
 }
 
-export async function getLimitRequests(privateKeyJwk, publicKeyDer) {
-    const response = await makeSignedRequest(privateKeyJwk, publicKeyDer, null, "changes", "GET")
+export async function getLimitRequests(privateKeyJwk, publicKeyDer, filter) {
+    const response = await makeSignedRequest(privateKeyJwk, publicKeyDer, null, "changes?filter=" + filter, "GET")
     return response
 }
 
@@ -266,4 +266,11 @@ export async function getInvites(privateKeyJwk, publicKeyDer) {
 
 export async function getUserInfo(privateKeyJwk, publicKeyDer, userId) {
     return await makeSignedRequest(privateKeyJwk, publicKeyDer, null, `user/info/${userId}`, "GET")
+}
+
+export async function getTicker(currency){
+    return await fetch("/ticker/ticker", {
+        method: "POST",
+        body: JSON.stringify(currency)
+    })
 }

@@ -112,7 +112,7 @@ export const WithdrawalRequestsTable = {
         getCurrencyName,
         copyToClipboard,
         async fetchData() {
-            const withdrawalRequestsResponse = await getWithdrawalRequests(this.privateKeyJwk, this.publicKeyDer, this.currency)
+            const withdrawalRequestsResponse = await getWithdrawalRequests(this.privateKeyJwk, this.publicKeyDer, this.currency, this.filter)
             // Get withdrawal requests and sort them by date
             this.withdrawalRequests = (await withdrawalRequestsResponse.json()).sort(
                 function (a, b) {
@@ -161,7 +161,8 @@ export const WithdrawalRequestsTable = {
             withdrawalRequests: [],
             requiredConfirmations: null,
             isModalVisible: false,
-            userInfo: null
+            userInfo: null,
+            filter: "oprejected",
         }
     },
     watch: {

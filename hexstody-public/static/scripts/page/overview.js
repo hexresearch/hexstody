@@ -11,12 +11,14 @@ async function getBalances() {
     return await fetch("/balance").then(r => r.json());
 }
 
-async function getHistory(skip, take) {
-    return fetch(`/history/${skip}/${take}`).then(r => r.json());
+async function getHistory(skip, take, filter) {
+    var filt = null
+    if (filter) { filt = filter } else {filt = "all"}
+    return fetch(`/history/${skip}/${take}?filter=` + filt).then(r => r.json());
 }
 
 async function getCourseForCurrency(currency) {
-    return await fetch("/ticker",
+    return await fetch("/ticker/ticker",
         {
             method: "POST",
             body: JSON.stringify(currency)

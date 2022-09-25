@@ -2,6 +2,9 @@ use figment::Figment;
 use futures::future::{join3, AbortHandle, AbortRegistration, Abortable, Aborted};
 use futures::Future;
 use hexstody_eth_client::client::EthClient;
+use hexstody_runtime_db::RuntimeState;
+use hexstody_ticker::worker::ticker_worker;
+use hexstody_ticker_provider::client::TickerClient;
 use log::*;
 use p256::pkcs8::DecodePublicKey;
 use p256::PublicKey;
@@ -173,11 +176,13 @@ async fn serve_abortable<F, Fut, Out>(
 async fn serve_api(
     pool: Pool,
     state_mx: Arc<Mutex<State>>,
+    runtime_state_mx: Arc<Mutex<RuntimeState>>,
     state_notify: Arc<Notify>,
     start_notify: Arc<Notify>,
     update_sender: mpsc::Sender<StateUpdate>,
     btc_client: BtcClient,
     eth_client: EthClient,
+    ticker_client: TickerClient,
     api_type: ApiType,
     api_config: Figment,
     abort_reg: AbortRegistration,
@@ -196,11 +201,13 @@ async fn serve_api(
                 hexstody_public::api::serve_api(
                     pool.clone(),
                     state_mx.clone(),
+                    runtime_state_mx.clone(),
                     state_notify.clone(),
                     start_notify.clone(),
                     update_sender.clone(),
                     btc_client,
                     eth_client,
+                    ticker_client,
                     api_config,
                     is_test,
                 )
@@ -212,11 +219,13 @@ async fn serve_api(
                 hexstody_operator::api::serve_api(
                     pool.clone(),
                     state_mx.clone(),
+                    runtime_state_mx.clone(),
                     state_notify.clone(),
                     start_notify.clone(),
                     update_sender.clone(),
                     btc_client,
                     eth_client,
+                    ticker_client,
                     api_config,
                 )
             })
@@ -228,6 +237,7 @@ async fn serve_api(
 pub async fn serve_apis(
     pool: Pool,
     state_mx: Arc<Mutex<State>>,
+    runtime_state_mx: Arc<Mutex<RuntimeState>>,
     state_notify: Arc<Notify>,
     start_notify: Arc<Notify>,
     api_config: ApiConfig,
@@ -235,6 +245,7 @@ pub async fn serve_apis(
     update_sender: mpsc::Sender<StateUpdate>,
     btc_client: BtcClient,
     eth_client: EthClient,
+    ticker_client: TickerClient,
     is_test: bool,
 ) -> Result<(), Aborted>
 {
@@ -245,11 +256,13 @@ pub async fn serve_apis(
     let public_api_fut = serve_api(
         pool.clone(),
         state_mx.clone(),
+        runtime_state_mx.clone(),
         state_notify.clone(),
         public_start.clone(),
         update_sender.clone(),
         btc_client.clone(),
         eth_client.clone(),
+        ticker_client.clone(),
         ApiType::Public,
         api_config.public_api_config,
         public_abort_reg,
@@ -259,11 +272,13 @@ pub async fn serve_apis(
     let operator_api_fut = serve_api(
         pool,
         state_mx,
+        runtime_state_mx.clone(),
         state_notify,
         operator_start.clone(),
         update_sender.clone(),
         btc_client.clone(),
         eth_client.clone(),
+        ticker_client.clone(),
         ApiType::Operator,
         api_config.operator_api_config,
         operator_abort_reg,
@@ -300,6 +315,7 @@ pub async fn run_hot_wallet(
     start_notify: Arc<Notify>,
     btc_client: BtcClient,
     eth_client: EthClient,
+    ticker_client: TickerClient,
     api_abort_reg: AbortRegistration,
     is_test: bool,
 ) -> Result<(), Error>
@@ -309,6 +325,7 @@ pub async fn run_hot_wallet(
     info!("Reconstructing state from database");
     let state = query_state(args.network, &pool).await?;
     let state_mx = Arc::new(Mutex::new(state));
+    let runtime_state_mx = Arc::new(Mutex::new(RuntimeState::new()));
     let state_notify = Arc::new(Notify::new());
     let (update_sender, update_receiver) = mpsc::channel(1000);
     let (update_resp_sender, update_resp_receiver) = mpsc::channel(1000);
@@ -343,12 +360,19 @@ pub async fn run_hot_wallet(
 
     let cron_workers_hndl = tokio::spawn({
         let update_sender = update_sender.clone();
-        async move { cron_workers(update_sender) }
+        async move { cron_workers(update_sender).await }
+    });
+
+    let ticker_worker_hndl = tokio::spawn({
+        let ticker_client = ticker_client.clone();
+        let runtime_state_mx = runtime_state_mx.clone();
+        async move { ticker_worker(ticker_client, runtime_state_mx).await }
     });
 
     if let Err(Aborted) = serve_apis(
         pool,
         state_mx,
+        runtime_state_mx,
         state_notify,
         start_notify,
         api_config,
@@ -356,6 +380,7 @@ pub async fn run_hot_wallet(
         update_sender,
         btc_client,
         eth_client,
+        ticker_client,
         is_test
     )
     .await
@@ -365,6 +390,7 @@ pub async fn run_hot_wallet(
         btc_worker_hndl.abort();
         update_response_hndl.abort();
         cron_workers_hndl.abort();
+        ticker_worker_hndl.abort();
         Err(Error::Aborted)
     } else {
         Ok(())
