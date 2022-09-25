@@ -321,5 +321,3 @@ export function isErc20Token(currencyName) {
             return null
     };
 }
-
-export function currencyUnits() { }
