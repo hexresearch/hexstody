@@ -162,7 +162,7 @@ export const WithdrawalRequestsTable = {
             requiredConfirmations: null,
             isModalVisible: false,
             userInfo: null,
-            filter: "oprejected",
+            filter: "pending",
         }
     },
     watch: {

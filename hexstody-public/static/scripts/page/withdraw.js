@@ -82,7 +82,7 @@ async function getFee(currencyName) {
 }
 
 async function getCurrencyExchangeRate(currency) {
-    return await fetch("/ticker",
+    return await fetch("/ticker/ticker",
         {
             method: "POST",
             body: JSON.stringify(currency)
