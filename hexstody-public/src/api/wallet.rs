@@ -127,31 +127,6 @@ pub async fn get_balance_by_currency(
 }
 
 #[openapi(tag = "wallet")]
-#[post("/ticker", data = "<currency>")]
-pub async fn ticker(
-    cookies: &CookieJar<'_>,
-    currency: Json<Currency>,
-) -> error::Result<Json<api::TickerETH>> {
-    require_auth(cookies, |_| async move {
-        let currency = currency.into_inner();
-        let currency_literal = match currency.clone() {
-            Currency::BTC => "BTC".to_owned(),
-            Currency::ETH => "ETH".to_owned(),
-            Currency::ERC20(token) => token.ticker,
-        };
-        let url = format!(
-            "https://min-api.cryptocompare.com/data/price?fsym={}&tsyms=USD,RUB",
-            currency_literal
-        );
-        let ticker_str = reqwest::get(url).await.unwrap().text().await.unwrap();
-        let ticker: api::TickerETH =
-            serde_json::from_str(&ticker_str).or(Err(error::Error::ExchangeRateError(currency)))?;
-        Ok(Json(ticker))
-    })
-    .await
-}
-
-#[openapi(tag = "wallet")]
 #[get("/userdata")]
 pub async fn get_user_data(
     cookies: &CookieJar<'_>,

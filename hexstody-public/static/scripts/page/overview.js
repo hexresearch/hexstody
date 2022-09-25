@@ -18,7 +18,7 @@ async function getHistory(skip, take, filter) {
 }
 
 async function getCourseForCurrency(currency) {
-    return await fetch("/ticker",
+    return await fetch("/ticker/ticker",
         {
             method: "POST",
             body: JSON.stringify(currency)

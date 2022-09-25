@@ -3,6 +3,7 @@ use hexstody_btc_client::client::BtcClient;
 use hexstody_db::state::*;
 use hexstody_db::Pool;
 use hexstody_eth_client::client::EthClient;
+use hexstody_ticker_provider::client::TickerClient;
 use p256::PublicKey;
 use std::sync::Arc;
 use tokio::sync::{Mutex, Notify};
@@ -14,6 +15,7 @@ use futures_util::future::TryFutureExt;
 use hexstody_client::client::HexstodyClient;
 use rocket::fs::relative;
 use std::panic::AssertUnwindSafe;
+use hexstody_runtime_db::RuntimeState;
 
 const SERVICE_TEST_PORT: u16 = 8000;
 const SERVICE_TEST_HOST: &str = "127.0.0.1";
@@ -34,6 +36,8 @@ where
     let pub_keys : Vec<PublicKey> = vec![];
     let btc_client = BtcClient::new("127.0.0.1");
     let eth_client = EthClient::new("http://127.0.0.1");
+    let ticker_client = TickerClient::new("https://min-api.cryptocompare.com");
+    let runtime_state = Arc::new(Mutex::new(RuntimeState::new()));
     let api_config = rocket::Config::figment()
         .merge(("port", SERVICE_TEST_PORT))
         .merge(("static_path", relative!("static")))
@@ -49,11 +53,13 @@ where
             let serve_task = serve_api(
                 pool,
                 state,
+                runtime_state,
                 state_notify,
                 start_notify,
                 update_sender,
                 btc_client,
                 eth_client,
+                ticker_client,
                 api_config,
                 true
             );

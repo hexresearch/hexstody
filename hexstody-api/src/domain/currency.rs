@@ -62,7 +62,10 @@ impl Currency {
         })
     }
 
-    /// Check if the currency is a token
+    pub fn ticker(&self) -> String {
+        self.symbol().symbol()
+    }
+    
     pub fn ticker_lowercase(&self) -> String {
         match self {
             Currency::BTC => "btc".to_owned(),
@@ -148,6 +151,29 @@ impl Currency {
                 };
             }
             return None;
+        }
+    }
+
+    pub fn symbol(&self) -> Symbol{
+        match self {
+            Currency::BTC => Symbol::BTC,
+            Currency::ETH => Symbol::ETH,
+            Currency::ERC20(symbol) => Symbol::ERC20(symbol.ticker.clone()),
+        }
+    }
+
+    pub fn from_symbol(symbol: Symbol) -> Option<Currency>{
+        match symbol {
+            Symbol::USD => None,
+            Symbol::RUB => None,
+            Symbol::BTC => Some(Currency::BTC),
+            Symbol::ETH => Some(Currency::ETH),
+            Symbol::ERC20(s) => match s.as_str() {
+                "USDT" => Some(Currency::usdt_erc20()),
+                "CRV" => Some(Currency::crv_erc20()),
+                "GTECH" => Some(Currency::gtech_erc20()),
+                _ => None
+            },
         }
     }
 }
@@ -309,5 +335,99 @@ impl From<bitcoin::Txid> for CurrencyTxId {
         CurrencyTxId::BTC(BTCTxid {
             txid: txid.to_string(),
         })
+    }
+}
+
+/// Supported fiat currencies. Can be extended in future.
+#[derive(
+    Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
+)]
+pub enum Fiat {
+    USD,
+    RUB
+}
+
+impl Fiat{
+    pub fn symbol(&self) -> Symbol {
+        match self {
+            Fiat::USD => Symbol::USD ,
+            Fiat::RUB => Symbol::RUB ,
+        }
+    }
+
+    pub fn from_symbol(symbol: Symbol) -> Option<Fiat>{
+        match symbol {
+            Symbol::USD => Some(Fiat::USD),
+            Symbol::RUB => Some(Fiat::RUB),
+            _ => None
+        }
+    } 
+
+    pub fn ticker(&self) -> String {
+        self.symbol().symbol()
+    }
+}
+
+/// Generalized tickers. Keep them all together to enable generic storage and request
+#[derive(
+    Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
+)]
+pub enum Symbol {
+    USD,
+    RUB,
+    BTC,
+    ETH,
+    ERC20(String)
+}
+
+impl Symbol {
+    pub fn symbol(&self) -> String {
+        match self {
+            Symbol::USD => "USD".to_owned(),
+            Symbol::RUB => "RUB".to_owned(),
+            Symbol::BTC => "BTC".to_owned(),
+            Symbol::ETH => "ETH".to_owned(),
+            Symbol::ERC20(ticker) => ticker.clone(),
+        }
+    }
+
+    pub fn is_crypto(&self) -> bool {
+        match self {
+            Symbol::USD => false,
+            Symbol::RUB => false,
+            Symbol::BTC => true,
+            Symbol::ETH => true,
+            Symbol::ERC20(_) => true,
+        }
+    }
+
+    pub fn is_fiat(&self) -> bool {
+        match self {
+            Symbol::USD => true,
+            Symbol::RUB => true,
+            Symbol::BTC => false,
+            Symbol::ETH => false,
+            Symbol::ERC20(_) => false,
+        }
+    }
+
+    pub fn supported() -> Vec<Symbol> {
+        vec![
+            Symbol::USD,
+            Symbol::RUB,
+            Symbol::BTC,
+            Symbol::ETH,
+            Symbol::ERC20("USDT".to_owned()),
+            Symbol::ERC20("CRV".to_owned()),
+            Symbol::ERC20("GTECH".to_owned())
+        ]
+    }
+
+    pub fn supported_fiats() -> Vec<Symbol> {
+        Symbol::supported().iter().filter(|t| t.is_fiat()).cloned().collect()
+    }
+
+    pub fn supported_cryptos() -> Vec<Symbol> {
+        Symbol::supported().iter().filter(|t| t.is_crypto()).cloned().collect()
     }
 }

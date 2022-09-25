@@ -1,4 +1,7 @@
 use figment::Figment;
+use hexstody_runtime_db::RuntimeState;
+use hexstody_ticker::api::ticker_api;
+use hexstody_ticker_provider::client::TickerClient;
 use rocket::{
     fairing::AdHoc,
     fs::{FileServer, NamedFile},
@@ -549,11 +552,13 @@ async fn get_exchange_address(
 pub async fn serve_api(
     pool: Pool,
     state: Arc<Mutex<HexstodyState>>,
+    runtime_state: Arc<Mutex<RuntimeState>>,
     _state_notify: Arc<Notify>,
     start_notify: Arc<Notify>,
     update_sender: mpsc::Sender<StateUpdate>,
     btc_client: BtcClient,
     eth_client: EthClient,
+    ticker_client: TickerClient,
     api_config: Figment,
 ) -> Result<(), rocket::Error> {
     let on_ready = AdHoc::on_liftoff("API Start!", |_| {
@@ -562,6 +567,7 @@ pub async fn serve_api(
         })
     });
     let static_path: PathBuf = api_config.extract_inner("static_path").unwrap();
+    let ticker_api = ticker_api();
     let _ = rocket::custom(api_config)
         .mount("/", FileServer::from(static_path.clone()))
         .mount("/", routes![index])
@@ -587,6 +593,7 @@ pub async fn serve_api(
                 get_user_info,                  // GET: /user/info/<user_id>
             ],
         )
+        .mount("/ticker/", ticker_api)
         .mount(
             "/swagger/",
             make_swagger_ui(&SwaggerUIConfig {
@@ -595,10 +602,12 @@ pub async fn serve_api(
             }),
         )
         .manage(state)
+        .manage(runtime_state)
         .manage(pool)
         .manage(update_sender)
         .manage(btc_client)
         .manage(eth_client)
+        .manage(ticker_client)
         .manage(static_path)
         .attach(AdHoc::config::<SignatureVerificationConfig>())
         .attach(on_ready)

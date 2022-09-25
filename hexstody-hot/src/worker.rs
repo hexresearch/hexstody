@@ -253,6 +253,7 @@ pub async fn process_btc_events(
 pub async fn cron_workers(
     update_sender: mpsc::Sender<StateUpdate>,
 ) {
+    info!("Starting cleanup worker");
     let mut sched = JobScheduler::new().await.expect("Failed to create scheduler");
 
     sched.shutdown_on_ctrl_c();
@@ -265,7 +266,7 @@ pub async fn cron_workers(
     let send_daily = update_sender.clone();
     let send_weekly = update_sender.clone();
 
-    let _daily_id = sched.add(Job::new_async("0 0 * * * *", move |_, _| {
+    let _daily_id = sched.add(Job::new_async("0 0 0 * * *", move |_, _| {
         let update_sender = send_daily.clone();
         let upd = StateUpdate::new(UpdateBody::ClearLimits(LimitSpan::Day));
         Box::pin(async move {
@@ -276,7 +277,7 @@ pub async fn cron_workers(
         })
     }).expect("Failed to create daily job"));
 
-    let _weekly_id = sched.add(Job::new_async("0 0 * * * 1", move |_, _| {
+    let _weekly_id = sched.add(Job::new_async("0 0 0 * * Mon *", move |_, _| {
         let update_sender = send_weekly.clone();
         let upd = StateUpdate::new(UpdateBody::ClearLimits(LimitSpan::Week));
         Box::pin(async move {
@@ -287,7 +288,7 @@ pub async fn cron_workers(
         })
     }).expect("Failed to create weekly job"));
 
-    let _monthly_id = sched.add(Job::new_async("0 0 1 * * 0", move |_, _| {
+    let _monthly_id = sched.add(Job::new_async("0 0 0 1 * * *", move |_, _| {
         let update_sender = update_sender.clone();
         let upd = StateUpdate::new(UpdateBody::ClearLimits(LimitSpan::Month));
         Box::pin(async move {

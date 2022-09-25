@@ -20,6 +20,9 @@ hexstody-eth-client = { path = "../hexstody-eth-client" }
 hexstody-public = { path = "../hexstody-public" }
 hexstody-operator = { path = "../hexstody-operator" }
 hexstody-btc-test = { path = "../hexstody-btc-test" }
+hexstody-ticker-provider = { path = "../hexstody-ticker-provider" }
+hexstody-ticker = { path = "../hexstody-ticker" }
+hexstody-runtime-db = { path = "../hexstody-runtime-db" }
 log = "0.4.14"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

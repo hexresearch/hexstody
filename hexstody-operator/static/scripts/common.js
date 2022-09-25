@@ -266,3 +266,10 @@ export async function getInvites(privateKeyJwk, publicKeyDer) {
 export async function getUserInfo(privateKeyJwk, publicKeyDer, userId) {
     return await makeSignedRequest(privateKeyJwk, publicKeyDer, null, `user/info/${userId}`, "GET")
 }
+
+export async function getTicker(currency){
+    return await fetch("/ticker/ticker", {
+        method: "POST",
+        body: JSON.stringify(currency)
+    })
+}
