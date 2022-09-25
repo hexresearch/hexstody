@@ -81,14 +81,15 @@ export const ExchangeRequestsTable = {
             exchangeRequests: [],
             requiredConfirmations: null,
             isModalVisible: false,
-            userInfo: null
+            userInfo: null,
+            filter: "all"
         }
     },
     methods: {
         copyToClipboard,
         truncate,
         async fetchData() {
-            const exchangeRequestsResponse = await getExchangeRequests(this.privateKeyJwk, this.publicKeyDer, 'all')
+            const exchangeRequestsResponse = await getExchangeRequests(this.privateKeyJwk, this.publicKeyDer, this.filter)
             // Get exchange requests and sort them by date
             this.exchangeRequests = (await exchangeRequestsResponse.json()).sort(
                 function (a, b) {
