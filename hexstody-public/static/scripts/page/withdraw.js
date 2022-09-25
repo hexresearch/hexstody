@@ -1,6 +1,7 @@
 import {
     initTabs,
     currencyPrecision,
+    convertToSmallest,
     currencyNameToCurrency,
     formattedCurrencyValue,
     feeCurrency,
@@ -22,8 +23,8 @@ async function postWithdrawRequest(currency, address, amount) {
             body = { address: { type: "BTC", addr: address }, amount: amount }
             break
         case "ETH":
-            body = { address: { type: "ETH", token: "ETH", account: address }, amount: amount };
-            break;
+            body = { address: { type: "ETH", token: "ETH", account: address }, amount: amount }
+            break
         case "USDT":
         case "CRV":
         case "GTECH":
@@ -81,7 +82,7 @@ async function getFee(currencyName) {
 }
 
 async function getCurrencyExchangeRate(currency) {
-    return await fetch("/ticker",
+    return await fetch("/ticker/ticker",
         {
             method: "POST",
             body: JSON.stringify(currency)
@@ -97,6 +98,15 @@ function calcAvailableBalance(balanceObj) {
     } else {
         return (lim - spent)
     };
+}
+
+function withdrawalUnits(currency) {
+    switch (currency) {
+        case "btc":
+            return "sat"
+        default:
+            return currency.toUpperCase()
+    }
 }
 
 function cryptoToFiat(currencyName, value, rate) {
@@ -153,6 +163,9 @@ async function updateActiveTab() {
     const spentElement = document.getElementById(`${activeCurrencyName}-spent`)
     spentElement.innerHTML = `${formattedCurrencyValue(currencyNameUppercase, balanceObj.limit_info.spent)} ${currencyNameUppercase} (${fiatSpent})`
 
+    const unitsElement = document.getElementById(`${activeCurrencyName}-units`)
+    unitsElement.innerHTML = withdrawalUnits(activeCurrencyName)
+
     const maxAmountBtn = document.getElementById(`max-${activeCurrencyName}`)
     const sendBtn = document.getElementById(`send-${activeCurrencyName}`)
     const sendAmountInput = document.getElementById(`${activeCurrencyName}-send-amount`)
@@ -166,10 +179,18 @@ async function updateActiveTab() {
             sendAmountInput.value = Math.max(0, availableBalance - fee)
         };
     }
+
+    function formatWithdrawalAmount(value) {
+        let amount = Number(value)
+        return currencyNameUppercase === "BTC"
+            ? Math.round(amount)
+            : Math.round(convertToSmallest(activeCurrencyName, amount))
+    }
+
     sendBtn.onclick = () => trySubmit(
         currencyNameUppercase,
         addressInput.value,
-        Math.round(Number(sendAmountInput.value)),
+        formatWithdrawalAmount(sendAmountInput.value),
         validationDisplayEl)
 }
 

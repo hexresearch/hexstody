@@ -6,5 +6,6 @@
     "address": "Address",
     "amount": "Amount",
     "max": "Max",
-    "send": "Send"
+    "send": "Send",
+    "in": "in"
 }
