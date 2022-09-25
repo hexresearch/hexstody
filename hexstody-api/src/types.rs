@@ -6,9 +6,13 @@ use hexstody_btc_api::bitcoin::txid::BtcTxid;
 use okapi::openapi3::*;
 use p256::{ecdsa::Signature, pkcs8::DecodePublicKey, PublicKey};
 use rocket::{
-    http::{Status, uri::fmt::{FromUriParam, Query, UriDisplay, Formatter}},
+    http::{
+        uri::fmt::{Formatter, FromUriParam, Query, UriDisplay},
+        Status,
+    },
     request::{FromRequest, Outcome, Request},
-    serde::json::json, FromFormField,
+    serde::json::json,
+    FromFormField,
 };
 use rocket_okapi::{
     gen::OpenApiGenerator,
@@ -762,7 +766,8 @@ pub struct ExchangeRequest {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy, JsonSchema)]
-pub enum ExchangeStatus{
+#[serde(tag = "type")]
+pub enum ExchangeStatus {
     Completed,
     Rejected,
     InProgress { confirmations: i16, rejections: i16 },
@@ -777,7 +782,7 @@ pub struct ExchangeOrder {
     pub amount_from: u64,
     pub amount_to: u64,
     pub created_at: String,
-    pub status: ExchangeStatus
+    pub status: ExchangeStatus,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
@@ -788,7 +793,7 @@ pub struct ExchangeConfirmationData {
     pub currency_to: Currency,
     pub amount_from: u64,
     pub amount_to: u64,
-    pub created_at: String
+    pub created_at: String,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema, FromFormField, Copy)]
@@ -796,7 +801,7 @@ pub enum ExchangeFilter {
     All,
     Pending,
     Completed,
-    Rejected
+    Rejected,
 }
 
 impl UriDisplay<Query> for ExchangeFilter {
@@ -811,7 +816,7 @@ impl ToString for ExchangeFilter {
             ExchangeFilter::All => "all".to_owned(),
             ExchangeFilter::Completed => "completed".to_owned(),
             ExchangeFilter::Rejected => "rejected".to_owned(),
-            ExchangeFilter::Pending => "pending".to_owned()
+            ExchangeFilter::Pending => "pending".to_owned(),
         }
     }
 }
@@ -825,7 +830,7 @@ impl<'a> FromUriParam<Query, &str> for ExchangeFilter {
             "completed" => ExchangeFilter::Completed,
             "rejected" => ExchangeFilter::Rejected,
             "pending" => ExchangeFilter::Pending,
-            _ => ExchangeFilter::All
+            _ => ExchangeFilter::All,
         }
     }
 }
@@ -839,9 +844,9 @@ impl<'a> FromUriParam<Query, &ExchangeFilter> for ExchangeFilter {
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
-pub struct ExchangeBalanceItem{
+pub struct ExchangeBalanceItem {
     pub currency: Currency,
-    pub balance: i64
+    pub balance: i64,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]

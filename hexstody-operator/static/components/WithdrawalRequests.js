@@ -10,7 +10,7 @@ export const WithdrawalRequests = {
     },
     template:
         /*html*/
-        `<div class="flex-column">
+        `<div>
             <currency-select :private-key-jwk="privateKeyJwk" :public-key-der="publicKeyDer" @currency-selected="setCurrency" />
             <hot-wallet-balance :private-key-jwk="privateKeyJwk" :public-key-der="publicKeyDer" :currency="currency" />
             <withdrawal-requests-table :private-key-jwk="privateKeyJwk" :public-key-der="publicKeyDer" :currency="currency" />
