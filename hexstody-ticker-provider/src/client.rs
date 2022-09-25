@@ -34,7 +34,7 @@ impl TickerClient {
         }
     }
 
-    /// Generic Symbol to Symbol 
+    /// Symbol to Symbol ticker 
     pub async fn symbol_to_symbol(&self, from: &Symbol, to: &Symbol) -> Result<f64> {
         let path = "data/price";
         let endpoint = format!("{}/{}?fsym={}&tsyms={}",self.server, path, from.symbol(), to.symbol());
@@ -51,6 +51,7 @@ impl TickerClient {
             .cloned()
     }
 
+    /// Concrete symbol to many symbols request.
     pub async fn symbol_to_symbols(&self, from: &Symbol, to: &Vec<Symbol>) -> Result<HashMap<Symbol, f64>>
     {
         let tsyms = to.iter().map(|f| f.symbol()).collect::<Vec<String>>().join(",");
