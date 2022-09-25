@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::fmt::Debug;
 
-use hexstody_api::domain::{Currency, Fiat};
+use hexstody_api::domain::Symbol;
 use hexstody_ticker_provider::client::TickerClient;
 use hexstody_ticker_provider::client::Result as TickerResult;
 use serde::de::DeserializeOwned;
@@ -12,9 +12,9 @@ pub struct RuntimeState {
     /// Runtime cache of challenges to log in with a key
     pub challenges: HashMap<String, String>,
     /// Cached ticker info
-    /// We store tikers in the string format: "BTC:ETH" etc
+    /// We store tikers refering by Symbol
     /// since we want to uniformely store both Crypto and Fiat tickers in the same map 
-    pub cached_tickers: HashMap<String, HashMap<String, f64>>
+    pub cached_tickers: HashMap<Symbol, HashMap<Symbol, f64>>
 }
 
 impl RuntimeState {
@@ -25,59 +25,77 @@ impl RuntimeState {
         }
     }
 
-    pub async fn get_fiat_ticker(&mut self, client: &TickerClient, crypto: Currency, fiat: Fiat) -> TickerResult<f64>{
-        let ct = crypto.ticker();
-        let ft = fiat.ticker();
-        let mrate = self.cached_tickers.get(&ct).map(|sm| sm.get(&ft)).flatten();
+    pub async fn symbol_to_symbol(&mut self, client: &TickerClient, from: Symbol, to: Symbol) -> TickerResult<f64>{
+        let mrate = self.cached_tickers.get(&from).map(|sm| sm.get(&to)).flatten();
         match mrate {
             Some(rate) => Ok(rate.clone()),
             None => {
-                let rate = client.fiat_ticker(crypto, fiat).await?;
-                self.cached_tickers.entry(ct).and_modify(|cm| {cm.insert(ft, rate);});
+                let rate = client.symbol_to_symbol(&from, &to).await?;
+                self.cached_tickers.entry(from).and_modify(|cm| {cm.insert(to, rate);});
                 Ok(rate)
             },
         }
     }
 
-    pub async fn get_pair_ticker(&mut self, client: &TickerClient, from: Currency, to: Currency) -> TickerResult<f64> {
-        let ft = from.ticker();
-        let tt = to.ticker();
-        let mrate = self.cached_tickers.get(&ft).map(|sm| sm.get(&tt)).flatten();
-        match mrate {
-            Some(rate) => Ok(rate.clone()),
-            None => {
-                let rate = client.ticker_pair(from, to).await?;
-                self.cached_tickers.entry(ft).and_modify(|cm| {cm.insert(tt, rate);});
-                Ok(rate)
-            },
-        }
-    }
-
-    pub async fn get_multifiat_ticker<T>(&mut self, client: &TickerClient, crypto: Currency, fiats: Vec<Fiat>) -> TickerResult<T>
-    where T: DeserializeOwned + Debug
+    pub async fn symbol_to_symbols_generic<T>(&mut self, client: &TickerClient, from: Symbol, to: Vec<Symbol>) -> TickerResult<T>
+    where T: DeserializeOwned + Debug 
     {
         let mut vals: Map<String, Value> = Map::new();
-        let mut missing: Vec<Fiat> = vec![];
-        let ct = crypto.ticker();
-        let submap = self.cached_tickers.get(&ct);
+        let mut missing: Vec<Symbol> = Vec::new();
+        let submap = self.cached_tickers.get(&from);
         match submap {
             None => {
-                let res: HashMap<String, f64> = client.multi_fiat_ticker(crypto.clone(), fiats).await?;
-                self.cached_tickers.insert(ct.clone(), res.clone());
-                vals = res.iter().map(|(k,v)| (k.to_owned(), serde_json::to_value(v).unwrap())).collect();
+                let res: HashMap<Symbol, f64> = client.symbol_to_symbols(&from, &to).await?;
+                self.cached_tickers.insert(from.clone(), res.clone());
+                vals = res.iter().map(|(k,v)| (k.symbol(), serde_json::to_value(v).unwrap())).collect();
             },
             Some(submap) => {
-                fiats.iter().for_each(|f| match submap.get(&f.ticker()) {
-                    None => missing.push(f.clone()),
-                    Some(rate) => {vals.insert(f.ticker(), serde_json::to_value(rate).unwrap());},
+                to.iter().for_each(|t| match submap.get(&t) {
+                    None => missing.push(t.clone()),
+                    Some(rate) => {vals.insert(t.symbol(), serde_json::to_value(rate).unwrap());},
                 })
             },
         }
         if missing.len() != 0 {
-            let res: HashMap<String, f64> = client.multi_fiat_ticker(crypto, missing).await?;
-            self.cached_tickers.insert(ct, res.clone());
-            vals = res.iter().map(|(k,v)| (k.to_owned(), serde_json::to_value(v).unwrap())).collect();
+            let res: HashMap<Symbol, f64> = client.symbol_to_symbols(&from, &missing).await?;
+            self.cached_tickers.insert(from, res.clone());
+            vals = res.iter().map(|(k,v)| (k.symbol(), serde_json::to_value(v).unwrap())).collect();
         }
         serde_json::from_value(vals.into()).map_err(|e| e.into())
+    }
+
+    pub async fn symbol_to_symbols(&mut self, client: &TickerClient, from: Symbol, to: Vec<Symbol>) -> TickerResult<HashMap<Symbol, f64>>{
+        let mut result: HashMap<Symbol, f64> = HashMap::new();
+        let mut missing: Vec<Symbol> = Vec::new();
+        let submap = self.cached_tickers.get(&from);
+        match submap {
+            None => {
+                let res = client.symbol_to_symbols(&from, &to).await?;
+                self.cached_tickers.insert(from.clone(), res.clone());
+                return Ok(res) ;
+            },
+            Some(submap) => {
+                to.iter().for_each(|t| match submap.get(&t) {
+                    None => missing.push(t.clone()),
+                    Some(rate) => {result.insert(t.clone(), rate.clone());},
+                })
+            },
+        }
+        if missing.len() != 0 {
+            let res = client.symbol_to_symbols(&from, &missing).await?;
+            self.cached_tickers.insert(from, res.clone());
+            res.into_iter().for_each(|(k,v)| {
+                result.insert(k, v);
+            });
+        }
+        Ok(result)
+    }
+
+    pub fn tracked_pairs(&self) -> HashMap<Symbol, Vec<Symbol>>{
+        self
+            .cached_tickers
+            .iter()
+            .map(|(k,v)| (k.clone(), v.keys().cloned().collect()))
+            .collect()
     }
 }

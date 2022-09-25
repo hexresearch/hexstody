@@ -1646,6 +1646,7 @@ dependencies = [
  "hexstody-operator",
  "hexstody-public",
  "hexstody-runtime-db",
+ "hexstody-ticker",
  "hexstody-ticker-provider",
  "log",
  "nix 0.24.2",

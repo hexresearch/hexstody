@@ -1,8 +1,6 @@
 use std::{collections::HashMap, fmt::Debug};
 
-use hexstody_api::{
-    domain::{Currency, Fiat}
-};
+use hexstody_api::domain::Symbol;
 use log::*;
 use serde::de::DeserializeOwned;
 use thiserror::Error;
@@ -13,10 +11,6 @@ pub enum Error {
     Reqwest(#[from] reqwest::Error),
     #[error("JSON encoding/decoding error: {0}")]
     Json(#[from] serde_json::Error),
-    #[error("Invalid currency: {0}")]
-    InvalidCurrency(Currency),
-    #[error("Currency not found: {0}")]
-    CurrencyNotFound(Currency),
     #[error("{0} not found in response")]
     ResponseMissing(String),
     #[error("Generic error: {0}")]
@@ -40,10 +34,10 @@ impl TickerClient {
         }
     }
 
-    /// Get crypto's price in a single fiat currency
-    pub async fn fiat_ticker(&self, crypto: Currency, fiat: Fiat) -> Result<f64> {
+    /// Generic Symbol to Symbol 
+    pub async fn symbol_to_symbol(&self, from: &Symbol, to: &Symbol) -> Result<f64> {
         let path = "data/price";
-        let endpoint = format!("{}/{}?fsym={}&tsyms={}",self.server, path, crypto.ticker(), fiat.ticker());
+        let endpoint = format!("{}/{}?fsym={}&tsyms={}",self.server, path, from.symbol(), to.symbol());
         let request = self.client.get(endpoint).build()?;
         let response = self.client.execute(request)
             .await?
@@ -52,20 +46,33 @@ impl TickerClient {
             .await?;
         debug!("Response {path}: {:?}", response);
         response
-            .get(&fiat.ticker())
-            .ok_or(Error::ResponseMissing(fiat.ticker()))
+            .get(&to.symbol())
+            .ok_or(Error::ResponseMissing(to.symbol()))
             .cloned()
     }
 
-    /// Get multiple fiat tickers
-    /// Return type is generic since only the caller knows it
-    /// Catch-all type is HashMap<String, f64>
-    pub async fn multi_fiat_ticker<T> (&self, crypto: Currency, fiats: Vec<Fiat>) -> Result<T>
+    pub async fn symbol_to_symbols(&self, from: &Symbol, to: &Vec<Symbol>) -> Result<HashMap<Symbol, f64>>
+    {
+        let tsyms = to.iter().map(|f| f.symbol()).collect::<Vec<String>>().join(",");
+        let path = "data/price";
+        let endpoint = format!("{}/{}?fsym={}&tsyms={}",self.server, path, from.symbol(), tsyms);
+        let request = self.client.get(endpoint).build()?;
+        let response = self.client.execute(request)
+            .await?
+            .error_for_status()?
+            .json()
+            .await?;
+        debug!("Response {path}: {:?}", response);
+        Ok(response)
+    }
+
+    /// Get multiple values: Symbol to multiple Symbols with generic return. Catch all is HashMap<String, f64>
+    pub async fn symbol_to_symbols_generic<T>(&self, from: &Symbol, to: &Vec<Symbol>) -> Result<T>
     where T: DeserializeOwned + Debug
     {
-        let tsyms = fiats.iter().map(|f| f.ticker()).collect::<Vec<String>>().join(",");
+        let tsyms = to.iter().map(|f| f.symbol()).collect::<Vec<String>>().join(",");
         let path = "data/price";
-        let endpoint = format!("{}/{}?fsym={}&tsyms={}",self.server, path, crypto.ticker(), tsyms);
+        let endpoint = format!("{}/{}?fsym={}&tsyms={}",self.server, path, from.symbol(), tsyms);
         let request = self.client.get(endpoint).build()?;
         let response = self.client.execute(request)
             .await?
@@ -74,23 +81,6 @@ impl TickerClient {
             .await?;
         debug!("Response {path}: {:?}", response);
         Ok(response)
-    }
-
-    /// Get a ticker to a pair of cryptos
-    pub async fn ticker_pair(&self, from: Currency, to: Currency) -> Result<f64> {
-        let path = "data/price";
-        let endpoint = format!("{}/{}?fsym={}&tsyms={}",self.server, path, from.ticker(), to.ticker());
-        let request = self.client.get(endpoint).build()?;
-        let response = self.client.execute(request)
-            .await?
-            .error_for_status()?
-            .json::<HashMap<String, f64>>()
-            .await?;
-        debug!("Response {path}: {:?}", response);
-        response
-            .get(&to.ticker())
-            .ok_or(Error::ResponseMissing(to.ticker()))
-            .cloned()
     }
 }
 
@@ -117,7 +107,7 @@ mod tests {
     #[tokio::test]
     async fn test_btc_to_usd() {
         run_test(|client| async move {
-            let resp = client.fiat_ticker(Currency::BTC, Fiat::USD).await;
+            let resp = client.symbol_to_symbol(&Symbol::BTC, &Symbol::USD).await;
             assert!(resp.is_ok());
         }).await;
     }
@@ -125,7 +115,7 @@ mod tests {
     #[tokio::test]
     async fn test_eth_to_ethticker() {
         run_test(|client| async move {
-            let resp = client.multi_fiat_ticker::<TickerETH>(Currency::ETH, vec![Fiat::USD, Fiat::RUB]).await;
+            let resp = client.symbol_to_symbols_generic::<TickerETH>(&Symbol::ETH, &vec![Symbol::USD, Symbol::RUB]).await;
             assert!(resp.is_ok());
         }).await;
     }
@@ -133,7 +123,7 @@ mod tests {
     #[tokio::test]
     async fn test_eth_to_ethticker_fail() {
         run_test(|client| async move {
-            let resp = client.multi_fiat_ticker::<TickerETH>(Currency::ETH, vec![Fiat::USD]).await;
+            let resp = client.symbol_to_symbols_generic::<TickerETH>(&Symbol::ETH, &vec![Symbol::USD]).await;
             assert!(resp.is_err());
         }).await;
     }
@@ -141,7 +131,7 @@ mod tests {
     #[tokio::test]
     async fn test_btc_to_btc() {
         run_test(|client| async move {
-            let resp = client.ticker_pair(Currency::BTC, Currency::BTC).await;
+            let resp = client.symbol_to_symbol(&Symbol::BTC, &Symbol::BTC).await;
             assert!(resp.is_ok());
             let v = resp.unwrap();
             assert_eq!(v, 1.0);

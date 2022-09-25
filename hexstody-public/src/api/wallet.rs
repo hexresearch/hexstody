@@ -4,7 +4,7 @@ use std::sync::Arc;
 use super::auth::{require_auth, require_auth_user};
 use chrono::NaiveDateTime;
 use hexstody_api::domain::{
-    filter_tokens, BtcAddress, Currency, CurrencyAddress, CurrencyTxId, Erc20, ETHTxid, Erc20Token, EthAccount, Fiat
+    filter_tokens, BtcAddress, Currency, CurrencyAddress, CurrencyTxId, Erc20, ETHTxid, Erc20Token, EthAccount
 };
 use hexstody_api::error;
 use hexstody_api::types::{
@@ -19,8 +19,6 @@ use hexstody_db::update::misc::{TokenAction, TokenUpdate};
 use hexstody_db::update::withdrawal::WithdrawalRequestInfo;
 use hexstody_db::update::{StateUpdate, UpdateBody};
 use hexstody_eth_client::client::EthClient;
-use hexstody_runtime_db::RuntimeState;
-use hexstody_ticker_provider::client::TickerClient;
 use log::*;
 use reqwest;
 use rocket::http::CookieJar;
@@ -126,26 +124,6 @@ pub async fn get_balance_by_currency(
             limit_info,
         })
     })
-}
-
-#[openapi(tag = "wallet")]
-#[post("/ticker", data = "<currency>")]
-pub async fn ticker(
-    cookies: &CookieJar<'_>,
-    rstate: &State<Arc<Mutex<RuntimeState>>>,
-    ticker_client: &State<TickerClient>,
-    currency: Json<Currency>,
-) -> error::Result<Json<api::TickerETH>> {
-    require_auth(cookies, |_| async move {
-        let currency = currency.into_inner();
-        let mut rstate = rstate.lock().await;
-        let ticker: api::TickerETH = rstate
-            .get_multifiat_ticker(ticker_client, currency, vec![Fiat::USD, Fiat::RUB])
-            .await
-            .map_err(|e| error::Error::GenericError(e.to_string()))?;
-        Ok(Json(ticker))
-    })
-    .await
 }
 
 #[openapi(tag = "wallet")]

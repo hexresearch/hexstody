@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use hexstody_api::{
     types::TickerETH,
-    domain::{Currency, Fiat}};
+    domain::{Currency, Symbol}};
 use hexstody_api::error;
 use hexstody_runtime_db::RuntimeState;
 use hexstody_ticker_provider::client::TickerClient;
@@ -28,22 +28,22 @@ pub async fn ticker(
     let currency = currency.into_inner();
     let mut rstate = rstate.lock().await;
     let ticker: TickerETH = rstate
-        .get_multifiat_ticker(ticker_client, currency, vec![Fiat::USD, Fiat::RUB])
+        .symbol_to_symbols_generic(ticker_client, currency.symbol(), vec![Symbol::USD, Symbol::RUB])
         .await
         .map_err(|e| error::Error::GenericError(e.to_string()))?;
     Ok(Json(ticker))
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct CurrencyPair {
-    from: Currency,
-    to: Currency
+pub struct SymbolPair {
+    from: Symbol,
+    to: Symbol,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct CurrencyPairResponse{
-    from: Currency,
-    to: Currency,
+pub struct SymbolPairResponse{
+    from: Symbol,
+    to: Symbol,
     rate: f64
 }
 
@@ -52,13 +52,13 @@ pub struct CurrencyPairResponse{
 pub async fn ticker_pair(
     rstate: &State<Arc<Mutex<RuntimeState>>>,
     ticker_client: &State<TickerClient>,
-    currency_pair: Json<CurrencyPair>,
-) -> error::Result<Json<CurrencyPairResponse>> {
-    let CurrencyPair{ from, to } = currency_pair.into_inner();
+    currency_pair: Json<SymbolPair>,
+) -> error::Result<Json<SymbolPairResponse>> {
+    let SymbolPair{ from, to } = currency_pair.into_inner();
     let mut rstate = rstate.lock().await;
     let rate = rstate
-        .get_pair_ticker(ticker_client, from.clone(), to.clone())
+        .symbol_to_symbol(ticker_client, from.clone(), to.clone())
         .await
         .map_err(|e| error::Error::GenericError(e.to_string()))?;
-    Ok(Json(CurrencyPairResponse{ from, to, rate }))
+    Ok(Json(SymbolPairResponse{ from, to, rate }))
 }

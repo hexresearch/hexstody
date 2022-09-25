@@ -3,6 +3,7 @@ use futures::future::{join3, AbortHandle, AbortRegistration, Abortable, Aborted}
 use futures::Future;
 use hexstody_eth_client::client::EthClient;
 use hexstody_runtime_db::RuntimeState;
+use hexstody_ticker::worker::ticker_worker;
 use hexstody_ticker_provider::client::TickerClient;
 use log::*;
 use p256::pkcs8::DecodePublicKey;
@@ -359,7 +360,13 @@ pub async fn run_hot_wallet(
 
     let cron_workers_hndl = tokio::spawn({
         let update_sender = update_sender.clone();
-        async move { cron_workers(update_sender) }
+        async move { cron_workers(update_sender).await }
+    });
+
+    let ticker_worker_hndl = tokio::spawn({
+        let ticker_client = ticker_client.clone();
+        let runtime_state_mx = runtime_state_mx.clone();
+        async move { ticker_worker(ticker_client, runtime_state_mx).await }
     });
 
     if let Err(Aborted) = serve_apis(
@@ -383,6 +390,7 @@ pub async fn run_hot_wallet(
         btc_worker_hndl.abort();
         update_response_hndl.abort();
         cron_workers_hndl.abort();
+        ticker_worker_hndl.abort();
         Err(Error::Aborted)
     } else {
         Ok(())
