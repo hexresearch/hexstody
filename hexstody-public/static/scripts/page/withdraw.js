@@ -1,13 +1,14 @@
 import {
     initTabs,
     currencyPrecision,
-    currencyNameToCurrency,
     formattedCurrencyValue,
     feeCurrency,
     isErc20Token,
     ETH_TX_GAS_LIMIT,
     ERC20_TX_GAS_LIMIT,
-    GWEI
+    GWEI,
+    currencyEnum,
+    tickerEnum
 } from "../common.js"
 
 import { localizeSpan } from "../localize.js"
@@ -18,19 +19,19 @@ const refreshInterval = 3_000_000
 async function postWithdrawRequest(currency, address, amount) {
     let body
     switch (currency) {
-        case "BTC":
-            body = { address: { type: "BTC", addr: address }, amount: amount }
+        case tickerEnum.btc:
+            body = { address: { type: tickerEnum.btc, addr: address }, amount: amount }
             break
-        case "ETH":
-            body = { address: { type: "ETH", token: "ETH", account: address }, amount: amount };
+        case tickerEnum.eth:
+            body = { address: { type: tickerEnum.eth, token: tickerEnum.eth, account: address }, amount: amount };
             break;
-        case "USDT":
-        case "CRV":
-        case "GTECH":
+        case tickerEnum.erc20_usdt:
+        case tickerEnum.erc20_crv:
+        case tickerEnum.erc20_gtech:
             body = {
                 address: {
                     type: "ERC20",
-                    token: currencyNameToCurrency(currency).ERC20,
+                    token: currencyEnum[currency].ERC20,
                     account: {
                         account: address
                     }
@@ -116,8 +117,8 @@ async function updateActiveTab() {
     const activeTab = document.querySelector(`#tabs-ul li.is-active`)
     const activeCurrencyName = activeTab.id.replace("-tab", "")
     const currencyNameUppercase = activeCurrencyName.toUpperCase()
-    const currency = currencyNameToCurrency(currencyNameUppercase)
-    const balanceObj = await getBalance(currencyNameToCurrency(activeCurrencyName))
+    const currency = currencyEnum[activeCurrencyName]
+    const balanceObj = await getBalance(currency)
     const fee = await getFee(activeCurrencyName)
     // GTECH is not listed on any exchange for now
     let tikerResponse

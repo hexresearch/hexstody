@@ -13,39 +13,39 @@ const GTECH_PRECISION = 10 ** 18;
 
 export const GWEI = 10 ** 9;
 
-export const currencyEnum = Object.freeze({
+export const tickerEnum = Object.freeze({
     btc: "BTC",
     eth: "ETH",
+    erc20_usdt: "USDT",
+    erc20_crv: "CRV",
+    erc20_gtech:"GTECH"
+});
+
+export const currencyEnum = Object.freeze({
+    btc: tickerEnum.btc,
+    eth: tickerEnum.eth,
     erc20_usdt: {
         "ERC20": {
-            "ticker": "USDT",
+            "ticker": tickerEnum.erc20_usdt,
             "name": "USDT",
             "contract": "0xfD8ef4113c5f54BE9Cb103eB437b710b8e1d6885"
         }
     },
     erc20_crv: {
         "ERC20": {
-            "ticker": "CRV",
+            "ticker": tickerEnum.erc20_crv,
             "name": "CRV",
             "contract": "0x817805F0f818237c73Fde5dEc91dbB650A7E7612"
         }
     },
     erc20_gtech: {
         "ERC20": {
-            "ticker": "GTECH",
+            "ticker": tickerEnum.erc20_gtech,
             "name": "GTECH",
             "contract": "0x866A4Da32007BA71aA6CcE9FD85454fCF48B140c"
         }
     }
 });
-
-export function* getAllCurrencies() {
-    for (const currencyKey in currencyEnum) {
-       const currency = currencyEnum[currencyKey]
-       if(typeof currency === "string") yield currency; 
-       if(typeof currency === "object" && currency.ERC20 !== undefined) yield currency.ERC20.ticker;
-    }
-}
 
 // Gas limit for ETH transfer transaction
 export const ETH_TX_GAS_LIMIT = 21_000;
@@ -60,27 +60,27 @@ export async function loadTemplate(path) {
 export function formattedCurrencyValue(currency, value) {
     let numberFormat;
     switch (currency) {
-        case "BTC":
+        case tickerEnum.btc:
             numberFormat = Intl.NumberFormat('en', {
                 maximumFractionDigits: Math.log10(BTC_PRECISION),
             });
             return numberFormat.format(value / BTC_PRECISION);
-        case "ETH":
+        case tickerEnum.eth:
             numberFormat = Intl.NumberFormat('en', {
                 maximumFractionDigits: Math.log10(ETH_PRECISION),
             });
             return numberFormat.format(value / ETH_PRECISION);
-        case "USDT":
+        case tickerEnum.erc20_usdt:
             numberFormat = Intl.NumberFormat('en', {
                 maximumFractionDigits: Math.log10(USDT_PRECISION),
             });
             return numberFormat.format(value / USDT_PRECISION);
-        case "CRV":
+        case tickerEnum.erc20_crv:
             numberFormat = Intl.NumberFormat('en', {
                 maximumFractionDigits: Math.log10(CRV_PRECISION),
             });
             return numberFormat.format(value / CRV_PRECISION);
-        case "GTECH":
+        case tickerEnum.erc20_gtech:
             numberFormat = Intl.NumberFormat('en', {
                 maximumFractionDigits: Math.log10(GTECH_PRECISION),
             });
@@ -142,7 +142,7 @@ export function initCollapsibles() {
     console.log("A")
     const cols = document.getElementsByClassName("collapsible")
     console.log(cols)
-    for (let col of cols){
+    for (let col of cols) {
         col.addEventListener("click", function () {
             this.classList.toggle("active");
             const content = this.nextElementSibling;
@@ -252,34 +252,17 @@ export function indexArrayFromOne(array) {
     return res
 }
 
-export function currencyNameToCurrency(currencyName) {
-    switch (currencyName.toUpperCase()) {
-        case "BTC":
-            return currencyEnum.btc;
-        case "ETH":
-            return currencyEnum.eth;
-        case "USDT":
-            return currencyEnum.erc20_usdt;
-        case "CRV":
-            return currencyEnum.erc20_crv;
-        case "GTECH":
-            return currencyEnum.erc20_gtech;
-        default:
-            return null;
-    }
-}
-
 export function currencyPrecision(currencyName) {
     switch (currencyName.toUpperCase()) {
-        case "BTC":
+        case tickerEnum.btc:
             return BTC_PRECISION;
-        case "ETH":
+        case tickerEnum.eth:
             return ETH_PRECISION;
-        case "USDT":
+        case tickerEnum.erc20_usdt:
             return USDT_PRECISION;
-        case "CRV":
+        case tickerEnum.erc20_crv:
             return CRV_PRECISION;
-        case "GTECH":
+        case tickerEnum.erc20_gtech:
             return GTECH_PRECISION;
         default:
             return null;
@@ -289,14 +272,14 @@ export function currencyPrecision(currencyName) {
 // The currency in which transaction fees are paid
 export function feeCurrency(currencyName) {
     switch (currencyName.toUpperCase()) {
-        case "BTC":
-            return "BTC";
-        case "ETH":
-            return "ETH";
-        case "USDT":
-        case "CRV":
-        case "GTECH":
-            return "ETH";
+        case tickerEnum.btc:
+            return tickerEnum.btc;
+        case tickerEnum.eth:
+            return tickerEnum.eth;
+        case tickerEnum.erc20_usdt:
+        case tickerEnum.erc20_crv:
+        case tickerEnum.erc20_gtech:
+            return tickerEnum.eth;
         default:
             return null;
     };
@@ -304,12 +287,12 @@ export function feeCurrency(currencyName) {
 
 export function isErc20Token(currencyName) {
     switch (currencyName.toUpperCase()) {
-        case "BTC":
-        case "ETH":
+        case tickerEnum.btc:
+        case tickerEnum.eth:
             return false;
-        case "USDT":
-        case "CRV":
-        case "GTECH":
+        case tickerEnum.erc20_usdt:
+        case tickerEnum.erc20_crv:
+        case tickerEnum.erc20_gtech:
             return true;
         default:
             return null;

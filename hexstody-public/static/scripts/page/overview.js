@@ -1,4 +1,4 @@
-import { loadTemplate, formattedCurrencyValue, formattedElapsedTime, currencyNameToCurrency } from "../common.js";
+import { loadTemplate, formattedCurrencyValue, formattedElapsedTime, currencyEnum, tickerEnum } from "../common.js";
 
 let balanceTemplate = null;
 let historyTemplate = null;
@@ -46,9 +46,9 @@ async function initTemplates() {
     });
     Handlebars.registerHelper('currencyFullName', (currencyName) => {
         switch (currencyName) {
-            case "BTC":
+            case tickerEnum.btc:
                 return "Bitcoin";
-            case "ETH":
+            case tickerEnum.eth:
                 return "Ethereum";
             default:
                 return currencyName;
@@ -85,7 +85,7 @@ async function loadHistory() {
         if (isDeposit) {
             let explorerLink;
             switch (currencyName) {
-                case "BTC":
+                case tickerEnum.btc:
                     explorerLink = `https://mempool.space/tx/${historyItem.txid.txid}`;
                     break;
                 default:
@@ -181,9 +181,9 @@ async function updateLoop() {
     await Promise.allSettled([loadBalance(), loadHistory()]);
 
     const [jsonresBTC, jsonresETH, jsonresUSDT] = await Promise.allSettled([
-        getCourseForCurrency(currencyNameToCurrency("BTC")),
-        getCourseForCurrency(currencyNameToCurrency("ETH")),
-        getCourseForCurrency(currencyNameToCurrency("USDT"))
+        getCourseForCurrency(currencyEnum[tickerEnum.btc]),
+        getCourseForCurrency(currencyEnum[tickerEnum.eth]),
+        getCourseForCurrency(currencyEnum[tickerEnum.erc20_usdt])
     ]);
 
     const btcTicker = jsonresBTC.value;
