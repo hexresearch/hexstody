@@ -2,8 +2,8 @@
 {{/inline}}
 
 {{#*inline "scripts"}}
-<script type="module" src="/scripts/page/common.js"></script>
-<script type="module" src="/scripts/page/request.js"></script>
+<script type="module" src="/scripts/common.js"></script>
+<script type="module" src="/scripts/request.js"></script>
 <script type="module" src="/scripts/page/swap.js"></script>
 <script src="/scripts/handlebars.min-v4.7.7.js" defer></script>
 {{/inline}}
@@ -51,8 +51,12 @@
         <label id="to_max" class=""></label>
     </div>
     <wbr>
+    <div class="field" id="validation-error" hidden="true">
+        <span class="is-danger">{{lang.alreadytaken}}</span>
+    </div>
+    <wbr>
     <div class="test">
-        <button class="button">Swap</button>
+        <button id="swap" class="button">Swap</button>
     </div>
 </div>
 
