@@ -1,4 +1,4 @@
-import { tickerEnum, currencyEnum, formattedCurrencyValue, currencyPrecision, currencyNameToCurrency} from "../common.js";
+import { tickerEnum, currencyEnum, formattedCurrencyValue, currencyPrecision, currencyNameToCurrency } from "../common.js";
 import { getBalance, postOrderExchange } from "../request.js";
 
 let currencyFrom = null;
@@ -56,7 +56,7 @@ function initDrop(idPostfix, options) {
             }
 
             if (currencyFrom) {
-                const bal = await getBalance(currencyNameToCurrency(currencyFrom));
+                const bal = await getBalance(currencyNameToCurrency(currencyFrom)).then(r => r.json());
                 const balPretty = formattedCurrencyValue(currencyFrom, calcAvailableBalance(bal));
                 document.getElementById("from_max").innerText = `Max ${balPretty}`;
                 if (currencyTo) {
@@ -95,8 +95,8 @@ async function init() {
     document.getElementById("swap").addEventListener("click", async _ => {
         if (currencyFrom && currencyTo && valueFrom && valueTo) {
             const request = {
-                currency_from: currencyEnum[currencyFrom],
-                currency_to: currencyEnum[currencyTo],
+                currency_from: currencyNameToCurrency(currencyFrom),
+                currency_to: currencyNameToCurrency(currencyTo),
                 amount_from: valueFrom,
                 amount_to: valueTo
             }
