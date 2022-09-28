@@ -188,11 +188,23 @@ pub struct EthGasPrice {
     pub gasUsedRatio: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Eq, PartialEq)]
 pub struct BalanceItem {
     pub currency: Currency,
     pub value: u64,
     pub limit_info: LimitInfo,
+}
+
+impl PartialOrd for BalanceItem {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.currency.partial_cmp(&other.currency)
+    }
+}
+
+impl Ord for BalanceItem {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.currency.cmp(&other.currency)
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
@@ -648,12 +660,24 @@ pub struct GetTokensResponse {
     pub tokens: Vec<TokenInfo>,
 }
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, PartialEq, Eq, Deserialize, JsonSchema)]
 pub struct TokenInfo {
     pub token: Erc20Token,
     pub balance: u64,
     pub finalized_balance: u64,
     pub is_active: bool,
+}
+
+impl PartialOrd for TokenInfo {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.token.partial_cmp(&other.token)
+    }
+}
+
+impl Ord for TokenInfo {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.token.cmp(&other.token)
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
@@ -696,14 +720,14 @@ pub struct Erc20HotWalletBalanceResponse {
     pub balance: Vec<Erc20Balance>,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Clone, JsonSchema)]
 pub enum LimitSpan {
     Day,
     Week,
     Month,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Clone, JsonSchema)]
 pub struct Limit {
     pub amount: u64,
     pub span: LimitSpan,
@@ -780,7 +804,7 @@ pub struct LimitChangeOpResponse {
     pub status: LimitChangeStatus,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, Eq, JsonSchema)]
 pub struct LimitInfo {
     pub limit: Limit,
     pub spent: u64,
@@ -798,10 +822,22 @@ impl Default for LimitInfo {
     }
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Clone, JsonSchema)]
 pub struct LimitApiResp {
-    pub limit_info: LimitInfo,
     pub currency: Currency,
+    pub limit_info: LimitInfo,
+}
+
+impl PartialOrd for LimitApiResp {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.currency.partial_cmp(&other.currency)
+    }
+}
+
+impl Ord for LimitApiResp {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.currency.cmp(&other.currency)
+    }
 }
 
 // NOTE: fields order must be the same as in 'LimitChangeOpResponse' struct

@@ -41,7 +41,7 @@ pub async fn get_balance(
             return Err(error::Error::FailedETHConnection(e.to_string()).into());
         };
         let user_data = user_data_resp.unwrap();
-        let balances: Vec<api::BalanceItem> = user
+        let mut balances: Vec<api::BalanceItem> = user
             .currencies
             .iter()
             .map(|(cur, info)| {
@@ -66,6 +66,8 @@ pub async fn get_balance(
                 }
             })
             .collect();
+        balances.sort();
+        // balances.sort_by(|b1, b2| b1.currency.cmp(&b2.currency));
         Ok(Json(api::Balance { balances }))
     })
     .await
@@ -534,7 +536,7 @@ pub async fn list_tokens(
     state: &State<Arc<Mutex<DbState>>>,
 ) -> error::Result<Json<GetTokensResponse>> {
     require_auth_user(cookies, state, |_, user| async move {
-        let info = Currency::supported_tokens()
+        let mut info: Vec<TokenInfo> = Currency::supported_tokens()
             .into_iter()
             .map(
                 |token| match user.currencies.get(&Currency::ERC20(token.clone())) {
@@ -553,6 +555,7 @@ pub async fn list_tokens(
                 },
             )
             .collect();
+        info.sort();
         Ok(Json(GetTokensResponse { tokens: info }))
     })
     .await
