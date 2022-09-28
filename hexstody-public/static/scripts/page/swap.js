@@ -1,4 +1,4 @@
-import { tickerEnum, currencyEnum, formattedCurrencyValue, currencyPrecision, currencyNameToCurrency } from "../common.js";
+import { tickerEnum, formattedCurrencyValue, currencyPrecision, currencyNameToCurrency } from "../common.js";
 import { getBalance, postOrderExchange } from "../request.js";
 
 let currencyFrom = null;
@@ -29,9 +29,16 @@ function parseInput(currency, value) {
             return parseInt(value);
         default:
             const asFloat = parseFloat(value);
-            return asFloat ? Math.round(asFloat * currencyPrecision(currencyFrom)) : null;
+            return asFloat ? Math.round(asFloat * currencyPrecision(currency)) : null;
     }
 };
+
+async function convertAmount(from, to, amount) {
+    const ticker = await fetch(`https://min-api.cryptocompare.com/data/price?fsym=${from}&tsyms=${to}`)
+        .then(r => r.json());
+    const tickerNorm = ticker[to] * currencyPrecision(to) / currencyPrecision(from);
+    return Math.round(amount * tickerNorm);
+}
 
 function initDrop(idPostfix, options) {
     document.getElementById(`currency-${idPostfix}`).innerHTML = options;
@@ -56,18 +63,30 @@ function initDrop(idPostfix, options) {
             }
 
             if (currencyFrom) {
-                const bal = await getBalance(currencyNameToCurrency(currencyFrom)).then(r => r.json());
-                const balPretty = formattedCurrencyValue(currencyFrom, calcAvailableBalance(bal));
-                document.getElementById("from_max").innerText = `Max ${balPretty}`;
+                const balance = await getBalance(currencyNameToCurrency(currencyFrom)).then(r => r.json());
+                const availableBalance = calcAvailableBalance(balance);
+                const formattedBalance = formattedCurrencyValue(currencyFrom, availableBalance);
+                document.getElementById("from_max").innerText = `Max ${formattedBalance}`;
                 if (currencyTo) {
-                    const ticker = await fetch(`https://min-api.cryptocompare.com/data/price?fsym=${currencyFrom}&tsyms=${currencyTo}`).then(r => r.json());
-                    const t = formattedCurrencyValue(currencyTo, calcAvailableBalance(bal) * ticker[currencyTo]);
-                    document.getElementById("to_max").innerText = `Max ${t}`;
+                    const convertedAmount = await convertAmount(currencyFrom, currencyTo, availableBalance);
+                    const formattedAmount = formattedCurrencyValue(currencyTo, convertedAmount);
+                    document.getElementById("to_max").innerText = `Max ${formattedAmount}`;
                 }
             }
         });
     }
 
+}
+
+async function tryTrans(from, to, event) {
+    if (from && to) {
+        const inputValue = event.target.value;
+        const valueFrom = parseInput(from, inputValue);
+        if (valueFrom) {
+            return convertAmount(from, to, valueFrom);
+        }
+    }
+    return null;
 }
 
 async function init() {
@@ -77,18 +96,18 @@ async function init() {
 
     document.getElementById("from_value").value = 0;
     document.getElementById("to_value").value = 0;
+
     document.getElementById("from_value").addEventListener("keyup", async event => {
-        const inputValue = event.target.value;
-        if (currencyFrom && currencyTo) {
-            let value = parseInput(currencyFrom, inputValue);
-            if (value) {
-                valueFrom = value;
-                const ticker = await fetch(`https://min-api.cryptocompare.com/data/price?fsym=${currencyFrom}&tsyms=${currencyTo}`)
-                    .then(r => r.json());
-                const tickerNorm = ticker[currencyTo] * currencyPrecision(currencyTo) / currencyPrecision(currencyFrom);
-                valueTo = Math.round(valueFrom * tickerNorm);
-                document.getElementById("to_value").value = formattedCurrencyValue(currencyTo, valueTo);
-            }
+        valueTo = await tryTrans(currencyFrom, currencyTo, event);
+        if (valueTo) {
+            document.getElementById("to_value").value = formattedCurrencyValue(currencyTo, valueTo);
+        }
+    });
+
+    document.getElementById("to_value").addEventListener("keyup", async event => {
+        valueFrom = await tryTrans(currencyTo, currencyFrom, event);
+        if (valueFrom) {
+            document.getElementById("from_value").value = formattedCurrencyValue(currencyFrom, valueFrom);
         }
     });
 
