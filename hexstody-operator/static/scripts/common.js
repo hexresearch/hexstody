@@ -221,13 +221,23 @@ export async function getHotWalletBalance(privateKeyJwk, publicKeyDer, currency)
     return response
 }
 
+export async function getExchangeBalances(privateKeyJwk, publicKeyDer) {
+    const response = await makeSignedRequest(privateKeyJwk, publicKeyDer, null, `exchange/balances`, 'GET')
+    return response
+}
+
 export async function getWithdrawalRequests(privateKeyJwk, publicKeyDer, currency, filter) {
-    const response = await makeSignedRequest(privateKeyJwk, publicKeyDer, null, `request/${getCurrencyName(currency).toLowerCase()}?filter=`+filter, 'GET')
+    const response = await makeSignedRequest(privateKeyJwk, publicKeyDer, null, `request/${getCurrencyName(currency).toLowerCase()}?filter=${filter}`, 'GET')
     return response
 }
 
 export async function getLimitRequests(privateKeyJwk, publicKeyDer, filter) {
-    const response = await makeSignedRequest(privateKeyJwk, publicKeyDer, null, "changes?filter=" + filter, "GET")
+    const response = await makeSignedRequest(privateKeyJwk, publicKeyDer, null, `changes?filter=${filter}`, "GET")
+    return response
+}
+
+export async function getExchangeRequests(privateKeyJwk, publicKeyDer, filter) {
+    const response = await makeSignedRequest(privateKeyJwk, publicKeyDer, null, `exchange/list?filter=${filter}`, 'GET')
     return response
 }
 
@@ -256,6 +266,16 @@ export async function rejectLimitRequest(privateKeyJwk, publicKeyDer, confirmati
     return response
 }
 
+export async function confirmExchangeRequest(privateKeyJwk, publicKeyDer, confirmationData) {
+    const response = await makeSignedRequest(privateKeyJwk, publicKeyDer, confirmationData, "exchange/confirm", "POST")
+    return response
+}
+
+export async function rejectExchangeRequest(privateKeyJwk, publicKeyDer, confirmationData) {
+    const response = await makeSignedRequest(privateKeyJwk, publicKeyDer, confirmationData, "exchange/reject", "POST")
+    return response
+}
+
 export async function getInvite(privateKeyJwk, publicKeyDer, inviteLabel) {
     return await makeSignedRequest(privateKeyJwk, publicKeyDer, inviteLabel, "invite/generate", "POST")
 }
@@ -268,7 +288,11 @@ export async function getUserInfo(privateKeyJwk, publicKeyDer, userId) {
     return await makeSignedRequest(privateKeyJwk, publicKeyDer, null, `user/info/${userId}`, "GET")
 }
 
-export async function getTicker(currency){
+export async function getExchangeDepositAddress(privateKeyJwk, publicKeyDer, currency) {
+    return await makeSignedRequest(privateKeyJwk, publicKeyDer, currency, "exchange/address", "POST")
+}
+
+export async function getTicker(currency) {
     return await fetch("/ticker/ticker", {
         method: "POST",
         body: JSON.stringify(currency)
