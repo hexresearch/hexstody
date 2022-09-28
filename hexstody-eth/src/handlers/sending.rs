@@ -228,7 +228,7 @@ pub async fn signsend(login: &str,
     let transport = web3::transports::Http::new(nurl).unwrap();
     let web3 = web3::Web3::new(transport);
 
-    let transport_i = web3::transports::Http::new("https://goerli.infura.io/v3/e2f19e2685c64874b4495b3f37a10aa3").unwrap();
+    let transport_i = web3::transports::Http::new("https://mainnet.infura.io/v3/e2f19e2685c64874b4495b3f37a10aa3").unwrap();
     let web3_i = web3::Web3::new(transport_i);
 
     let to = Address::from_str(recipient).unwrap();
@@ -247,7 +247,7 @@ pub async fn signsend(login: &str,
         to: Some(to),
         value: Some(val_u),
         gas:Some(U256::from_dec_str("21000").unwrap()),
-        gas_price:Some(U256::from_dec_str("1800000000").unwrap()),
+        gas_price:Some(U256::from_dec_str("45000000000").unwrap()),
         nonce:Some(count),
         ..Default::default()
     };
@@ -320,7 +320,7 @@ pub async fn signsend_erc20(login: &str,
     let transport = web3::transports::Http::new(nurl).unwrap();
     let web3 = web3::Web3::new(transport);
 
-    let transport_i = web3::transports::Http::new(nurl).unwrap();//web3::transports::Http::new("https://goerli.infura.io/v3/e2f19e2685c64874b4495b3f37a10aa3").unwrap();
+    let transport_i = web3::transports::Http::new(nurl).unwrap();//web3::transports::Http::new("https://mainnet.infura.io/v3/e2f19e2685c64874b4495b3f37a10aa3").unwrap();
     let web3_i = web3::Web3::new(transport_i);
     let to = Address::from_str(token_address).unwrap();
 

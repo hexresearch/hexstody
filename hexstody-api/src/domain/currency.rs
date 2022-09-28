@@ -42,7 +42,7 @@ impl Currency {
         Currency::ERC20(Erc20Token {
             ticker: "USDT".to_string(),
             name: "USDT".to_string(),
-            contract: "0xfD8ef4113c5f54BE9Cb103eB437b710b8e1d6885".to_string(),
+            contract: "0xdAC17F958D2ee523a2206206994597C13D831ec7".to_string(),
         })
     }
 
@@ -50,7 +50,7 @@ impl Currency {
         Currency::ERC20(Erc20Token {
             ticker: "CRV".to_string(),
             name: "CRV".to_string(),
-            contract: "0x817805F0f818237c73Fde5dEc91dbB650A7E7612".to_string(),
+            contract: "0xd533a949740bb3306d119cc777fa900ba034cd52".to_string(),
         })
     }
 
@@ -65,7 +65,7 @@ impl Currency {
     pub fn ticker(&self) -> String {
         self.symbol().symbol()
     }
-    
+
     pub fn ticker_lowercase(&self) -> String {
         match self {
             Currency::BTC => "btc".to_owned(),
@@ -361,7 +361,7 @@ impl Fiat{
             Symbol::RUB => Some(Fiat::RUB),
             _ => None
         }
-    } 
+    }
 
     pub fn ticker(&self) -> String {
         self.symbol().symbol()
