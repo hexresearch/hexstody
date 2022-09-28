@@ -13,31 +13,39 @@ const GTECH_PRECISION = 10 ** 18
 
 export const GWEI = 10 ** 9
 
-export const currencyEnum = Object.freeze({
+export const tickerEnum = Object.freeze({
     btc: "BTC",
     eth: "ETH",
+    erc20_usdt: "USDT",
+    erc20_crv: "CRV",
+    erc20_gtech:"GTECH"
+});
+
+export const currencyEnum = Object.freeze({
+    btc: tickerEnum.btc,
+    eth: tickerEnum.eth,
     erc20_usdt: {
         "ERC20": {
-            "ticker": "USDT",
+            "ticker": tickerEnum.erc20_usdt,
             "name": "USDT",
             "contract": "0xdAC17F958D2ee523a2206206994597C13D831ec7"
         }
     },
     erc20_crv: {
         "ERC20": {
-            "ticker": "CRV",
+            "ticker": tickerEnum.erc20_crv,
             "name": "CRV",
             "contract": "0xd533a949740bb3306d119cc777fa900ba034cd52"
         }
     },
     erc20_gtech: {
         "ERC20": {
-            "ticker": "GTECH",
+            "ticker": tickerEnum.erc20_gtech,
             "name": "GTECH",
             "contract": "0x866A4Da32007BA71aA6CcE9FD85454fCF48B140c"
         }
     }
-})
+});
 
 export function* getAllCurrencies() {
     for (const currencyKey in currencyEnum) {
