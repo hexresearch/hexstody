@@ -52,7 +52,7 @@ impl EthClient {
         let response = self.client.execute(request)
             .await?
             .error_for_status()?
-            .text()
+            .json()
             .await?;
         debug!("Response {path}: {:?}", response);
         Ok(response)

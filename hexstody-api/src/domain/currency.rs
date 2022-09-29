@@ -189,7 +189,7 @@ pub fn filter_tokens(curs: Vec<Currency>) -> Vec<Erc20Token> {
 
 /// Description of ERC20 token that allows to distinguish them between each other
 #[derive(
-    Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
+    Debug, Serialize, Deserialize, JsonSchema, Clone, Eq, PartialEq, Hash,
 )]
 pub struct Erc20Token {
     /// Short name of the token like USDT or WBTC
@@ -198,6 +198,29 @@ pub struct Erc20Token {
     pub name: String,
     /// Contract address
     pub contract: String,
+}
+
+impl Erc20Token {
+    pub fn index(&self) -> u16 {
+        match self.ticker.as_str() {
+            "USDT" => 0,
+            "GTECH" => 1,
+            "CRV" => 2,
+            _ => u16::max_value()
+        }
+    }
+}
+
+impl PartialOrd for Erc20Token{
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.index().partial_cmp(&other.index())
+    }
+}
+
+impl Ord for Erc20Token {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.index().cmp(&other.index())
+    }
 }
 
 impl fmt::Display for Erc20Token {
@@ -429,5 +452,20 @@ impl Symbol {
 
     pub fn supported_cryptos() -> Vec<Symbol> {
         Symbol::supported().iter().filter(|t| t.is_crypto()).cloned().collect()
+    }
+
+    pub fn exponent(&self) -> f64 {
+        match self {
+            Symbol::USD => 1.0,
+            Symbol::RUB => 1.0,
+            Symbol::BTC => 100000000.0,
+            Symbol::ETH => 1000000000000000000.0,
+            Symbol::ERC20(ticker) => match ticker.as_str() {
+                "USDT" => 1.0,
+                "CRV" => 1.0,
+                "GTECH" => 1.0,
+                _ => 1.0
+            },
+        }
     }
 }

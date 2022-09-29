@@ -16,11 +16,12 @@ pub async fn get_user_limits(
     state: &State<Arc<Mutex<DbState>>>,
 ) -> Result<Json<Vec<LimitApiResp>>, Redirect>{
     require_auth_user(cookies, state, |_, user| async move {
-        let infos = user.currencies.values().map(|cur_info| 
+        let mut infos: Vec<LimitApiResp> = user.currencies.values().map(|cur_info| 
             LimitApiResp{ 
                 limit_info: cur_info.limit_info.clone(), 
                 currency: cur_info.currency.clone() 
             }).collect();
+        infos.sort();
         Ok(Json(infos))
     }).await.map_err(|_| goto_signin())
 }
