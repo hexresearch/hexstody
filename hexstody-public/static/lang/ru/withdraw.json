@@ -7,5 +7,11 @@
     "amount": "Сумма",
     "max": "Макс.",
     "send": "Отправить",
-    "in": "в"
+    "in": "в",
+    "error": {
+        "invalidAddress": "Неправильный адрес",
+        "invalidAmount": "Неправильная сумма",
+        "error": "Ошибка",
+        "unknownCurrency": "Неизвеcтная валюта"
+    }
 }

@@ -1,8 +1,12 @@
 use bitcoin::network::constants::Network as BtcNetwork;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::str::FromStr;
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(
+    Serialize, Deserialize, Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, JsonSchema,
+)]
 pub enum Network {
     Mainnet,
     Testnet,

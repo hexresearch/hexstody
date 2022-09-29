@@ -2,9 +2,13 @@
 {{/inline}}
 
 {{#*inline "scripts"}}
+{{!-- https://github.com/web3/web3.js --}}
+<script src="/scripts/web3.min.js" defer></script>
+{{!-- https://github.com/bitcoinjs/bitcoinjs-lib --}}
+<script src="/scripts/bitcoinjs.min.js" defer></script>
+<script src="/scripts/handlebars.min-v4.7.7.js" defer></script>
 <script type="module" src="/scripts/common.js"></script>
 <script type="module" src="/scripts/page/withdraw.js"></script>
-<script src="/scripts/handlebars.min-v4.7.7.js" defer></script>
 {{/inline}}
 
 {{#*inline "page"}}
@@ -22,54 +26,58 @@
 
 {{#each tabs}}
 <div id="{{this}}-tab-body">
-    <div class="card column is-half is-offset-one-quarter">
-        <div class='card-content'>
-            <div class="columns is-center">
+    <div class="card withdraw-card mx-auto">
+        <div class="card-content">
+            <div class="columns">
                 <div class="column">
                     {{../lang.withdraw.avaliable}}: <span id="{{this}}-balance">{{balance}}</span>
                 </div>
-                <div class="column has-text-right">
+                <div class="column has-text-right has-text-left-mobile">
                     {{../lang.withdraw.fee}}: <span id="{{this}}-fee">{{fee}}</span>
                 </div>
             </div>
-            <div class="columns is-center">
+            <div class="columns">
                 <div class="column">
                     {{../lang.withdraw.limit}}: <span id="{{this}}-limit">{{this.limit}}</span>
                 </div>
-                <div class="column has-text-right">
+                <div class="column has-text-right has-text-left-mobile">
                     {{../lang.withdraw.spent}}: <span id="{{this}}-spent">{{this.spent}}</span>
                 </div>
             </div>
-            <div class="columns is-center">
-                <div class="column is-3">
-                    {{../lang.withdraw.address}}:
+
+            <div class="field">
+                <label class="label">{{../lang.withdraw.address}}</label>
+                <div class="control">
+                    <input class="input" id="{{this}}-address" type="text">
                 </div>
-                <div class="column is-9">
-                    <input class="input is-fullwidth" id="{{this}}-address" type="text">
-                </div>
+                <p class="help is-danger" id="{{this}}-address-error" style="display: none;"></p>
             </div>
-            <div class="columns is-center">
-                <div class="column is-3">
-                    {{../lang.withdraw.amount}} ({{../lang.withdraw.in}} <span id="{{this}}-units"></span>):
+            <div class="field">
+                <label class="label">
+                    {{../lang.withdraw.amount}} ({{../lang.withdraw.in}} <span id="{{this}}-units"></span>)
+                </label>
+                <div class="control">
+                    <div class="field has-addons">
+                        <div class="control is-expanded">
+                            <input class="input is-fullwidth" id="{{this}}-send-amount" type="text">
+                        </div>
+                        <div class="control">
+                            <button id="max-{{this}}" type="button" class="button">
+                                {{../lang.withdraw.max}}
+                            </button>
+                        </div>
+                    </div>
                 </div>
-                <div class="column is-6">
-                    <input class="input" id="{{this}}-send-amount" type="text">
-                </div>
-                <div class="column is-3">
-                    <button id="max-{{this}}" type="button" class="button is-fullwidth">
-                        {{../lang.withdraw.max}}
-                    </button>
-                </div>
+                <p class="help is-danger" id="{{this}}-amount-error" style="display: none;"></p>
             </div>
-            <div class="columns is-center">
-                <div class="column">
-                    <button id="send-{{this}}" type="button" class="button is-info is-fullwidth item-buttom-d">
-                        {{../lang.withdraw.send}}
-                    </button>
-                </div>
+            <div class="field">
+                <p class="has-text-danger" id="{{this}}-other-error" style="display: none;"></p>
             </div>
-        </div class="columns is-center">
-        <label id="{{this}}-validation" hidden="hidden" class="text-error"></label>
+            <button id="send-{{this}}" type="button" class="button is-info is-fullwidth item-buttom-d">
+                {{../lang.withdraw.send}}
+            </button>
+            </div>
+        </div>
     </div>
 </div>
 {{/each}}

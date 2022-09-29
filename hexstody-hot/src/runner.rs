@@ -100,7 +100,8 @@ impl ApiConfig {
             .merge(("port", public_api_port))
             .merge(("static_path", public_api_static_path))
             .merge(("template_dir", public_api_template_path))
-            .merge(("secret_key", public_api_secret_key));
+            .merge(("secret_key", public_api_secret_key))
+            .merge(("network", args.network.clone()));
 
         let operator_api_enabled = if args.operator_api_enabled {
             true
@@ -144,7 +145,8 @@ impl ApiConfig {
             .merge(("port", operator_api_port))
             .merge(("static_path", operator_api_static_path))
             .merge(("template_dir", operator_api_template_path))
-            .merge(("secret_key", operator_api_secret_key));
+            .merge(("secret_key", operator_api_secret_key))
+            .merge(("network", args.network.clone()));
 
         ApiConfig {
             public_api_config: public_api_figment,
@@ -186,9 +188,8 @@ async fn serve_api(
     api_type: ApiType,
     api_config: Figment,
     abort_reg: AbortRegistration,
-    is_test: bool
-) -> ()
-{
+    is_test: bool,
+) -> () {
     let api_enabled: bool = api_config.extract_inner("api_enabled").unwrap();
     if !api_enabled {
         info!("{api_type} API disabled");
@@ -247,8 +248,7 @@ pub async fn serve_apis(
     eth_client: EthClient,
     ticker_client: TickerClient,
     is_test: bool,
-) -> Result<(), Aborted>
-{
+) -> Result<(), Aborted> {
     let public_start = Arc::new(Notify::new());
     let operator_start = Arc::new(Notify::new());
 
@@ -266,7 +266,7 @@ pub async fn serve_apis(
         ApiType::Public,
         api_config.public_api_config,
         public_abort_reg,
-        is_test
+        is_test,
     );
     let (operator_handle, operator_abort_reg) = AbortHandle::new_pair();
     let operator_api_fut = serve_api(
@@ -282,14 +282,15 @@ pub async fn serve_apis(
         ApiType::Operator,
         api_config.operator_api_config,
         operator_abort_reg,
-        is_test
+        is_test,
     );
     let body_fut = async move {
         public_start.notified().await;
         operator_start.notified().await;
         start_notify.notify_one();
     };
-    let abortable_apis = Abortable::new(join3(public_api_fut, operator_api_fut, body_fut), api_abort);
+    let abortable_apis =
+        Abortable::new(join3(public_api_fut, operator_api_fut, body_fut), api_abort);
     if let Err(Aborted) = abortable_apis.await {
         public_handle.abort();
         operator_handle.abort();
@@ -318,8 +319,7 @@ pub async fn run_hot_wallet(
     ticker_client: TickerClient,
     api_abort_reg: AbortRegistration,
     is_test: bool,
-) -> Result<(), Error>
-{
+) -> Result<(), Error> {
     info!("Connecting to database");
     let pool = create_db_pool(&args.dbconnect).await?;
     info!("Reconstructing state from database");
@@ -336,7 +336,14 @@ pub async fn run_hot_wallet(
         let state_mx = state_mx.clone();
         let state_notify = state_notify.clone();
         async move {
-            update_worker(pool, state_mx, state_notify, update_receiver, update_resp_sender).await;
+            update_worker(
+                pool,
+                state_mx,
+                state_notify,
+                update_receiver,
+                update_resp_sender,
+            )
+            .await;
         }
     });
     let btc_worker_hndl = tokio::spawn({
@@ -354,7 +361,14 @@ pub async fn run_hot_wallet(
         let eth_client = eth_client.clone();
         let update_sender = update_sender.clone();
         async move {
-            update_results_worker(btc_client, eth_client, state_mx, update_resp_receiver, update_sender).await;
+            update_results_worker(
+                btc_client,
+                eth_client,
+                state_mx,
+                update_resp_receiver,
+                update_sender,
+            )
+            .await;
         }
     });
 
@@ -381,7 +395,7 @@ pub async fn run_hot_wallet(
         btc_client,
         eth_client,
         ticker_client,
-        is_test
+        is_test,
     )
     .await
     {

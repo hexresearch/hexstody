@@ -4,15 +4,17 @@ use std::sync::Arc;
 use super::auth::{require_auth, require_auth_user};
 use chrono::NaiveDateTime;
 use hexstody_api::domain::{
-    filter_tokens, BtcAddress, Currency, CurrencyAddress, CurrencyTxId, Erc20, ETHTxid, Erc20Token, EthAccount
+    filter_tokens, BtcAddress, Currency, CurrencyAddress, CurrencyTxId, ETHTxid, Erc20, Erc20Token,
+    EthAccount,
 };
 use hexstody_api::error;
 use hexstody_api::types::{
-    self as api, BalanceItem, Erc20HistUnitU, GetTokensResponse, TokenActionRequest, TokenInfo, ExchangeRequest, ExchangeFilter, WithdrawalFilter,
+    self as api, BalanceItem, Erc20HistUnitU, ExchangeFilter, ExchangeRequest, GetTokensResponse,
+    TokenActionRequest, TokenInfo, WithdrawalFilter,
 };
 use hexstody_btc_client::client::{BtcClient, BTC_BYTES_PER_TRANSACTION};
 use hexstody_db::state::exchange::ExchangeOrderUpd;
-use hexstody_db::state::{State as DbState, WithdrawalRequestType};
+use hexstody_db::state::{Network, State as DbState, WithdrawalRequestType};
 use hexstody_db::state::{Transaction, WithdrawalRequest, REQUIRED_NUMBER_OF_CONFIRMATIONS};
 use hexstody_db::update::deposit::DepositAddress;
 use hexstody_db::update::misc::{TokenAction, TokenUpdate};
@@ -186,7 +188,7 @@ pub async fn get_history(
     eth_client: &State<EthClient>,
     skip: usize,
     take: usize,
-    filter: Option<WithdrawalFilter>
+    filter: Option<WithdrawalFilter>,
 ) -> error::Result<Json<api::History>> {
     let filter = filter.unwrap_or(WithdrawalFilter::All);
     fn to_deposit_history_item(deposit: &Transaction) -> api::HistoryItem {
@@ -255,7 +257,11 @@ pub async fn get_history(
             .flat_map(|(currency, info)| {
                 let deposits = info.unconfirmed_transactions();
                 let deposit_history = deposits.map(to_deposit_history_item);
-                let withdrawals: Vec<_> = info.withdrawal_requests.values().filter(|w| w.matches_filter(filter)).collect();
+                let withdrawals: Vec<_> = info
+                    .withdrawal_requests
+                    .values()
+                    .filter(|w| w.matches_filter(filter))
+                    .collect();
                 let withdrawal_history = withdrawals
                     .iter()
                     .map(|withdrawal| to_withdrawal_history_item(currency, withdrawal));
@@ -302,7 +308,7 @@ pub async fn withdraw_eth(
 ) -> error::Result<()> {
     require_auth_user(cookies, state, |_, _| async move {
         eth_client
-            .send_tx("testlogin",&addr, &amount)
+            .send_tx("testlogin", &addr, &amount)
             .await
             .map_err(|e| error::Error::FailedETHConnection(e.to_string()).into())
     })
@@ -328,31 +334,36 @@ pub async fn post_withdraw(
                     amount: withdraw_request.amount,
                     request_type: WithdrawalRequestType::OverLimit,
                 };
-                let state_update = StateUpdate::new(UpdateBody::CreateWithdrawalRequest(withdrawal_request));
+                let state_update =
+                    StateUpdate::new(UpdateBody::CreateWithdrawalRequest(withdrawal_request));
                 info!("state_update: {:?}", state_update);
                 updater
                     .send(state_update)
                     .await
                     .map_err(|_| error::Error::NoUserFound.into())
-            },
+            }
             CurrencyAddress::ERC20(_) => {
-            let withdrawal_request = WithdrawalRequestInfo {
+                let withdrawal_request = WithdrawalRequestInfo {
                     id: Uuid::new_v4(),
                     user: user.username,
                     address: withdraw_request.address.to_owned(),
                     amount: withdraw_request.amount,
                     request_type: WithdrawalRequestType::OverLimit,
                 };
-                let state_update = StateUpdate::new(UpdateBody::CreateWithdrawalRequest(withdrawal_request));
+                let state_update =
+                    StateUpdate::new(UpdateBody::CreateWithdrawalRequest(withdrawal_request));
                 info!("state_update: {:?}", state_update);
                 updater
                     .send(state_update)
                     .await
                     .map_err(|_| error::Error::NoUserFound.into())
-            },
+            }
             CurrencyAddress::BTC(_) => {
                 let btc_cur = Currency::BTC;
-                let btc_info = user.currencies.get(&btc_cur).ok_or(error::Error::NoUserCurrency(btc_cur.clone()))?;
+                let btc_info = user
+                    .currencies
+                    .get(&btc_cur)
+                    .ok_or(error::Error::NoUserCurrency(btc_cur.clone()))?;
                 let btc_balance = btc_info.finalized_balance();
                 let spent = btc_info.limit_info.spent;
                 let limit = btc_info.limit_info.limit.amount;
@@ -361,11 +372,14 @@ pub async fn post_withdraw(
                     .await
                     .map_err(|_| error::Error::FailedGetFee(Currency::BTC))?
                     .fee_rate;
-                let required_amount = withdraw_request.amount + btc_fee_per_byte * BTC_BYTES_PER_TRANSACTION;
+                let required_amount =
+                    withdraw_request.amount + btc_fee_per_byte * BTC_BYTES_PER_TRANSACTION;
                 if required_amount <= btc_balance {
                     let req_type = if limit - spent >= required_amount {
                         WithdrawalRequestType::UnderLimit
-                    } else {WithdrawalRequestType::OverLimit};
+                    } else {
+                        WithdrawalRequestType::OverLimit
+                    };
                     info!("req_type: {:?}", req_type);
                     let withdrawal_request = WithdrawalRequestInfo {
                         id: Uuid::new_v4(),
@@ -384,10 +398,11 @@ pub async fn post_withdraw(
                 } else {
                     Err(error::Error::InsufficientFunds(btc_cur))?
                 }
-            },
+            }
         }
     })
-    .await.map_err(|e| e.into())
+    .await
+    .map_err(|e| e.into())
 }
 
 #[openapi(tag = "deposit")]
@@ -402,11 +417,19 @@ pub async fn get_deposit_address_handle(
 ) -> error::Result<Json<CurrencyAddress>> {
     require_auth_user(cookies, state, |_, user| async move {
         let currency = currency.into_inner();
-        get_deposit_address(btc_client, eth_client, updater, state, &user.username, currency.clone())
-            .await
-            .map(|v| Json(v))
-            .map_err(|_| error::Error::NoUserCurrency(currency).into())
-    }).await
+        get_deposit_address(
+            btc_client,
+            eth_client,
+            updater,
+            state,
+            &user.username,
+            currency.clone(),
+        )
+        .await
+        .map(|v| Json(v))
+        .map_err(|_| error::Error::NoUserCurrency(currency).into())
+    })
+    .await
 }
 
 pub async fn get_deposit_address(
@@ -486,9 +509,7 @@ async fn allocate_eth_address(
         .allocate_address(&user_id)
         .await
         .map_err(|e| error::Error::FailedETHConnection(e.to_string()))?;
-    let packed_address = CurrencyAddress::ETH(EthAccount {
-        account: addr,
-    });
+    let packed_address = CurrencyAddress::ETH(EthAccount { account: addr });
     updater
         .send(StateUpdate::new(UpdateBody::DepositAddress(
             DepositAddress {
@@ -513,9 +534,7 @@ async fn allocate_erc20_address(
         .map_err(|e| error::Error::FailedETHConnection(e.to_string()))?;
     let packed_address = CurrencyAddress::ERC20(Erc20 {
         token: token,
-        account: EthAccount {
-            account: addr
-        },
+        account: EthAccount { account: addr },
     });
     updater
         .send(StateUpdate::new(UpdateBody::DepositAddress(
@@ -665,19 +684,39 @@ pub async fn order_exchange(
     req: Json<ExchangeRequest>,
 ) -> error::Result<()> {
     require_auth_user(cookies, state, |_, user| async move {
-        let ExchangeRequest { currency_from, currency_to, amount_from, amount_to } = req.into_inner();
-        let cinfo = user.currencies.get(&currency_from).ok_or(error::Error::NoUserCurrency(currency_from.clone()))?;
+        let ExchangeRequest {
+            currency_from,
+            currency_to,
+            amount_from,
+            amount_to,
+        } = req.into_inner();
+        let cinfo = user
+            .currencies
+            .get(&currency_from)
+            .ok_or(error::Error::NoUserCurrency(currency_from.clone()))?;
         let balance = cinfo.balance();
         if balance < amount_from {
-            return Err(error::Error::InsufficientFunds(currency_from).into())
+            return Err(error::Error::InsufficientFunds(currency_from).into());
         } else {
             let id = Uuid::new_v4();
             let created_at = chrono::offset::Utc::now().to_string();
-            let req = ExchangeOrderUpd{user: user.username, currency_from, currency_to, amount_from, amount_to, id, created_at };
+            let req = ExchangeOrderUpd {
+                user: user.username,
+                currency_from,
+                currency_to,
+                amount_from,
+                amount_to,
+                id,
+                created_at,
+            };
             let upd = StateUpdate::new(UpdateBody::ExchangeRequest(req));
-            updater.send(upd).await.map_err(|e| error::Error::GenericError(e.to_string()).into())
+            updater
+                .send(upd)
+                .await
+                .map_err(|e| error::Error::GenericError(e.to_string()).into())
         }
-    }).await
+    })
+    .await
 }
 
 #[openapi(tag = "wallet")]
@@ -690,5 +729,12 @@ pub async fn list_my_orders(
     require_auth_user(cookies, state, |_, user| async move {
         let res = user.get_exchange_requests(filter);
         Ok(Json(res))
-    }).await
+    })
+    .await
+}
+
+#[openapi(tag = "wallet")]
+#[get("/network")]
+pub async fn get_network(network: &State<Network>) -> Json<Network> {
+    Json(network.inner().clone())
 }
