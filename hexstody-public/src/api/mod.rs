@@ -253,7 +253,7 @@ async fn deposit(
                 qrcode_generator::to_png_to_vec(deposit_address.address(), QrCodeEcc::Low, 256)
                     .unwrap();
             deposit_addresses.push(DepositInfo {
-                address: deposit_address.to_string(),
+                address: deposit_address.address(),
                 qr_code_base64: base64::encode(qr_code),
                 tab: user_currency.ticker_lowercase(),
                 currency: user_currency.to_string(),
