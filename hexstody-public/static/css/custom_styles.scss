@@ -283,6 +283,10 @@
 #signup-box {
     padding: 96px 85px;
 
+    @include mobile {
+        padding: 40px 24px;
+    }
+
     .button {
         height: 54px;
         font-weight: 700;

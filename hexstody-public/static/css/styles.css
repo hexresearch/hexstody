@@ -7909,6 +7909,10 @@ a.has-text-danger-dark:hover, a.has-text-danger-dark:focus {
 #signin-box,
 #signup-box {
   padding: 96px 85px; }
+  @media screen and (max-width: 768px) {
+    #signin-box,
+    #signup-box {
+      padding: 40px 24px; } }
   #signin-box .button,
   #signup-box .button {
     height: 54px;
