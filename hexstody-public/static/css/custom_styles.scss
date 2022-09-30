@@ -283,6 +283,10 @@
 #signup-box {
     padding: 96px 85px;
 
+    @include mobile {
+        padding: 40px 24px;
+    }
+
     .button {
         height: 54px;
         font-weight: 700;
@@ -313,6 +317,16 @@
         font-size: 56px;
         line-height: 64px;
         margin-bottom: 24px;
+
+        @include tablet-only {
+            font-size: 42px;
+            line-height: 52px;
+        }
+
+        @include mobile {
+            font-size: 32px;
+            line-height: 40px;
+        }
     }
 
     .field:not(:last-child) {
