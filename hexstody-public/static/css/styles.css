@@ -7937,6 +7937,16 @@ a.has-text-danger-dark:hover, a.has-text-danger-dark:focus {
     font-size: 56px;
     line-height: 64px;
     margin-bottom: 24px; }
+    @media screen and (min-width: 769px) and (max-width: 1023px) {
+      #signin-box .login-title,
+      #signup-box .login-title {
+        font-size: 42px;
+        line-height: 52px; } }
+    @media screen and (max-width: 768px) {
+      #signin-box .login-title,
+      #signup-box .login-title {
+        font-size: 32px;
+        line-height: 40px; } }
   #signin-box .field:not(:last-child),
   #signup-box .field:not(:last-child) {
     margin-bottom: 32px; }
