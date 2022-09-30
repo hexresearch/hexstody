@@ -19,6 +19,8 @@ use hexstody_db::update::misc::{TokenAction, TokenUpdate};
 use hexstody_db::update::withdrawal::WithdrawalRequestInfo;
 use hexstody_db::update::{StateUpdate, UpdateBody};
 use hexstody_eth_client::client::EthClient;
+use hexstody_runtime_db::RuntimeState;
+use hexstody_ticker_provider::client::TickerClient;
 use log::*;
 use reqwest;
 use rocket::http::CookieJar;
@@ -657,17 +659,26 @@ pub async fn disable_token(
 #[post("/exchange/order", data = "<req>")]
 pub async fn order_exchange(
     cookies: &CookieJar<'_>,
+    rstate: &State<Arc<Mutex<RuntimeState>>>,
+    ticker_client: &State<TickerClient>,
     state: &State<Arc<Mutex<DbState>>>,
     updater: &State<mpsc::Sender<StateUpdate>>,
     req: Json<ExchangeRequest>,
 ) -> error::Result<()> {
     require_auth_user(cookies, state, |_, user| async move {
-        let ExchangeRequest { currency_from, currency_to, amount_from, amount_to } = req.into_inner();
+        let ExchangeRequest { currency_from, currency_to, amount_from } = req.into_inner();
+        
         let cinfo = user.currencies.get(&currency_from).ok_or(error::Error::NoUserCurrency(currency_from.clone()))?;
         let balance = cinfo.balance();
         if balance < amount_from {
             return Err(error::Error::InsufficientFunds(currency_from).into())
         } else {
+            let mut rstate = rstate.lock().await;
+            let rate = rstate
+                 .symbol_to_symbol(ticker_client, currency_from.symbol(), currency_to.symbol())
+                 .await
+                 .map_err(|e| error::Error::GenericError(e.to_string()))?;
+            let amount_to = 0;
             let id = Uuid::new_v4();
             let created_at = chrono::offset::Utc::now().to_string();
             let req = ExchangeOrderUpd{user: user.username, currency_from, currency_to, amount_from, amount_to, id, created_at };

@@ -829,7 +829,6 @@ pub struct ExchangeRequest {
     pub currency_from: Currency,
     pub currency_to: Currency,
     pub amount_from: u64,
-    pub amount_to: u64,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy, JsonSchema)]
