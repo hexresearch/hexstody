@@ -5,6 +5,7 @@ pub mod wallet;
 
 use base64;
 use figment::Figment;
+use hexstody_db::state::Network;
 use hexstody_runtime_db::RuntimeState;
 use hexstody_ticker::api::ticker_api;
 use hexstody_ticker_provider::client::TickerClient;
@@ -368,12 +369,13 @@ async fn get_dict(
     .await
 }
 
-
 #[openapi(skip)]
 #[get("/swap")]
-async fn swap(cookies: &CookieJar<'_>,
-state: &State<Arc<Mutex<DbState>>>,
-static_path: &State<StaticPath>,) ->  Result<Template, Redirect> {
+async fn swap(
+    cookies: &CookieJar<'_>,
+    state: &State<Arc<Mutex<DbState>>>,
+    static_path: &State<StaticPath>,
+) -> Result<Template, Redirect> {
     require_auth_user(cookies, state, |_, user| async move {
         let header_dict = get_dict_json(
             static_path.inner(),
@@ -389,7 +391,8 @@ static_path: &State<StaticPath>,) ->  Result<Template, Redirect> {
                 header: header_dict,
             }
         };
-        Ok(Template::render("swap", context)) })
+        Ok(Template::render("swap", context))
+    })
     .await
     .map_err(|_| goto_signin())
 }
@@ -413,6 +416,7 @@ pub async fn serve_api(
         })
     });
     let static_path: PathBuf = api_config.extract_inner("static_path").unwrap();
+    let network: Network = api_config.extract_inner("network").unwrap();
     let ticker_api = ticker_api();
     let _ = rocket::custom(api_config)
         .mount("/", FileServer::from(static_path.clone()))
@@ -449,7 +453,8 @@ pub async fn serve_api(
                 redeem_challenge,
                 get_deposit_address_handle,
                 order_exchange,
-                list_my_orders
+                list_my_orders,
+                get_network
             ],
         )
         .mount("/ticker/", ticker_api)
@@ -482,6 +487,7 @@ pub async fn serve_api(
         .manage(ticker_client)
         .manage(IsTestFlag(is_test))
         .manage(StaticPath(static_path))
+        .manage(network)
         .attach(Template::fairing())
         .attach(AdHoc::config::<SignatureVerificationConfig>())
         .attach(on_ready)

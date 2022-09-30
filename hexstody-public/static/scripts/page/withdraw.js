@@ -13,12 +13,28 @@ import {
 
 import { localizeSpan } from "../localize.js"
 
+
 var tabs = []
 const refreshInterval = 3_000_000
+let withdrawTranslations
+let network
+
+function networkToBtcNetwork() {
+    switch (network) {
+        case "Mainnet":
+            return Bitcoin.networks.mainnet
+        case "Testnet":
+            return Bitcoin.networks.testnet
+        case "Regtest":
+            return Bitcoin.networks.regtest
+        default:
+            return undefined
+    }
+}
 
 async function postWithdrawRequest(currency, address, amount) {
     let body
-    switch (currency) {
+    switch (currency.toUpperCase()) {
         case "BTC":
             body = { address: { type: "BTC", addr: address }, amount: amount }
             break
@@ -39,8 +55,6 @@ async function postWithdrawRequest(currency, address, amount) {
                 amount: amount
             }
     }
-
-
     return await fetch("/withdraw",
         {
             method: "POST",
@@ -48,13 +62,162 @@ async function postWithdrawRequest(currency, address, amount) {
         })
 };
 
-async function trySubmit(currency, address, amount, validationDisplayEl) {
-    const result = await postWithdrawRequest(currency, address, amount)
-    if (result.ok) {
-        window.location.href = "/overview"
+function validateEthAddress(address) {
+    let result = {
+        ok: true,
+        error: null,
+        value: null
+    }
+    if (!Web3.utils.isAddress(address)) {
+        result.ok = false
+        result.error = withdrawTranslations.error.invalidAddress
     } else {
-        validationDisplayEl.textContent = (await result.json()).message
-        validationDisplayEl.hidden = false
+        result.value = address
+    }
+    return result
+}
+
+function validateBtcAddress(address) {
+    let result = {
+        ok: true,
+        error: null,
+        value: null
+    }
+    try {
+        Bitcoin.address.toOutputScript(address, networkToBtcNetwork(network))
+        result.value = address
+    } catch (e) {
+        result.ok = false
+        result.error = withdrawTranslations.error.invalidAddress
+    }
+    return result
+}
+
+function validateAddress(currency, address) {
+    switch (currency.toUpperCase()) {
+        case "BTC":
+            return validateBtcAddress(address)
+        case "ETH":
+        case "USDT":
+        case "CRV":
+        case "GTECH":
+            return validateEthAddress(address)
+        default:
+            return { ok: false, error: withdrawTranslations.error.unknownCurrency, value: null }
+    };
+}
+
+function validateBtcAmout(amount) {
+    let result = {
+        ok: true,
+        error: null,
+        value: null
+    }
+    let value = Number(amount)
+    if (isNaN(value) || value <= 0 || !Number.isInteger(value)) {
+        result.ok = false
+        result.error = withdrawTranslations.error.invalidAmount
+    } else {
+        result.value = value
+    }
+    return result
+}
+
+function validateEthAmount(currency, amount) {
+    let result = {
+        ok: true,
+        error: null,
+        value: null
+    }
+    let value = Number(amount)
+    if (isNaN(value) || value <= 0) {
+        result.ok = false
+        result.error = withdrawTranslations.error.invalidAmount
+    } else {
+        result.value = Math.round(convertToSmallest(currency, value))
+    }
+    return result
+}
+
+function validateAmount(currency, amount) {
+    switch (currency.toUpperCase()) {
+        case "BTC":
+            return validateBtcAmout(amount)
+        case "ETH":
+        case "USDT":
+        case "CRV":
+        case "GTECH":
+            return validateEthAmount(currency, amount)
+        default:
+            return { ok: false, error: withdrawTranslations.error.unknownCurrency, value: null }
+    };
+}
+
+async function trySubmit(currency, address, amount) {
+    // Address elements
+    const addressInput = document.getElementById(`${currency}-address`)
+    const addressErrorEl = document.getElementById(`${currency}-address-error`)
+
+    // Amount elements
+    const amountInput = document.getElementById(`${currency}-send-amount`)
+    const maxAmountBtn = document.getElementById(`max-${currency}`)
+    const amountErrorEl = document.getElementById(`${currency}-amount-error`)
+
+    // Other
+    const otherErrorEl = document.getElementById(`${currency}-other-error`)
+
+    // Clear address errors
+    addressInput.classList.remove("is-danger")
+    addressErrorEl.innerText = ""
+    addressErrorEl.style.display = "none"
+
+    // Clear aomunt errors
+    amountInput.classList.remove("is-danger")
+    maxAmountBtn.classList.remove("is-danger", "is-outlined")
+    amountErrorEl.innerText = ""
+    amountErrorEl.style.display = "none"
+
+    // Clear other errors
+    otherErrorEl.innerText = ""
+    otherErrorEl.style.display = "none"
+
+    // Address validation
+    const addressValidationResult = validateAddress(currency, address)
+    if (!addressValidationResult.ok) {
+        addressInput.classList.add("is-danger")
+        addressErrorEl.innerText = addressValidationResult.error
+        addressErrorEl.style.display = "block"
+    }
+
+    // Amount validation
+    const amountValidationResult = validateAmount(currency, amount)
+    if (!amountValidationResult.ok) {
+        amountInput.classList.add("is-danger")
+        maxAmountBtn.classList.add("is-danger", "is-outlined")
+        amountErrorEl.innerText = amountValidationResult.error
+        amountErrorEl.style.display = "block"
+    }
+
+    // Stop here if validation failed
+    if (!addressValidationResult.ok || !amountValidationResult.ok) {
+        return
+    }
+
+    try {
+        const response = await postWithdrawRequest(currency, addressValidationResult.value, amountValidationResult.value)
+        try {
+            const responseJson = await response.json()
+            if (!response.ok) {
+                otherErrorEl.innerText = `Error: ${responseJson.message}`
+                otherErrorEl.style.display = "block"
+            }
+        } catch {
+            otherErrorEl.innerText = `Error: status code ${response.status}`
+            otherErrorEl.style.display = "block"
+        }
+    } catch (error) {
+        otherErrorEl.innerText = `Error: ${error}`
+        otherErrorEl.style.display = "block"
     }
 }
 
@@ -169,7 +332,6 @@ async function updateActiveTab() {
     const maxAmountBtn = document.getElementById(`max-${activeCurrencyName}`)
     const sendBtn = document.getElementById(`send-${activeCurrencyName}`)
     const sendAmountInput = document.getElementById(`${activeCurrencyName}-send-amount`)
-    const validationDisplayEl = document.getElementById(`${activeCurrencyName}-validation`)
     const addressInput = document.getElementById(`${activeCurrencyName}-address`)
 
     maxAmountBtn.onclick = () => {
@@ -180,18 +342,11 @@ async function updateActiveTab() {
         };
     }
 
-    function formatWithdrawalAmount(value) {
-        let amount = Number(value)
-        return currencyNameUppercase === "BTC"
-            ? Math.round(amount)
-            : Math.round(convertToSmallest(activeCurrencyName, amount))
-    }
-
     sendBtn.onclick = () => trySubmit(
-        currencyNameUppercase,
+        activeCurrencyName,
         addressInput.value,
-        formatWithdrawalAmount(sendAmountInput.value),
-        validationDisplayEl)
+        sendAmountInput.value
+    )
 }
 
 async function updateLoop() {
@@ -220,6 +375,8 @@ function preInitTabs() {
 }
 
 async function init() {
+    withdrawTranslations = await fetch("/translations/withdraw.json").then(r => r.json())
+    network = await fetch("/network").then(r => r.json())
     const selectedTab = preInitTabs()
     initTabs(tabs, tabUrlHook, selectedTab)
     updateLoop()

@@ -279,7 +279,8 @@
     }
 }
 
-#signin-box, #signup-box {
+#signin-box,
+#signup-box {
     padding: 96px 85px;
 
     .button {
@@ -291,7 +292,8 @@
         text-transform: uppercase;
     }
 
-    .control input, select {
+    .control input,
+    select {
         height: 54px;
         font-weight: 500;
         font-size: 16px;
@@ -318,25 +320,29 @@
     }
 }
 
-.fit-content{
+.withdraw-card {
+    max-width: 40rem;
+}
+
+.fit-content {
     width: fit-content;
 }
 
-.mr-2em{
+.mr-2em {
     margin-right: 2em;
 }
 
 .font-big-size {
     font-weight: 600;
     font-size: 28px;
-    line-height: 36px; 
+    line-height: 36px;
 }
 
 .zoom-1-6 {
     zoom: 1.6;
 }
 
-.ticker-with-checkbox{
+.ticker-with-checkbox {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -345,30 +351,30 @@
 .font-mid-size {
     font-weight: 400;
     font-size: 18px;
-    line-height: 24px; 
+    line-height: 24px;
 }
 
 .font-bold {
     font-weight: bold;
 }
 
-.margin-b-24px{
+.margin-b-24px {
     margin-bottom: 24px;
 }
 
-.margin-t-24px{
+.margin-t-24px {
     margin-top: 24px;
 }
 
-.font-dark-grey{
+.font-dark-grey {
     color: #77778C;
 }
 
-.font-black{
+.font-black {
     color: rgb(26, 26, 26);
 }
 
-.p-05em{
+.p-05em {
     padding: 0.5em;
 }
 
@@ -376,7 +382,7 @@
     padding: 1rem;
 }
 
-span.is-danger{
+span.is-danger {
     color: #f03a5f
 }
 
@@ -406,37 +412,40 @@ span.is-danger{
     text-align: left;
     outline: none;
     font-size: 15px;
-  }
-  
-  /* Add a background color to the button if it is clicked on (add the .active class with JS), and when you move the mouse over it (hover) */
-  .active, .collapsible:hover {
+}
+
+/* Add a background color to the button if it is clicked on (add the .active class with JS), and when you move the mouse over it (hover) */
+.active,
+.collapsible:hover {
     // background-color: #ccc;
-  }
-  
-  /* Style the collapsible content. Note: hidden by default */
-  .collapsible-content {
+}
+
+/* Style the collapsible content. Note: hidden by default */
+.collapsible-content {
     padding: 1rem;
     display: none;
     overflow: hidden;
-  }
+}
 
-  .collapsible:after {
-    content: '\02795'; /* Unicode character for "plus" sign (+) */
+.collapsible:after {
+    content: '\02795';
+    /* Unicode character for "plus" sign (+) */
     font-size: 13px;
     color: black;
     float: right;
     margin-left: 5px;
-  }
-  
-  .active:after {
-    content: "\2796"; /* Unicode character for "minus" sign (-) */
-  }
+}
 
-.secure-input{
+.active:after {
+    content: "\2796";
+    /* Unicode character for "minus" sign (-) */
+}
+
+.secure-input {
     -webkit-text-security: disc !important;
 }
 
-.inline-flex{
+.inline-flex {
     display: inline-flex;
 }
 
@@ -444,29 +453,29 @@ span.is-danger{
     height: 36px;
 }
 
-.float-right{
+.float-right {
     float: right;
 }
 
-.display-flex{
+.display-flex {
     display: flex;
 }
 
-.m-l-a{
+.m-l-a {
     margin-left: auto;
 }
 
-.p-lr-1em{
+.p-lr-1em {
     padding-left: 1em;
     padding-right: 1em;
 }
 
-.p-tb-05em{
+.p-tb-05em {
     padding-top: 0.5em;
     padding-bottom: 0.5em;
 }
 
-textarea.mnemonic{
+textarea.mnemonic {
     height: auto;
     resize: none;
     width: 50%;

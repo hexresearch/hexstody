@@ -15,14 +15,9 @@ pub fn fund_wallet(client: &Client) {
 // Mine some blocks to self wallet
 pub fn mine_blocks(client: &Client, amount: u64) {
     let address = new_address(client);
-    for _ in 0..amount {
-        client
-            .generate_to_address(1, &address)
-            .expect("mined blocks");
-    }
-    // client
-    //     .generate_to_address(amount, &address)
-    //     .expect("mined blocks");
+    client
+        .generate_to_address(amount, &address)
+        .expect("mined blocks");
 }
 
 // Get a fresh address from the node
