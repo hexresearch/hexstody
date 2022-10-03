@@ -126,7 +126,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     match args.subcmd.clone() {
         SubCommand::Serve => {
             let regtest_flag = args.start_regtest;
-            if false {
+            if regtest_flag {
                 run_regtest(
                     args.operator_api_domain.clone(),
                     args.operator_public_keys.clone(),
