@@ -11,7 +11,7 @@ use hexstody_db::state::{Network, CONFIRMATIONS_CONFIG};
 use hexstody_eth_client::client::EthClient;
 use hexstody_ticker_provider::client::TickerClient;
 use log::*;
-use runner::{ApiConfig, run_hot_wallet};
+use runner::{run_hot_wallet, ApiConfig};
 use std::error::Error;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -42,7 +42,11 @@ pub struct Args {
         env = "ETH_MODULE_URL"
     )]
     eth_module: String,
-    #[clap(long, default_value = "https://min-api.cryptocompare.com", env = "HEXSTODY_TICKER_PROVIDER")]
+    #[clap(
+        long,
+        default_value = "https://min-api.cryptocompare.com",
+        env = "HEXSTODY_TICKER_PROVIDER"
+    )]
     ticker_provider: String,
     #[clap(long, default_value = "mainnet", env = "HEXSTODY_NETWORK")]
     network: Network,
@@ -99,14 +103,24 @@ async fn run(
     eth_client: EthClient,
     ticker_client: TickerClient,
     args: &Args,
-    start_notify: Arc<Notify>
+    start_notify: Arc<Notify>,
 ) {
     let (api_abort_handle, api_abort_reg) = AbortHandle::new_pair();
     ctrlc::set_handler(move || {
         api_abort_handle.abort();
     })
     .expect("Error setting Ctrl-C handler: {e}");
-    match run_hot_wallet(args, start_notify, btc_client.clone(), eth_client.clone(), ticker_client.clone(), api_abort_reg, false).await {
+    match run_hot_wallet(
+        args,
+        start_notify,
+        btc_client.clone(),
+        eth_client.clone(),
+        ticker_client.clone(),
+        api_abort_reg,
+        false,
+    )
+    .await
+    {
         Ok(_) | Err(runner::Error::Aborted) => {
             info!("Terminated gracefully!");
             return ();

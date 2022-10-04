@@ -2,6 +2,7 @@ use figment::Figment;
 use hexstody_runtime_db::RuntimeState;
 use hexstody_ticker::api::ticker_api;
 use hexstody_ticker_provider::client::TickerClient;
+use qrcode_generator::QrCodeEcc;
 use rocket::{
     fairing::AdHoc,
     fs::{FileServer, NamedFile},
@@ -12,20 +13,21 @@ use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
 use std::{path::PathBuf, str, sync::Arc};
 use tokio::sync::{mpsc, Mutex, Notify};
 use uuid::Uuid;
-use qrcode_generator::QrCodeEcc;
 
 use hexstody_api::{
     domain::Currency,
     error,
     types::{
-        ConfirmationData, HotBalanceResponse, Invite, InviteRequest, InviteResp,
-        LimitChangeDecisionType, LimitChangeOpResponse, LimitConfirmationData, SignatureData,
-        WithdrawalRequest, WithdrawalRequestDecisionType, ExchangeConfirmationData, ExchangeFilter, ExchangeBalanceItem, ExchangeAddress, UserInfo, WithdrawalFilter, LimitChangeFilter,
+        ConfirmationData, ConfirmationsConfig, ExchangeAddress, ExchangeBalanceItem,
+        ExchangeConfirmationData, ExchangeFilter, HotBalanceResponse, Invite, InviteRequest,
+        InviteResp, LimitChangeDecisionType, LimitChangeFilter, LimitChangeOpResponse,
+        LimitConfirmationData, SignatureData, UserInfo, WithdrawalFilter, WithdrawalRequest,
+        WithdrawalRequestDecisionType,
     },
 };
 use hexstody_btc_client::client::BtcClient;
 use hexstody_db::{
-    state::{State as HexstodyState, REQUIRED_NUMBER_OF_CONFIRMATIONS, exchange::ExchangeDecisionType},
+    state::{exchange::ExchangeDecisionType, State as HexstodyState, CONFIRMATIONS_CONFIG},
     update::limit::LimitChangeData,
     update::{misc::InviteRec, StateUpdate, UpdateBody},
     Pool,
@@ -143,7 +145,7 @@ async fn list(
     signature_data: SignatureData,
     config: &RocketState<SignatureVerificationConfig>,
     currency_name: &str,
-    filter: WithdrawalFilter
+    filter: WithdrawalFilter,
 ) -> error::Result<Json<Vec<WithdrawalRequest>>> {
     guard_op_signature_nomsg(
         &config,
@@ -157,8 +159,8 @@ async fn list(
             .values()
             .cloned()
             .filter_map(|x| {
-                if x.address.currency().ticker_lowercase() == currency_name 
-                    && x.matches_filter(filter) 
+                if x.address.currency().ticker_lowercase() == currency_name
+                    && x.matches_filter(filter)
                 {
                     Some(x.into())
                 } else {
@@ -311,7 +313,11 @@ async fn get_all_changes(
     signature_data: SignatureData,
     filter: LimitChangeFilter,
 ) -> error::Result<Json<Vec<LimitChangeOpResponse>>> {
-    guard_op_signature_nomsg(&config, uri!(get_all_changes(&filter)).to_string(), signature_data)?;
+    guard_op_signature_nomsg(
+        &config,
+        uri!(get_all_changes(&filter)).to_string(),
+        signature_data,
+    )?;
     let hexstody_state = state.lock().await;
     let changes = hexstody_state
         .users
@@ -413,7 +419,7 @@ async fn reject_limits(
 }
 
 #[openapi(skip)]
-#[post("/exchange/confirm", data="<confirmation_data>")]
+#[post("/exchange/confirm", data = "<confirmation_data>")]
 async fn confirm_exchange(
     update_sender: &RocketState<mpsc::Sender<StateUpdate>>,
     signature_data: SignatureData,
@@ -444,7 +450,7 @@ async fn confirm_exchange(
 }
 
 #[openapi(skip)]
-#[post("/exchange/reject", data="<confirmation_data>")]
+#[post("/exchange/reject", data = "<confirmation_data>")]
 async fn reject_exchange(
     update_sender: &RocketState<mpsc::Sender<StateUpdate>>,
     signature_data: SignatureData,
@@ -481,7 +487,7 @@ async fn get_exchange_requests(
     state: &RocketState<Arc<Mutex<HexstodyState>>>,
     signature_data: SignatureData,
     config: &RocketState<SignatureVerificationConfig>,
-    filter: ExchangeFilter
+    filter: ExchangeFilter,
 ) -> error::Result<Json<Vec<hexstody_api::types::ExchangeOrder>>> {
     guard_op_signature_nomsg(
         &config,
@@ -507,12 +513,18 @@ async fn get_exchange_balances(
     )?;
     let state = state.lock().await;
     let res = &state.exchange_state.balances;
-    let res = res.into_iter().map(|(k, v)| ExchangeBalanceItem{ currency: k.clone(), balance: v.clone() }).collect();
+    let res = res
+        .into_iter()
+        .map(|(k, v)| ExchangeBalanceItem {
+            currency: k.clone(),
+            balance: v.clone(),
+        })
+        .collect();
     Ok(Json(res))
 }
 
 #[openapi(skip)]
-#[post("/exchange/address", data="<currency>")]
+#[post("/exchange/address", data = "<currency>")]
 async fn get_exchange_address(
     state: &RocketState<Arc<Mutex<HexstodyState>>>,
     btc_client: &RocketState<BtcClient>,
@@ -520,7 +532,7 @@ async fn get_exchange_address(
     update_sender: &RocketState<mpsc::Sender<StateUpdate>>,
     signature_data: SignatureData,
     config: &RocketState<SignatureVerificationConfig>,
-    currency: Json<Currency>
+    currency: Json<Currency>,
 ) -> error::Result<Json<ExchangeAddress>> {
     let currency = currency.into_inner();
     guard_op_signature(
@@ -535,15 +547,21 @@ async fn get_exchange_address(
     };
     let address = match deposit_info {
         Some(address) => Ok(address),
-        None => get_deposit_address(btc_client, eth_client, update_sender, state, currency.clone())
-                    .await
-                    .map_err(|_| error::Error::FailedGenAddress(currency.clone()))
+        None => get_deposit_address(
+            btc_client,
+            eth_client,
+            update_sender,
+            state,
+            currency.clone(),
+        )
+        .await
+        .map_err(|_| error::Error::FailedGenAddress(currency.clone())),
     }?;
     let qr_code: Vec<u8> =
         qrcode_generator::to_png_to_vec(address.address(), QrCodeEcc::Low, 256).unwrap();
-    let addr = ExchangeAddress{ 
-        currency: currency.ticker_lowercase(), 
-        address: address.address(), 
+    let addr = ExchangeAddress {
+        currency: currency.ticker_lowercase(),
+        address: address.address(),
         qr_code_base64: base64::encode(qr_code),
     };
     Ok(Json(addr))
@@ -574,23 +592,23 @@ pub async fn serve_api(
         .mount(
             "/",
             openapi_get_routes![
-                list,                           // GET:  /request/${currency.toLowerCase()} 
-                confirm,                        // POST: /confirm', 
-                reject,                         // POST: /reject',
-                get_hot_wallet_balance,         // GET:  /hot-wallet-balance/${currency.toLowerCase()} 
-                get_supported_currencies,       // GET:  /currencies
-                get_required_confrimations,     // GET:  /confirmations 
-                gen_invite,                     // POST: /invite/generate 
-                list_ops_invites,               // GET:  /invite/listmy 
-                get_all_changes,                // GET:  /changes 
-                confirm_limits,                 // POST: /limits/confirm 
-                reject_limits,                  // POST: /limits/reject 
-                confirm_exchange,               // POST: /exchange/confirm
-                reject_exchange,                // POST: /exchange/reject
-                get_exchange_requests,          // GET:  /exchange/list?filter= <all, pending, completed, rejected>
-                get_exchange_balances,          // GET:  /exchange/balances    
-                get_exchange_address,           // POST: /exchange/address
-                get_user_info,                  // GET: /user/info/<user_id>
+                list,                       // GET:  /request/${currency.toLowerCase()}
+                confirm,                    // POST: /confirm',
+                reject,                     // POST: /reject',
+                get_hot_wallet_balance,     // GET:  /hot-wallet-balance/${currency.toLowerCase()}
+                get_supported_currencies,   // GET:  /currencies
+                get_required_confrimations, // GET:  /confirmations
+                gen_invite,                 // POST: /invite/generate
+                list_ops_invites,           // GET:  /invite/listmy
+                get_all_changes,            // GET:  /changes
+                confirm_limits,             // POST: /limits/confirm
+                reject_limits,              // POST: /limits/reject
+                confirm_exchange,           // POST: /exchange/confirm
+                reject_exchange,            // POST: /exchange/reject
+                get_exchange_requests, // GET:  /exchange/list?filter= <all, pending, completed, rejected>
+                get_exchange_balances, // GET:  /exchange/balances
+                get_exchange_address,  // POST: /exchange/address
+                get_user_info,         // GET: /user/info/<user_id>
             ],
         )
         .mount("/ticker/", ticker_api)

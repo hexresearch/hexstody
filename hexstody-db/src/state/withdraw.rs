@@ -2,8 +2,8 @@ use crate::update::withdrawal::WithdrawalRequestInfo;
 use crate::update::{signup::UserId, withdrawal::WithdrawalRequestDecision};
 use hexstody_api::domain::{CurrencyAddress, CurrencyTxId};
 use hexstody_api::types::{
-    WithdrawalRequest as WithdrawalRequestApi,
-    WithdrawalRequestStatus as WithdrawalRequestStatusApi, WithdrawalFilter,
+    WithdrawalFilter, WithdrawalRequest as WithdrawalRequestApi,
+    WithdrawalRequestStatus as WithdrawalRequestStatusApi,
 };
 
 use chrono::prelude::*;
@@ -70,9 +70,9 @@ impl Into<WithdrawalRequestStatusApi> for WithdrawalRequestStatus {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub enum WithdrawalRequestType{
+pub enum WithdrawalRequestType {
     UnderLimit,
-    OverLimit
+    OverLimit,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -94,7 +94,7 @@ pub struct WithdrawalRequest {
     /// Rejections received from operators
     pub rejections: Vec<WithdrawalRequestDecision>,
     /// Withdrawal request type
-    pub request_type: WithdrawalRequestType 
+    pub request_type: WithdrawalRequestType,
 }
 
 impl From<(NaiveDateTime, WithdrawalRequestInfo)> for WithdrawalRequest {
@@ -108,7 +108,7 @@ impl From<(NaiveDateTime, WithdrawalRequestInfo)> for WithdrawalRequest {
             status: WithdrawalRequestStatus::InProgress(0),
             confirmations: vec![],
             rejections: vec![],
-            request_type: value.1.request_type
+            request_type: value.1.request_type,
         }
     }
 }
@@ -150,11 +150,19 @@ impl WithdrawalRequest {
             true
         } else {
             match self.status {
-                WithdrawalRequestStatus::InProgress(_) => matches!(filter, WithdrawalFilter::Pending),
+                WithdrawalRequestStatus::InProgress(_) => {
+                    matches!(filter, WithdrawalFilter::Pending)
+                }
                 WithdrawalRequestStatus::Confirmed => matches!(filter, WithdrawalFilter::Confirmed),
-                WithdrawalRequestStatus::Completed { .. } => matches!(filter, WithdrawalFilter::Completed),
-                WithdrawalRequestStatus::OpRejected => matches!(filter, WithdrawalFilter::OpRejected),
-                WithdrawalRequestStatus::NodeRejected { .. } => matches!(filter, WithdrawalFilter::NodeRejected),
+                WithdrawalRequestStatus::Completed { .. } => {
+                    matches!(filter, WithdrawalFilter::Completed)
+                }
+                WithdrawalRequestStatus::OpRejected => {
+                    matches!(filter, WithdrawalFilter::OpRejected)
+                }
+                WithdrawalRequestStatus::NodeRejected { .. } => {
+                    matches!(filter, WithdrawalFilter::NodeRejected)
+                }
             }
         }
     }

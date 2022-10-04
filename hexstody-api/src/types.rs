@@ -393,7 +393,7 @@ pub enum WithdrawalFilter {
     Confirmed,
     Completed,
     OpRejected,
-    NodeRejected
+    NodeRejected,
 }
 
 impl ToString for WithdrawalFilter {
@@ -752,7 +752,7 @@ pub enum LimitChangeFilter {
     All,
     Pending,
     Completed,
-    Rejected
+    Rejected,
 }
 
 impl ToString for LimitChangeFilter {
@@ -761,7 +761,7 @@ impl ToString for LimitChangeFilter {
             LimitChangeFilter::All => "all".to_owned(),
             LimitChangeFilter::Completed => "completed".to_owned(),
             LimitChangeFilter::Rejected => "rejected".to_owned(),
-            LimitChangeFilter::Pending => "pending".to_owned()
+            LimitChangeFilter::Pending => "pending".to_owned(),
         }
     }
 }
@@ -779,7 +779,6 @@ impl<'a> FromUriParam<Query, &LimitChangeFilter> for LimitChangeFilter {
         filt.clone()
     }
 }
-
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
 pub struct LimitChangeResponse {
