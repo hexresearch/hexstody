@@ -14,14 +14,18 @@ pub struct RuntimeState {
     /// Cached ticker info
     /// We store tikers refering by Symbol
     /// since we want to uniformely store both Crypto and Fiat tickers in the same map 
-    pub cached_tickers: HashMap<Symbol, HashMap<Symbol, f64>>
+    pub cached_tickers: HashMap<Symbol, HashMap<Symbol, f64>>,
+    /// Exchange margins, applied to cached_tickers
+    /// Store separately to make storing tickers easier and allow ops to see original rates
+    pub margins: HashMap<Symbol, HashMap<Symbol, f64>>
 }
 
 impl RuntimeState {
     pub fn new() -> Self{
         RuntimeState{
             challenges: HashMap::new(),
-            cached_tickers: HashMap::new()
+            cached_tickers: HashMap::new(),
+            margins: HashMap::new()
         }
     }
 
@@ -97,5 +101,20 @@ impl RuntimeState {
             .iter()
             .map(|(k,v)| (k.clone(), v.keys().cloned().collect()))
             .collect()
+    }
+
+    /// Returns 0 if the margin is not set
+    pub fn get_margin(&self, from: Symbol, to:Symbol) -> f64 {
+        self.margins.get(&from).map(|m| m.get(&to)).flatten().cloned().unwrap_or(0.0)
+    }
+
+    /// Sets pair's margin
+    pub fn set_margin(&mut self, from: Symbol, to:Symbol, margin: f64) {
+        let margin = margin.abs();
+        self.margins.entry(from).and_modify(|m| {
+            m.insert(to.clone(), margin);
+        }).or_insert(
+            HashMap::from([(to, margin)])
+        );
     }
 }

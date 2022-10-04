@@ -74,6 +74,8 @@ pub enum Error {
     InvalidPhoneNumber,
     #[error("Failed to get {0} exchange rate")]
     ExchangeRateError(Currency),
+    #[error("Malformed margin: {0}")]
+    MalformedMargin(String),
 }
 
 impl Error {
@@ -108,6 +110,7 @@ impl Error {
             Error::InvalidEmail => 26,
             Error::InvalidPhoneNumber => 27,
             Error::ExchangeRateError(_) => 28,
+            Error::MalformedMargin(_) => 29,
         }
     }
 
@@ -142,6 +145,7 @@ impl Error {
             Error::InvalidEmail => Status::from_code(400).unwrap(),
             Error::InvalidPhoneNumber => Status::from_code(400).unwrap(),
             Error::ExchangeRateError(_) => Status::from_code(404).unwrap(),
+            Error::MalformedMargin(_) => Status::from_code(400).unwrap(),
         }
     }
 }

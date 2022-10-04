@@ -962,3 +962,10 @@ pub struct ExchangeAddress {
     pub address: String,
     pub qr_code_base64: String,
 }
+
+#[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct MarginData{
+    pub currency_from: Currency,
+    pub currency_to: Currency,
+    pub margin: f64
+}

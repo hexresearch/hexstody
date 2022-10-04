@@ -9,6 +9,8 @@ use rocket::{
     State as RocketState, {get, post, routes, uri},
 };
 use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
+use schemars::JsonSchema;
+use serde::{Serialize, Deserialize};
 use std::{path::PathBuf, str, sync::Arc};
 use tokio::sync::{mpsc, Mutex, Notify};
 use uuid::Uuid;
@@ -20,7 +22,8 @@ use hexstody_api::{
     types::{
         ConfirmationData, HotBalanceResponse, Invite, InviteRequest, InviteResp,
         LimitChangeDecisionType, LimitChangeOpResponse, LimitConfirmationData, SignatureData,
-        WithdrawalRequest, WithdrawalRequestDecisionType, ExchangeConfirmationData, ExchangeFilter, ExchangeBalanceItem, ExchangeAddress, UserInfo, WithdrawalFilter, LimitChangeFilter,
+        WithdrawalRequest, WithdrawalRequestDecisionType, ExchangeConfirmationData, ExchangeFilter, 
+        ExchangeBalanceItem, ExchangeAddress, UserInfo, WithdrawalFilter, LimitChangeFilter,
     },
 };
 use hexstody_btc_client::client::BtcClient;
@@ -549,6 +552,39 @@ async fn get_exchange_address(
     Ok(Json(addr))
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct MarginSet {
+    currency_from: Currency,
+    currency_to: Currency,
+    /// Parse string and convert String -> f64 in the handler
+    /// Js stringify drops .0 from floats
+    /// Client signs and sends margin: 1,
+    /// guard_op_signature runs json::to_string and gets 1.0
+    /// resulting in signature mismatch
+    margin: String
+}
+
+#[openapi(skip)]
+#[post("/margin/set", data="<req>")]
+pub async fn set_margin(
+    rstate: &RocketState<Arc<Mutex<RuntimeState>>>,
+    signature_data: SignatureData,
+    config: &RocketState<SignatureVerificationConfig>,
+    req: Json<MarginSet>
+) -> error::Result<()> {
+    let req = req.into_inner();
+    let margin = req.margin.parse::<f64>().map_err(|e| error::Error::MalformedMargin(e.to_string()))?;
+    guard_op_signature(
+        &config,
+        uri!(set_margin).to_string(),
+        signature_data,
+        &req,
+    )?;
+    let mut rstate = rstate.lock().await;
+    rstate.set_margin(req.currency_from.symbol(), req.currency_to.symbol(), margin);
+    Ok(())
+}
+
 pub async fn serve_api(
     pool: Pool,
     state: Arc<Mutex<HexstodyState>>,
@@ -590,7 +626,8 @@ pub async fn serve_api(
                 get_exchange_requests,          // GET:  /exchange/list?filter= <all, pending, completed, rejected>
                 get_exchange_balances,          // GET:  /exchange/balances    
                 get_exchange_address,           // POST: /exchange/address
-                get_user_info,                  // GET: /user/info/<user_id>
+                get_user_info,                  // GET:  /user/info/<user_id>
+                set_margin,                     // POST: /margin/set
             ],
         )
         .mount("/ticker/", ticker_api)
