@@ -4,6 +4,7 @@ import {
     confirmExchangeRequest,
     rejectExchangeRequest,
     copyToClipboard,
+    getCurrencyName,
     truncate
 } from "../scripts/common.js"
 
@@ -47,7 +48,7 @@ export const ExchangeRequestsTable = {
                                 </div>
                             </td>
                             <td>{{exchangeRequest.user}}</td>
-                            <td>{{exchangeRequest.currency_from}}/{{exchangeRequest.currency_to}}</td>
+                            <td>{{getCurrencyName(exchangeRequest.currency_from)}}/{{getCurrencyName(exchangeRequest.currency_to)}}</td>
                             <td>{{exchangeRequest.amount_from}}/{{exchangeRequest.amount_to}}</td>
                             <td>{{exchangeRequest.status}}</td>
                             <td>
@@ -88,6 +89,7 @@ export const ExchangeRequestsTable = {
     methods: {
         copyToClipboard,
         truncate,
+        getCurrencyName,
         async fetchData() {
             const exchangeRequestsResponse = await getExchangeRequests(this.privateKeyJwk, this.publicKeyDer, this.filter)
             // Get exchange requests and sort them by date
