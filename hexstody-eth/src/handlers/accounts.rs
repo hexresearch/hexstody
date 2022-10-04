@@ -109,7 +109,7 @@ pub async fn createtest(db: Connection<MyDb>) -> String {
 pub async fn updatetokens(db: Connection<MyDb>, login: &str) -> String {
     let tokens = [Erc20Token{ticker: "USDT".to_string()
                             ,name: "USDT".to_string()
-                            ,contract: "0xfD8ef4113c5f54BE9Cb103eB437b710b8e1d6885".to_string()
+                            ,contract: "0xdAC17F958D2ee523a2206206994597C13D831ec7".to_string()
                         },
                   Erc20Token{ticker: "GTECH".to_string()
                             ,name: "GTECH".to_string()
@@ -117,7 +117,7 @@ pub async fn updatetokens(db: Connection<MyDb>, login: &str) -> String {
                         },
                   Erc20Token{ticker: "CRV".to_string()
                             ,name: "CRV".to_string()
-                            ,contract: "0x817805F0f818237c73Fde5dEc91dbB650A7E7612".to_string()
+                            ,contract: "0xd533a949740bb3306d119cc777fa900ba034cd52".to_string()
                         },
                 ].to_vec();
     db_functions::pg_update_user_tokens(db,login,tokens).await.unwrap();

@@ -16,14 +16,14 @@
 //         name: "Tether USD",
 //         decimals: 10 ** 6,
 //         type: "ERC20",
-//         contract: "0xfD8ef4113c5f54BE9Cb103eB437b710b8e1d6885"
+//         contract: "0xdAC17F958D2ee523a2206206994597C13D831ec7"
 //     },
 //     erc20_crv: {
 //         symbol: "CRV",
 //         name: "Curve DAO Token",
 //         decimals: 10 ** 18,
 //         type: "ERC20",
-//         contract: "0x817805F0f818237c73Fde5dEc91dbB650A7E7612"
+//         contract: "0xd533a949740bb3306d119cc777fa900ba034cd52"
 //     },
 //     erc20_gtech: {
 //         symbol: "GTECH",
