@@ -4,6 +4,7 @@ import {
     confirmExchangeRequest,
     rejectExchangeRequest,
     copyToClipboard,
+    getUserInfo,
     getCurrencyName,
     truncate
 } from "../scripts/common.js"
