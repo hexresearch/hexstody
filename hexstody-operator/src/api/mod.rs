@@ -66,13 +66,13 @@ async fn get_supported_currencies(
 async fn get_required_confrimations(
     signature_data: SignatureData,
     config: &RocketState<SignatureVerificationConfig>,
-) -> error::Result<Json<i16>> {
+) -> error::Result<Json<ConfirmationsConfig>> {
     guard_op_signature_nomsg(
         &config,
         uri!(get_required_confrimations).to_string(),
         signature_data,
     )?;
-    Ok(Json(REQUIRED_NUMBER_OF_CONFIRMATIONS))
+    Ok(Json(CONFIRMATIONS_CONFIG))
 }
 
 /// # Get user information by user ID

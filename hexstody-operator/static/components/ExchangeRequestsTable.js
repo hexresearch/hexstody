@@ -4,6 +4,7 @@ import {
     confirmExchangeRequest,
     rejectExchangeRequest,
     copyToClipboard,
+    formatExchangeRequestStatus,
     getUserInfo,
     getCurrencyName,
     truncate
@@ -51,7 +52,9 @@ export const ExchangeRequestsTable = {
                             <td>{{exchangeRequest.user}}</td>
                             <td>{{getCurrencyName(exchangeRequest.currency_from)}}/{{getCurrencyName(exchangeRequest.currency_to)}}</td>
                             <td>{{exchangeRequest.amount_from}}/{{exchangeRequest.amount_to}}</td>
-                            <td>{{exchangeRequest.status}}</td>
+                            <td>
+                                {{formatExchangeRequestStatus(exchangeRequest.status, requiredConfirmations)}}
+                            </td>
                             <td>
                                 <div class="action-buttons-wrapper justify-center">
                                     <button class="button primary" @click="confirmRequest(exchangeRequest)" :disabled="exchangeRequest.status.type !== 'InProgress'">Confirm</button>
@@ -90,6 +93,7 @@ export const ExchangeRequestsTable = {
     methods: {
         copyToClipboard,
         truncate,
+        formatExchangeRequestStatus,
         getCurrencyName,
         async fetchData() {
             const exchangeRequestsResponse = await getExchangeRequests(this.privateKeyJwk, this.publicKeyDer, this.filter)
@@ -102,7 +106,7 @@ export const ExchangeRequestsTable = {
                 }
             )
             const requiredConfirmationsResponse = await getRequiredConfirmations(this.privateKeyJwk, this.publicKeyDer)
-            this.requiredConfirmations = await requiredConfirmationsResponse.json()
+            this.requiredConfirmations = (await requiredConfirmationsResponse.json()).exchange
         },
         confirmRequest(exchangeRequest) {
             // Here we copy exchangeRequest and remove status feild

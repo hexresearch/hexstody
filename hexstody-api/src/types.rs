@@ -255,7 +255,7 @@ impl Balance {
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct History {
-    pub target_number_of_confirmations: i16,
+    pub confirmations_config: ConfirmationsConfig,
     pub history_items: Vec<HistoryItem>,
 }
 
@@ -961,4 +961,26 @@ pub struct ExchangeAddress {
     pub currency: String,
     pub address: String,
     pub qr_code_base64: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct ConfirmationsConfig {
+    // Number of confirmations from operators required for funds withdrawal above the limit
+    pub withdraw: i16,
+    // Number of confirmations from operators required for change withdrawal limits
+    pub change_limit: i16,
+    // Number of confirmations from operators required for exchange
+    pub exchange: i16,
+}
+
+impl ConfirmationsConfig {
+    // Returns maximum value among fields
+    pub fn max(&self) -> i16 {
+        let items = [self.withdraw, self.change_limit, self.exchange];
+        items
+            .iter()
+            .copied()
+            .reduce(|accum, item| if accum >= item { accum } else { item })
+            .unwrap()
+    }
 }

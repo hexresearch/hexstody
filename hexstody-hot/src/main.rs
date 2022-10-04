@@ -7,7 +7,7 @@ use clap::Parser;
 use futures::future::{join, AbortHandle};
 use hexstody_btc_client::client::BtcClient;
 use hexstody_btc_test::runner::run_regtest;
-use hexstody_db::state::{Network, REQUIRED_NUMBER_OF_CONFIRMATIONS};
+use hexstody_db::state::{Network, CONFIRMATIONS_CONFIG};
 use hexstody_eth_client::client::EthClient;
 use hexstody_ticker_provider::client::TickerClient;
 use log::*;
@@ -53,7 +53,7 @@ pub struct Args {
         env = "HEXSTODY_OPERATOR_PUBLIC_KEYS",
         takes_value = true,
         multiple_values = true,
-        min_values = usize::try_from(REQUIRED_NUMBER_OF_CONFIRMATIONS).unwrap(),
+        min_values = usize::try_from(CONFIRMATIONS_CONFIG.max()).unwrap(),
         required = true
     )]
     /// List of paths to files containing trusted public keys, which operators use to confirm withdrawal requests

@@ -15,7 +15,7 @@ use hexstody_api::types::{
 use hexstody_btc_client::client::{BtcClient, BTC_BYTES_PER_TRANSACTION};
 use hexstody_db::state::exchange::ExchangeOrderUpd;
 use hexstody_db::state::{Network, State as DbState, WithdrawalRequestType};
-use hexstody_db::state::{Transaction, WithdrawalRequest, REQUIRED_NUMBER_OF_CONFIRMATIONS};
+use hexstody_db::state::{Transaction, WithdrawalRequest, CONFIRMATIONS_CONFIG};
 use hexstody_db::update::deposit::DepositAddress;
 use hexstody_db::update::misc::{TokenAction, TokenUpdate};
 use hexstody_db::update::withdrawal::WithdrawalRequestInfo;
@@ -290,7 +290,7 @@ pub async fn get_history(
         let history_slice = history.iter().skip(skip).take(take).cloned().collect();
 
         Ok(Json(api::History {
-            target_number_of_confirmations: REQUIRED_NUMBER_OF_CONFIRMATIONS,
+            confirmations_config: CONFIRMATIONS_CONFIG,
             history_items: history_slice,
         }))
     })

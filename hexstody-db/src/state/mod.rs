@@ -37,9 +37,16 @@ use super::update::withdrawal::{
 use super::update::{results::UpdateResult, StateUpdate, UpdateBody};
 use hexstody_api::domain::*;
 use hexstody_api::types::{
-    WithdrawalRequestDecisionType, Invite, LimitChangeStatus, 
-    LimitChangeDecisionType, SignatureData, LimitInfo, LimitSpan, 
-    ExchangeStatus, ExchangeFilter, ExchangeOrder as ExchangeApiOrder};
+    ConfirmationsConfig, ExchangeFilter, ExchangeOrder as ExchangeApiOrder, ExchangeStatus, Invite,
+    LimitChangeDecisionType, LimitChangeStatus, LimitInfo, LimitSpan, SignatureData,
+    WithdrawalRequestDecisionType,
+};
+
+pub const CONFIRMATIONS_CONFIG: ConfirmationsConfig = ConfirmationsConfig {
+    withdraw: 2,
+    change_limit: 2,
+    exchange: 1,
+};
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub struct State {
@@ -432,7 +439,7 @@ impl State {
                             .confirmations
                             .push(WithdrawalRequestDecision::from(withdrawal_request_decision));
                         let m = if is_rejected_by_this_key { 2 } else { 1 };
-                        if n == REQUIRED_NUMBER_OF_CONFIRMATIONS - m {
+                        if n == CONFIRMATIONS_CONFIG.withdraw - m {
                             withdrawal_request.status = WithdrawalRequestStatus::Confirmed;
                             return Ok(Some(withdrawal_request.id));
                         } else {
@@ -456,7 +463,7 @@ impl State {
                             .rejections
                             .push(WithdrawalRequestDecision::from(withdrawal_request_decision));
                         let m = if is_confirmed_by_this_key { 2 } else { 1 };
-                        if n == m - REQUIRED_NUMBER_OF_CONFIRMATIONS {
+                        if n == m - CONFIRMATIONS_CONFIG.withdraw {
                             withdrawal_request.status = WithdrawalRequestStatus::OpRejected;
                         } else {
                             withdrawal_request.status = WithdrawalRequestStatus::InProgress(n - m);
@@ -765,7 +772,9 @@ impl State {
                                     Err(StateUpdateErr::LimitAlreadyConfirmed)
                                 } else {
                                     req.confirmations.push(sdata);
-                                    if confirmations + 1 - rejections >= 2 {
+                                    if confirmations + 1 - rejections
+                                        >= CONFIRMATIONS_CONFIG.change_limit
+                                    {
                                         req.status = LimitChangeStatus::Completed;
                                         if let Some(cinfo) = usr.currencies.get_mut(&lcd.currency) {
                                             cinfo.limit_info = LimitInfo {
@@ -788,7 +797,9 @@ impl State {
                                     return Err(StateUpdateErr::LimitAlreadyConfirmed);
                                 } else {
                                     req.rejections.push(sdata);
-                                    if rejections + 1 - confirmations >= 2 {
+                                    if rejections + 1 - confirmations
+                                        >= CONFIRMATIONS_CONFIG.change_limit
+                                    {
                                         req.status = LimitChangeStatus::Rejected;
                                         let _ = usr.limit_change_requests.remove(&lcd.currency);
                                     } else {
@@ -918,7 +929,7 @@ impl State {
                     Err(StateUpdateErr::ExchangeAlreadyConfirmed)
                 } else {
                     exchange.confirmations.push(sdata);
-                    if confirmations + 1 - rejections >= State::EXCHANGE_NUMBER_OF_CONFIRMATIONS {
+                        if confirmations + 1 - rejections >= CONFIRMATIONS_CONFIG.exchange {
                         exchange.status = ExchangeStatus::Completed;
                         self.exchange_state.process_order(exchange.into_exchange_upd());
                         Ok(true)
@@ -931,7 +942,7 @@ impl State {
                     Err(StateUpdateErr::ExchangeAlreadyRejected)
                 } else {
                     exchange.confirmations.push(sdata);
-                    if rejections + 1 - confirmations >= State::EXCHANGE_NUMBER_OF_CONFIRMATIONS {
+                        if rejections + 1 - confirmations >= CONFIRMATIONS_CONFIG.exchange {
                         exchange.status = ExchangeStatus::Rejected
                     } else {
                         exchange.status = ExchangeStatus::InProgress { confirmations: confirmations, rejections: rejections + 1}

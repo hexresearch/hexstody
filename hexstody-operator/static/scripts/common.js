@@ -134,6 +134,19 @@ export function formatWithdrawalRequestStatus(status, requiredConfirmations) {
     };
 }
 
+export function formatExchangeRequestStatus(status, requiredConfirmations) {
+    switch (status.type) {
+        case "InProgress":
+            return "In progress (" + status.confirmations + " of " + requiredConfirmations + ")"
+        case "Completed":
+            return "Confirmed"
+        case "Rejected":
+            return "Rejected by operators"
+        default:
+            return "Unknown"
+    };
+}
+
 export function formatExplorerLink(txid) {
     switch (txid.type) {
         case "BTC":

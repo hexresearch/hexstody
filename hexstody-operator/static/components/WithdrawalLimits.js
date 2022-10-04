@@ -83,7 +83,7 @@ export const WithdrawalLimits = {
                 }
             )
             const requiredConfirmationsResponse = await getRequiredConfirmations(this.privateKeyJwk, this.publicKeyDer)
-            this.requiredConfirmations = await requiredConfirmationsResponse.json()
+            this.requiredConfirmations = await requiredConfirmationsResponse.json().changeLimits
         },
         hideTooltip(instance) {
             setTimeout(() => {
