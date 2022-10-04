@@ -129,7 +129,12 @@ export const ExchangeRequestsTable = {
         },
         closeModal() {
             this.isModalVisible = false
-        }
+        },
+        hideTooltip(instance) {
+            setTimeout(() => {
+                instance.hide()
+            }, 1000)
+        },
     },
     async created() {
         await this.fetchData()
