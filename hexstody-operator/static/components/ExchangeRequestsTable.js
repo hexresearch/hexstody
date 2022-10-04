@@ -70,7 +70,7 @@ export const ExchangeRequestsTable = {
                     <p><b>Last name:</b> {{userInfo.lastName}}</p>
                     <p><b>Email:</b> {{userInfo.email ? userInfo.email.email : ""}}</p>
                     <p><b>Phone:</b> {{userInfo.phone ? userInfo.phone.number : ""}}</p>
-                    <p><b>Telegram:</b> {{userInfo.tgName}}</p>
+                    <p><b>Telegram:</b> {{userInfo.tgName.tg_name}}</p>
                 </template>
                 <template v-slot:footer>
                 </template>
