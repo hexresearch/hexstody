@@ -205,13 +205,9 @@ async function trySubmit(currency, address, amount) {
 
     try {
         const response = await postWithdrawRequest(currency, addressValidationResult.value, amountValidationResult.value)
-        try {
-            const responseJson = await response.json()
-            if (!response.ok) {
-                otherErrorEl.innerText = `Error: ${responseJson.message}`
-                otherErrorEl.style.display = "block"
-            }
-        } catch {
+        if (response.ok) {
+            window.location.href = "/overview"
+        } else {
             otherErrorEl.innerText = `Error: status code ${response.status}`
             otherErrorEl.style.display = "block"
         }
