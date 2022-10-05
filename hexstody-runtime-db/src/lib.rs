@@ -104,8 +104,8 @@ impl RuntimeState {
     }
 
     /// Returns 0 if the margin is not set
-    pub fn get_margin(&self, from: Symbol, to:Symbol) -> f64 {
-        self.margins.get(&from).map(|m| m.get(&to)).flatten().cloned().unwrap_or(0.0)
+    pub fn get_margin(&self, from: &Symbol, to: &Symbol) -> f64 {
+        self.margins.get(from).map(|m| m.get(to)).flatten().cloned().unwrap_or(0.0)
     }
 
     /// Sets pair's margin
@@ -116,5 +116,14 @@ impl RuntimeState {
         }).or_insert(
             HashMap::from([(to, margin)])
         );
+    }
+
+    /// Get pair rate, adjusted for margin
+    pub async fn symbol_to_symbol_adjusted(&mut self, client: &TickerClient, from: Symbol, to: Symbol) -> TickerResult<f64> {
+        let margin = self.get_margin(&from, &to);
+        let rate = self.symbol_to_symbol(client, from, to).await?;
+        // We receive and store margins in whole percents, so we have to divide by 100
+        let adjusted_rate = rate * (1.0 - margin / 100.0);
+        Ok(adjusted_rate)
     }
 }

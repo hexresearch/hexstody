@@ -15,7 +15,8 @@ pub fn ticker_api() -> Vec<Route> {
     openapi_get_routes![
         ticker,
         ticker_pair,
-        get_margin
+        get_margin,
+        get_pair_with_margin
     ]
 }
 
@@ -71,6 +72,22 @@ pub async fn get_margin(
     currency_pair: Json<CurrencyPair>
 ) -> error::Result<Json<MarginData>> {
     let CurrencyPair{ from: currency_from, to: currency_to } = currency_pair.into_inner();
-    let margin = rstate.lock().await.get_margin(currency_from.symbol(), currency_to.symbol());
+    let margin = rstate.lock().await.get_margin(&currency_from.symbol(), &currency_to.symbol());
     Ok(Json(MarginData{ currency_from, currency_to, margin }))
+}
+
+#[openapi(tag = "ticker")]
+#[post("/pair/adjusted", data = "<currency_pair>")]
+pub async fn get_pair_with_margin(
+    rstate: &State<Arc<Mutex<RuntimeState>>>, 
+    ticker_client: &State<TickerClient>,
+    currency_pair: Json<CurrencyPair>
+) -> error::Result<Json<CurrencyPairResponse>> {
+    let CurrencyPair{ from, to } = currency_pair.into_inner();
+    let mut rstate = rstate.lock().await;
+    let rate = rstate
+        .symbol_to_symbol_adjusted(ticker_client, from.symbol(), to.symbol())
+        .await
+        .map_err(|e| error::Error::GenericError(e.to_string()))?;
+    Ok(Json(CurrencyPairResponse{ from, to, rate }))
 }
