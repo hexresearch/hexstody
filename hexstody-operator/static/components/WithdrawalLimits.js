@@ -2,7 +2,7 @@ import {
     truncate,
     getLimitRequests,
     getRequiredConfirmations,
-    formatLimitTime,
+    formatTime,
     formatLimitValue,
     formatLimitStatus,
     copyToClipboard,
@@ -32,7 +32,7 @@ export const WithdrawalLimits = {
                     </thead>
                     <tbody>
                         <tr v-for="limitRequest in limitRequests">
-                            <td>{{formatLimitTime(limitRequest.created_at)}}</td>
+                            <td>{{formatTime(limitRequest.created_at)}}</td>
                             <td>
                                 <div class="flex-row">
                                     <span v-tippy="limitRequest.id">
@@ -65,13 +65,13 @@ export const WithdrawalLimits = {
         </div>`,
     methods: {
         truncate,
-        formatLimitTime,
         formatLimitValue,
         formatLimitStatus,
         copyToClipboard,
         getCurrencyName,
         confirmLimitRequest,
         rejectLimitRequest,
+        formatTime,
         async fetchData() {
             const limitRequestsResponse = await getLimitRequests(this.privateKeyJwk, this.publicKeyDer, this.filter)
             // Get limit requests and sort them by date

@@ -7,6 +7,7 @@ import {
     formatExchangeRequestStatus,
     getUserInfo,
     getCurrencyName,
+    formatTime,
     truncate
 } from "../scripts/common.js"
 
@@ -35,7 +36,7 @@ export const ExchangeRequestsTable = {
                     </thead>
                     <tbody>
                         <tr v-for="exchangeRequest in exchangeRequests">
-                            <td>{{exchangeRequest.created_at}}</td>
+                            <td>{{formatTime(exchangeRequest.created_at)}}</td>
                             <td>
                                 <div class="flex-row">
                                     <span v-tippy="exchangeRequest.id">
@@ -95,6 +96,7 @@ export const ExchangeRequestsTable = {
         truncate,
         formatExchangeRequestStatus,
         getCurrencyName,
+        formatTime,
         async fetchData() {
             const exchangeRequestsResponse = await getExchangeRequests(this.privateKeyJwk, this.publicKeyDer, this.filter)
             // Get exchange requests and sort them by date

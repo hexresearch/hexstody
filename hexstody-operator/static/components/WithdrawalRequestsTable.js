@@ -12,6 +12,7 @@ import {
     formatExplorerLink,
     truncate,
     truncateMiddle,
+    formatTime
 } from "../scripts/common.js"
 
 import { Modal } from "./Modal.js"
@@ -39,7 +40,7 @@ export const WithdrawalRequestsTable = {
                     </thead>
                     <tbody>
                         <tr v-for="withdrawalRequest in withdrawalRequests">
-                            <td>{{withdrawalRequest.created_at}}</td>
+                            <td>{{formatTime(withdrawalRequest.created_at)}}</td>
                             <td>
                                 <div class="flex-row">
                                     <span v-tippy="withdrawalRequest.id">
@@ -111,6 +112,7 @@ export const WithdrawalRequestsTable = {
         formatExplorerLink,
         getCurrencyName,
         copyToClipboard,
+        formatTime,
         async fetchData() {
             const withdrawalRequestsResponse = await getWithdrawalRequests(this.privateKeyJwk, this.publicKeyDer, this.currency, this.filter)
             // Get withdrawal requests and sort them by date
@@ -162,7 +164,7 @@ export const WithdrawalRequestsTable = {
             requiredConfirmations: null,
             isModalVisible: false,
             userInfo: null,
-            filter: "pending",
+            filter: "all",
         }
     },
     watch: {

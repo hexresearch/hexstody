@@ -84,7 +84,7 @@ pub struct WithdrawalRequest {
     /// Receiving address
     pub address: CurrencyAddress,
     /// When the request was created
-    pub created_at: NaiveDateTime,
+    pub created_at: DateTime<Utc>,
     /// Amount of tokens to transfer
     pub amount: u64,
     /// Some request require manual confirmation
@@ -97,8 +97,8 @@ pub struct WithdrawalRequest {
     pub request_type: WithdrawalRequestType,
 }
 
-impl From<(NaiveDateTime, WithdrawalRequestInfo)> for WithdrawalRequest {
-    fn from(value: (NaiveDateTime, WithdrawalRequestInfo)) -> Self {
+impl From<(DateTime<Utc>, WithdrawalRequestInfo)> for WithdrawalRequest {
+    fn from(value: (DateTime<Utc>, WithdrawalRequestInfo)) -> Self {
         WithdrawalRequest {
             id: value.1.id,
             user: value.1.user,
@@ -120,7 +120,7 @@ impl Into<WithdrawalRequestApi> for WithdrawalRequest {
             id: self.id,
             user: self.user,
             address: self.address,
-            created_at: self.created_at.format("%Y-%m-%d %H:%M:%S").to_string(),
+            created_at: self.created_at.to_string(),
             amount: self.amount,
             confirmation_status: confirmation_status,
         }

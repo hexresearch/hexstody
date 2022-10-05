@@ -117,6 +117,16 @@ export function formatAddress(address) {
     };
 }
 
+export function formatTime(timeString) {
+    const time = new Date(timeString)
+    const options = {
+        year: 'numeric', month: 'numeric', day: 'numeric',
+        hour: 'numeric', minute: 'numeric', second: 'numeric',
+        hour12: false,
+    }
+    return new Intl.DateTimeFormat('default', options).format(time)
+}
+
 export function formatWithdrawalRequestStatus(status, requiredConfirmations) {
     switch (status.type) {
         case "InProgress":
@@ -156,17 +166,6 @@ export function formatExplorerLink(txid) {
         default:
             return "unknown"
     };
-}
-
-export function formatLimitTime(datetime) {
-    const time = new Date(datetime)
-    const dateStr = `${time.getFullYear()}-${String(time.getMonth() + 1).padStart(2, '0')}-${String(time.getDate()).padStart(2, '0')}`
-    const timeStr = time.toLocaleTimeString()
-    if (time instanceof Date && !isNaN(time)) {
-        return `${dateStr} ${timeStr}`
-    } else {
-        return "Invalid time"
-    }
 }
 
 export function formatLimitValue(limit) {

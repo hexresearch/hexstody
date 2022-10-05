@@ -176,7 +176,7 @@ impl State {
                 Ok(None)
             }
             UpdateBody::CreateWithdrawalRequest(withdrawal_request) => {
-                let res = self.with_new_withdrawal_request(update.created, withdrawal_request)?;
+                let res = self.with_new_withdrawal_request(withdrawal_request)?;
                 self.last_changed = update.created;
                 info!("Res: {:?}", res);
                 Ok(res)
@@ -313,11 +313,10 @@ impl State {
     /// Apply new withdrawal request update
     fn with_new_withdrawal_request(
         &mut self,
-        timestamp: NaiveDateTime,
         withdrawal_request_info: WithdrawalRequestInfo,
     ) -> Result<Option<UpdateResult>, StateUpdateErr> {
         let withdrawal_request: WithdrawalRequest =
-            (timestamp, withdrawal_request_info.clone()).into();
+            (chrono::offset::Utc::now(), withdrawal_request_info.clone()).into();
         info!("withdrawal_request: {:?}", withdrawal_request);
         if let Some(user) = self.users.get_mut(&withdrawal_request.user) {
             let currency = withdrawal_request.address.currency();

@@ -1,7 +1,7 @@
 use std::fmt;
 
 use base64;
-use chrono::NaiveDateTime;
+use chrono::prelude::*;
 use hexstody_btc_api::bitcoin::txid::BtcTxid;
 use okapi::openapi3::*;
 use p256::{ecdsa::Signature, pkcs8::DecodePublicKey, PublicKey};
@@ -210,7 +210,7 @@ impl Ord for BalanceItem {
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
 pub struct DepositHistoryItem {
     pub currency: Currency,
-    pub date: NaiveDateTime,
+    pub date: DateTime<Utc>,
     pub value: u64,
     pub number_of_confirmations: u64,
     pub txid: CurrencyTxId,
@@ -220,7 +220,7 @@ pub struct DepositHistoryItem {
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
 pub struct WithdrawalHistoryItem {
     pub currency: Currency,
-    pub date: NaiveDateTime,
+    pub date: DateTime<Utc>,
     pub value: u64,
     pub status: WithdrawalRequestStatus,
     //temp field to give txid for ETH and tokens while status not working
@@ -235,7 +235,7 @@ pub enum HistoryItem {
     Withdrawal(WithdrawalHistoryItem),
 }
 
-pub fn history_item_time(h: &HistoryItem) -> &NaiveDateTime {
+pub fn history_item_time(h: &HistoryItem) -> &DateTime<Utc> {
     match h {
         HistoryItem::Deposit(d) => &d.date,
         HistoryItem::Withdrawal(w) => &w.date,

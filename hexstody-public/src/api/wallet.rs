@@ -2,7 +2,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use super::auth::{require_auth, require_auth_user};
-use chrono::NaiveDateTime;
+use chrono::prelude::*;
 use hexstody_api::domain::{
     filter_tokens, BtcAddress, Currency, CurrencyAddress, CurrencyTxId, ETHTxid, Erc20, Erc20Token,
     EthAccount,
@@ -222,7 +222,7 @@ pub async fn get_history(
 
     fn to_eth_history(h: &Erc20HistUnitU) -> api::HistoryItem {
         let curr = Currency::from_str(&h.tokenName).unwrap();
-        let time = NaiveDateTime::from_timestamp(h.timeStamp.parse().unwrap(), 0);
+        let time = Utc.timestamp(h.timeStamp.parse().unwrap(), 0);
         let val = h.value.parse().unwrap_or(u64::MAX); // MAX for strange entries with value bigger than u64
         if h.addr.to_uppercase() != h.from.to_ascii_uppercase() {
             api::HistoryItem::Deposit(api::DepositHistoryItem {

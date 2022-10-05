@@ -2,8 +2,8 @@ use crate::update::btc::BtcTxCancel;
 use bitcoin::{Address, Txid};
 use chrono::prelude::*;
 use hexstody_btc_api::events::{TxDirection, TxUpdate};
-use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 /// User data for specific currency
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
@@ -56,7 +56,7 @@ pub struct BtcTransaction {
     /// Negative for withdrawal, positive for deposit
     pub amount: i64,
     /// The tx first seen
-    pub timestamp: NaiveDateTime,
+    pub timestamp: DateTime<Utc>,
     /// Conflicts with other transactions
     pub conflicts: Vec<Txid>,
     /// Fee paid in sats.
@@ -92,9 +92,9 @@ impl From<TxUpdate> for BtcTransaction {
                 TxDirection::Deposit => val.amount as i64,
                 TxDirection::Withdraw => -(val.amount as i64),
             },
-            timestamp: NaiveDateTime::from_timestamp(val.timestamp as i64, 0),
+            timestamp: Utc.timestamp(val.timestamp as i64, 0),
             conflicts: val.conflicts.iter().map(|tx| tx.0).collect(),
-            fee: val.fee
+            fee: val.fee,
         }
     }
 }
@@ -126,5 +126,5 @@ pub struct EthTransaction {
     /// Confirmations number
     pub confirmations: i64,
     /// Accounts address
-    pub addr: String
+    pub addr: String,
 }
