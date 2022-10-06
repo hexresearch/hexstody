@@ -32,6 +32,10 @@ export const HotWalletBalance = {
             isLoading: false
         }
     },
+    watch: {
+        currency: 'fetchData',
+        eventToggle: 'fetchData'
+    },
     computed: {
         isBalanceLoaded() {
             if (typeof this.balance === 'object' && this.balance !== null && "balance" in this.balance) {
@@ -41,18 +45,8 @@ export const HotWalletBalance = {
             }
         }
     },
-    watch: {
-        currency: 'fetchData'
-    },
     props: {
-        privateKeyJwk: {
-            type: Object,
-            required: true
-        },
-        publicKeyDer: {
-            type: Object,
-            required: true
-        },
         currency: {}
     },
+    inject: ['eventToggle', 'privateKeyJwk', 'publicKeyDer'],
 }

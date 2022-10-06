@@ -11,9 +11,9 @@ export const WithdrawalRequests = {
     template:
         /*html*/
         `<div>
-            <currency-select :private-key-jwk="privateKeyJwk" :public-key-der="publicKeyDer" @currency-selected="setCurrency" />
-            <hot-wallet-balance :private-key-jwk="privateKeyJwk" :public-key-der="publicKeyDer" :currency="currency" />
-            <withdrawal-requests-table :private-key-jwk="privateKeyJwk" :public-key-der="publicKeyDer" :currency="currency" />
+            <currency-select @currency-selected="setCurrency" />
+            <hot-wallet-balance :currency="currency" />
+            <withdrawal-requests-table :currency="currency" />
         </div>`,
     data() {
         return {
@@ -25,14 +25,4 @@ export const WithdrawalRequests = {
             this.currency = currency
         },
     },
-    props: {
-        privateKeyJwk: {
-            type: Object,
-            required: true
-        },
-        publicKeyDer: {
-            type: Object,
-            required: true
-        }
-    }
 }

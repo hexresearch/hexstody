@@ -154,7 +154,7 @@ export const WithdrawalRequestsTable = {
         },
         closeModal() {
             this.isModalVisible = false
-        }
+        },
     },
     data() {
         return {
@@ -166,17 +166,11 @@ export const WithdrawalRequestsTable = {
         }
     },
     watch: {
-        currency: 'fetchData'
+        currency: 'fetchData',
+        eventToggle: 'fetchData'
     },
     props: {
-        privateKeyJwk: {
-            type: Object,
-            required: true
-        },
-        publicKeyDer: {
-            type: Object,
-            required: true
-        },
         currency: {}
     },
+    inject: ['eventToggle', 'privateKeyJwk', 'publicKeyDer'],
 }

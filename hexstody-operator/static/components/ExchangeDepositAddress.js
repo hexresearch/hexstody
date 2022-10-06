@@ -37,7 +37,8 @@ export const ExchangeDepositAddress = {
         }
     },
     watch: {
-        currency: 'fetchData'
+        currency: 'fetchData',
+        eventToggle: 'fetchData',
     },
     computed: {
         isAddressLoaded() {
@@ -49,14 +50,7 @@ export const ExchangeDepositAddress = {
         }
     },
     props: {
-        privateKeyJwk: {
-            type: Object,
-            required: true
-        },
-        publicKeyDer: {
-            type: Object,
-            required: true
-        },
         currency: {}
-    }
+    },
+    inject: ['eventToggle', 'privateKeyJwk', 'publicKeyDer'],
 }

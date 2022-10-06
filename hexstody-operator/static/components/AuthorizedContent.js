@@ -18,7 +18,7 @@ export const AuthorizedContent = {
                 </nav>
             </header>
             <KeepAlive>
-                <component :is="currentTab" :private-key-jwk="privateKeyJwk" :public-key-der="publicKeyDer"></component>
+                <component :is="currentTab"></component>
             </KeepAlive>
         </div>`,
     data() {
@@ -49,14 +49,4 @@ export const AuthorizedContent = {
             return tabName
         }
     },
-    props: {
-        privateKeyJwk: {
-            type: Object,
-            required: true
-        },
-        publicKeyDer: {
-            type: Object,
-            required: true
-        }
-    }
 }
