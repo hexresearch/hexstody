@@ -77,7 +77,7 @@ async fn get_fees(client: &State<Client>) -> Json<FeeResponse> {
         .estimate_smart_fee(2, None)
         .map_err(|e| error::Error::from(e));
     let res = FeeResponse {
-        fee_rate: 5, // default 5 sat/byte
+        fee_rate: 5 * 1024, // default 5 sat/byte
         block: None,
     };
     match est {

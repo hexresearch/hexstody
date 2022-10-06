@@ -170,12 +170,14 @@ pub async fn ethfee(cookies: &CookieJar<'_>) -> error::Result<Json<api::EthGasPr
 #[get("/btcfee")]
 pub async fn btcfee(cookies: &CookieJar<'_>, btc: &State<BtcClient>) -> error::Result<Json<u64>> {
     require_auth(cookies, |_| async move {
-        let btc_fee_per_byte = &btc
+        let btc_fee_per_kilobyte = &btc
             .get_fees()
             .await
             .map_err(|_| error::Error::FailedGetFee(Currency::BTC))?
             .fee_rate;
-        Ok(Json(btc_fee_per_byte * BTC_BYTES_PER_TRANSACTION))
+        Ok(Json(
+            (btc_fee_per_kilobyte * BTC_BYTES_PER_TRANSACTION) / 1024,
+        ))
     })
     .await
 }
@@ -367,13 +369,13 @@ pub async fn post_withdraw(
                 let btc_balance = btc_info.finalized_balance();
                 let spent = btc_info.limit_info.spent;
                 let limit = btc_info.limit_info.limit.amount;
-                let btc_fee_per_byte = &btc
+                let btc_fee_per_kilobyte = &btc
                     .get_fees()
                     .await
                     .map_err(|_| error::Error::FailedGetFee(Currency::BTC))?
                     .fee_rate;
-                let required_amount =
-                    withdraw_request.amount + btc_fee_per_byte * BTC_BYTES_PER_TRANSACTION;
+                let required_amount = withdraw_request.amount
+                    + (btc_fee_per_kilobyte * BTC_BYTES_PER_TRANSACTION) / 1024;
                 if required_amount <= btc_balance {
                     let req_type = if limit - spent >= required_amount {
                         WithdrawalRequestType::UnderLimit
