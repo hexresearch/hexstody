@@ -2,10 +2,11 @@ import { WithdrawalRequests } from "./WithdrawalRequests.js"
 import { Invites } from "./Invites.js"
 import { WithdrawalLimits } from "./WithdrawalLimits.js"
 import { ExchangeRequests } from "./ExchangeRequests.js"
+import { MarginsTab } from "./Margins.js"
 
 export const AuthorizedContent = {
     components: {
-        WithdrawalRequests, Invites, WithdrawalLimits, ExchangeRequests
+        WithdrawalRequests, Invites, WithdrawalLimits, ExchangeRequests, MarginsTab
     },
     template:
         /*html*/
@@ -24,7 +25,7 @@ export const AuthorizedContent = {
     data() {
         return {
             currentTab: 'WithdrawalRequests',
-            tabs: ['WithdrawalRequests', 'Invites', 'WithdrawalLimits', 'ExchangeRequests']
+            tabs: ['WithdrawalRequests', 'Invites', 'WithdrawalLimits', 'ExchangeRequests', 'MarginsTab']
         }
     },
     methods: {
@@ -42,6 +43,9 @@ export const AuthorizedContent = {
                     break
                 case 'ExchangeRequests':
                     tabName = 'Exchange requests'
+                    break
+                case 'MarginsTab':
+                    tabName = 'Margins';
                     break
                 default:
                     tabName = 'Undefined'

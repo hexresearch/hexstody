@@ -963,6 +963,13 @@ pub struct ExchangeAddress {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct MarginData{
+    pub currency_from: Currency,
+    pub currency_to: Currency,
+    pub margin: f64
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
 pub struct ConfirmationsConfig {
     // Number of confirmations from operators required for funds withdrawal above the limit
     pub withdraw: i16,

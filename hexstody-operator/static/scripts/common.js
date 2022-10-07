@@ -223,6 +223,12 @@ export async function makeSignedRequest(privateKeyJwk, publicKeyDer, requestBody
     return response
 }
 
+export function isNumeric(str) {
+    if (typeof str != "string") return false // we only process strings!  
+    return !isNaN(str) && // use type coercion to parse the _entirety_ of the string (`parseFloat` alone does not do this)...
+           !isNaN(parseFloat(str)) // ...and ensure strings of whitespace fail
+  }
+
 export async function getSupportedCurrencies(privateKeyJwk, publicKeyDer) {
     const response = await makeSignedRequest(privateKeyJwk, publicKeyDer, null, "currencies", 'GET')
     return response
@@ -309,4 +315,28 @@ export async function getTicker(currency) {
         method: "POST",
         body: JSON.stringify(currency)
     })
+}
+
+export async function getPairRate(currency_from, currency_to) {
+    return await fetch("/ticker/pair", {
+        method: "POST",
+        body: JSON.stringify({
+            from: currency_from,
+            to: currency_to
+        })
+    })
+}
+
+export async function getMargin(currency_from, currency_to) {
+    return await fetch("/ticker/margin", {
+        method: "POST",
+        body: JSON.stringify({
+            from: currency_from,
+            to: currency_to
+        })
+    })
+}
+
+export async function setMargin(privateKeyJwk, publicKeyDer, req){
+    return await makeSignedRequest(privateKeyJwk, publicKeyDer, req, "margin/set", "POST");
 }

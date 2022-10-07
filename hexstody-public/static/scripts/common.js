@@ -260,6 +260,14 @@ export function indexArrayFromOne(array) {
     return res
 }
 
+export function currencyName(currency) {
+    if (isErc20Token(currency)) {
+        return currency.ERC20.name
+    } else {
+        return currency
+    };
+}
+
 export function currencyNameToCurrency(currencyName) {
     switch (currencyName.toUpperCase()) {
         case "BTC":

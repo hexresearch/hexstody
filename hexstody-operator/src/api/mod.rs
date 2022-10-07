@@ -14,6 +14,8 @@ use rocket::{
 };
 
 use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
+use schemars::JsonSchema;
+use serde::{Serialize, Deserialize};
 use std::{path::PathBuf, str, sync::Arc};
 use tokio::sync::{mpsc, Mutex, Notify};
 use uuid::Uuid;
@@ -570,6 +572,39 @@ async fn get_exchange_address(
     Ok(Json(addr))
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct MarginSet {
+    currency_from: Currency,
+    currency_to: Currency,
+    /// Parse string and convert String -> f64 in the handler
+    /// Js stringify drops .0 from floats
+    /// Client signs and sends margin: 1,
+    /// guard_op_signature runs json::to_string and gets 1.0
+    /// resulting in signature mismatch
+    margin: String
+}
+
+#[openapi(skip)]
+#[post("/margin/set", data="<req>")]
+pub async fn set_margin(
+    rstate: &RocketState<Arc<Mutex<RuntimeState>>>,
+    signature_data: SignatureData,
+    config: &RocketState<SignatureVerificationConfig>,
+    req: Json<MarginSet>
+) -> error::Result<()> {
+    let req = req.into_inner();
+    let margin = req.margin.parse::<f64>().map_err(|e| error::Error::MalformedMargin(e.to_string()))?;
+    guard_op_signature(
+        &config,
+        uri!(set_margin).to_string(),
+        signature_data,
+        &req,
+    )?;
+    let mut rstate = rstate.lock().await;
+    rstate.set_margin(req.currency_from.symbol(), req.currency_to.symbol(), margin);
+    Ok(())
+}
+
 // NOTE: this handler has no authorization, so it leaks information
 /// Returns an infinite stream of server-sent events.
 /// Each event is a notification that state on the server has changed.
@@ -629,11 +664,12 @@ pub async fn serve_api(
                 reject_limits,              // POST: /limits/reject
                 confirm_exchange,           // POST: /exchange/confirm
                 reject_exchange,            // POST: /exchange/reject
-                get_exchange_requests, // GET:  /exchange/list?filter= <all, pending, completed, rejected>
-                get_exchange_balances, // GET:  /exchange/balances
-                get_exchange_address,  // POST: /exchange/address
-                get_user_info,         // GET: /user/info/<user_id>
-                events,
+                get_exchange_requests,      // GET:  /exchange/list?filter= <all, pending, completed, rejected>
+                get_exchange_balances,      // GET:  /exchange/balances
+                get_exchange_address,       // POST: /exchange/address
+                get_user_info,              // GET:  /user/info/<user_id>
+                events,                     // GET:  /state-updates-events
+                set_margin,                 // POST: /margin/set
             ],
         )
         .mount("/ticker/", ticker_api)
