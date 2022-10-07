@@ -12,6 +12,7 @@ import {
     formatExplorerLink,
     truncate,
     truncateMiddle,
+    formatTime
 } from "../scripts/common.js"
 
 import { Modal } from "./Modal.js"
@@ -39,7 +40,7 @@ export const WithdrawalRequestsTable = {
                     </thead>
                     <tbody>
                         <tr v-for="withdrawalRequest in withdrawalRequests">
-                            <td>{{withdrawalRequest.created_at}}</td>
+                            <td>{{formatTime(withdrawalRequest.created_at)}}</td>
                             <td>
                                 <div class="flex-row">
                                     <span v-tippy="withdrawalRequest.id">
@@ -96,7 +97,7 @@ export const WithdrawalRequestsTable = {
                     <p><b>Last name:</b> {{userInfo.lastName}}</p>
                     <p><b>Email:</b> {{userInfo.email ? userInfo.email.email : ""}}</p>
                     <p><b>Phone:</b> {{userInfo.phone ? userInfo.phone.number : ""}}</p>
-                    <p><b>Telegram:</b> {{userInfo.tgName}}</p>
+                    <p><b>Telegram:</b> {{userInfo.tgName.tg_name}}</p>
                 </template>
                 <template v-slot:footer>
                 </template>
@@ -111,6 +112,7 @@ export const WithdrawalRequestsTable = {
         formatExplorerLink,
         getCurrencyName,
         copyToClipboard,
+        formatTime,
         async fetchData() {
             const withdrawalRequestsResponse = await getWithdrawalRequests(this.privateKeyJwk, this.publicKeyDer, this.currency, this.filter)
             // Get withdrawal requests and sort them by date
@@ -122,7 +124,7 @@ export const WithdrawalRequestsTable = {
                 }
             )
             const requiredConfirmationsResponse = await getRequiredConfirmations(this.privateKeyJwk, this.publicKeyDer)
-            this.requiredConfirmations = await requiredConfirmationsResponse.json()
+            this.requiredConfirmations = (await requiredConfirmationsResponse.json()).withdraw
         },
         hideTooltip(instance) {
             setTimeout(() => {
@@ -154,7 +156,7 @@ export const WithdrawalRequestsTable = {
         },
         closeModal() {
             this.isModalVisible = false
-        }
+        },
     },
     data() {
         return {
@@ -162,21 +164,15 @@ export const WithdrawalRequestsTable = {
             requiredConfirmations: null,
             isModalVisible: false,
             userInfo: null,
-            filter: "pending",
+            filter: "all",
         }
     },
     watch: {
-        currency: 'fetchData'
+        currency: 'fetchData',
+        eventToggle: 'fetchData'
     },
     props: {
-        privateKeyJwk: {
-            type: Object,
-            required: true
-        },
-        publicKeyDer: {
-            type: Object,
-            required: true
-        },
         currency: {}
     },
+    inject: ['eventToggle', 'privateKeyJwk', 'publicKeyDer'],
 }

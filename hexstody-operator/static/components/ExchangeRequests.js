@@ -13,10 +13,10 @@ export const ExchangeRequests = {
     template:
         /*html*/
         `<div>
-            <currency-select :private-key-jwk="privateKeyJwk" :public-key-der="publicKeyDer" @currency-selected="setCurrency" />
-            <exchange-balance :private-key-jwk="privateKeyJwk" :public-key-der="publicKeyDer" :currency="currency" />
-            <exchange-deposit-address :private-key-jwk="privateKeyJwk" :public-key-der="publicKeyDer" :currency="currency" />
-            <exchange-requests-table :private-key-jwk="privateKeyJwk" :public-key-der="publicKeyDer" :currency="currency" />
+            <currency-select @currency-selected="setCurrency" />
+            <exchange-balance :currency="currency" />
+            <exchange-deposit-address :currency="currency" />
+            <exchange-requests-table :currency="currency" />
         </div>`,
     methods: {
         setCurrency(currency) {
@@ -28,14 +28,4 @@ export const ExchangeRequests = {
             currency: null,
         }
     },
-    props: {
-        privateKeyJwk: {
-            type: Object,
-            required: true
-        },
-        publicKeyDer: {
-            type: Object,
-            required: true
-        }
-    }
 }

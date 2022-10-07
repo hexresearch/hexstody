@@ -1,7 +1,7 @@
 use std::fmt;
 
 use base64;
-use chrono::NaiveDateTime;
+use chrono::prelude::*;
 use hexstody_btc_api::bitcoin::txid::BtcTxid;
 use okapi::openapi3::*;
 use p256::{ecdsa::Signature, pkcs8::DecodePublicKey, PublicKey};
@@ -210,7 +210,7 @@ impl Ord for BalanceItem {
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
 pub struct DepositHistoryItem {
     pub currency: Currency,
-    pub date: NaiveDateTime,
+    pub date: DateTime<Utc>,
     pub value: u64,
     pub number_of_confirmations: u64,
     pub txid: CurrencyTxId,
@@ -220,7 +220,7 @@ pub struct DepositHistoryItem {
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
 pub struct WithdrawalHistoryItem {
     pub currency: Currency,
-    pub date: NaiveDateTime,
+    pub date: DateTime<Utc>,
     pub value: u64,
     pub status: WithdrawalRequestStatus,
     //temp field to give txid for ETH and tokens while status not working
@@ -235,7 +235,7 @@ pub enum HistoryItem {
     Withdrawal(WithdrawalHistoryItem),
 }
 
-pub fn history_item_time(h: &HistoryItem) -> &NaiveDateTime {
+pub fn history_item_time(h: &HistoryItem) -> &DateTime<Utc> {
     match h {
         HistoryItem::Deposit(d) => &d.date,
         HistoryItem::Withdrawal(w) => &w.date,
@@ -255,7 +255,7 @@ impl Balance {
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct History {
-    pub target_number_of_confirmations: i16,
+    pub confirmations_config: ConfirmationsConfig,
     pub history_items: Vec<HistoryItem>,
 }
 
@@ -393,7 +393,7 @@ pub enum WithdrawalFilter {
     Confirmed,
     Completed,
     OpRejected,
-    NodeRejected
+    NodeRejected,
 }
 
 impl ToString for WithdrawalFilter {
@@ -752,7 +752,7 @@ pub enum LimitChangeFilter {
     All,
     Pending,
     Completed,
-    Rejected
+    Rejected,
 }
 
 impl ToString for LimitChangeFilter {
@@ -761,7 +761,7 @@ impl ToString for LimitChangeFilter {
             LimitChangeFilter::All => "all".to_owned(),
             LimitChangeFilter::Completed => "completed".to_owned(),
             LimitChangeFilter::Rejected => "rejected".to_owned(),
-            LimitChangeFilter::Pending => "pending".to_owned()
+            LimitChangeFilter::Pending => "pending".to_owned(),
         }
     }
 }
@@ -779,7 +779,6 @@ impl<'a> FromUriParam<Query, &LimitChangeFilter> for LimitChangeFilter {
         filt.clone()
     }
 }
-
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
 pub struct LimitChangeResponse {
@@ -968,4 +967,26 @@ pub struct MarginData{
     pub currency_from: Currency,
     pub currency_to: Currency,
     pub margin: f64
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct ConfirmationsConfig {
+    // Number of confirmations from operators required for funds withdrawal above the limit
+    pub withdraw: i16,
+    // Number of confirmations from operators required for change withdrawal limits
+    pub change_limit: i16,
+    // Number of confirmations from operators required for exchange
+    pub exchange: i16,
+}
+
+impl ConfirmationsConfig {
+    // Returns maximum value among fields
+    pub fn max(&self) -> i16 {
+        let items = [self.withdraw, self.change_limit, self.exchange];
+        items
+            .iter()
+            .copied()
+            .reduce(|accum, item| if accum >= item { accum } else { item })
+            .unwrap()
+    }
 }
