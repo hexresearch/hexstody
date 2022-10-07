@@ -1,4 +1,4 @@
-import { tickerEnum, formattedCurrencyValue, currencyPrecision, currencyNameToCurrency } from "../common.js";
+import { tickerEnum, formattedCurrencyValue, currencyPrecision, currencyNameToCurrency, tickerToSymbol } from "../common.js";
 import { getBalance, postOrderExchange } from "../request.js";
 
 let currencyFrom = null;
@@ -34,9 +34,13 @@ function parseInput(currency, value) {
 };
 
 async function convertAmount(from, to, amount) {
-    const ticker = await fetch(`https://min-api.cryptocompare.com/data/price?fsym=${from}&tsyms=${to}`)
+    const request = {
+        from : tickerToSymbol(from),
+        to : tickerToSymbol(to)
+    };
+    const ticker = await fetch("/ticker/pair", { method: "POST", body: JSON.stringify(request) })
         .then(r => r.json());
-    const tickerNorm = ticker[to] * currencyPrecision(to) / currencyPrecision(from);
+    const tickerNorm = ticker.rate * currencyPrecision(to) / currencyPrecision(from);
     return Math.round(amount * tickerNorm);
 }
 
