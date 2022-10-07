@@ -30,14 +30,5 @@ export const CurrencySelect = {
             this.$emit('currency-selected', this.currencies[event.target.value])
         }
     },
-    props: {
-        privateKeyJwk: {
-            type: Object,
-            required: true
-        },
-        publicKeyDer: {
-            type: Object,
-            required: true
-        }
-    }
+    inject: ['privateKeyJwk', 'publicKeyDer'],
 }

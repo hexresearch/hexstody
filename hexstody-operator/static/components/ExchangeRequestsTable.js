@@ -143,17 +143,13 @@ export const ExchangeRequestsTable = {
         },
     },
     async created() {
-        await this.fetchData()
+        this.fetchData()
+    },
+    watch: {
+        eventToggle: 'fetchData'
     },
     props: {
-        privateKeyJwk: {
-            type: Object,
-            required: true
-        },
-        publicKeyDer: {
-            type: Object,
-            required: true
-        },
         currency: {}
-    }
+    },
+    inject: ['eventToggle', 'privateKeyJwk', 'publicKeyDer'],
 }

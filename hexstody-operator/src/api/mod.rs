@@ -6,9 +6,13 @@ use qrcode_generator::QrCodeEcc;
 use rocket::{
     fairing::AdHoc,
     fs::{FileServer, NamedFile},
+    futures::stream::Stream,
+    response::stream::{Event, EventStream},
     serde::json::Json,
-    State as RocketState, {get, post, routes, uri},
+    tokio::select,
+    Shutdown, State as RocketState, {get, post, routes, uri},
 };
+
 use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
 use std::{path::PathBuf, str, sync::Arc};
 use tokio::sync::{mpsc, Mutex, Notify};
@@ -480,7 +484,6 @@ async fn reject_exchange(
         .map_err(|e| error::Error::InternalServerError(format!("{:?}", e)).into())
 }
 
-/// # Get all supported currencies
 #[openapi(skip)]
 #[get("/exchange/list?<filter>")]
 async fn get_exchange_requests(
@@ -567,11 +570,32 @@ async fn get_exchange_address(
     Ok(Json(addr))
 }
 
+// NOTE: this handler has no authorization, so it leaks information
+/// Returns an infinite stream of server-sent events.
+/// Each event is a notification that state on the server has changed.
+#[openapi(tag = "State update events")]
+#[get("/state-updates-events")]
+async fn events(
+    state_notify: &RocketState<Arc<Notify>>,
+    mut end: Shutdown,
+) -> EventStream<impl Stream<Item = Event> + '_> {
+    EventStream! {
+        loop {
+            select! {
+                _ = state_notify.notified() => {
+                    yield Event::data("");
+                }
+                _ = &mut end => break,
+            };
+        }
+    }
+}
+
 pub async fn serve_api(
     pool: Pool,
     state: Arc<Mutex<HexstodyState>>,
     runtime_state: Arc<Mutex<RuntimeState>>,
-    _state_notify: Arc<Notify>,
+    state_notify: Arc<Notify>,
     start_notify: Arc<Notify>,
     update_sender: mpsc::Sender<StateUpdate>,
     btc_client: BtcClient,
@@ -609,6 +633,7 @@ pub async fn serve_api(
                 get_exchange_balances, // GET:  /exchange/balances
                 get_exchange_address,  // POST: /exchange/address
                 get_user_info,         // GET: /user/info/<user_id>
+                events,
             ],
         )
         .mount("/ticker/", ticker_api)
@@ -627,6 +652,7 @@ pub async fn serve_api(
         .manage(eth_client)
         .manage(ticker_client)
         .manage(static_path)
+        .manage(state_notify)
         .attach(AdHoc::config::<SignatureVerificationConfig>())
         .attach(on_ready)
         .launch()

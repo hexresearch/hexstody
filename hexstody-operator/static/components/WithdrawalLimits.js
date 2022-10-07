@@ -110,7 +110,10 @@ export const WithdrawalLimits = {
         },
     },
     async created() {
-        await this.fetchData()
+        this.fetchData()
+    },
+    watch: {
+        eventToggle: 'fetchData'
     },
     data() {
         return {
@@ -119,14 +122,5 @@ export const WithdrawalLimits = {
             filter: "all"
         }
     },
-    props: {
-        privateKeyJwk: {
-            type: Object,
-            required: true
-        },
-        publicKeyDer: {
-            type: Object,
-            required: true
-        },
-    },
+    inject: ['eventToggle', 'privateKeyJwk', 'publicKeyDer'],
 }
