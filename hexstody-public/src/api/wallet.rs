@@ -2,7 +2,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use super::auth::{require_auth, require_auth_user};
-use chrono::NaiveDateTime;
+use chrono::prelude::*;
 use hexstody_api::domain::{
     filter_tokens, BtcAddress, Currency, CurrencyAddress, CurrencyTxId, ETHTxid, Erc20, Erc20Token,
     EthAccount,
@@ -15,7 +15,7 @@ use hexstody_api::types::{
 use hexstody_btc_client::client::{BtcClient, BTC_BYTES_PER_TRANSACTION};
 use hexstody_db::state::exchange::ExchangeOrderUpd;
 use hexstody_db::state::{Network, State as DbState, WithdrawalRequestType};
-use hexstody_db::state::{Transaction, WithdrawalRequest, REQUIRED_NUMBER_OF_CONFIRMATIONS};
+use hexstody_db::state::{Transaction, WithdrawalRequest, CONFIRMATIONS_CONFIG};
 use hexstody_db::update::deposit::DepositAddress;
 use hexstody_db::update::misc::{TokenAction, TokenUpdate};
 use hexstody_db::update::withdrawal::WithdrawalRequestInfo;
@@ -224,7 +224,7 @@ pub async fn get_history(
 
     fn to_eth_history(h: &Erc20HistUnitU) -> api::HistoryItem {
         let curr = Currency::from_str(&h.tokenName).unwrap();
-        let time = NaiveDateTime::from_timestamp(h.timeStamp.parse().unwrap(), 0);
+        let time = Utc.timestamp(h.timeStamp.parse().unwrap(), 0);
         let val = h.value.parse().unwrap_or(u64::MAX); // MAX for strange entries with value bigger than u64
         if h.addr.to_uppercase() != h.from.to_ascii_uppercase() {
             api::HistoryItem::Deposit(api::DepositHistoryItem {
@@ -292,7 +292,7 @@ pub async fn get_history(
         let history_slice = history.iter().skip(skip).take(take).cloned().collect();
 
         Ok(Json(api::History {
-            target_number_of_confirmations: REQUIRED_NUMBER_OF_CONFIRMATIONS,
+            confirmations_config: CONFIRMATIONS_CONFIG,
             history_items: history_slice,
         }))
     })

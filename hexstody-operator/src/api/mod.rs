@@ -22,18 +22,16 @@ use hexstody_api::{
     domain::Currency,
     error,
     types::{
-        ConfirmationData, ExchangeAddress, ExchangeBalanceItem, ExchangeConfirmationData,
-        ExchangeFilter, HotBalanceResponse, Invite, InviteRequest, InviteResp,
-        LimitChangeDecisionType, LimitChangeFilter, LimitChangeOpResponse, LimitConfirmationData,
-        SignatureData, UserInfo, WithdrawalFilter, WithdrawalRequest,
+        ConfirmationData, ConfirmationsConfig, ExchangeAddress, ExchangeBalanceItem,
+        ExchangeConfirmationData, ExchangeFilter, HotBalanceResponse, Invite, InviteRequest,
+        InviteResp, LimitChangeDecisionType, LimitChangeFilter, LimitChangeOpResponse,
+        LimitConfirmationData, SignatureData, UserInfo, WithdrawalFilter, WithdrawalRequest,
         WithdrawalRequestDecisionType,
     },
 };
 use hexstody_btc_client::client::BtcClient;
 use hexstody_db::{
-    state::{
-        exchange::ExchangeDecisionType, State as HexstodyState, REQUIRED_NUMBER_OF_CONFIRMATIONS,
-    },
+    state::{exchange::ExchangeDecisionType, State as HexstodyState, CONFIRMATIONS_CONFIG},
     update::limit::LimitChangeData,
     update::{misc::InviteRec, StateUpdate, UpdateBody},
     Pool,
@@ -74,13 +72,13 @@ async fn get_supported_currencies(
 async fn get_required_confrimations(
     signature_data: SignatureData,
     config: &RocketState<SignatureVerificationConfig>,
-) -> error::Result<Json<i16>> {
+) -> error::Result<Json<ConfirmationsConfig>> {
     guard_op_signature_nomsg(
         &config,
         uri!(get_required_confrimations).to_string(),
         signature_data,
     )?;
-    Ok(Json(REQUIRED_NUMBER_OF_CONFIRMATIONS))
+    Ok(Json(CONFIRMATIONS_CONFIG))
 }
 
 /// # Get user information by user ID
