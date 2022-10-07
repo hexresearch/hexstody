@@ -19,6 +19,7 @@ use tempdir::TempDir;
 use tokio::sync::{Mutex, Notify};
 
 use hexstody_btc::api::public::serve_public_api;
+use hexstody_btc::constants::CONFIRMATIONS_CONFIG;
 use hexstody_btc::state::ScanState;
 use hexstody_btc::worker::{cold_wallet_worker, node_worker};
 use hexstody_btc_client::client::BtcClient;
@@ -132,7 +133,7 @@ async fn setup_api(rpc_port: u16) -> u16 {
                 polling_duration,
                 None,
                 vec![pk1, pk2, pk3],
-                1,
+                CONFIRMATIONS_CONFIG,
                 "http://127.0.0.1:8080".to_owned(),
                 network,
             )
@@ -188,7 +189,7 @@ async fn setup_cold_api(cold_amount: u64, rpc_port: u16) -> u16 {
                 polling_duration,
                 None,
                 vec![],
-                1,
+                CONFIRMATIONS_CONFIG,
                 "http://127.0.0.1:8080".to_owned(),
                 network,
             )
@@ -331,7 +332,7 @@ async fn setup_api_regtest(
                 polling_duration,
                 None,
                 operator_public_keys,
-                2,
+                CONFIRMATIONS_CONFIG,
                 operator_api_domain,
                 network,
             )

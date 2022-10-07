@@ -2,15 +2,13 @@ use crate::update::withdrawal::WithdrawalRequestInfo;
 use crate::update::{signup::UserId, withdrawal::WithdrawalRequestDecision};
 use hexstody_api::domain::{CurrencyAddress, CurrencyTxId};
 use hexstody_api::types::{
-    WithdrawalRequest as WithdrawalRequestApi,
-    WithdrawalRequestStatus as WithdrawalRequestStatusApi, WithdrawalFilter,
+    WithdrawalFilter, WithdrawalRequest as WithdrawalRequestApi,
+    WithdrawalRequestStatus as WithdrawalRequestStatusApi,
 };
 
 use chrono::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-
-pub const REQUIRED_NUMBER_OF_CONFIRMATIONS: i16 = 2;
 
 /// It is unique withdrawal request ID whithin the system.
 pub type WithdrawalRequestId = Uuid;
@@ -72,9 +70,9 @@ impl Into<WithdrawalRequestStatusApi> for WithdrawalRequestStatus {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub enum WithdrawalRequestType{
+pub enum WithdrawalRequestType {
     UnderLimit,
-    OverLimit
+    OverLimit,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -86,7 +84,7 @@ pub struct WithdrawalRequest {
     /// Receiving address
     pub address: CurrencyAddress,
     /// When the request was created
-    pub created_at: NaiveDateTime,
+    pub created_at: DateTime<Utc>,
     /// Amount of tokens to transfer
     pub amount: u64,
     /// Some request require manual confirmation
@@ -96,11 +94,11 @@ pub struct WithdrawalRequest {
     /// Rejections received from operators
     pub rejections: Vec<WithdrawalRequestDecision>,
     /// Withdrawal request type
-    pub request_type: WithdrawalRequestType 
+    pub request_type: WithdrawalRequestType,
 }
 
-impl From<(NaiveDateTime, WithdrawalRequestInfo)> for WithdrawalRequest {
-    fn from(value: (NaiveDateTime, WithdrawalRequestInfo)) -> Self {
+impl From<(DateTime<Utc>, WithdrawalRequestInfo)> for WithdrawalRequest {
+    fn from(value: (DateTime<Utc>, WithdrawalRequestInfo)) -> Self {
         WithdrawalRequest {
             id: value.1.id,
             user: value.1.user,
@@ -110,7 +108,7 @@ impl From<(NaiveDateTime, WithdrawalRequestInfo)> for WithdrawalRequest {
             status: WithdrawalRequestStatus::InProgress(0),
             confirmations: vec![],
             rejections: vec![],
-            request_type: value.1.request_type
+            request_type: value.1.request_type,
         }
     }
 }
@@ -122,7 +120,7 @@ impl Into<WithdrawalRequestApi> for WithdrawalRequest {
             id: self.id,
             user: self.user,
             address: self.address,
-            created_at: self.created_at.format("%Y-%m-%d %H:%M:%S").to_string(),
+            created_at: self.created_at.to_string(),
             amount: self.amount,
             confirmation_status: confirmation_status,
         }
@@ -152,11 +150,19 @@ impl WithdrawalRequest {
             true
         } else {
             match self.status {
-                WithdrawalRequestStatus::InProgress(_) => matches!(filter, WithdrawalFilter::Pending),
+                WithdrawalRequestStatus::InProgress(_) => {
+                    matches!(filter, WithdrawalFilter::Pending)
+                }
                 WithdrawalRequestStatus::Confirmed => matches!(filter, WithdrawalFilter::Confirmed),
-                WithdrawalRequestStatus::Completed { .. } => matches!(filter, WithdrawalFilter::Completed),
-                WithdrawalRequestStatus::OpRejected => matches!(filter, WithdrawalFilter::OpRejected),
-                WithdrawalRequestStatus::NodeRejected { .. } => matches!(filter, WithdrawalFilter::NodeRejected),
+                WithdrawalRequestStatus::Completed { .. } => {
+                    matches!(filter, WithdrawalFilter::Completed)
+                }
+                WithdrawalRequestStatus::OpRejected => {
+                    matches!(filter, WithdrawalFilter::OpRejected)
+                }
+                WithdrawalRequestStatus::NodeRejected { .. } => {
+                    matches!(filter, WithdrawalFilter::NodeRejected)
+                }
             }
         }
     }

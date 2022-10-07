@@ -117,6 +117,16 @@ export function formatAddress(address) {
     };
 }
 
+export function formatTime(timeString) {
+    const time = new Date(timeString)
+    const options = {
+        year: 'numeric', month: 'numeric', day: 'numeric',
+        hour: 'numeric', minute: 'numeric', second: 'numeric',
+        hour12: false,
+    }
+    return new Intl.DateTimeFormat('default', options).format(time)
+}
+
 export function formatWithdrawalRequestStatus(status, requiredConfirmations) {
     switch (status.type) {
         case "InProgress":
@@ -134,6 +144,19 @@ export function formatWithdrawalRequestStatus(status, requiredConfirmations) {
     };
 }
 
+export function formatExchangeRequestStatus(status, requiredConfirmations) {
+    switch (status.type) {
+        case "InProgress":
+            return "In progress (" + status.confirmations + " of " + requiredConfirmations + ")"
+        case "Completed":
+            return "Confirmed"
+        case "Rejected":
+            return "Rejected by operators"
+        default:
+            return "Unknown"
+    };
+}
+
 export function formatExplorerLink(txid) {
     switch (txid.type) {
         case "BTC":
@@ -143,17 +166,6 @@ export function formatExplorerLink(txid) {
         default:
             return "unknown"
     };
-}
-
-export function formatLimitTime(datetime) {
-    const time = new Date(datetime)
-    const dateStr = `${time.getFullYear()}-${String(time.getMonth() + 1).padStart(2, '0')}-${String(time.getDate()).padStart(2, '0')}`
-    const timeStr = time.toLocaleTimeString()
-    if (time instanceof Date && !isNaN(time)) {
-        return `${dateStr} ${timeStr}`
-    } else {
-        return "Invalid time"
-    }
 }
 
 export function formatLimitValue(limit) {
@@ -210,6 +222,12 @@ export async function makeSignedRequest(privateKeyJwk, publicKeyDer, requestBody
     const response = await fetch(url, params)
     return response
 }
+
+export function isNumeric(str) {
+    if (typeof str != "string") return false // we only process strings!  
+    return !isNaN(str) && // use type coercion to parse the _entirety_ of the string (`parseFloat` alone does not do this)...
+           !isNaN(parseFloat(str)) // ...and ensure strings of whitespace fail
+  }
 
 export async function getSupportedCurrencies(privateKeyJwk, publicKeyDer) {
     const response = await makeSignedRequest(privateKeyJwk, publicKeyDer, null, "currencies", 'GET')
@@ -297,4 +315,28 @@ export async function getTicker(currency) {
         method: "POST",
         body: JSON.stringify(currency)
     })
+}
+
+export async function getPairRate(currency_from, currency_to) {
+    return await fetch("/ticker/pair", {
+        method: "POST",
+        body: JSON.stringify({
+            from: currency_from,
+            to: currency_to
+        })
+    })
+}
+
+export async function getMargin(currency_from, currency_to) {
+    return await fetch("/ticker/margin", {
+        method: "POST",
+        body: JSON.stringify({
+            from: currency_from,
+            to: currency_to
+        })
+    })
+}
+
+export async function setMargin(privateKeyJwk, publicKeyDer, req){
+    return await makeSignedRequest(privateKeyJwk, publicKeyDer, req, "margin/set", "POST");
 }

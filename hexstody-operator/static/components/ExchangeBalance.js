@@ -43,17 +43,11 @@ export const ExchangeBalance = {
         },
     },
     watch: {
-        currency: 'fetchData'
+        currency: 'fetchData',
+        eventToggle: 'fetchData'
     },
     props: {
-        privateKeyJwk: {
-            type: Object,
-            required: true
-        },
-        publicKeyDer: {
-            type: Object,
-            required: true
-        },
         currency: {}
-    }
+    },
+    inject: ['eventToggle', 'privateKeyJwk', 'publicKeyDer'],
 }

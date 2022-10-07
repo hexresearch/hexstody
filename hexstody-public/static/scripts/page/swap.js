@@ -12,6 +12,14 @@ function displayError(error) {
     validationDisplay.hidden = false;
 }
 
+async function getAdjustedRate(from, to) {
+    return await fetch("/ticker/pair/adjusted",
+    {
+        method: "POST",
+        body: JSON.stringify({from: from, to: to})
+    });
+}
+
 function calcAvailableBalance(balanceObj) {
     const lim = balanceObj.limit_info.limit.amount;
     const spent = balanceObj.limit_info.spent;
@@ -44,6 +52,15 @@ async function convertAmount(from, to, amount) {
     return Math.round(amount * tickerNorm);
 }
 
+function displayTicker(ticker){
+    document.getElementById("rate-span").innerText = 
+        "1 " + currencyName(ticker.from) + " = " + ticker.rate + " " + currencyName(ticker.to);
+}
+
+function hideTicker(){
+    document.getElementById("rate-span").innerText = "";
+}
+
 function initDrop(idPostfix, options) {
     document.getElementById(`currency-${idPostfix}`).innerHTML = options;
     const optionElements = Array
@@ -52,6 +69,7 @@ function initDrop(idPostfix, options) {
 
     for (const opt of optionElements) {
         opt.addEventListener("click", async event => {
+            hideTicker();
             document.getElementById("from_value").value = 0;
             document.getElementById("to_value").value = 0;
             const currency = event.target.innerText;
@@ -72,7 +90,9 @@ function initDrop(idPostfix, options) {
                 const formattedBalance = formattedCurrencyValue(currencyFrom, availableBalance);
                 document.getElementById("from_max").innerText = `Max ${formattedBalance}`;
                 if (currencyTo) {
-                    const convertedAmount = await convertAmount(currencyFrom, currencyTo, availableBalance);
+                    const ticker = await getAdjustedRate(currencyFrom, currencyTo).then(r => r.json());
+                    displayTicker(ticker);
+                    const convertedAmount = await convertAmount(currencyFrom, currencyTo, ticker.rate, availableBalance);
                     const formattedAmount = formattedCurrencyValue(currencyTo, convertedAmount);
                     document.getElementById("to_max").innerText = `Max ${formattedAmount}`;
                 }
