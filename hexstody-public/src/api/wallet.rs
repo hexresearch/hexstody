@@ -5,7 +5,7 @@ use super::auth::{require_auth, require_auth_user};
 use chrono::prelude::*;
 use hexstody_api::domain::{
     filter_tokens, BtcAddress, Currency, CurrencyAddress, CurrencyTxId, ETHTxid, Erc20, Erc20Token,
-    EthAccount, UnitAmount,
+    EthAccount, UnitAmount, Symbol, CurrencyUnit,
 };
 use hexstody_api::error;
 use hexstody_api::types::{
@@ -21,6 +21,8 @@ use hexstody_db::update::misc::{TokenAction, TokenUpdate};
 use hexstody_db::update::withdrawal::WithdrawalRequestInfo;
 use hexstody_db::update::{StateUpdate, UpdateBody};
 use hexstody_eth_client::client::EthClient;
+use hexstody_runtime_db::RuntimeState;
+use hexstody_ticker_provider::client::TickerClient;
 use log::*;
 use reqwest;
 use rocket::http::CookieJar;
@@ -35,7 +37,9 @@ use uuid::Uuid;
 pub async fn get_balance(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
+    rstate: &State<Arc<Mutex<RuntimeState>>>,
     eth_client: &State<EthClient>,
+    ticker_client: &State<TickerClient>
 ) -> error::Result<Json<api::Balance>> {
     require_auth_user(cookies, state, |_, user| async move {
         let user_data_resp = eth_client.get_user_data(&user.username).await;
@@ -43,32 +47,34 @@ pub async fn get_balance(
             return Err(error::Error::FailedETHConnection(e.to_string()).into());
         };
         let user_data = user_data_resp.unwrap();
-        let mut balances: Vec<api::BalanceItem> = user
-            .currencies
-            .iter()
-            .map(|(cur, info)| {
-                let unit = info.unit.clone();
-                let mut bal = info.balance();
-                match cur {
-                    Currency::BTC => {}
-                    Currency::ETH => {
-                        bal = user_data.data.balanceEth.parse::<u64>().unwrap();
-                    }
-                    Currency::ERC20(token) => {
-                        for tok in &user_data.data.balanceTokens {
-                            if tok.tokenName == token.ticker {
-                                bal = tok.tokenBalance.parse::<u64>().unwrap_or(0);
-                            }
+        let mut rstate = rstate.lock().await;
+        let mut balances: Vec<api::BalanceItem>= vec![];
+        for (cur, info) in user.currencies.iter() {
+            let name = info.unit.name();
+            let mul = info.unit.mul();
+            let ticker = rstate.symbol_to_symbols_generic(ticker_client, cur.symbol(), vec![Symbol::USD, Symbol::RUB]).await.ok();
+            let mut bal = info.balance();
+            match cur {
+                Currency::BTC => {}
+                Currency::ETH => {
+                    bal = user_data.data.balanceEth.parse::<u64>().unwrap();
+                }
+                Currency::ERC20(token) => {
+                    for tok in &user_data.data.balanceTokens {
+                        if tok.tokenName == token.ticker {
+                            bal = tok.tokenBalance.parse::<u64>().unwrap_or(0);
                         }
                     }
                 }
-                api::BalanceItem {
-                    currency: cur.clone(),
-                    value: UnitAmount { amount: bal, unit },
-                    limit_info: info.limit_info.clone(),
-                }
-            })
-            .collect();
+            }
+            let bal = api::BalanceItem {
+                currency: cur.clone(),
+                value: UnitAmount { amount: bal, name, mul },
+                limit_info: info.limit_info.clone(),
+                ticker,
+            };
+            balances.push(bal);
+        }
         balances.sort();
         // balances.sort_by(|b1, b2| b1.currency.cmp(&b2.currency));
         Ok(Json(api::Balance { balances }))
@@ -81,7 +87,9 @@ pub async fn get_balance(
 pub async fn get_balance_by_currency(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
+    rstate: &State<Arc<Mutex<RuntimeState>>>,
     eth_client: &State<EthClient>,
+    ticker_client: &State<TickerClient>,
     currency: Json<Currency>,
 ) -> error::Result<Json<api::BalanceItem>> {
     let cur = currency.into_inner();
@@ -91,9 +99,10 @@ pub async fn get_balance_by_currency(
         match user.currencies.get(&cur) {
             Some(info) => {
                 let limit_info = info.limit_info.clone();
-                let unit = info.unit.clone();
+                let name = info.unit.name();
+                let mul = info.unit.mul();
                 if cur == Currency::BTC {
-                    return Ok((UnitAmount{amount: info.balance(), unit}, limit_info));
+                    return Ok((UnitAmount{amount: info.balance(), name, mul}, limit_info));
                 } else {
                     let user_data_resp = eth_client.get_user_data(&user.username).await;
                     if let Err(e) = user_data_resp {
@@ -104,7 +113,7 @@ pub async fn get_balance_by_currency(
                         Currency::BTC => return nofound_err, // this should not happen
                         Currency::ETH => {
                             return Ok((
-                                UnitAmount{ amount: user_data.data.balanceEth.parse().unwrap(), unit}, 
+                                UnitAmount{ amount: user_data.data.balanceEth.parse().unwrap(), name, mul}, 
                                 limit_info
                             ))
                         }
@@ -112,7 +121,7 @@ pub async fn get_balance_by_currency(
                             for tok in user_data.data.balanceTokens {
                                 if tok.tokenName == token.ticker {
                                     return Ok((
-                                        UnitAmount{ amount: tok.tokenBalance.parse::<u64>().unwrap(), unit },
+                                        UnitAmount{ amount: tok.tokenBalance.parse::<u64>().unwrap(), name, mul },
                                         limit_info,
                                     ));
                                 }
@@ -126,11 +135,14 @@ pub async fn get_balance_by_currency(
         }
     })
     .await;
+    let mut rstate = rstate.lock().await;
+    let ticker = rstate.symbol_to_symbols_generic(ticker_client, currency.symbol(), vec![Symbol::USD, Symbol::RUB]).await.ok();
     resp.map(|(value, limit_info)| {
         Json(BalanceItem {
             currency,
             value,
             limit_info,
+            ticker
         })
     })
 }

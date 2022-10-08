@@ -7,6 +7,8 @@ const DAY = 24 * HOUR
 const BTC_PRECISION = 10 ** 8
 // Amount of wei in 1 ETH
 const ETH_PRECISION = 10 ** 18
+// Generic token precision
+const TOKEN_PRECISION = 10 ** 8;
 const USDT_PRECISION = 10 ** 6
 const CRV_PRECISION = 10 ** 18
 const GTECH_PRECISION = 10 ** 18
@@ -55,6 +57,27 @@ export function* getAllCurrencies() {
     }
 }
 
+export function convertToUnitJson(unit_obj){
+    switch(unit_obj.name){
+        case "BTC":
+            return {BtcUnit: "Btc"}
+        case "mBTC":
+            return {BtcUnit: "Mili"}
+        case "μBTC":
+            return {BtcUnit: "Micro"}
+        case "sat":
+            return {BtcUnit: "sat"}
+        case "ETH":
+            return {EthUnit: "Ether"}
+        case "gwei":
+            return {EthUnit: "Gwei"}
+        case "wei":
+            return {EthUnit: "Wei"}
+        default:
+            return {GenUnit: unit_obj.name}
+    }
+}
+
 // Gas limit for ETH transfer transaction
 export const ETH_TX_GAS_LIMIT = 21_000
 // Gas limit for ERC20 transfer transaction
@@ -63,6 +86,14 @@ export const ERC20_TX_GAS_LIMIT = 150_000
 export async function loadTemplate(path) {
     const template = await (await fetch(path)).text()
     return Handlebars.compile(template)
+}
+
+export function displayUnitAmount(val) {
+    let numberFormat = Intl.NumberFormat('en', {
+        maximumFractionDigits: Math.log10(val.mul),
+    })
+    let value = numberFormat.format(val.amount / val.mul)
+    return value + " " + val.name;
 }
 
 export function formattedCurrencyValue(currency, value) {

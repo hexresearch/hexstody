@@ -491,7 +491,6 @@ pub trait CurrencyUnit {
 #[derive(
     Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
 )]
-#[serde(tag = "type")]
 pub enum Unit {
     BtcUnit(BtcUnit),
     EthUnit(EthUnit),
@@ -597,5 +596,6 @@ impl CurrencyUnit for EthUnit {
 )]
 pub struct UnitAmount {
     pub amount: u64,
-    pub unit: Unit
+    pub name: String,
+    pub mul: u64,
 }

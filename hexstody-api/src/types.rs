@@ -27,7 +27,7 @@ use crate::domain::{CurrencyTxId, Email, PhoneNumber, TgName, UnitAmount};
 use super::domain::currency::{BtcAddress, Currency, CurrencyAddress, Erc20Token};
 
 #[allow(non_snake_case)]
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct TickerETH {
     pub USD: f32,
     pub RUB: f32,
@@ -188,12 +188,15 @@ pub struct EthGasPrice {
     pub gasUsedRatio: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema, Eq, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema, PartialEq)]
 pub struct BalanceItem {
     pub currency: Currency,
     pub value: UnitAmount,
     pub limit_info: LimitInfo,
+    pub ticker: Option<TickerETH>
 }
+
+impl Eq for BalanceItem{ }
 
 impl PartialOrd for BalanceItem {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
