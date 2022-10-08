@@ -22,7 +22,7 @@ use rocket_okapi::{
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::domain::{CurrencyTxId, Email, PhoneNumber, TgName};
+use crate::domain::{CurrencyTxId, Email, PhoneNumber, TgName, UnitAmount};
 
 use super::domain::currency::{BtcAddress, Currency, CurrencyAddress, Erc20Token};
 
@@ -191,7 +191,7 @@ pub struct EthGasPrice {
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Eq, PartialEq)]
 pub struct BalanceItem {
     pub currency: Currency,
-    pub value: u64,
+    pub value: UnitAmount,
     pub limit_info: LimitInfo,
 }
 

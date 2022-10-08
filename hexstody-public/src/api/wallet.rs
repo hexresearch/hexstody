@@ -5,7 +5,7 @@ use super::auth::{require_auth, require_auth_user};
 use chrono::prelude::*;
 use hexstody_api::domain::{
     filter_tokens, BtcAddress, Currency, CurrencyAddress, CurrencyTxId, ETHTxid, Erc20, Erc20Token,
-    EthAccount,
+    EthAccount, UnitAmount,
 };
 use hexstody_api::error;
 use hexstody_api::types::{
@@ -47,6 +47,7 @@ pub async fn get_balance(
             .currencies
             .iter()
             .map(|(cur, info)| {
+                let unit = info.unit.clone();
                 let mut bal = info.balance();
                 match cur {
                     Currency::BTC => {}
@@ -63,7 +64,7 @@ pub async fn get_balance(
                 }
                 api::BalanceItem {
                     currency: cur.clone(),
-                    value: bal,
+                    value: UnitAmount { amount: bal, unit },
                     limit_info: info.limit_info.clone(),
                 }
             })
@@ -90,8 +91,9 @@ pub async fn get_balance_by_currency(
         match user.currencies.get(&cur) {
             Some(info) => {
                 let limit_info = info.limit_info.clone();
+                let unit = info.unit.clone();
                 if cur == Currency::BTC {
-                    return Ok((info.balance(), limit_info));
+                    return Ok((UnitAmount{amount: info.balance(), unit}, limit_info));
                 } else {
                     let user_data_resp = eth_client.get_user_data(&user.username).await;
                     if let Err(e) = user_data_resp {
@@ -101,13 +103,16 @@ pub async fn get_balance_by_currency(
                     match cur.clone() {
                         Currency::BTC => return nofound_err, // this should not happen
                         Currency::ETH => {
-                            return Ok((user_data.data.balanceEth.parse().unwrap(), limit_info))
+                            return Ok((
+                                UnitAmount{ amount: user_data.data.balanceEth.parse().unwrap(), unit}, 
+                                limit_info
+                            ))
                         }
                         Currency::ERC20(token) => {
                             for tok in user_data.data.balanceTokens {
                                 if tok.tokenName == token.ticker {
                                     return Ok((
-                                        tok.tokenBalance.parse::<u64>().unwrap(),
+                                        UnitAmount{ amount: tok.tokenBalance.parse::<u64>().unwrap(), unit },
                                         limit_info,
                                     ));
                                 }

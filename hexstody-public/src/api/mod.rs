@@ -454,7 +454,9 @@ pub async fn serve_api(
                 get_deposit_address_handle,
                 order_exchange,
                 list_my_orders,
-                get_network
+                get_network,
+                set_unit,
+                get_unit,
             ],
         )
         .mount("/ticker/", ticker_api)

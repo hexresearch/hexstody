@@ -106,7 +106,7 @@ async fn test_btc_deposit() {
             Some(amount),
             balances
                 .by_currency(&Currency::BTC)
-                .map(|i| Amount::from_sat(i.value.try_into().expect("Positive balance")))
+                .map(|i| Amount::from_sat(i.value.amount.try_into().expect("Positive balance")))
         );
     })
     .await;
@@ -135,7 +135,7 @@ async fn test_btc_unconfirmed_deposit() {
             Some(amount),
             balances
                 .by_currency(&Currency::BTC)
-                .map(|i| Amount::from_sat(i.value.try_into().expect("Positive balance")))
+                .map(|i| Amount::from_sat(i.value.amount.try_into().expect("Positive balance")))
         );
     })
     .await;
@@ -168,7 +168,7 @@ async fn test_btc_rbf_0conf_deposit() {
             Some(Amount::from_sat(0)),
             balances
                 .by_currency(&Currency::BTC)
-                .map(|i| Amount::from_sat(i.value.try_into().expect("Positive balance")))
+                .map(|i| Amount::from_sat(i.value.amount.try_into().expect("Positive balance")))
         );
     })
     .await;
@@ -203,7 +203,7 @@ async fn test_btc_rbf_1conf_deposit() {
             Some(Amount::from_sat(10_000)),
             balances
                 .by_currency(&Currency::BTC)
-                .map(|i| Amount::from_sat(i.value.try_into().expect("Positive balance")))
+                .map(|i| Amount::from_sat(i.value.amount.try_into().expect("Positive balance")))
         );
     })
     .await;

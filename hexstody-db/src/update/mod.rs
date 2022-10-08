@@ -21,7 +21,7 @@ use self::deposit::DepositAddress;
 use self::limit::{LimitChangeUpd, LimitCancelData, LimitChangeDecision};
 use self::signup::SignupInfo;
 use self::withdrawal::{WithdrawalRequestDecisionInfo, WithdrawalRequestInfo, WithdrawCompleteInfo, WithdrawalRejectInfo};
-use self::misc::{InviteRec, TokenUpdate, SetLanguage, ConfigUpdateData, PasswordChangeUpd, SetPublicKey};
+use self::misc::{InviteRec, TokenUpdate, SetLanguage, ConfigUpdateData, PasswordChangeUpd, SetPublicKey, SetUnit};
 use super::state::transaction::BtcTransaction;
 use super::state::State;
 
@@ -90,7 +90,9 @@ pub enum UpdateBody {
     /// Exchange decision
     ExchangeDecision(ExchangeDecision),
     /// Set up exchange deposit address
-    ExchangeAddress(CurrencyAddress)
+    ExchangeAddress(CurrencyAddress),
+    /// Set user's unit info
+    SetUnit(SetUnit)
 }
 
 impl UpdateBody {
@@ -119,6 +121,7 @@ impl UpdateBody {
             UpdateBody::ExchangeRequest(_) => UpdateTag::ExchangeRequest,
             UpdateBody::ExchangeDecision(_) => UpdateTag::ExchangeDecision,
             UpdateBody::ExchangeAddress(_) => UpdateTag::ExchangeAddress,
+            UpdateBody::SetUnit(_) => UpdateTag::SetUnit,
         }
     }
 
@@ -147,6 +150,7 @@ impl UpdateBody {
             UpdateBody::ExchangeRequest(v) => serde_json::to_value(v),
             UpdateBody::ExchangeDecision(v) => serde_json::to_value(v),
             UpdateBody::ExchangeAddress(v) => serde_json::to_value(v),
+            UpdateBody::SetUnit(v) => serde_json::to_value(v),
         }
     }
 }
@@ -176,6 +180,7 @@ pub enum UpdateTag {
     ExchangeRequest,
     ExchangeDecision,
     ExchangeAddress,
+    SetUnit,
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -215,6 +220,7 @@ impl fmt::Display for UpdateTag {
             UpdateTag::ExchangeRequest => write!(f, "exchange request"),
             UpdateTag::ExchangeDecision => write!(f, "exchange decision"),
             UpdateTag::ExchangeAddress => write!(f, "exchange address"),
+            UpdateTag::SetUnit => write!(f, "set unit"),
         }
     }
 }
@@ -247,6 +253,7 @@ impl FromStr for UpdateTag {
             "exchange request" => Ok(UpdateTag::ExchangeRequest),
             "exchange decision" => Ok(UpdateTag::ExchangeDecision),
             "exchange address" => Ok(UpdateTag::ExchangeAddress),
+            "set unit" => Ok(UpdateTag::SetUnit),
             _ => Err(UnknownUpdateTag(s.to_owned())),
         }
     }
@@ -311,6 +318,7 @@ impl UpdateTag {
             UpdateTag::ExchangeRequest => Ok(UpdateBody::ExchangeRequest(serde_json::from_value(value)?)),
             UpdateTag::ExchangeDecision => Ok(UpdateBody::ExchangeDecision(serde_json::from_value(value)?)),
             UpdateTag::ExchangeAddress => Ok(UpdateBody::ExchangeAddress(serde_json::from_value(value)?)),
+            UpdateTag::SetUnit => Ok(UpdateBody::SetUnit(serde_json::from_value(value)?)),
         }
     }
 }

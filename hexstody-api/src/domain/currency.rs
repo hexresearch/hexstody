@@ -176,6 +176,14 @@ impl Currency {
             },
         }
     }
+
+    pub fn default_unit(&self) -> Unit {
+        match self {
+            Currency::BTC => Unit::BtcUnit(BtcUnit::Btc),
+            Currency::ETH => Unit::EthUnit(EthUnit::Ether),
+            Currency::ERC20(token) => Unit::GenUnit(token.ticker.clone()),
+        }
+    }
 }
 
 pub fn filter_tokens(curs: Vec<Currency>) -> Vec<Erc20Token> {
@@ -468,4 +476,126 @@ impl Symbol {
             },
         }
     }
+}
+
+pub trait CurrencyUnit {
+    /// Display name of the unit
+    fn name(&self) -> String;
+    /// Multiplier of minimal unit
+    fn mul(&self) -> u64;
+    /// Gen currency by unit
+    fn currency(&self) -> Option<Currency>;
+}
+
+/// Currency units
+#[derive(
+    Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
+)]
+#[serde(tag = "type")]
+pub enum Unit {
+    BtcUnit(BtcUnit),
+    EthUnit(EthUnit),
+    /// Tokens have only fixed units: whole token with multiplier of 10^8
+    GenUnit(String)
+}
+
+impl CurrencyUnit for Unit {
+    fn name(&self) -> String {
+        match self {
+            Unit::BtcUnit(u) => u.name(),
+            Unit::EthUnit(u) => u.name(),
+            Unit::GenUnit(u) => u.clone(),
+        }
+    }
+
+    fn mul(&self) -> u64 {
+        match self {
+            Unit::BtcUnit(u) => u.mul(),
+            Unit::EthUnit(u) => u.mul(),
+            Unit::GenUnit(_) => 100_000_000,
+        }
+    }
+
+    fn currency(&self) -> Option<Currency> {
+        match self {
+            Unit::BtcUnit(_) => Some(Currency::BTC),
+            Unit::EthUnit(_) => Some(Currency::ETH),
+            Unit::GenUnit(u) => Currency::get_by_name(u),
+        }
+    }
+}
+
+/// Supported BTC units
+#[derive(
+    Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
+)]
+pub enum BtcUnit {
+    Sat,
+    Micro,
+    Mili,
+    Btc
+}
+
+impl CurrencyUnit for BtcUnit {
+    fn name(&self) -> String {
+        match self {
+            BtcUnit::Sat => "sat",
+            BtcUnit::Micro => "μBTC",
+            BtcUnit::Mili => "mBTC",
+            BtcUnit::Btc => "BTC",
+        }.to_owned()
+    }
+
+    fn mul(&self) -> u64 {
+        match self {
+            BtcUnit::Sat => 1,
+            BtcUnit::Micro => 100,
+            BtcUnit::Mili => 100_000,
+            BtcUnit::Btc => 100_000_000,
+        }
+    }
+
+    fn currency(&self) -> Option<Currency> {
+        Some(Currency::BTC)
+    }
+}
+
+/// Supported ETH units
+#[derive(
+    Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
+)]
+pub enum EthUnit {
+    Wei,
+    Gwei,
+    Ether
+}
+
+impl CurrencyUnit for EthUnit {
+    fn name(&self) -> String {
+        match self {
+            EthUnit::Wei => "Wei",
+            EthUnit::Gwei => "Gwei",
+            EthUnit::Ether => "ETH",
+        }.to_owned()
+    }
+
+    fn mul(&self) -> u64 {
+        match self {
+            EthUnit::Wei => 1,
+            EthUnit::Gwei => 1_000_000_000,
+            EthUnit::Ether => 1_000_000_000_000_000_000,
+        }
+    }
+
+    fn currency(&self) -> Option<Currency> {
+        Some(Currency::ETH)
+    }
+}
+
+#[derive(
+    Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
+)]
+pub struct UnitAmount {
+    pub amount: u64,
+    pub unit: Unit
 }

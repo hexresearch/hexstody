@@ -11,15 +11,17 @@ use hexstody_api::domain::Email;
 use hexstody_api::domain::Language;
 use hexstody_api::domain::PhoneNumber;
 use hexstody_api::domain::TgName;
+use hexstody_api::domain::Unit;
 use hexstody_api::domain::{Currency, CurrencyAddress};
 use hexstody_api::types::ExchangeFilter;
 use hexstody_api::types::Invite;
 use hexstody_api::types::LimitInfo;
 use p256::PublicKey;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
-#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
 pub struct UserConfig {
     pub language: Language,
     pub email: Option<Email>,
@@ -127,19 +129,22 @@ pub struct UserCurrencyInfo {
     /// Confirmed incoming exchange requests. We store only amounts for balance calculations
     pub incoming_exchange_requests: HashMap<ExchangeOrderId, u64>,
     /// User's limit info. 
-    pub limit_info: LimitInfo
+    pub limit_info: LimitInfo,
+    /// Unit used for this currency
+    pub unit: Unit
 }
 
 impl UserCurrencyInfo {
     pub fn new(currency: Currency) -> Self {
         UserCurrencyInfo {
+            unit: currency.default_unit(),
             currency,
             deposit_info: Vec::new(),
             transactions: Vec::new(),
             withdrawal_requests: HashMap::new(),
             exchange_requests: HashMap::new(),
             incoming_exchange_requests: HashMap::new(),
-            limit_info: LimitInfo::default()
+            limit_info: LimitInfo::default(),
         }
     }
 
