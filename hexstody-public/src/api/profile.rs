@@ -1,6 +1,6 @@
 use std::{sync::Arc, fmt::Debug};
 use base64;
-use hexstody_api::{types::{LimitApiResp, LimitChangeReq, LimitChangeResponse, ConfigChangeRequest, LimitChangeFilter}, domain::{Currency, Language, Email, PhoneNumber, TgName, Unit, CurrencyUnit}};
+use hexstody_api::{types::{LimitApiResp, LimitChangeReq, LimitChangeResponse, ConfigChangeRequest, LimitChangeFilter}, domain::{Currency, Language, Email, PhoneNumber, TgName, Unit, CurrencyUnit, UnitInfo, UserUnitInfo}};
 use rocket::{get, http::{CookieJar, Status}, State, serde::json::Json, response::Redirect, post};
 use rocket_okapi::openapi;
 use tokio::sync::{Mutex, mpsc};
@@ -221,20 +221,22 @@ pub async fn set_user_public_key(
 }
 
 #[openapi(tag = "profile")]
-#[post("/profile/unit/set", data="<unit_req>")]
+#[post("/profile/unit/set", data="<unit_reqs>")]
 pub async fn set_unit(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
     updater: &State<mpsc::Sender<StateUpdate>>,
-    unit_req: Json<Unit>
+    unit_reqs: Json<Vec<Unit>>
 ) -> error::Result<()> {
-    let unit_req = unit_req.into_inner();
+    let unit_reqs = unit_reqs.into_inner();
     require_auth_user(cookies, state, |_, user| async move {
-        let cur = unit_req.currency().ok_or(error::Error::UnknownCurrency(unit_req.name()))?;
-        let cinfo = user.currencies.get(&cur).ok_or(error::Error::NoUserCurrency(cur))?;
-        if cinfo.unit != unit_req {
-            let _ = updater.send(StateUpdate::new(UpdateBody::SetUnit(SetUnit{ user: user.username, unit: unit_req }))).await;
-        };
+        for unit_req in unit_reqs {
+            let cur = unit_req.currency().ok_or(error::Error::UnknownCurrency(unit_req.name()))?;
+            let cinfo = user.currencies.get(&cur).ok_or(error::Error::NoUserCurrency(cur))?;
+            if cinfo.unit != unit_req {
+                let _ = updater.send(StateUpdate::new(UpdateBody::SetUnit(SetUnit{ user: user.username.clone(), unit: unit_req }))).await;
+            };
+        }
         Ok(())
     }).await
 }
@@ -250,5 +252,29 @@ pub async fn get_unit(
     require_auth_user(cookies, state, |_, user| async move {
         let cinfo = user.currencies.get(&currency).ok_or(error::Error::NoUserCurrency(currency))?;
         Ok(Json(cinfo.unit.clone()))
+    }).await
+}
+
+#[openapi(tag = "profile")]
+#[get("/profile/unit/all")]
+pub async fn get_all_units(
+    cookies: &CookieJar<'_>,
+    state: &State<Arc<Mutex<DbState>>>,
+) -> error::Result<Json<Vec<UserUnitInfo>>> {
+    require_auth_user(cookies, state, |_, user| async move {
+        let units: Vec<UnitInfo> =  user.currencies.values()
+            .filter_map(|cinfo|
+                if cinfo.unit.is_generic() {
+                    None
+                } else {
+                    Some(cinfo.unit.clone().into())
+                }
+            ).collect();
+        let mut info: Vec<UserUnitInfo> = units
+                .into_iter()
+                .map(|ui| (ui.unit.currency().unwrap(), ui).into())
+                .collect();
+        info.sort_by(|a,b| a.currency.cmp(&b.currency));
+        Ok(Json(info))
     }).await
 }

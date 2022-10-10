@@ -1,0 +1,38 @@
+<button class="collapsible m-t-05em">{{lang.tokens}}</button>
+<div class="collapsible-content">
+    <div class="fit-content">
+        {{#each tokens}}
+        <div class="content-row mt-5 ticker-with-checkbox">
+            <span id="curr-name-{{tokenFormatName}}" class="font-big-size mr-2em">
+                {{tokenFormatName}}
+            </span>
+            {{#if this.is_active}}
+                <input id="checkbox-{{tokenFormatName}}" class="zoom-1-6" type="checkbox" checked>
+            {{else}}
+                <input id="checkbox-{{tokenFormatName}}" class="zoom-1-6" type="checkbox">
+            {{/if}}
+        </div>
+        {{/each}}
+    </div>
+</div>
+<button class="collapsible m-t-05em">{{lang.units}}</button>
+<div class="collapsible-content">
+    <div class="fit-content">
+        {{#each units}}
+            <div class="display-flex m-t-1em">
+                <span id="curr-name-{{limitsFormatName}}" class="font-big-size mr-2em">
+                    {{limitsFormatName}}
+                </span>
+                <select id="unit-select-{{limitsFormatName}}" class="p-05em">
+                    {{#each this.supported_units}}
+                    <option value="{{extractUnitValue}}">{{this.name}}</option>
+                    {{/each}}
+                </select>
+            </div>
+        {{/each}}
+        <div id="btn-box" style="display: none;">
+            <button id="confirm-units-btn" type="button" class="button is-primary deposit-button margin-t-24px mr-2em"> {{lang.confirm}} </button>
+            <button id="reset-units-btn" type="button" class="button is-danger deposit-button margin-t-24px"> {{lang.clear}} </button>
+        </div>
+    </div>
+</div>

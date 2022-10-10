@@ -1,6 +1,6 @@
 [
-    {"id": "tokens", "label": "токены"}, 
+    {"id": "currency", "label": "валюта"}, 
     {"id": "limits", "label": "лимиты"},
-    {"id": "settings", "label": "настройки"},
+    {"id": "personal", "label": "личность"},
     {"id": "security", "label":"безопасность"}
 ]

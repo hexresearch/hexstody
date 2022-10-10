@@ -1,6 +1,6 @@
 [
-    {"id": "tokens", "label": "tokens"}, 
+    {"id": "currency", "label": "currency"}, 
     {"id": "limits", "label": "limits"},
-    {"id": "settings", "label": "settings"},
+    {"id": "personal", "label": "personal"},
     {"id": "security", "label":"security"}
 ]

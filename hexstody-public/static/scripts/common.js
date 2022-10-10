@@ -57,24 +57,22 @@ export function* getAllCurrencies() {
     }
 }
 
-export function convertToUnitJson(unit_obj){
-    switch(unit_obj.name){
+export function convertToUnitJson(name, unit){
+    switch(name){
         case "BTC":
-            return {BtcUnit: "Btc"}
-        case "mBTC":
-            return {BtcUnit: "Mili"}
-        case "μBTC":
-            return {BtcUnit: "Micro"}
-        case "sat":
-            return {BtcUnit: "sat"}
+            if (["Btc", "Mili", "Micro", "Sat"].includes(unit)) {
+                return {BtcUnit: unit}
+            } else {
+                return null
+            }
         case "ETH":
-            return {EthUnit: "Ether"}
-        case "gwei":
-            return {EthUnit: "Gwei"}
-        case "wei":
-            return {EthUnit: "Wei"}
-        default:
-            return {GenUnit: unit_obj.name}
+            if (["Ether", "Gwei", "Wei"].includes(unit)) {
+                return {EthUnit: unit}
+            } else {
+                return null
+            }
+        default: 
+            return {GenUnit: unit}
     }
 }
 
@@ -177,10 +175,8 @@ export function initTabs(tabIds, hook, selected) {
     tabClicked(tabIds[i])
 }
 
-export function initCollapsibles() {
-    console.log("A")
+export function initCollapsibles(autoopenId) {
     const cols = document.getElementsByClassName("collapsible")
-    console.log(cols)
     for (let col of cols) {
         col.addEventListener("click", function () {
             this.classList.toggle("active")
@@ -192,9 +188,12 @@ export function initCollapsibles() {
             }
         })
     }
-    // .forEach(function (coll) {
-
-    // });
+    if(autoopenId){
+        const content = document.getElementById(autoopenId);
+        if (content){
+            content.style.display = "block"
+        }
+    }
 }
 
 export function initDropDowns() {

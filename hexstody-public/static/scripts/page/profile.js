@@ -1,11 +1,11 @@
-import { loadTemplate, initTabs, initCollapsibles, getUserName, chunkifyTransposed, indexArrayFromOne } from "../common.js";
+import { loadTemplate, initTabs, initCollapsibles, getUserName, chunkifyTransposed, indexArrayFromOne, convertToUnitJson } from "../common.js";
 import { localizeChangeStatus, localizeSpan, getLanguage } from "../localize.js";
 import { hasKeyPairStored, generateKeyPair, privateKeyToMnemonic, mnemonicToPrivateKey, retrievePrivateKey, removeStoredKeyPair, storePrivateKey } from "../crypto.js";
 
 const errorBox = document.getElementById("error-box")
 
 var tabs = [];
-let tokensTemplate = null;
+let currencyTabTemplate = null;
 let limitsTemplate = null;
 let settingsTemplate = null
 let origLimits = null;
@@ -19,6 +19,10 @@ const phoneRegex = /^(\+\d{1,2}\s?)?1?\-?\.?\s?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{
 
 async function getTokens() {
     return await fetch("/profile/tokens/list").then(r => r.json());
+}
+
+async function getUnits() {
+    return await fetch("/profile/unit/all").then(r => r.json());
 }
 
 async function getLimits(){
@@ -114,6 +118,14 @@ async function clearPublicKey(){
     }
 }
 
+async function postUnits(units) {
+    return await fetch("/profile/unit/set",
+    {
+        method: "POST",
+        body: JSON.stringify(units)
+    });
+}
+
 function changeCancelHandler(currency){
     return async function(){
         await postChangeCancel(currency);
@@ -132,16 +144,16 @@ function getCurName(val){
 }
 
 async function initTemplates() {
-    const [tokensTemp, limitsTemp, settingsTemp, securityTemp, mnemTemp, dictD] = await Promise.allSettled([
-        await loadTemplate("/templates/token.html.hbs"),
-        await loadTemplate("/templates/limits.html.hbs"),
-        await loadTemplate("/templates/settings.html.hbs"),
-        await loadTemplate("/templates/security.html.hbs"),
-        await loadTemplate("/templates/mnemonic.html.hbs"),
+    const [currencyTemp, limitsTemp, settingsTemp, securityTemp, mnemTemp, dictD] = await Promise.allSettled([
+        await loadTemplate("/templates/profile/currency.html.hbs"),
+        await loadTemplate("/templates/profile/limits.html.hbs"),
+        await loadTemplate("/templates/profile/settings.html.hbs"),
+        await loadTemplate("/templates/profile/security.html.hbs"),
+        await loadTemplate("/templates/profile/mnemonic.html.hbs"),
         await fetch("/translations/profile.json").then(r => r.json()),
     ]);
 
-    tokensTemplate = tokensTemp.value;
+    currencyTabTemplate = currencyTemp.value;
     limitsTemplate = limitsTemp.value;
     settingsTemplate = settingsTemp.value
     securityTemplate = securityTemp.value;
@@ -150,6 +162,7 @@ async function initTemplates() {
     Handlebars.registerHelper('tokenFormatName', function () { return this.token.ticker; });
     Handlebars.registerHelper('limitsFormatName', function () { return getCurName(this) });
     Handlebars.registerHelper('changesFormatName', function () { return getCurName(this) });
+    Handlebars.registerHelper('extractUnitValue', function () { return Object.values(this.unit)[0] });
     Handlebars.registerHelper('changeStatus', function () { return localizeChangeStatus(this.status) });
     Handlebars.registerHelper('localizeSpan', function () { return localizeSpan(this.limit.span)})
 }
@@ -167,23 +180,61 @@ function setLimit(limit){
 async function checkboxHandler(event, token) {
     if (event.currentTarget.checked) {
         const resp = await postEnable(token);
-        loadTokens();
+        loadCurrencyTab();
     } else {
         const resp = await postDisable(token);
-        loadTokens();
+        loadCurrencyTab();
     }
 }
 
-async function loadTokens() {
+async function loadCurrencyTab() {
     const tokens = await getTokens();
-    const tokensDrawUpdate = tokensTemplate({tokens: tokens.tokens, lang: dict.tokens});
-    const tokensElem = document.getElementById("tokens-tab-body");
-    tokensElem.innerHTML = tokensDrawUpdate;
+    const units = await getUnits();
+    const currencyDrawUpdate = currencyTabTemplate({tokens: tokens.tokens, units: units, lang: dict.currency});
+    const currencyEl = document.getElementById("currency-tab-body");
+    currencyEl.innerHTML = currencyDrawUpdate;
+    initCollapsibles();
     const tokensArray = tokens.tokens;
     tokensArray.forEach(token => {
         const checkbox = document.getElementById('checkbox-'+token.token.ticker)
         checkbox.addEventListener('change', (event) => checkboxHandler(event, token.token))
     });
+    var acc = {};
+    units.forEach(unit => {
+        const select = document.getElementById("unit-select-" + getCurName(unit))
+        select.value = Object.values(unit.unit)[0];
+        select.addEventListener('change', (event) => unitChangeHandler(select.value, units, unit, acc))
+    })
+}
+
+async function unitChangeHandler(newVal, origUnits, origUnit, acc) {
+    const origVal = Object.values(origUnit.unit)[0];
+    const id = getCurName(origUnit)
+    if (newVal == origVal) {
+        delete acc[id]
+    } else {
+        acc[id] = newVal
+    }
+
+    if (Object.keys(acc).length === 0){
+        document.getElementById("btn-box").style.display = "none";
+    } else {
+        document.getElementById("reset-units-btn").onclick = loadCurrencyTab;
+        document.getElementById("confirm-units-btn").onclick = postUnitChanges(acc);
+        document.getElementById("btn-box").style.display = "block";
+    }
+}
+
+function postUnitChanges(acc){
+    return async function(){
+        var units = [];
+        Object.keys(acc).forEach(key => {
+            const unit = convertToUnitJson(key, acc[key])
+            units.push(unit)
+        })
+        await postUnits(units);
+        loadCurrencyTab()
+    }
 }
 
 async function loadLimits(){
@@ -204,23 +255,23 @@ async function loadLimits(){
     })
 }
 
-async function loadSettings(editable, load){
+async function loadPersonalTab(editable, load){
     hideError()
     if (load){
         origConfig = await getMyConfig()
     }
     const settingsDrawUpdate = settingsTemplate({config: origConfig, lang: dict.settings, editable: editable});
-    const settingsElement = document.getElementById("settings-tab-body");
+    const settingsElement = document.getElementById("personal-tab-body");
     settingsElement.innerHTML = settingsDrawUpdate
 
     if (editable){
         const confirmBtn = document.getElementById("confirm-config-changes-btn");
         const clearBtn = document.getElementById("reset-changes-btn");
         confirmBtn.onclick = confirmCfgChanges;
-        clearBtn.onclick = loadSettingsCurry(false, false);
+        clearBtn.onclick = loadPersonalTabCurry(false, false);
     } else {
         const editBtn = document.getElementById("edit-config-btn");
-        editBtn.onclick = loadSettingsCurry(true, false);
+        editBtn.onclick = loadPersonalTabCurry(true, false);
     }
 }
 
@@ -295,15 +346,15 @@ async function confirmCfgChanges(){
             const txt = await res.json();
             displayError(txt.message)
         } else {
-            loadSettings(false, true)
+            loadPersonalTab(false, true)
         }
     } else {
-        loadSettings(false, false)
+        loadPersonalTab(false, false)
     }
 }
 
-function loadSettingsCurry(editable, load){
-    return function(){ return loadSettings(editable, load) }
+function loadPersonalTabCurry(editable, load){
+    return function(){ return loadPersonalTab(editable, load) }
 }
 
 function setChangeHandlers(cur) {
@@ -498,14 +549,14 @@ async function tabUrlHook(tabId){
     titleEl.innerText = titleOld[0] + ": " + properName;
 
     switch(tabId){
-        case "tokens-tab": 
-            await loadTokens();
+        case "currency-tab": 
+            await loadCurrencyTab();
             break;
         case "limits-tab":
             await loadLimits();
             break;
-        case "settings-tab":
-            await loadSettings(false, true);
+        case "personal-tab":
+            await loadPersonalTab(false, true);
             break;
         case "security-tab":
             await loadSecurityTab();

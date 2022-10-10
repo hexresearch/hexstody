@@ -157,7 +157,7 @@ async fn profile_page(
             page_title,
             parent: "base_with_header",
             tabs: tabs.unwrap(),
-            selected: tab.unwrap_or("tokens".to_string()),
+            selected: tab.unwrap_or("currency".to_string()),
             username: &user.username,
             lang: context! {
                 selected_lang: user.config.language.to_alpha().to_uppercase(),
@@ -457,6 +457,7 @@ pub async fn serve_api(
                 get_network,
                 set_unit,
                 get_unit,
+                get_all_units
             ],
         )
         .mount("/ticker/", ticker_api)

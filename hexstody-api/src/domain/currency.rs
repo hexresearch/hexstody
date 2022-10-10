@@ -485,6 +485,8 @@ pub trait CurrencyUnit {
     fn mul(&self) -> u64;
     /// Gen currency by unit
     fn currency(&self) -> Option<Currency>;
+    /// List all avaliable units
+    fn supported(&self) -> Vec<Self> where Self: Sized;
 }
 
 /// Currency units
@@ -496,6 +498,15 @@ pub enum Unit {
     EthUnit(EthUnit),
     /// Tokens have only fixed units: whole token with multiplier of 10^8
     GenUnit(String)
+}
+
+impl Unit {
+    pub fn is_generic(&self) -> bool {
+        match self {
+            Unit::GenUnit(_) => true,
+            _ => false
+        }
+    }
 }
 
 impl CurrencyUnit for Unit {
@@ -520,6 +531,14 @@ impl CurrencyUnit for Unit {
             Unit::BtcUnit(_) => Some(Currency::BTC),
             Unit::EthUnit(_) => Some(Currency::ETH),
             Unit::GenUnit(u) => Currency::get_by_name(u),
+        }
+    }
+
+    fn supported(&self) -> Vec<Self> where Self: Sized {
+        match self {
+            Unit::BtcUnit(unit) => unit.supported().into_iter().map(|u| Unit::BtcUnit(u)).collect(),
+            Unit::EthUnit(unit) => unit.supported().into_iter().map(|u| Unit::EthUnit(u)).collect(),
+            Unit::GenUnit(name) => vec![Unit::GenUnit(name.clone())],
         }
     }
 }
@@ -557,6 +576,10 @@ impl CurrencyUnit for BtcUnit {
     fn currency(&self) -> Option<Currency> {
         Some(Currency::BTC)
     }
+
+    fn supported(&self) -> Vec<Self> where Self: Sized {
+        vec![BtcUnit::Btc, BtcUnit::Mili, BtcUnit::Micro, BtcUnit::Sat]
+    }
 }
 
 /// Supported ETH units
@@ -589,6 +612,10 @@ impl CurrencyUnit for EthUnit {
     fn currency(&self) -> Option<Currency> {
         Some(Currency::ETH)
     }
+
+    fn supported(&self) -> Vec<Self> where Self: Sized {
+        vec![EthUnit::Ether, EthUnit::Gwei, EthUnit::Wei]
+    }
 }
 
 #[derive(
@@ -598,4 +625,42 @@ pub struct UnitAmount {
     pub amount: u64,
     pub name: String,
     pub mul: u64,
+}
+
+#[derive(
+    Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
+)]
+pub struct UnitInfo {
+    pub unit: Unit,
+    pub name: String,
+    pub mul: u64,
+}
+
+impl From<Unit> for UnitInfo {
+    fn from(u: Unit) -> Self {
+        UnitInfo { 
+            unit: u.clone(), 
+            name: u.name(), 
+            mul: u.mul() 
+        }
+    }
+}
+
+#[derive(
+    Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
+)]
+pub struct UserUnitInfo{
+    pub currency: Currency,
+    pub unit: Unit,
+    pub supported_units: Vec<UnitInfo>
+}
+
+impl From<(Currency, UnitInfo)> for UserUnitInfo{
+    fn from((currency, uinfo): (Currency, UnitInfo)) -> Self {
+        UserUnitInfo { 
+            currency: currency, 
+            unit: uinfo.unit.clone(), 
+            supported_units: uinfo.unit.supported().into_iter().map(|u| u.into()).collect()
+        }
+    }
 }
