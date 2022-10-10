@@ -121,5 +121,5 @@ export const Invites = {
             this.showInvites = !this.showInvites
         }
     },
-    inject: ['eventSource', 'privateKeyJwk', 'publicKeyDer'],
+    inject: ['privateKeyJwk', 'publicKeyDer'],
 }
