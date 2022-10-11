@@ -621,15 +621,6 @@ impl CurrencyUnit for EthUnit {
 #[derive(
     Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
 )]
-pub struct UnitAmount {
-    pub amount: u64,
-    pub name: String,
-    pub mul: u64,
-}
-
-#[derive(
-    Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
-)]
 pub struct UnitInfo {
     pub unit: Unit,
     pub name: String,

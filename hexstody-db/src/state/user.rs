@@ -104,6 +104,10 @@ impl UserInfo {
             })
         ).collect()
     }
+
+    pub fn get_unit_by_currency(&self, cur: Currency) -> Unit{
+        self.currencies.get(&cur).map(|cinfo| cinfo.unit.clone()).unwrap_or(cur.default_unit())
+    }
 }
 
 impl From<(NaiveDateTime, SignupInfo)> for UserInfo {

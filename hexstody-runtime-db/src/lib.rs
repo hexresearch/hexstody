@@ -8,6 +8,25 @@ use serde::de::DeserializeOwned;
 use serde_json::Value;
 use serde_json::Map;
 
+pub struct FeeEstimates {
+    /// Estimate of bytes per tx for BTC
+    pub btc_bytes_per_tx: u64,
+    /// Gas limit for Ethereum transfer transaction
+    pub eth_tx_gas_limit: u64,
+    /// Gas limit for ERC20 transfer transaction
+    pub erc20_tx_gas_limit: u64
+}
+
+impl FeeEstimates {
+    pub fn new() -> Self{
+        FeeEstimates{
+            btc_bytes_per_tx: 1024,
+            eth_tx_gas_limit: 21_000,
+            erc20_tx_gas_limit: 150_000,
+        }
+    }
+}
+
 pub struct RuntimeState {
     /// Runtime cache of challenges to log in with a key
     pub challenges: HashMap<String, String>,
@@ -17,7 +36,9 @@ pub struct RuntimeState {
     pub cached_tickers: HashMap<Symbol, HashMap<Symbol, f64>>,
     /// Exchange margins, applied to cached_tickers
     /// Store separately to make storing tickers easier and allow ops to see original rates
-    pub margins: HashMap<Symbol, HashMap<Symbol, f64>>
+    pub margins: HashMap<Symbol, HashMap<Symbol, f64>>,
+    /// Fee config
+    pub fee_estimates: FeeEstimates
 }
 
 impl RuntimeState {
@@ -25,7 +46,8 @@ impl RuntimeState {
         RuntimeState{
             challenges: HashMap::new(),
             cached_tickers: HashMap::new(),
-            margins: HashMap::new()
+            margins: HashMap::new(),
+            fee_estimates: FeeEstimates::new()
         }
     }
 

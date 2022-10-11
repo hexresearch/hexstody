@@ -124,7 +124,7 @@ impl HexstodyClient {
         Ok(serde_json::from_str(&response)?)
     }
 
-    pub async fn eth_ticker(&self, currency: Currency) -> Result<TickerETH> {
+    pub async fn eth_ticker(&self, currency: Currency) -> Result<TickerUsdRub> {
         let path = "/ethticker";
         let endpoint = format!("{}{}", self.server, path);
         let request = self.client.post(endpoint).json(&currency).build()?;

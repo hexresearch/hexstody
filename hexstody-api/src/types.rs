@@ -22,13 +22,13 @@ use rocket_okapi::{
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::domain::{CurrencyTxId, Email, PhoneNumber, TgName, UnitAmount};
+use crate::domain::{CurrencyTxId, Email, PhoneNumber, TgName};
 
 use super::domain::currency::{BtcAddress, Currency, CurrencyAddress, Erc20Token};
 
 #[allow(non_snake_case)]
-#[derive(Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
-pub struct TickerETH {
+#[derive(Debug, PartialEq, Serialize, Clone, Copy, Deserialize, JsonSchema)]
+pub struct TickerUsdRub {
     pub USD: f32,
     pub RUB: f32,
 }
@@ -180,11 +180,11 @@ pub struct EthFeeResp {
 #[allow(non_snake_case)]
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct EthGasPrice {
-    pub LastBlock: String,
-    pub SafeGasPrice: String,
-    pub ProposeGasPrice: String,
-    pub FastGasPrice: String,
-    pub suggestBaseFee: String,
+    pub LastBlock: u64,
+    pub SafeGasPrice: f64,
+    pub ProposeGasPrice: f64,
+    pub FastGasPrice: f64,
+    pub suggestBaseFee: f64,
     pub gasUsedRatio: String,
 }
 
@@ -193,7 +193,7 @@ pub struct BalanceItem {
     pub currency: Currency,
     pub value: UnitAmount,
     pub limit_info: LimitInfo,
-    pub ticker: Option<TickerETH>
+    pub ticker: Option<TickerUsdRub>
 }
 
 impl Eq for BalanceItem{ }
@@ -992,4 +992,21 @@ impl ConfirmationsConfig {
             .reduce(|accum, item| if accum >= item { accum } else { item })
             .unwrap()
     }
+}
+
+#[derive(
+    Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
+)]
+pub struct UnitAmount {
+    pub amount: u64,
+    pub name: String,
+    pub mul: u64,
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq)]
+pub struct UnitTickedAmount{
+    pub amount: u64,
+    pub name: String,
+    pub mul: u64,
+    pub ticker: Option<TickerUsdRub>
 }

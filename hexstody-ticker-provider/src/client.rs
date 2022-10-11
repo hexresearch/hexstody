@@ -89,7 +89,7 @@ impl TickerClient {
 mod tests {
     use std::{future::Future, panic::AssertUnwindSafe};
     use futures::FutureExt;
-    use hexstody_api::types::TickerETH;
+    use hexstody_api::types::TickerUsdRub;
     use super::*;
     async fn run_test<F, Fut>(test_body: F)
     where
@@ -116,7 +116,7 @@ mod tests {
     #[tokio::test]
     async fn test_eth_to_ethticker() {
         run_test(|client| async move {
-            let resp = client.symbol_to_symbols_generic::<TickerETH>(&Symbol::ETH, &vec![Symbol::USD, Symbol::RUB]).await;
+            let resp = client.symbol_to_symbols_generic::<TickerUsdRub>(&Symbol::ETH, &vec![Symbol::USD, Symbol::RUB]).await;
             assert!(resp.is_ok());
         }).await;
     }
@@ -124,7 +124,7 @@ mod tests {
     #[tokio::test]
     async fn test_eth_to_ethticker_fail() {
         run_test(|client| async move {
-            let resp = client.symbol_to_symbols_generic::<TickerETH>(&Symbol::ETH, &vec![Symbol::USD]).await;
+            let resp = client.symbol_to_symbols_generic::<TickerUsdRub>(&Symbol::ETH, &vec![Symbol::USD]).await;
             assert!(resp.is_err());
         }).await;
     }
