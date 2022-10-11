@@ -188,7 +188,8 @@ pub async fn get_fee(
     ticker: bool
 ) -> error::Result<Json<UnitTickedAmount>>{
     let currency = currency.into_inner();
-    let symbol = currency.symbol();
+    // symbol is used for fee ticker. For Eth and Erc20 we use Eth ticker
+    let symbol = if matches!(currency, Currency::BTC) {Symbol::BTC} else {Symbol::ETH};
     let (fee, unit) = require_auth_user(cookies, state, |_, user| async move {
         if matches!(currency, Currency::BTC){
             let bytes_estimate = rstate.lock().await.fee_estimates.btc_bytes_per_tx;
