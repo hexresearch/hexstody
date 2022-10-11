@@ -4,10 +4,13 @@ use std::fmt::Debug;
 use hexstody_api::domain::Symbol;
 use hexstody_ticker_provider::client::TickerClient;
 use hexstody_ticker_provider::client::Result as TickerResult;
+use serde::Deserialize;
+use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 use serde_json::Map;
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FeeEstimates {
     /// Estimate of bytes per tx for BTC
     pub btc_bytes_per_tx: u64,
