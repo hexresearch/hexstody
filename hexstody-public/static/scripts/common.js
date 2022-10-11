@@ -293,12 +293,14 @@ export function indexArrayFromOne(array) {
     return res
 }
 
-export function currencyName(currency) {
-    if (isErc20Token(currency)) {
-        return currency.ERC20.name
+export function currencyToCurrencyName(currency) {
+    if (typeof currency === "string") {
+        return currency;
+    } else if (typeof currency === "object" && currency.ERC20) {
+        return currency.ERC20.name;
     } else {
-        return currency
-    };
+        return null;
+    }
 }
 
 export function currencyNameToCurrency(currencyName) {
@@ -317,6 +319,8 @@ export function currencyNameToCurrency(currencyName) {
             return null
     }
 }
+
+
 
 export function currencyPrecision(currencyName) {
     switch (currencyName.toUpperCase()) {

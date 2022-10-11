@@ -21,6 +21,8 @@ use hexstody_db::update::misc::{TokenAction, TokenUpdate};
 use hexstody_db::update::withdrawal::WithdrawalRequestInfo;
 use hexstody_db::update::{StateUpdate, UpdateBody};
 use hexstody_eth_client::client::EthClient;
+use hexstody_runtime_db::RuntimeState;
+use hexstody_ticker_provider::client::TickerClient;
 use log::*;
 use reqwest;
 use rocket::http::CookieJar;
@@ -683,6 +685,8 @@ pub async fn order_exchange(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
     updater: &State<mpsc::Sender<StateUpdate>>,
+    ticker_client: &State<TickerClient>,
+    rstate: &State<Arc<Mutex<RuntimeState>>>,
     req: Json<ExchangeRequest>,
 ) -> error::Result<()> {
     require_auth_user(cookies, state, |_, user| async move {
@@ -690,13 +694,20 @@ pub async fn order_exchange(
             currency_from,
             currency_to,
             amount_from,
-            amount_to,
         } = req.into_inner();
         let cinfo = user
             .currencies
             .get(&currency_from)
             .ok_or(error::Error::NoUserCurrency(currency_from.clone()))?;
         let balance = cinfo.balance();
+        let mut rstate = rstate.lock().await;
+        let from_symbol = currency_from.symbol();
+        let to_symbol = currency_to.symbol();
+        let rate = rstate
+            .symbol_to_symbol_adjusted(ticker_client, from_symbol.to_owned(), to_symbol.to_owned())
+            .await
+            .map_err(|e| error::Error::GenericError(e.to_string()))?;
+        let amount_to = (amount_from as f64 / from_symbol.exponent() * rate * to_symbol.exponent()) as u64;
         if balance < amount_from {
             return Err(error::Error::InsufficientFunds(currency_from).into());
         } else {
