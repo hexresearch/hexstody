@@ -1,5 +1,5 @@
-import { tickerEnum, formattedCurrencyValue, currencyPrecision, currencyNameToCurrency, currencyName } from "../common.js";
-import { getBalance, postOrderExchange } from "../request.js";
+import { currencyToCurrencyName, tickerEnum, formattedCurrencyValue, currencyPrecision, currencyNameToCurrency, tickerToSymbol } from "../common.js";
+import { getAdjustedRate, getBalance, postOrderExchange } from "../request.js";
 
 let currencyFrom = null;
 let currencyTo = null;
@@ -12,13 +12,7 @@ function displayError(error) {
     validationDisplay.hidden = false;
 }
 
-async function getAdjustedRate(from, to) {
-    return await fetch("/ticker/pair/adjusted",
-    {
-        method: "POST",
-        body: JSON.stringify({from: from, to: to})
-    });
-}
+
 
 function calcAvailableBalance(balanceObj) {
     const lim = balanceObj.limit_info.limit.amount;
@@ -41,17 +35,22 @@ function parseInput(currency, value) {
     }
 };
 
-async function convertAmount(from, to, rate, amount) {
-    const rateNorm = rate * currencyPrecision(to) / currencyPrecision(from);
-    return Math.round(amount * rateNorm);
+async function convertAmount(from, to, amount) {
+    const request = {
+        from: currencyNameToCurrency(from),
+        to: currencyNameToCurrency(to)
+    };
+    const ticker = await fetch("/ticker/pair", { method: "POST", body: JSON.stringify(request) })
+        .then(r => r.json());
+    return Math.round(amount / currencyPrecision(from) * ticker.rate * currencyPrecision(to));
 }
 
-function displayTicker(ticker){
-    document.getElementById("rate-span").innerText = 
-        "1 " + currencyName(ticker.from) + " = " + ticker.rate + " " + currencyName(ticker.to);
+function displayTicker(ticker) {
+    document.getElementById("rate-span").innerText =
+        `1 ${currencyToCurrencyName(ticker.from)} = ${ticker.rate} + ${currencyToCurrencyName(ticker.to)}`;
 }
 
-function hideTicker(){
+function hideTicker() {
     document.getElementById("rate-span").innerText = "";
 }
 
@@ -96,13 +95,10 @@ function initDrop(idPostfix, options) {
 
 }
 
-async function tryTrans(from, to, event) {
-    if (from && to) {
+function tryTrans(from, event) {
+    if (from) {
         const inputValue = event.target.value;
-        const valueFrom = parseInput(from, inputValue);
-        if (valueFrom) {
-            return convertAmount(from, to, valueFrom);
-        }
+        return parseInput(from, inputValue);
     }
     return null;
 }
@@ -116,15 +112,17 @@ async function init() {
     document.getElementById("to_value").value = 0;
 
     document.getElementById("from_value").addEventListener("keyup", async event => {
-        valueTo = await tryTrans(currencyFrom, currencyTo, event);
-        if (valueTo) {
+        valueFrom = tryTrans(currencyFrom, event);
+        if (valueFrom && currencyTo) {
+            valueTo = await convertAmount(currencyFrom, currencyTo, valueFrom);
             document.getElementById("to_value").value = formattedCurrencyValue(currencyTo, valueTo);
         }
     });
 
     document.getElementById("to_value").addEventListener("keyup", async event => {
-        valueFrom = await tryTrans(currencyTo, currencyFrom, event);
-        if (valueFrom) {
+        valueTo = tryTrans(currencyTo, event);
+        if (valueTo && currencyFrom) {
+            valueFrom = await convertAmount(currencyTo, currencyFrom, valueTo);
             document.getElementById("from_value").value = formattedCurrencyValue(currencyFrom, valueFrom);
         }
     });
