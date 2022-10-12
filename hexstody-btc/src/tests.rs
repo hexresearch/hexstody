@@ -295,16 +295,10 @@ async fn process_withdrawal_request() {
             197, 103, 161, 120, 28, 231, 101, 35, 34, 117, 53, 115, 210, 176, 147, 227, 72, 177, 3,
             11, 69, 147, 176, 246, 176, 171, 80, 1, 68, 143, 100, 96,
         ];
-        let sk3bytes = [
-            136, 43, 196, 241, 144, 235, 247, 160, 3, 26, 8, 234, 164, 69, 85, 59, 219, 248, 130,
-            95, 240, 188, 175, 229, 43, 160, 105, 235, 187, 120, 183, 16,
-        ];
         let sk1 = p256::SecretKey::from_be_bytes(&sk1bytes).unwrap();
         let sk2 = p256::SecretKey::from_be_bytes(&sk2bytes).unwrap();
-        let sk3 = p256::SecretKey::from_be_bytes(&sk3bytes).unwrap();
         let pk1 = sk1.public_key();
         let pk2 = sk2.public_key();
-        let pk3 = sk3.public_key();
         let addr = new_address(&btc).to_string();
         let id = uuid::Uuid::new_v4();
         let user = "test_user".to_owned();
@@ -320,16 +314,12 @@ async fn process_withdrawal_request() {
         };
         let cd_json = json::to_string(&confirmation_data).unwrap();
         let url_confirm = "http://127.0.0.1:8080/confirm".to_owned();
-        let url_reject = "http://127.0.0.1:8080/reject".to_owned();
         let nonce1 = 1;
         let nonce2 = 2;
-        let nonce3 = 3;
         let msg1 = [url_confirm.clone(), cd_json.clone(), nonce1.to_string()].join(":");
         let msg2 = [url_confirm.clone(), cd_json.clone(), nonce2.to_string()].join(":");
-        let msg3 = [url_reject.clone(), cd_json.clone(), nonce3.to_string()].join(":");
         let sig1 = SigningKey::from(sk1).sign(msg1.as_bytes());
         let sig2 = SigningKey::from(sk2).sign(msg2.as_bytes());
-        let sig3 = SigningKey::from(sk3).sign(msg3.as_bytes());
         let sd1 = SignatureData {
             signature: sig1,
             public_key: pk1,
@@ -340,13 +330,8 @@ async fn process_withdrawal_request() {
             public_key: pk2,
             nonce: nonce2,
         };
-        let sd3 = SignatureData {
-            signature: sig3,
-            public_key: pk3,
-            nonce: nonce3,
-        };
         let confirmations = vec![sd1, sd2];
-        let rejections = vec![sd3];
+        let rejections = vec![];
         let cw = ConfirmedWithdrawal {
             id,
             user,
