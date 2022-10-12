@@ -10,7 +10,7 @@ use hexstody_api::domain::{
 use hexstody_api::error;
 use hexstody_api::types::{
     self as api, BalanceItem, Erc20HistUnitU, ExchangeFilter, ExchangeRequest, GetTokensResponse,
-    TokenActionRequest, TokenInfo, WithdrawalFilter, EthFeeResp, UnitAmount, UnitTickedAmount
+    TokenActionRequest, TokenInfo, WithdrawalFilter, EthFeeResp, UnitTickedAmount
 };
 use hexstody_btc_client::client::{BtcClient, BTC_BYTES_PER_TRANSACTION};
 use hexstody_db::state::exchange::ExchangeOrderUpd;
@@ -50,8 +50,6 @@ pub async fn get_balance(
         let mut rstate = rstate.lock().await;
         let mut balances: Vec<api::BalanceItem>= vec![];
         for (cur, info) in user.currencies.iter() {
-            let name = info.unit.name();
-            let mul = info.unit.mul();
             let ticker = rstate.symbol_to_symbols_generic(ticker_client, cur.symbol(), vec![Symbol::USD, Symbol::RUB]).await.ok();
             let mut bal = info.balance();
             match cur {
@@ -69,7 +67,7 @@ pub async fn get_balance(
             }
             let bal = api::BalanceItem {
                 currency: cur.clone(),
-                value: UnitAmount { amount: bal, name, mul },
+                value: (bal, &info.unit).into(),
                 limit_info: info.limit_info.clone(),
                 ticker,
             };
@@ -99,10 +97,9 @@ pub async fn get_balance_by_currency(
         match user.currencies.get(&cur) {
             Some(info) => {
                 let limit_info = info.limit_info.clone();
-                let name = info.unit.name();
-                let mul = info.unit.mul();
+                let unit = info.unit.clone();
                 if cur == Currency::BTC {
-                    return Ok((UnitAmount{amount: info.balance(), name, mul}, limit_info));
+                    return Ok(((info.balance(), &unit).into(), limit_info));
                 } else {
                     let user_data_resp = eth_client.get_user_data(&user.username).await;
                     if let Err(e) = user_data_resp {
@@ -113,7 +110,7 @@ pub async fn get_balance_by_currency(
                         Currency::BTC => return nofound_err, // this should not happen
                         Currency::ETH => {
                             return Ok((
-                                UnitAmount{ amount: user_data.data.balanceEth.parse().unwrap(), name, mul}, 
+                                (user_data.data.balanceEth.parse().unwrap(), &unit).into(),
                                 limit_info
                             ))
                         }
@@ -121,7 +118,7 @@ pub async fn get_balance_by_currency(
                             for tok in user_data.data.balanceTokens {
                                 if tok.tokenName == token.ticker {
                                     return Ok((
-                                        UnitAmount{ amount: tok.tokenBalance.parse::<u64>().unwrap(), name, mul },
+                                        (user_data.data.balanceEth.parse().unwrap(), &unit).into(),
                                         limit_info,
                                     ));
                                 }
@@ -219,7 +216,7 @@ pub async fn get_fee(
     let t = if ticker {
         rstate.lock().await.symbol_to_symbols_generic(ticker_client, symbol, vec![Symbol::USD, Symbol::RUB]).await.ok()
     } else {None};
-    Ok(Json(UnitTickedAmount{ amount: fee, name: unit.name(), mul: unit.mul(), ticker: t }))
+    Ok(Json(UnitTickedAmount{ amount: fee, name: unit.name(), mul: unit.mul(), prec: unit.precision(), ticker: t }))
 }
 
 #[openapi(tag = "history")]

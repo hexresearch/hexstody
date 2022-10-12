@@ -108,12 +108,6 @@ export function convertToUnitJson(name, unit){
             return {GenUnit: unit}
     }
 }
-
-// Gas limit for ETH transfer transaction
-export const ETH_TX_GAS_LIMIT = 21_000
-// Gas limit for ERC20 transfer transaction
-export const ERC20_TX_GAS_LIMIT = 150_000
-
 export async function loadTemplate(path) {
     const template = await (await fetch(path)).text()
     return Handlebars.compile(template)
@@ -125,6 +119,41 @@ export function displayUnitAmount(val) {
     })
     let value = numberFormat.format(val.amount / val.mul)
     return value + " " + val.name;
+}
+
+export function displayUnitTickerAmount(obj, cur = "USD"){
+    let crypto;
+    let fiat; 
+    let mul;
+    let name;
+    if(obj.value){
+        crypto = obj.value.amount / obj.value.mul;
+        if (obj.ticker) {
+            fiat = obj.value.amount * obj.ticker[cur] / obj.value.prec;
+        }
+        mul = obj.value.mul;
+        name = obj.value.name;
+    } else {
+        crypto = obj.amount / obj.mul;
+        if(obj.ticker) {
+            fiat = obj.amount * obj.ticker[cur] / obj.prec;
+        }
+        mul = obj.mul;
+        name = obj.name;
+    };
+    let cryptoFormat = Intl.NumberFormat('en')
+    let fiatFormat = Intl.NumberFormat('en', {
+        style: 'currency',
+        currency: cur,
+        currencyDisplay: 'code',
+    })
+    let cryptoValue = cryptoFormat.format(crypto)
+    if(fiat){
+        let fiatValue = fiatFormat.format(fiat)
+        return `${cryptoValue} ${name} (${fiatValue})`
+    } else {
+        return `${cryptoValue} ${name}`
+    }
 }
 
 export function formattedCurrencyValue(currency, value) {
@@ -348,47 +377,6 @@ export function currencyNameToCurrency(currencyName) {
         default:
             return null
     }
-}
-
-
-
-export function currencyPrecision(currencyName) {
-    switch (currencyName.toUpperCase()) {
-        case "BTC":
-            return BTC_PRECISION
-        case "ETH":
-            return ETH_PRECISION
-        case "USDT":
-            return USDT_PRECISION
-        case "CRV":
-            return CRV_PRECISION
-        case "GTECH":
-            return GTECH_PRECISION
-        default:
-            return null
-    };
-}
-
-// Converts amounts in whole units to smallest units.
-// E.g. ETH to WEI, BTC to sats and so on.
-export function convertToSmallest(currency, value) {
-    return value * currencyPrecision(currency)
-}
-
-// The currency in which transaction fees are paid
-export function feeCurrency(currencyName) {
-    switch (currencyName.toUpperCase()) {
-        case "BTC":
-            return "BTC"
-        case "ETH":
-            return "ETH"
-        case "USDT":
-        case "CRV":
-        case "GTECH":
-            return "ETH"
-        default:
-            return null
-    };
 }
 
 export function isErc20Token(currencyName) {

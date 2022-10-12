@@ -184,6 +184,14 @@ impl Currency {
             Currency::ERC20(token) => Unit::GenUnit(token.ticker.clone()),
         }
     }
+
+    pub fn precision(&self) -> u64 {
+        match self {
+            Currency::BTC => BtcUnit::Btc.mul(),
+            Currency::ETH => EthUnit::Ether.mul(),
+            Currency::ERC20(_) => 100_000_000,
+        }
+    }
 }
 
 pub fn filter_tokens(curs: Vec<Currency>) -> Vec<Erc20Token> {
@@ -505,6 +513,14 @@ impl Unit {
         match self {
             Unit::GenUnit(_) => true,
             _ => false
+        }
+    }
+
+    pub fn precision(&self) -> u64 {
+        match self {
+            Unit::BtcUnit(_) => BtcUnit::Btc.mul(),
+            Unit::EthUnit(_) => EthUnit::Ether.mul(),
+            Unit::GenUnit(_) => 100_000_000,
         }
     }
 }

@@ -22,7 +22,7 @@ use rocket_okapi::{
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::domain::{CurrencyTxId, Email, PhoneNumber, TgName};
+use crate::domain::{CurrencyTxId, Email, PhoneNumber, TgName, Unit, CurrencyUnit};
 
 use super::domain::currency::{BtcAddress, Currency, CurrencyAddress, Erc20Token};
 
@@ -178,7 +178,7 @@ pub struct EthFeeResp {
 }
 
 #[allow(non_snake_case)]
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, JsonSchema)]
 pub struct EthGasPrice {
     pub LastBlock: u64,
     pub SafeGasPrice: f64,
@@ -186,6 +186,39 @@ pub struct EthGasPrice {
     pub FastGasPrice: f64,
     pub suggestBaseFee: f64,
     pub gasUsedRatio: String,
+}
+
+impl<'de> Deserialize<'de> for EthGasPrice {
+    #[allow(non_snake_case)]
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+        D::Error: serde::de::Error {
+        use serde::de::Error;
+        use serde_json::Value;
+        let v = Value::deserialize(deserializer)?;
+        let parsef64 = |fname: &str| -> Result<f64, D::Error> {
+            v.get(fname)
+            .map(|v| v.as_str().map(|s| s.parse::<f64>()))
+            .flatten()
+            .ok_or(D::Error::custom(format!("failed to parse {}", fname)))?
+            .map_err(D::Error::custom)
+        };
+        let gasUsedRatio = v.get("gasUsedRatio")
+            .map(|v| v.as_str().map(|s| s.to_string()))
+            .flatten()
+            .ok_or(D::Error::custom("failed to parse gasUsedRatio"))?;
+        let LastBlock = v.get("LastBlock")
+            .map(|v| v.as_str().map(|s| s.parse::<u64>()))
+            .flatten()
+            .ok_or(D::Error::custom("failed to parse LastBlock"))?
+            .map_err(D::Error::custom)?;
+        let SafeGasPrice = parsef64("SafeGasPrice")?;
+        let ProposeGasPrice = parsef64("ProposeGasPrice")?;
+        let FastGasPrice = parsef64("FastGasPrice")?;
+        let suggestBaseFee = parsef64("suggestBaseFee")?;
+        Ok(EthGasPrice{ LastBlock, SafeGasPrice, ProposeGasPrice, FastGasPrice, suggestBaseFee, gasUsedRatio})
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema, PartialEq)]
@@ -1000,6 +1033,29 @@ pub struct UnitAmount {
     pub amount: u64,
     pub name: String,
     pub mul: u64,
+    pub prec: u64,
+}
+
+impl From<(u64, Unit)> for UnitAmount {
+    fn from((amount, unit): (u64, Unit)) -> Self {
+        UnitAmount { 
+            amount, 
+            name: unit.name(), 
+            mul: unit.mul(),
+            prec: unit.precision(), 
+        }
+    }
+}
+
+impl From<(u64, &Unit)> for UnitAmount {
+    fn from((amount, unit): (u64, &Unit)) -> Self {
+        UnitAmount { 
+            amount, 
+            name: unit.name(), 
+            mul: unit.mul(),
+            prec: unit.precision(), 
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq)]
@@ -1007,5 +1063,6 @@ pub struct UnitTickedAmount{
     pub amount: u64,
     pub name: String,
     pub mul: u64,
+    pub prec: u64,
     pub ticker: Option<TickerUsdRub>
 }
