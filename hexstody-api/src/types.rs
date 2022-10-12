@@ -354,14 +354,16 @@ fn example_amount() -> u64 {
 }
 
 fn example_confirmation_status() -> WithdrawalRequestStatus {
-    WithdrawalRequestStatus::InProgress { confirmations: 1 }
+    WithdrawalRequestStatus::InProgress {
+        confirmations_minus_rejections: 1,
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
 #[serde(tag = "type")]
 pub enum WithdrawalRequestStatus {
-    /// Number of confirmations received
-    InProgress { confirmations: i16 },
+    /// Number of confirmations minus number of rejections received
+    InProgress { confirmations_minus_rejections: i16 },
     /// Confirmed by operators, but not yet sent to the node
     Confirmed,
     /// Tx sent to the node
@@ -742,7 +744,10 @@ pub struct LimitChangeReq {
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
 #[serde(tag = "type")]
 pub enum LimitChangeStatus {
-    InProgress { confirmations: i16, rejections: i16 },
+    /// Number of confirmations minus number of rejections received
+    InProgress {
+        confirmations_minus_rejections: i16,
+    },
     Completed,
     Rejected,
 }
@@ -876,7 +881,10 @@ pub struct ExchangeRequest {
 pub enum ExchangeStatus {
     Completed,
     Rejected,
-    InProgress { confirmations: i16, rejections: i16 },
+    /// Number of confirmations minus number of rejections received
+    InProgress {
+        confirmations_minus_rejections: i16,
+    },
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
@@ -963,10 +971,10 @@ pub struct ExchangeAddress {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
-pub struct MarginData{
+pub struct MarginData {
     pub currency_from: Currency,
     pub currency_to: Currency,
-    pub margin: f64
+    pub margin: f64,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]

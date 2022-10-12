@@ -44,6 +44,7 @@ use hexstody_api::types::{
     WithdrawalRequestDecisionType,
 };
 
+// Should be the same as hexstody-btc::constants::CONFIRMATIONS_CONFIG
 pub const CONFIRMATIONS_CONFIG: ConfirmationsConfig = ConfirmationsConfig {
     withdraw: 2,
     change_limit: 2,
@@ -77,9 +78,9 @@ pub enum StateUpdateErr {
     #[error("User {0} doesn't have withdrawal request {1}")]
     WithdrawalRequestNotFound(UserId, WithdrawalRequestId),
     #[error("Withdrawal request {0} is already confirmed by {}", .1.to_string())]
-    WithdrawalRequestConfirmationDuplicate(WithdrawalRequestId, PublicKey),
+    WithdrawalRequestAlreadyConfirmedByThisKey(WithdrawalRequestId, PublicKey),
     #[error("Withdrawal request {0} is already rejected by {}", .1.to_string())]
-    WithdrawalRequestRejectionDuplicate(WithdrawalRequestId, PublicKey),
+    WithdrawalRequestAlreadyRejectedByThisKey(WithdrawalRequestId, PublicKey),
     #[error("Withdrawal request {0} is already confirmed")]
     WithdrawalRequestAlreadyConfirmed(WithdrawalRequestId),
     #[error("Withdrawal request {0} is already rejected")]
@@ -426,57 +427,61 @@ impl State {
                     withdrawal_request.id,
                 ))
             }
-            WithdrawalRequestStatus::InProgress(n) => {
-                match withdrawal_request_decision.decision_type {
-                    WithdrawalRequestDecisionType::Confirm => {
-                        if is_confirmed_by_this_key {
-                            return Err(StateUpdateErr::WithdrawalRequestConfirmationDuplicate(
-                                withdrawal_request_decision.request_id,
-                                withdrawal_request_decision.public_key,
-                            ));
-                        };
-                        if is_rejected_by_this_key {
-                            withdrawal_request
-                                .rejections
-                                .retain(|x| x.public_key != withdrawal_request_decision.public_key);
-                        };
-                        withdrawal_request
-                            .confirmations
-                            .push(WithdrawalRequestDecision::from(withdrawal_request_decision));
-                        let m = if is_rejected_by_this_key { 2 } else { 1 };
-                        if n == CONFIRMATIONS_CONFIG.withdraw - m {
-                            withdrawal_request.status = WithdrawalRequestStatus::Confirmed;
-                            return Ok(Some(withdrawal_request.id));
-                        } else {
-                            withdrawal_request.status = WithdrawalRequestStatus::InProgress(n + m);
-                            return Ok(None);
-                        };
-                    }
-                    WithdrawalRequestDecisionType::Reject => {
-                        if is_rejected_by_this_key {
-                            return Err(StateUpdateErr::WithdrawalRequestRejectionDuplicate(
-                                withdrawal_request_decision.request_id,
-                                withdrawal_request_decision.public_key,
-                            ));
-                        };
-                        if is_confirmed_by_this_key {
-                            withdrawal_request
-                                .confirmations
-                                .retain(|x| x.public_key != withdrawal_request_decision.public_key);
-                        };
+            WithdrawalRequestStatus::InProgress {
+                confirmations_minus_rejections: n,
+            } => match withdrawal_request_decision.decision_type {
+                WithdrawalRequestDecisionType::Confirm => {
+                    if is_confirmed_by_this_key {
+                        return Err(StateUpdateErr::WithdrawalRequestAlreadyConfirmedByThisKey(
+                            withdrawal_request_decision.request_id,
+                            withdrawal_request_decision.public_key,
+                        ));
+                    };
+                    if is_rejected_by_this_key {
                         withdrawal_request
                             .rejections
-                            .push(WithdrawalRequestDecision::from(withdrawal_request_decision));
-                        let m = if is_confirmed_by_this_key { 2 } else { 1 };
-                        if n == m - CONFIRMATIONS_CONFIG.withdraw {
-                            withdrawal_request.status = WithdrawalRequestStatus::OpRejected;
-                        } else {
-                            withdrawal_request.status = WithdrawalRequestStatus::InProgress(n - m);
+                            .retain(|x| x.public_key != withdrawal_request_decision.public_key);
+                    };
+                    withdrawal_request
+                        .confirmations
+                        .push(WithdrawalRequestDecision::from(withdrawal_request_decision));
+                    let m = if is_rejected_by_this_key { 2 } else { 1 };
+                    if n == CONFIRMATIONS_CONFIG.withdraw - m {
+                        withdrawal_request.status = WithdrawalRequestStatus::Confirmed;
+                        return Ok(Some(withdrawal_request.id));
+                    } else {
+                        withdrawal_request.status = WithdrawalRequestStatus::InProgress {
+                            confirmations_minus_rejections: n + m,
                         };
                         return Ok(None);
-                    }
+                    };
                 }
-            }
+                WithdrawalRequestDecisionType::Reject => {
+                    if is_rejected_by_this_key {
+                        return Err(StateUpdateErr::WithdrawalRequestAlreadyRejectedByThisKey(
+                            withdrawal_request_decision.request_id,
+                            withdrawal_request_decision.public_key,
+                        ));
+                    };
+                    if is_confirmed_by_this_key {
+                        withdrawal_request
+                            .confirmations
+                            .retain(|x| x.public_key != withdrawal_request_decision.public_key);
+                    };
+                    withdrawal_request
+                        .rejections
+                        .push(WithdrawalRequestDecision::from(withdrawal_request_decision));
+                    let m = if is_confirmed_by_this_key { 2 } else { 1 };
+                    if n == m - CONFIRMATIONS_CONFIG.withdraw {
+                        withdrawal_request.status = WithdrawalRequestStatus::OpRejected;
+                    } else {
+                        withdrawal_request.status = WithdrawalRequestStatus::InProgress {
+                            confirmations_minus_rejections: n - m,
+                        };
+                    };
+                    return Ok(None);
+                }
+            },
         };
     }
 
@@ -722,8 +727,7 @@ impl State {
                         user: usr.username.clone(),
                         created_at: chrono::offset::Utc::now().to_string(),
                         status: LimitChangeStatus::InProgress {
-                            confirmations: 0,
-                            rejections: 0,
+                            confirmations_minus_rejections: 0,
                         },
                         currency: cur.clone(),
                         limit: req.limit,
@@ -769,17 +773,22 @@ impl State {
                         LimitChangeStatus::Completed => Err(StateUpdateErr::LimitAlreadyConfirmed),
                         LimitChangeStatus::Rejected => Err(StateUpdateErr::LimitAlreadyRejected),
                         LimitChangeStatus::InProgress {
-                            confirmations,
-                            rejections,
+                            confirmations_minus_rejections: n,
                         } => match lcd.decision_type {
                             LimitChangeDecisionType::Confirm => {
                                 if req.has_confirmed(lcd.public_key) {
                                     Err(StateUpdateErr::LimitAlreadyConfirmed)
                                 } else {
+                                    let m = if req.has_rejected(lcd.public_key) {
+                                        2
+                                    } else {
+                                        1
+                                    };
+                                    if req.has_rejected(lcd.public_key) {
+                                        req.rejections.retain(|x| x.public_key != lcd.public_key);
+                                    };
                                     req.confirmations.push(sdata);
-                                    if confirmations + 1 - rejections
-                                        >= CONFIRMATIONS_CONFIG.change_limit
-                                    {
+                                    if n == CONFIRMATIONS_CONFIG.change_limit - m {
                                         req.status = LimitChangeStatus::Completed;
                                         if let Some(cinfo) = usr.currencies.get_mut(&lcd.currency) {
                                             cinfo.limit_info = LimitInfo {
@@ -790,8 +799,7 @@ impl State {
                                         let _ = usr.limit_change_requests.remove(&lcd.currency);
                                     } else {
                                         req.status = LimitChangeStatus::InProgress {
-                                            confirmations: confirmations + 1,
-                                            rejections,
+                                            confirmations_minus_rejections: n + m,
                                         };
                                     };
                                     Ok(())
@@ -801,16 +809,22 @@ impl State {
                                 if req.has_rejected(lcd.public_key) {
                                     return Err(StateUpdateErr::LimitAlreadyConfirmed);
                                 } else {
+                                    let m = if req.has_confirmed(lcd.public_key) {
+                                        2
+                                    } else {
+                                        1
+                                    };
+                                    if req.has_confirmed(lcd.public_key) {
+                                        req.confirmations
+                                            .retain(|x| x.public_key != lcd.public_key);
+                                    };
                                     req.rejections.push(sdata);
-                                    if rejections + 1 - confirmations
-                                        >= CONFIRMATIONS_CONFIG.change_limit
-                                    {
+                                    if n == m - CONFIRMATIONS_CONFIG.change_limit {
                                         req.status = LimitChangeStatus::Rejected;
                                         let _ = usr.limit_change_requests.remove(&lcd.currency);
                                     } else {
                                         req.status = LimitChangeStatus::InProgress {
-                                            confirmations,
-                                            rejections: rejections + 1,
+                                            confirmations_minus_rejections: n - m,
                                         };
                                     };
                                     Ok(())
@@ -928,8 +942,7 @@ impl State {
             amount_from,
             amount_to,
             status: ExchangeStatus::InProgress {
-                confirmations: 0,
-                rejections: 0,
+                confirmations_minus_rejections: 0,
             },
             confirmations: Vec::new(),
             rejections: Vec::new(),
@@ -973,23 +986,31 @@ impl State {
             ExchangeStatus::Completed => Err(StateUpdateErr::ExchangeAlreadyConfirmed),
             ExchangeStatus::Rejected => Err(StateUpdateErr::ExchangeAlreadyRejected),
             ExchangeStatus::InProgress {
-                confirmations,
-                rejections,
+                confirmations_minus_rejections: n,
             } => match req.decision {
                 ExchangeDecisionType::Confirm => {
                     if exchange.has_confirmed(req.public_key) {
                         Err(StateUpdateErr::ExchangeAlreadyConfirmed)
                     } else {
+                        let m = if exchange.has_rejected(req.public_key) {
+                            2
+                        } else {
+                            1
+                        };
+                        if exchange.has_rejected(req.public_key) {
+                            exchange
+                                .rejections
+                                .retain(|x| x.public_key != req.public_key);
+                        };
                         exchange.confirmations.push(sdata);
-                        if confirmations + 1 - rejections >= CONFIRMATIONS_CONFIG.exchange {
+                        if n == CONFIRMATIONS_CONFIG.exchange - m {
                             exchange.status = ExchangeStatus::Completed;
                             self.exchange_state
                                 .process_order(exchange.into_exchange_upd());
                             Ok(true)
                         } else {
                             exchange.status = ExchangeStatus::InProgress {
-                                confirmations: confirmations + 1,
-                                rejections: rejections,
+                                confirmations_minus_rejections: n + m,
                             };
                             Ok(false)
                         }
@@ -999,13 +1020,22 @@ impl State {
                     if exchange.has_rejected(req.public_key) {
                         Err(StateUpdateErr::ExchangeAlreadyRejected)
                     } else {
-                        exchange.confirmations.push(sdata);
-                        if rejections + 1 - confirmations >= CONFIRMATIONS_CONFIG.exchange {
+                        let m = if exchange.has_confirmed(req.public_key) {
+                            2
+                        } else {
+                            1
+                        };
+                        if exchange.has_confirmed(req.public_key) {
+                            exchange
+                                .confirmations
+                                .retain(|x| x.public_key != req.public_key);
+                        };
+                        exchange.rejections.push(sdata);
+                        if n == m - CONFIRMATIONS_CONFIG.exchange {
                             exchange.status = ExchangeStatus::Rejected
                         } else {
                             exchange.status = ExchangeStatus::InProgress {
-                                confirmations: confirmations,
-                                rejections: rejections + 1,
+                                confirmations_minus_rejections: n - m,
                             }
                         }
                         Ok(false)
@@ -1183,7 +1213,9 @@ mod tests {
                 address: withdrawal_request_info.address,
                 created_at: extracted_withdrawal_request.created_at,
                 amount: withdrawal_request_info.amount,
-                status: WithdrawalRequestStatus::InProgress(0),
+                status: WithdrawalRequestStatus::InProgress {
+                    confirmations_minus_rejections: 0
+                },
                 confirmations: vec![],
                 rejections: vec![],
                 request_type: WithdrawalRequestType::OverLimit
@@ -1285,7 +1317,9 @@ mod tests {
             .unwrap();
         assert_eq!(
             extracted_withdrawal_request.status,
-            WithdrawalRequestStatus::InProgress(1)
+            WithdrawalRequestStatus::InProgress {
+                confirmations_minus_rejections: 1
+            }
         );
         assert_eq!(
             extracted_withdrawal_request.confirmations,

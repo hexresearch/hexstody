@@ -30,17 +30,21 @@ export function localizeSpan(span) {
 export function localizeChangeStatus(status) {
     switch (Object.keys(status)[0]) {
         case "InProgress":
-            let body = status["InProgress"]
+            // let body = status["InProgress"]
             switch (lang) {
-                case "en": return "In progress (+" + body.confirmations + "/-" + body.rejections + " of 2)"
-                case "ru": return "В процессе (+" + body.confirmations + "/-" + body.rejections + " из 2)"
+                case "en": return "In progress"
+                case "ru": return "В обработке"
             }
         case "Confirmed":
-        case "en": return "Confirmed"
-        case "ru": return "Принято"
+            switch (lang) {
+                case "en": return "Confirmed"
+                case "ru": return "Принято"
+            }
         case "Rejected":
-        case "en": return "Rejected by operators"
-        case "ru": return "Отвергнуто операторами"
+            switch (lang) {
+                case "en": return "Rejected by operators"
+                case "ru": return "Отклонено операторами"
+            }
         default:
             "Unknown"
     };

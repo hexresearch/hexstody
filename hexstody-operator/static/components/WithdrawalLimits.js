@@ -50,7 +50,7 @@ export const WithdrawalLimits = {
                             <td>{{getCurrencyName(limitRequest.currency)}}</td>
                             <td>{{formatLimitValue(limitRequest.current_limit)}}</td>
                             <td>{{formatLimitValue(limitRequest.requested_limit)}}</td>
-                            <td>{{formatLimitStatus(limitRequest.status)}}</td>
+                            <td>{{formatLimitStatus(limitRequest.status, requiredConfirmations)}}</td>
                             <td>
                                 <div class="action-buttons-wrapper justify-center">
                                     <button class="button primary" @click="confirmRequest(limitRequest)" :disabled="limitRequest.status.type !== 'InProgress'">Confirm</button>
@@ -83,7 +83,7 @@ export const WithdrawalLimits = {
                 }
             )
             const requiredConfirmationsResponse = await getRequiredConfirmations(this.privateKeyJwk, this.publicKeyDer)
-            this.requiredConfirmations = await requiredConfirmationsResponse.json().changeLimits
+            this.requiredConfirmations = (await requiredConfirmationsResponse.json()).change_limit
         },
         hideTooltip(instance) {
             setTimeout(() => {

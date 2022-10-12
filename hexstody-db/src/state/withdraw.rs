@@ -16,7 +16,7 @@ pub type WithdrawalRequestId = Uuid;
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub enum WithdrawalRequestStatus {
     /// Number of confirmations minus number of rejections received
-    InProgress(i16),
+    InProgress { confirmations_minus_rejections: i16 },
     /// Confirmed by operators, but not yet sent to the node
     Confirmed,
     /// Tx sent to the node
@@ -44,9 +44,11 @@ pub enum WithdrawalRequestStatus {
 impl Into<WithdrawalRequestStatusApi> for WithdrawalRequestStatus {
     fn into(self) -> WithdrawalRequestStatusApi {
         match self {
-            WithdrawalRequestStatus::InProgress(n) => {
-                WithdrawalRequestStatusApi::InProgress { confirmations: n }
-            }
+            WithdrawalRequestStatus::InProgress {
+                confirmations_minus_rejections: n,
+            } => WithdrawalRequestStatusApi::InProgress {
+                confirmations_minus_rejections: n,
+            },
             WithdrawalRequestStatus::Confirmed => WithdrawalRequestStatusApi::Confirmed,
             WithdrawalRequestStatus::Completed {
                 confirmed_at,
@@ -105,7 +107,9 @@ impl From<(DateTime<Utc>, WithdrawalRequestInfo)> for WithdrawalRequest {
             address: value.1.address,
             created_at: value.0,
             amount: value.1.amount,
-            status: WithdrawalRequestStatus::InProgress(0),
+            status: WithdrawalRequestStatus::InProgress {
+                confirmations_minus_rejections: 0,
+            },
             confirmations: vec![],
             rejections: vec![],
             request_type: value.1.request_type,
@@ -150,7 +154,7 @@ impl WithdrawalRequest {
             true
         } else {
             match self.status {
-                WithdrawalRequestStatus::InProgress(_) => {
+                WithdrawalRequestStatus::InProgress { .. } => {
                     matches!(filter, WithdrawalFilter::Pending)
                 }
                 WithdrawalRequestStatus::Confirmed => matches!(filter, WithdrawalFilter::Confirmed),
