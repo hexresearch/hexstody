@@ -9,9 +9,15 @@ import {
     getCurrencyName,
     confirmLimitRequest,
     rejectLimitRequest,
+    getUserInfo,
 } from "../scripts/common.js"
 
+import { Modal } from "./Modal.js"
+
 export const WithdrawalLimits = {
+    components: {
+        Modal
+    },
     template:
         /*html*/
         `<div>
@@ -50,18 +56,32 @@ export const WithdrawalLimits = {
                             <td>{{getCurrencyName(limitRequest.currency)}}</td>
                             <td>{{formatLimitValue(limitRequest.current_limit)}}</td>
                             <td>{{formatLimitValue(limitRequest.requested_limit)}}</td>
-                            <td>{{formatLimitStatus(limitRequest.status)}}</td>
+                            <td>{{formatLimitStatus(limitRequest.status, requiredConfirmations)}}</td>
                             <td>
                                 <div class="action-buttons-wrapper justify-center">
                                     <button class="button primary" @click="confirmRequest(limitRequest)" :disabled="limitRequest.status.type !== 'InProgress'">Confirm</button>
                                     <button class="button error" @click="rejectRequest(limitRequest)" :disabled="limitRequest.status.type !== 'InProgress'">Reject</button>
-                                    <!-- <button class="button" @click="showRequestDetails(withdrawalRequest)">Details</button> -->
+                                    <button class="button" @click="showRequestDetails(limitRequest)">Details</button>
                                 </div>
                             </td>
                         </tr>
                     </tbody>
                 </table>
             </div>
+            <Modal v-show="isModalVisible" @close="closeModal">
+                <template v-slot:header>
+                    <h4>Request info</h4>
+                </template>
+                <template v-slot:body v-if="userInfo">
+                    <p><b>First name:</b> {{userInfo.firstName ? userInfo.firstName : ""}}</p>
+                    <p><b>Last name:</b> {{userInfo.lastName ? userInfo.lastName : ""}}</p>
+                    <p><b>Email:</b> {{userInfo.email ? userInfo.email.email : ""}}</p>
+                    <p><b>Phone:</b> {{userInfo.phone ? userInfo.phone.number : ""}}</p>
+                    <p><b>Telegram:</b> {{userInfo.tgName ? userInfo.tgName.tg_name : ""}}</p>
+                </template>
+                <template v-slot:footer>
+                </template>
+            </Modal>
         </div>`,
     methods: {
         truncate,
@@ -83,7 +103,7 @@ export const WithdrawalLimits = {
                 }
             )
             const requiredConfirmationsResponse = await getRequiredConfirmations(this.privateKeyJwk, this.publicKeyDer)
-            this.requiredConfirmations = await requiredConfirmationsResponse.json().changeLimits
+            this.requiredConfirmations = (await requiredConfirmationsResponse.json()).change_limit
         },
         hideTooltip(instance) {
             setTimeout(() => {
@@ -105,8 +125,17 @@ export const WithdrawalLimits = {
             rejectLimitRequest(this.privateKeyJwk, this.publicKeyDer, confirmationData)
             this.fetchData()
         },
-        showRequestDetails(limitRequest) {
-            // show additional info about user and request
+        async showRequestDetails(limitRequest) {
+            const userInfoResponse = await getUserInfo(this.privateKeyJwk, this.publicKeyDer, limitRequest.user)
+            let userInfo = await userInfoResponse.json()
+            this.userInfo = userInfo
+            this.showModal()
+        },
+        showModal() {
+            this.isModalVisible = true
+        },
+        closeModal() {
+            this.isModalVisible = false
         },
     },
     async created() {
@@ -119,7 +148,9 @@ export const WithdrawalLimits = {
         return {
             limitRequests: [],
             requiredConfirmations: null,
-            filter: "all"
+            filter: "all",
+            isModalVisible: false,
+            userInfo: null,
         }
     },
     inject: ['eventToggle', 'privateKeyJwk', 'publicKeyDer'],

@@ -69,14 +69,14 @@ export const ExchangeRequestsTable = {
             </div>
             <Modal v-show="isModalVisible" @close="closeModal">
                 <template v-slot:header>
-                    <h4>Exchange request details</h4>
+                    <h4>Exchange request info</h4>
                 </template>
                 <template v-slot:body v-if="userInfo">
-                    <p><b>First name:</b> {{userInfo.firstName}}</p>
-                    <p><b>Last name:</b> {{userInfo.lastName}}</p>
+                    <p><b>First name:</b> {{userInfo.firstName ? userInfo.firstName : ""}}</p>
+                    <p><b>Last name:</b> {{userInfo.lastName ? userInfo.lastName : ""}}</p>
                     <p><b>Email:</b> {{userInfo.email ? userInfo.email.email : ""}}</p>
                     <p><b>Phone:</b> {{userInfo.phone ? userInfo.phone.number : ""}}</p>
-                    <p><b>Telegram:</b> {{userInfo.tgName.tg_name}}</p>
+                    <p><b>Telegram:</b> {{userInfo.tgName ? userInfo.tgName.tg_name : ""}}</p>
                 </template>
                 <template v-slot:footer>
                 </template>
