@@ -24,6 +24,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub struct TickerClient {
     pub client: reqwest::Client,
     pub server: String,
+    pub api_key: Option<String>
 }
 
 impl TickerClient {
@@ -31,6 +32,7 @@ impl TickerClient {
         TickerClient {
             client: reqwest::Client::new(),
             server: url.to_owned(),
+            api_key: Some("6b55695f17dbb4244531f989c93de2f448ab8eba5804afea248fa051f183ce14".to_string()),
         }
     }
 
@@ -38,6 +40,9 @@ impl TickerClient {
     pub async fn symbol_to_symbol(&self, from: &Symbol, to: &Symbol) -> Result<f64> {
         let path = "data/price";
         let endpoint = format!("{}/{}?fsym={}&tsyms={}",self.server, path, from.symbol(), to.symbol());
+        let endpoint = self.api_key.as_ref()
+            .map(|api_key| format!("{}&api_key={}", endpoint, api_key))
+            .unwrap_or(endpoint);
         let request = self.client.get(endpoint).build()?;
         let response = self.client.execute(request)
             .await?
@@ -57,6 +62,9 @@ impl TickerClient {
         let tsyms = to.iter().map(|f| f.symbol()).collect::<Vec<String>>().join(",");
         let path = "data/price";
         let endpoint = format!("{}/{}?fsym={}&tsyms={}",self.server, path, from.symbol(), tsyms);
+        let endpoint = self.api_key.as_ref()
+            .map(|api_key| format!("{}&api_key={}", endpoint, api_key))
+            .unwrap_or(endpoint);
         let request = self.client.get(endpoint).build()?;
         let response = self.client.execute(request)
             .await?
@@ -74,6 +82,9 @@ impl TickerClient {
         let tsyms = to.iter().map(|f| f.symbol()).collect::<Vec<String>>().join(",");
         let path = "data/price";
         let endpoint = format!("{}/{}?fsym={}&tsyms={}",self.server, path, from.symbol(), tsyms);
+        let endpoint = self.api_key.as_ref()
+            .map(|api_key| format!("{}&api_key={}", endpoint, api_key))
+            .unwrap_or(endpoint);
         let request = self.client.get(endpoint).build()?;
         let response = self.client.execute(request)
             .await?
