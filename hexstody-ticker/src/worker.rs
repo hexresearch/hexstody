@@ -6,7 +6,7 @@ use log::{debug, info};
 use tokio::sync::Mutex;
 
 /// Delay between refreshes in seconds
-static REFRESH_PERIOD: u64 = 30;
+static REFRESH_PERIOD: u64 = 120;
 
 pub async fn ticker_worker(
     ticker_client: TickerClient,

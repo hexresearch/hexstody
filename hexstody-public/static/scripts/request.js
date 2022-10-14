@@ -11,6 +11,6 @@ export async function getAdjustedRate(from, to) {
     return fetch("/ticker/pair/adjusted",
         {
             method: "POST",
-            body: JSON.stringify({ from: currencyNameToCurrency(from), to: currencyNameToCurrency(to) })
+            body: JSON.stringify({ from: from, to: to })
         });
 }

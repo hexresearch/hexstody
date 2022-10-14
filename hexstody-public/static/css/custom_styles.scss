@@ -346,6 +346,10 @@
     margin-right: 2em;
 }
 
+.mr-1em {
+    margin-right: 1em;
+}
+
 .font-big-size {
     font-weight: 600;
     font-size: 28px;
@@ -416,6 +420,20 @@ span.is-danger {
     margin-bottom: 1em;
 }
 
+.mtb-auto{
+    margin-top: auto;
+    margin-bottom: auto;
+}
+
+.ptb-0{
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+.height-2-5rem{
+    height: 2.5rem;
+}
+
 /* Style the button that is used to open and close the collapsible content */
 .collapsible {
     background-color: #eee;
@@ -467,6 +485,10 @@ span.is-danger {
 
 .display-flex {
     display: flex;
+}
+
+.display-inline-flex{
+    display: inline-flex;
 }
 
 .m-l-a {

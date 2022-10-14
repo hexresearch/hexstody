@@ -2,7 +2,8 @@ import {
     initTabs,
     currencyNameToCurrency,
     isErc20Token,
-    displayUnitTickerAmount
+    displayUnitTickerAmount,
+    validateAmount
 } from "../common.js"
 
 var tabs = []
@@ -97,52 +98,6 @@ function validateAddress(currency, address) {
         case "CRV":
         case "GTECH":
             return validateEthAddress(address)
-        default:
-            return { ok: false, error: withdrawTranslations.error.unknownCurrency, value: null }
-    };
-}
-
-function validateBtcAmout(amount) {
-    let result = {
-        ok: true,
-        error: null,
-        value: null
-    }
-    let value = Number(amount)
-    if (isNaN(value) || value <= 0 || !Number.isInteger(value)) {
-        result.ok = false
-        result.error = withdrawTranslations.error.invalidAmount
-    } else {
-        result.value = value
-    }
-    return result
-}
-
-function validateEthAmount(currency, amount) {
-    let result = {
-        ok: true,
-        error: null,
-        value: null
-    }
-    let value = Number(amount)
-    if (isNaN(value) || value <= 0) {
-        result.ok = false
-        result.error = withdrawTranslations.error.invalidAmount
-    } else {
-        result.value = value
-    }
-    return result
-}
-
-function validateAmount(currency, amount) {
-    switch (currency.toUpperCase()) {
-        case "BTC":
-            return validateBtcAmout(amount)
-        case "ETH":
-        case "USDT":
-        case "CRV":
-        case "GTECH":
-            return validateEthAmount(currency, amount)
         default:
             return { ok: false, error: withdrawTranslations.error.unknownCurrency, value: null }
     };

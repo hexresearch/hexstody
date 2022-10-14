@@ -392,3 +392,53 @@ export function isErc20Token(currencyName) {
             return null
     };
 }
+
+function validateBtcAmout(amount, dict) {
+    let result = {
+        ok: true,
+        error: null,
+        value: null
+    }
+    let value = Number(amount)
+    if (isNaN(value) || value <= 0 || !Number.isInteger(value)) {
+        result.ok = false
+        result.error = dict.invalidAmount ? dict.invalidAmount : "Invalid amount"
+    } else {
+        result.value = value
+    }
+    return result
+}
+
+function validateEthAmount(amount, dict) {
+    let result = {
+        ok: true,
+        error: null,
+        value: null
+    }
+    let value = Number(amount)
+    if (isNaN(value) || value <= 0) {
+        result.ok = false
+        result.error = dict.invalidAmount ? dict.invalidAmount : "Invalid amount"
+    } else {
+        result.value = value
+    }
+    return result
+}
+
+export function validateAmount(currency, amount, dict = {}) {
+    switch (currency.toUpperCase()) {
+        case "BTC":
+            return validateBtcAmout(amount, dict)
+        case "ETH":
+        case "USDT":
+        case "CRV":
+        case "GTECH":
+            return validateEthAmount(amount, dict)
+        default:
+            return { 
+                ok: false, 
+                error: dict.unknownCurrency ? dict.unknownCurrency : "Unknown currency", 
+                value: null 
+            }
+    };
+}

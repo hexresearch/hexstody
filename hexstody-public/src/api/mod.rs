@@ -377,10 +377,20 @@ async fn swap(
     static_path: &State<StaticPath>,
 ) -> Result<Template, Redirect> {
     require_auth_user(cookies, state, |_, user| async move {
+        let mut currencies: Vec<Currency> = user.currencies.keys().cloned().collect();
+        currencies.sort();
+        let currencies: Vec<String> = currencies.into_iter().map(|c| c.symbol().symbol()).collect();
+        let from = currencies.get(0).cloned().unwrap_or("".to_string());
+        let to = currencies.get(1).cloned().unwrap_or("".to_string());
         let header_dict = get_dict_json(
             static_path.inner(),
             user.config.language,
             PathBuf::from_str("header.json").unwrap(),
+        )?;
+        let swap_dict = get_dict_json(
+            static_path.inner(),
+            user.config.language,
+            PathBuf::from_str("swap.json").unwrap(),
         )?;
         let context = context! {
             title:"swap",
@@ -389,7 +399,11 @@ async fn swap(
             lang: context! {
                 lang: user.config.language.to_alpha().to_uppercase(),
                 header: header_dict,
-            }
+                swap: swap_dict,
+            },
+            currencies: currencies,
+            from: from,
+            to: to
         };
         Ok(Template::render("swap", context))
     })

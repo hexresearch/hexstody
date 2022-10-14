@@ -1,10 +1,12 @@
-import { currencyToCurrencyName, tickerEnum, formattedCurrencyValue, currencyPrecision, currencyNameToCurrency, tickerToSymbol } from "../common.js";
+import { currencyToCurrencyName, tickerEnum, formattedCurrencyValue, currencyNameToCurrency, validateAmount, displayUnitTickerAmount } from "../common.js";
 import { getAdjustedRate, getBalance, postOrderExchange } from "../request.js";
 
-let currencyFrom = null;
-let currencyTo = null;
+let balanceFrom = null;
+let balanceTo = null;
+let pairRate = null;
 let valueFrom = null;
 let valueTo = null;
+let balances = null;
 
 function displayError(error) {
     const validationDisplay = document.getElementById("validation-error");
@@ -12,6 +14,9 @@ function displayError(error) {
     validationDisplay.hidden = false;
 }
 
+function currencyPrecision(){
+    return 1
+}
 
 
 function calcAvailableBalance(balanceObj) {
@@ -103,7 +108,125 @@ function tryTrans(from, event) {
     return null;
 }
 
-async function init() {
+async function getBalances() {
+    return await fetch("/balance").then(r => r.json());
+}
+
+function getBalanceByCurrency(currencyName){
+    for (const balance of balances.balances){
+        let cn = currencyToCurrencyName(balance.currency)
+        if (cn === currencyName){
+            return balance;
+        }
+    }
+}
+
+function wipeEnv(){
+    balances = null;
+    balanceFrom = null;
+    balanceTo = null;
+    pairRate = null;
+    valueFrom = null;
+    valueTo = null;
+    document.getElementById("from-max-btn").style.display = "none";
+    document.getElementById("from-avaliable").style.display = "none";
+    document.getElementById("from-avaliable").hidden = true;
+}
+
+async function initEnv(){
+    wipeEnv()
+    balances = await getBalances()
+    const selectFrom = document.getElementById("select-from")
+    const selectTo = document.getElementById("select-to")
+    
+    selectFrom.onchange = function(){
+        balanceFrom = null;
+        let curName = selectFrom.value;
+        balanceFrom = getBalanceByCurrency(curName)
+        if(balanceFrom && balanceTo) {
+            if (balanceFrom != balanceTo){
+                displayEnv()
+            }
+        }
+    }
+
+    selectTo.onchange = function(){
+        balanceTo = null;
+        let curName = selectTo.value;
+        balanceTo = getBalanceByCurrency(curName)
+        if(balanceFrom && balanceTo) {
+            if (balanceFrom != balanceTo){
+                displayEnv()
+            }
+        }
+    }
+}
+
+async function displayEnv(){
+    pairRate = await getAdjustedRate(balanceFrom.currency, balanceTo.currency).then(r => r.json());
+    document.getElementById("from-balance").innerText = displayUnitTickerAmount(balanceFrom);
+    document.getElementById("from-unit").innerText = balanceFrom.value.name;
+    document.getElementById("to-unit").innerText = balanceTo.value.name;
+    document.getElementById("from-avaliable").hidden = false;
+    document.getElementById("rate-span").innerText = displayExchangeRate(pairRate)
+    document.getElementById("from-max-btn").style.display = "block";
+    document.getElementById("from-max-btn").onclick = maxAmountBtn;
+    document.getElementById("from_value").onkeyup = fromChangedHandler;
+    document.getElementById("to_value").onkeyup = toChangedHandler;
+    document.getElementById("swap").onclick = handleSwapButton;
+}
+
+function displayExchangeRate(rate){
+    if(rate) {
+        return `1 ${rate.from} = ${rate.rate} ${rate.to}`
+    } else {
+        return ""
+    }
+}
+
+function maxAmountBtn(){
+    const fromEl = document.getElementById("from_value") 
+    fromEl.value = balanceFrom.value.amount / balanceFrom.value.mul;
+    fromEl.onkeyup()
+}
+
+function fromChangedHandler(){
+    const rawValue = document.getElementById("from_value").value;
+    const convertedAmount = Math.floor(rawValue * balanceFrom.value.mul)
+    let val = validateAmount(balanceFrom.currency, convertedAmount);
+    if (val.ok){
+        // Split calc for easy understanding
+        const wholeUnitsFrom = val.value / balanceFrom.value.prec;
+        const wholeUnitsTo = wholeUnitsFrom * pairRate.rate;
+        const amountTo = wholeUnitsTo * balanceTo.prec;
+        const displayUnitsTo = amountTo / balanceTo.value.mul;
+        document.getElementById("to_value").value = displayUnitsTo
+
+    } else {
+        document.getElementById("to_value").value = null
+    }
+}
+
+function toChangedHandler(){
+    const rawValue = document.getElementById("to_value").value;
+    const convertedAmount = Math.floor(rawValue * balanceTo.value.mul)
+    let val = validateAmount(balanceTo.currency, convertedAmount);
+    if (val.ok) {
+        // Split calc for easy understanding
+        const wholeUnitsTo = val.value / balanceTo.value.prec
+        const wholeUnitsFrom = wholeUnitsTo / pairRate.rate
+        const displayUnitsFrom = wholeUnitsFrom * balanceFrom.value.prec / balanceFrom.value.mul
+        document.getElementById("from_value").value = displayUnitsFrom
+    } else {
+        document.getElementById("from_value").value = null
+    }
+}
+
+async function handleSwapButton(){
+
+}
+
+async function init2() {
     const allCurrencies = Object.values(tickerEnum);
     const optionTemplate = Handlebars.compile('<a href="#" class="dropdown-item"> {{this}} </a>');
     const renderedOptions = allCurrencies.reduce((acc, opt) => acc + optionTemplate(opt), "");
@@ -149,4 +272,4 @@ async function init() {
     initDrop("to", renderedOptions);
 }
 
-document.addEventListener("DOMContentLoaded", init);
+document.addEventListener("DOMContentLoaded", initEnv);
