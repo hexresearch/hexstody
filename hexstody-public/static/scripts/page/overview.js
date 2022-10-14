@@ -18,14 +18,6 @@ async function getHistory(skip, take, filter) {
     return fetch(`/history/${skip}/${take}?filter=` + filt).then(r => r.json());
 }
 
-async function getCourseForCurrency(currency) {
-    return await fetch("/ticker/ticker",
-        {
-            method: "POST",
-            body: JSON.stringify(currency)
-        }).then(r => r.json());
-};
-
 async function initTemplates() {
 
     const [balanceTemp, historyTemp, dictTemp] = await Promise.allSettled([
@@ -165,15 +157,6 @@ function enableCopyBtns(historyElem) {
                 setTimeout(() => instance.hide(), 1000);
             }
         });
-    };
-}
-
-function enableDepositWithdrawBtns(balancesElem) {
-    let balanceItems = balancesElem.getElementsByClassName('balances-item');
-    for (const item of balanceItems) {
-        const [depositBtn, withdrawBtn] = item.getElementsByTagName('button');
-        depositBtn.addEventListener("click", () => window.location.href = "/deposit");
-        withdrawBtn.addEventListener("click", () => window.location.href = "/withdraw");
     };
 }
 
