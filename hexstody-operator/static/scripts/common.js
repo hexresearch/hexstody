@@ -130,7 +130,7 @@ export function formatTime(timeString) {
 export function formatWithdrawalRequestStatus(status, requiredConfirmations) {
     switch (status.type) {
         case "InProgress":
-            return "In progress (" + status.confirmations + " of " + requiredConfirmations + ")"
+            return `In progress (${status.confirmations_minus_rejections} of ${requiredConfirmations})`
         case "Confirmed":
             return "Confirmed"
         case "OpRejected":
@@ -147,7 +147,7 @@ export function formatWithdrawalRequestStatus(status, requiredConfirmations) {
 export function formatExchangeRequestStatus(status, requiredConfirmations) {
     switch (status.type) {
         case "InProgress":
-            return "In progress (" + status.confirmations + " of " + requiredConfirmations + ")"
+            return `In progress (${status.confirmations_minus_rejections} of ${requiredConfirmations})`
         case "Completed":
             return "Confirmed"
         case "Rejected":
@@ -172,10 +172,10 @@ export function formatLimitValue(limit) {
     return limit.amount + " / " + limit.span
 }
 
-export function formatLimitStatus(status) {
+export function formatLimitStatus(status, requiredConfirmations) {
     switch (status.type) {
         case "InProgress":
-            return "In progress (+" + status.confirmations + " / -" + status.rejections + " of 2)"
+            return `In progress (${status.confirmations_minus_rejections} of ${requiredConfirmations})`
         case "Confirmed":
             return "Confirmed"
         case "Rejected":
@@ -226,8 +226,8 @@ export async function makeSignedRequest(privateKeyJwk, publicKeyDer, requestBody
 export function isNumeric(str) {
     if (typeof str != "string") return false // we only process strings!  
     return !isNaN(str) && // use type coercion to parse the _entirety_ of the string (`parseFloat` alone does not do this)...
-           !isNaN(parseFloat(str)) // ...and ensure strings of whitespace fail
-  }
+        !isNaN(parseFloat(str)) // ...and ensure strings of whitespace fail
+}
 
 export async function getSupportedCurrencies(privateKeyJwk, publicKeyDer) {
     const response = await makeSignedRequest(privateKeyJwk, publicKeyDer, null, "currencies", 'GET')
@@ -337,6 +337,6 @@ export async function getMargin(currency_from, currency_to) {
     })
 }
 
-export async function setMargin(privateKeyJwk, publicKeyDer, req){
-    return await makeSignedRequest(privateKeyJwk, publicKeyDer, req, "margin/set", "POST");
+export async function setMargin(privateKeyJwk, publicKeyDer, req) {
+    return await makeSignedRequest(privateKeyJwk, publicKeyDer, req, "margin/set", "POST")
 }

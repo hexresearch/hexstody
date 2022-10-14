@@ -60,40 +60,38 @@ export const MarginsTab = {
             this.currencies = currencies
             this.isLoading = false
             if (currencies.length >= 2) {
-                this.currency_from = currencies[0];
-                this.currency_to = currencies[1];
+                this.currency_from = currencies[0]
+                this.currency_to = currencies[1]
             }
         },
-        async setBtnClick(){
+        async setBtnClick() {
             const margin = parseFloat(this.marginField)
             const req = {
-                currency_from: this.currency_from, 
-                currency_to: this.currency_to, 
+                currency_from: this.currency_from,
+                currency_to: this.currency_to,
                 margin: margin.toFixed(1)
-            };
-            console.log(req)
+            }
             await setMargin(this.privateKeyJwk, this.publicKeyDer, req)
         },
-        async loadPairData(){
-            this.isLoading = true;
-            this.rate = null;
-            this.margin = null;
+        async loadPairData() {
+            this.isLoading = true
+            this.rate = null
+            this.margin = null
             if (this.currency_from && this.currency_to) {
-                const rate = await getPairRate(this.currency_from, this.currency_to).then(r => r.json());
-                console.log(rate);
+                const rate = await getPairRate(this.currency_from, this.currency_to).then(r => r.json())
                 this.rate = rate
-                const margin = await getMargin(this.currency_from, this.currency_to).then(r => r.json());
-                this.margin = margin.margin;
-                this.marginField = margin.margin;
+                const margin = await getMargin(this.currency_from, this.currency_to).then(r => r.json())
+                this.margin = margin.margin
+                this.marginField = margin.margin
             }
-            this.isLoading = false;
+            this.isLoading = false
         }
     },
     watch: {
-        currency_from(){
+        currency_from() {
             this.loadPairData()
         },
-        currency_to(){
+        currency_to() {
             this.loadPairData()
         }
     },
@@ -105,8 +103,8 @@ export const MarginsTab = {
                 return false
             }
         },
-        canSet(){
-            return this.margin != this.marginField 
+        canSet() {
+            return this.margin != this.marginField
                 && isNumeric(this.marginField)
                 && this.currency_from != this.currency_to
         }
@@ -114,14 +112,5 @@ export const MarginsTab = {
     async created() {
         await this.fetchData()
     },
-    props: {
-        privateKeyJwk: {
-            type: Object,
-            required: true
-        },
-        publicKeyDer: {
-            type: Object,
-            required: true
-        },
-    }
+    inject: ['privateKeyJwk', 'publicKeyDer'],
 }

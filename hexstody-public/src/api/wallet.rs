@@ -280,7 +280,9 @@ pub async fn get_history(
             api::HistoryItem::Withdrawal(api::WithdrawalHistoryItem {
                 currency: curr,
                 date: time,
-                status: api::WithdrawalRequestStatus::InProgress { confirmations: 0 },
+                status: api::WithdrawalRequestStatus::InProgress {
+                    confirmations_minus_rejections: 0,
+                },
                 value: val,
                 txid: Some(CurrencyTxId::ETH(ETHTxid {
                     txid: h.hash.to_owned(),
