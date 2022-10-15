@@ -2,5 +2,13 @@
     "deposit": "Deposit",
     "withdraw": "Withdraw",
     "copied": "Copied",
-    "txdoesntexist": "Tx does not exist yet"
+    "confirmed": "Confirmed",
+    "confirmations": "Confirmations",
+    "of": "of",
+    "inProgress": "In processing",
+    "confirmedByOperators": "Confirmed by operators",
+    "completed": "Completed",
+    "opRejected": "Rejected by operators",
+    "nodeRejected": "Rejected by node",
+    "unknownStatus": "Unknown status"
 }

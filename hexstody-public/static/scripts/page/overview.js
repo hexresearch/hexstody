@@ -68,7 +68,6 @@ async function initTemplates() {
     Handlebars.registerHelper('formattedElapsedTime', function () {
         return formattedElapsedTime(this.date)
     })
-    Handlebars.registerHelper('isInProgress', (req_confirmations, confirmations) => req_confirmations > confirmations)
     Handlebars.registerHelper('toLowerCase', (s) => s.toLowerCase())
 }
 
@@ -77,6 +76,29 @@ async function loadBalance() {
     const balanceDrawUpdate = balanceTemplate({ balances: balances.balances, lang: dict })
     const balancesElem = document.getElementById("balances")
     balancesElem.innerHTML = balanceDrawUpdate
+}
+
+export function formatDepositStatus(confirmations) {
+    // see 'hexstody_db::state::transaction::is_finalized' for confirmations number
+    let requiredConfirmations = 3
+    return confirmations > requiredConfirmations ? `${dict.confirmed}` : `${dict.confirmations}: ${confirmations} ${dict.of} ${requiredConfirmations}`
+}
+
+export function formatWithdrawStatus(status) {
+    switch (status.type) {
+        case "InProgress":
+            return dict.inProgress
+        case "Confirmed":
+            return dict.confirmedByOperators
+        case "Completed":
+            return dict.completed
+        case "OpRejected":
+            return dict.opRejected
+        case "NodeRejected":
+            return `${dict.nodeRejected}: ${status.reason}`
+        default:
+            return dict.unknownStatus
+    };
 }
 
 async function loadHistory() {
@@ -97,7 +119,8 @@ async function loadHistory() {
             return {
                 timeStamp: timeStamp,
                 valueToShow: `+${formattedCurrencyValue(currencyName, historyItem.value)} ${currencyName}`,
-                hash: historyItem.txid.txid,
+                txid: historyItem.txid.txid,
+                status: formatDepositStatus(historyItem.number_of_confirmations),
                 explorerLink: explorerLink,
                 flowClass: "is-deposit",
                 arrow: "mdi-arrow-collapse-down",
@@ -113,10 +136,12 @@ async function loadHistory() {
                     explorerLink = `https://etherscan.io/tx/${historyItem.txid.txid}`
                     break
             }
+            let isCompleted = historyItem.status.type === "Completed"
             return {
                 timeStamp: timeStamp,
                 valueToShow: `-${formattedCurrencyValue(currencyName, historyItem.value)} ${currencyName}`,
-                hash: historyItem.txid.txid,
+                txid: isCompleted ? historyItem.status.txid : null,
+                status: formatWithdrawStatus(historyItem.status),
                 explorerLink: explorerLink,
                 flowClass: "is-withdrawal",
                 arrow: "mdi-arrow-up",
@@ -124,8 +149,10 @@ async function loadHistory() {
             }
         }
     }
-    const historyBTCpred = await getHistory(0, 20)
-    const mappedHistory = historyBTCpred.history_items.map(mapHistory)
+
+    const history = await getHistory(0, 20)
+    const mappedHistory = history.history_items.map(mapHistory)
+
     const historyDrawUpdate = historyTemplate({ histories: mappedHistory })
     const historyElem = document.getElementById("history-table")
     historyElem.innerHTML = historyDrawUpdate
@@ -135,28 +162,22 @@ async function loadHistory() {
 function enableCopyBtns(historyElem) {
     let tableRows = historyElem.getElementsByTagName('tr')
     for (const row of tableRows) {
-        const txId = row.getElementsByTagName('a')[0].innerHTML
-        const copyBtn = row.getElementsByTagName('button')[0]
-        copyBtn.addEventListener("click", () => navigator.clipboard.writeText(txId).then(() => { }, err =>
-            console.error('Could not copy text: ', err)
-        ))
-        tippy(copyBtn, {
-            content: dict.copied,
-            trigger: "click",
-            hideOnClick: false,
-            onShow(instance) {
-                setTimeout(() => instance.hide(), 1000)
-            }
-        })
-    };
-}
-
-function enableDepositWithdrawBtns(balancesElem) {
-    let balanceItems = balancesElem.getElementsByClassName('balances-item')
-    for (const item of balanceItems) {
-        const [depositBtn, withdrawBtn] = item.getElementsByTagName('button')
-        depositBtn.addEventListener("click", () => window.location.href = "/deposit")
-        withdrawBtn.addEventListener("click", () => window.location.href = "/withdraw")
+        const txidList = row.getElementsByTagName('a')
+        if (txidList.length > 0) {
+            const txid = row.getElementsByTagName('a')[0].innerHTML
+            const copyBtn = row.getElementsByTagName('button')[0]
+            copyBtn.addEventListener("click", () => navigator.clipboard.writeText(txid).then(() => { }, err =>
+                console.error('Could not copy text: ', err)
+            ))
+            tippy(copyBtn, {
+                content: dict.copied,
+                trigger: "click",
+                hideOnClick: false,
+                onShow(instance) {
+                    setTimeout(() => instance.hide(), 1000)
+                }
+            })
+        }
     };
 }
 
