@@ -1038,9 +1038,13 @@ impl ConfirmationsConfig {
     Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
 )]
 pub struct UnitAmount {
+    /// Amount
     pub amount: u64,
+    /// Unit name. e.g mBTC, gwei, sat, etc
     pub name: String,
+    /// Unit multiplier. To display the amount in units: amount / mul
     pub mul: u64,
+    /// Currency precision. To convet the amount to whole units: amount / prec
     pub prec: u64,
 }
 
