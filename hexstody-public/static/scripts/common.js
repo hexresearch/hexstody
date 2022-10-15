@@ -379,6 +379,16 @@ export function currencyNameToCurrency(currencyName) {
     }
 }
 
+// Extracts object from array of objects with field currency by currency name
+export function getObjByCurrency(objects, currencyName){
+    for (const obj of objects){
+        let cn = currencyToCurrencyName(obj.currency)
+        if (cn === currencyName){
+            return obj;
+        }
+    }
+}
+
 export function isErc20Token(currencyName) {
     switch (currencyName.toUpperCase()) {
         case "BTC":

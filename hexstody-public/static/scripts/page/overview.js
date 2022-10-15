@@ -1,4 +1,4 @@
-import { loadTemplate, formattedCurrencyValue, formattedElapsedTime, currencyNameToCurrency, displayUnitAmount } from "../common.js";
+import { loadTemplate, formattedCurrencyValue, formattedElapsedTime, currencyNameToCurrency, displayUnitAmount, getObjByCurrency, displayUnitTickerAmount } from "../common.js";
 
 let balanceTemplate = null;
 let historyTemplate = null;
@@ -117,6 +117,10 @@ async function loadHistory() {
         const isDeposit = historyItem.type == "deposit"
         const timeStamp = timeStampToTime(Math.round(Date.parse(historyItem.date) / 1000))
         const currencyName = typeof historyItem.currency === 'object' ? historyItem.currency.ERC20.ticker : historyItem.currency
+        const curBalance = getObjByCurrency(currentBalances.balances, currencyName)
+        let unitVal = Object.assign({}, curBalance.value)
+        unitVal.amount = historyItem.value
+        const valueDisplay = displayUnitTickerAmount(unitVal);
         if (isDeposit) {
             let explorerLink
             switch (currencyName) {
@@ -129,7 +133,7 @@ async function loadHistory() {
             }
             return {
                 timeStamp: timeStamp,
-                valueToShow: `+${formattedCurrencyValue(currencyName, historyItem.value)} ${currencyName}`,
+                valueToShow: `+${valueDisplay}`,
                 txid: historyItem.txid.txid,
                 status: formatDepositStatus(historyItem.number_of_confirmations),
                 explorerLink: explorerLink,
@@ -150,7 +154,7 @@ async function loadHistory() {
             let isCompleted = historyItem.status.type === "Completed"
             return {
                 timeStamp: timeStamp,
-                valueToShow: `-${formattedCurrencyValue(currencyName, historyItem.value)} ${currencyName}`,
+                valueToShow: `-${valueDisplay}`,
                 txid: isCompleted ? historyItem.status.txid : null,
                 status: formatWithdrawStatus(historyItem.status),
                 explorerLink: explorerLink,
@@ -235,7 +239,8 @@ function displayTotalBalance(){
 }
 
 async function updateLoop() {
-    await Promise.allSettled([loadBalance(), loadHistory()]);
+    await loadBalance()
+    await loadHistory();
     displayTotalBalance()
     await new Promise((resolve) => setTimeout(resolve, refreshInterval));
     updateLoop();

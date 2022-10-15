@@ -1,4 +1,4 @@
-import { currencyToCurrencyName, validateAmount, displayUnitTickerAmount } from "../common.js";
+import { getObjByCurrency, validateAmount, displayUnitTickerAmount } from "../common.js";
 
 let balanceFrom = null;
 let balanceTo = null;
@@ -28,23 +28,12 @@ async function getAdjustedRate(from, to) {
         });
 }
 
-function getBalanceByCurrency(currencyName){
-    for (const balance of balances.balances){
-        let cn = currencyToCurrencyName(balance.currency)
-        if (cn === currencyName){
-            return balance;
-        }
-    }
-}
-
 function wipeEnv(){
     balances = null;
     balanceFrom = null;
     balanceTo = null;
     pairRate = null;
     amountFrom = null;
-    document.getElementById("from-max-btn").style.display = "none";
-    document.getElementById("from-avaliable").style.display = "none";
     document.getElementById("from-avaliable").hidden = true;
 }
 
@@ -57,7 +46,7 @@ async function initEnv(){
     selectFrom.onchange = function(){
         balanceFrom = null;
         let curName = selectFrom.value;
-        balanceFrom = getBalanceByCurrency(curName)
+        balanceFrom = getObjByCurrency(balances.balances, curName)
         if(balanceFrom && balanceTo) {
             if (balanceFrom != balanceTo){
                 displayEnv()
@@ -68,7 +57,7 @@ async function initEnv(){
     selectTo.onchange = function(){
         balanceTo = null;
         let curName = selectTo.value;
-        balanceTo = getBalanceByCurrency(curName)
+        balanceTo = getObjByCurrency(balances.balances, curName)
         if(balanceFrom && balanceTo) {
             if (balanceFrom != balanceTo){
                 displayEnv()
