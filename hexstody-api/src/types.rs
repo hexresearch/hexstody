@@ -22,13 +22,13 @@ use rocket_okapi::{
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::domain::{CurrencyTxId, Email, PhoneNumber, TgName};
+use crate::domain::{CurrencyTxId, Email, PhoneNumber, TgName, Unit, CurrencyUnit};
 
 use super::domain::currency::{BtcAddress, Currency, CurrencyAddress, Erc20Token};
 
 #[allow(non_snake_case)]
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct TickerETH {
+#[derive(Debug, PartialEq, Serialize, Clone, Copy, Deserialize, JsonSchema)]
+pub struct TickerUsdRub {
     pub USD: f32,
     pub RUB: f32,
 }
@@ -178,22 +178,58 @@ pub struct EthFeeResp {
 }
 
 #[allow(non_snake_case)]
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, JsonSchema)]
 pub struct EthGasPrice {
-    pub LastBlock: String,
-    pub SafeGasPrice: String,
-    pub ProposeGasPrice: String,
-    pub FastGasPrice: String,
-    pub suggestBaseFee: String,
+    pub LastBlock: u64,
+    pub SafeGasPrice: f64,
+    pub ProposeGasPrice: f64,
+    pub FastGasPrice: f64,
+    pub suggestBaseFee: f64,
     pub gasUsedRatio: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema, Eq, PartialEq)]
+impl<'de> Deserialize<'de> for EthGasPrice {
+    #[allow(non_snake_case)]
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+        D::Error: serde::de::Error {
+        use serde::de::Error;
+        use serde_json::Value;
+        let v = Value::deserialize(deserializer)?;
+        let parsef64 = |fname: &str| -> Result<f64, D::Error> {
+            v.get(fname)
+            .map(|v| v.as_str().map(|s| s.parse::<f64>()))
+            .flatten()
+            .ok_or(D::Error::custom(format!("failed to parse {}", fname)))?
+            .map_err(D::Error::custom)
+        };
+        let gasUsedRatio = v.get("gasUsedRatio")
+            .map(|v| v.as_str().map(|s| s.to_string()))
+            .flatten()
+            .ok_or(D::Error::custom("failed to parse gasUsedRatio"))?;
+        let LastBlock = v.get("LastBlock")
+            .map(|v| v.as_str().map(|s| s.parse::<u64>()))
+            .flatten()
+            .ok_or(D::Error::custom("failed to parse LastBlock"))?
+            .map_err(D::Error::custom)?;
+        let SafeGasPrice = parsef64("SafeGasPrice")?;
+        let ProposeGasPrice = parsef64("ProposeGasPrice")?;
+        let FastGasPrice = parsef64("FastGasPrice")?;
+        let suggestBaseFee = parsef64("suggestBaseFee")?;
+        Ok(EthGasPrice{ LastBlock, SafeGasPrice, ProposeGasPrice, FastGasPrice, suggestBaseFee, gasUsedRatio})
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, PartialEq)]
 pub struct BalanceItem {
     pub currency: Currency,
-    pub value: u64,
+    pub value: UnitAmount,
     pub limit_info: LimitInfo,
+    pub ticker: Option<TickerUsdRub>
 }
+
+impl Eq for BalanceItem{ }
 
 impl PartialOrd for BalanceItem {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
@@ -996,4 +1032,49 @@ impl ConfirmationsConfig {
             .reduce(|accum, item| if accum >= item { accum } else { item })
             .unwrap()
     }
+}
+
+#[derive(
+    Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
+)]
+pub struct UnitAmount {
+    /// Amount
+    pub amount: u64,
+    /// Unit name. e.g mBTC, gwei, sat, etc
+    pub name: String,
+    /// Unit multiplier. To display the amount in units: amount / mul
+    pub mul: u64,
+    /// Currency precision. To convet the amount to whole units: amount / prec
+    pub prec: u64,
+}
+
+impl From<(u64, Unit)> for UnitAmount {
+    fn from((amount, unit): (u64, Unit)) -> Self {
+        UnitAmount { 
+            amount, 
+            name: unit.name(), 
+            mul: unit.mul(),
+            prec: unit.precision(), 
+        }
+    }
+}
+
+impl From<(u64, &Unit)> for UnitAmount {
+    fn from((amount, unit): (u64, &Unit)) -> Self {
+        UnitAmount { 
+            amount, 
+            name: unit.name(), 
+            mul: unit.mul(),
+            prec: unit.precision(), 
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq)]
+pub struct UnitTickedAmount{
+    pub amount: u64,
+    pub name: String,
+    pub mul: u64,
+    pub prec: u64,
+    pub ticker: Option<TickerUsdRub>
 }

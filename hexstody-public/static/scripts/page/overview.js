@@ -1,11 +1,12 @@
-import { loadTemplate, formattedCurrencyValue, formattedElapsedTime, currencyNameToCurrency } from "../common.js"
+import { loadTemplate, formattedCurrencyValue, formattedElapsedTime, currencyNameToCurrency, displayUnitAmount, getObjByCurrency, displayUnitTickerAmount } from "../common.js";
 
-let balanceTemplate = null
-let historyTemplate = null
-let dict = null
-const refreshInterval = 20000
-const historyPageSize = 50
-let historyPagesToLoad = 1
+let balanceTemplate = null;
+let historyTemplate = null;
+let dict = null;
+const refreshInterval = 20000;
+const historyPageSize = 50;
+let historyPagesToLoad = 1;
+let currentBalances = null;
 
 async function getBalances() {
     return await fetch("/balance").then(r => r.json())
@@ -16,14 +17,6 @@ async function getHistory(skip, take, filter) {
     if (filter) { filt = filter } else { filt = "all" }
     return fetch(`/history/${skip}/${take}?filter=` + filt).then(r => r.json())
 }
-
-async function getCourseForCurrency(currency) {
-    return await fetch("/ticker/ticker",
-        {
-            method: "POST",
-            body: JSON.stringify(currency)
-        }).then(r => r.json())
-};
 
 async function initTemplates() {
 
@@ -37,6 +30,23 @@ async function initTemplates() {
     historyTemplate = historyTemp.value
     dict = dictTemp.value
 
+    Handlebars.registerHelper('isDeposit', (historyItem) => historyItem.type === "deposit");
+    Handlebars.registerHelper('isWithdrawal', (historyItem) => historyItem.type === "withdrawal");
+    Handlebars.registerHelper('displayUnitAmount', function () {
+        return displayUnitAmount(this.value)
+    });
+    Handlebars.registerHelper('displayUsdValue', function (){
+        if (this.ticker){
+            let numberFormat = Intl.NumberFormat('en', {
+                style: 'currency',
+                currency: 'USD',
+                currencyDisplay: 'code',
+                maximumFractionDigits: Math.log10(this.value.mul),
+            })
+            let value = numberFormat.format(this.ticker.USD * this.value.amount / this.value.mul)
+            return "(" + value + ")";
+        }
+    })
     Handlebars.registerHelper('isDeposit', (historyItem) => historyItem.type === "deposit")
     Handlebars.registerHelper('isWithdrawal', (historyItem) => historyItem.type === "withdrawal")
     Handlebars.registerHelper('formatCurrencyValue', function () {
@@ -72,10 +82,11 @@ async function initTemplates() {
 }
 
 async function loadBalance() {
-    const balances = await getBalances()
-    const balanceDrawUpdate = balanceTemplate({ balances: balances.balances, lang: dict })
-    const balancesElem = document.getElementById("balances")
-    balancesElem.innerHTML = balanceDrawUpdate
+    const balances = await getBalances();
+    currentBalances = balances;
+    const balanceDrawUpdate = balanceTemplate({ balances: balances.balances, lang: dict });
+    const balancesElem = document.getElementById("balances");
+    balancesElem.innerHTML = balanceDrawUpdate;
 }
 
 export function formatDepositStatus(confirmations) {
@@ -106,6 +117,10 @@ async function loadHistory() {
         const isDeposit = historyItem.type == "deposit"
         const timeStamp = timeStampToTime(Math.round(Date.parse(historyItem.date) / 1000))
         const currencyName = typeof historyItem.currency === 'object' ? historyItem.currency.ERC20.ticker : historyItem.currency
+        const curBalance = getObjByCurrency(currentBalances.balances, currencyName)
+        let unitVal = Object.assign({}, curBalance.value)
+        unitVal.amount = historyItem.value
+        const valueDisplay = displayUnitTickerAmount(unitVal);
         if (isDeposit) {
             let explorerLink
             switch (currencyName) {
@@ -118,7 +133,7 @@ async function loadHistory() {
             }
             return {
                 timeStamp: timeStamp,
-                valueToShow: `+${formattedCurrencyValue(currencyName, historyItem.value)} ${currencyName}`,
+                valueToShow: `+${valueDisplay}`,
                 txid: historyItem.txid.txid,
                 status: formatDepositStatus(historyItem.number_of_confirmations),
                 explorerLink: explorerLink,
@@ -139,7 +154,7 @@ async function loadHistory() {
             let isCompleted = historyItem.status.type === "Completed"
             return {
                 timeStamp: timeStamp,
-                valueToShow: `-${formattedCurrencyValue(currencyName, historyItem.value)} ${currencyName}`,
+                valueToShow: `-${valueDisplay}`,
                 txid: isCompleted ? historyItem.status.txid : null,
                 status: formatWithdrawStatus(historyItem.status),
                 explorerLink: explorerLink,
@@ -200,45 +215,17 @@ async function loadMoreHistory() {
     historyPagesToLoad += 1
 }
 
-async function updateLoop() {
-    await Promise.allSettled([loadBalance(), loadHistory()])
-
-    const [jsonresBTC, jsonresETH, jsonresUSDT] = await Promise.allSettled([
-        getCourseForCurrency(currencyNameToCurrency("BTC")),
-        getCourseForCurrency(currencyNameToCurrency("ETH")),
-        getCourseForCurrency(currencyNameToCurrency("USDT"))
-    ])
-
-    const btcTicker = jsonresBTC.value
-    const ethTicker = jsonresETH.value
-    const usdtTicker = jsonresUSDT.value
-
-    const usdNumberFormat1 = Intl.NumberFormat('ru-RU', {
-        style: 'currency',
-        currency: 'USD',
-        currencyDisplay: 'code'
+function displayTotalBalance(){
+    var usdTotal = 0;
+    var rubTotal = 0;
+    currentBalances.balances.forEach(bal => {
+        if (bal.ticker){
+            usdTotal += bal.value.amount * bal.ticker.USD / bal.value.mul;
+            rubTotal += bal.value.amount * bal.ticker.RUB / bal.value.mul;
+        }
     })
 
-    const usdToBtc = document.getElementById("usd-BTC")
-    let currValBtc = document.getElementById("curr-val-BTC").textContent
-    usdToBtc.textContent = `(${usdNumberFormat1.format((currValBtc * btcTicker.USD))})`
-
-    const usdToEth = document.getElementById("usd-ETH")
-    const currValEth = document.getElementById("curr-val-ETH").textContent
-    usdToEth.textContent = `(${usdNumberFormat1.format((currValEth * ethTicker.USD))})`
-
-    const usdToUSDT = document.getElementById("usd-USDT")
-    const currValUSDT = document.getElementById("curr-val-USDT").textContent
-    usdToUSDT.textContent = `(${usdNumberFormat1.format(currValUSDT)})`
-
-
-    const awBal = parseFloat(currValUSDT) + currValEth * ethTicker.USD + currValBtc * btcTicker.USD
-    const awBalRub = currValUSDT * usdtTicker.RUB + currValEth * ethTicker.RUB + currValBtc * btcTicker.RUB
-
-    const totalUsd = document.getElementById("total-balance-usd")
-    const totalRub = document.getElementById("total-balance-rub")
-
-    const usdNumberFormat2 = Intl.NumberFormat('ru-RU', {
+    const usdNumberFormat = Intl.NumberFormat('ru-RU', {
         style: 'currency',
         currency: 'USD'
     })
@@ -247,11 +234,16 @@ async function updateLoop() {
         currency: 'RUB'
     })
 
-    totalUsd.textContent = `${usdNumberFormat2.format(awBal)}`
-    totalRub.textContent = `(${rubNumberFormat.format(awBalRub)})`
+    document.getElementById("total-balance-usd").textContent = `${usdNumberFormat.format(usdTotal)}`;
+    document.getElementById("total-balance-rub").textContent = `(${rubNumberFormat.format(rubTotal)})`;
+}
 
-    await new Promise((resolve) => setTimeout(resolve, refreshInterval))
-    updateLoop()
+async function updateLoop() {
+    await loadBalance()
+    await loadHistory();
+    displayTotalBalance()
+    await new Promise((resolve) => setTimeout(resolve, refreshInterval));
+    updateLoop();
 }
 
 async function init() {

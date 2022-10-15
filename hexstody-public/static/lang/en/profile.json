@@ -1,6 +1,9 @@
 {
-    "tokens": {
-        "title": "Enable/disable token"
+    "currency": {
+        "tokens": "Enable/disable token",
+        "units": "Currency units",
+        "clear": "Clear",
+        "confirm": "Confirm"
     },
     "limits": {
         "setup": "Set up limits",

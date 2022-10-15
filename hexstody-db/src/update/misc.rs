@@ -2,7 +2,7 @@ use p256::PublicKey;
 use serde::{Deserialize, Serialize};
 use super::signup::UserId;
 
-use hexstody_api::domain::{Erc20Token, Language, Email, PhoneNumber, TgName};
+use hexstody_api::domain::{Erc20Token, Language, Email, PhoneNumber, TgName, Unit};
 use hexstody_api::types::Invite;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -52,4 +52,10 @@ pub struct PasswordChangeUpd{
 pub struct SetPublicKey{
     pub user: String,
     pub public_key: Option<PublicKey>
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+pub struct SetUnit{
+    pub user: String,
+    pub unit: Unit
 }

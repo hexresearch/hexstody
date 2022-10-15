@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use hexstody_api::{
-    types::{TickerETH, MarginData},
+    types::{TickerUsdRub, MarginData},
     domain::{Currency, Symbol}};
 use hexstody_api::error;
 use hexstody_runtime_db::RuntimeState;
@@ -26,10 +26,10 @@ pub async fn ticker(
     rstate: &State<Arc<Mutex<RuntimeState>>>,
     ticker_client: &State<TickerClient>,
     currency: Json<Currency>,
-) -> error::Result<Json<TickerETH>> {
+) -> error::Result<Json<TickerUsdRub>> {
     let currency = currency.into_inner();
     let mut rstate = rstate.lock().await;
-    let ticker: TickerETH = rstate
+    let ticker: TickerUsdRub = rstate
         .symbol_to_symbols_generic(ticker_client, currency.symbol(), vec![Symbol::USD, Symbol::RUB])
         .await
         .map_err(|e| error::Error::GenericError(e.to_string()))?;

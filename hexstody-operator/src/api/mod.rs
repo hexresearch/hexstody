@@ -1,5 +1,5 @@
 use figment::Figment;
-use hexstody_runtime_db::RuntimeState;
+use hexstody_runtime_db::{RuntimeState, FeeEstimates};
 use hexstody_ticker::api::ticker_api;
 use hexstody_ticker_provider::client::TickerClient;
 use qrcode_generator::QrCodeEcc;
@@ -626,6 +626,44 @@ async fn events(
     }
 }
 
+/// Get fee estimate info
+#[openapi(skip)]
+#[get("/rstate/fees")]
+async fn get_fee_estimates(
+    rstate: &RocketState<Arc<Mutex<RuntimeState>>>,
+    signature_data: SignatureData,
+    config: &RocketState<SignatureVerificationConfig>,
+) -> error::Result<Json<FeeEstimates>> {
+    guard_op_signature_nomsg(
+        &config,
+        uri!(get_fee_estimates).to_string(),
+        signature_data,
+    )?;
+    let est = rstate.lock().await.fee_estimates.clone();
+    Ok(Json(est))
+}
+
+/// Set fee estimates
+#[openapi(skip)]
+#[post("/rstate/fees/set", data="<estimates>")]
+async fn set_fee_estimates(
+    rstate: &RocketState<Arc<Mutex<RuntimeState>>>,
+    signature_data: SignatureData,
+    config: &RocketState<SignatureVerificationConfig>,
+    estimates: Json<FeeEstimates>
+) -> error::Result<()>{
+    let estimates = estimates.into_inner();
+    guard_op_signature(
+        &config,
+        uri!(set_fee_estimates).to_string(),
+        signature_data,
+        &estimates,
+    )?;
+    let mut rstate = rstate.lock().await;
+    rstate.fee_estimates = estimates;
+    Ok(())
+}
+
 pub async fn serve_api(
     pool: Pool,
     state: Arc<Mutex<HexstodyState>>,
@@ -670,6 +708,8 @@ pub async fn serve_api(
                 get_user_info,              // GET:  /user/info/<user_id>
                 events,                     // GET:  /state-updates-events
                 set_margin,                 // POST: /margin/set
+                get_fee_estimates,          // GET:  /rstate/fee
+                set_fee_estimates,          // POST: /rstate/fee/set
             ],
         )
         .mount("/ticker/", ticker_api)

@@ -1,15 +1,15 @@
 use std::{sync::Arc, fmt::Debug};
 use base64;
-use hexstody_api::{types::{LimitApiResp, LimitChangeReq, LimitChangeResponse, ConfigChangeRequest, LimitChangeFilter}, domain::{Currency, Language, Email, PhoneNumber, TgName}};
+use hexstody_api::{types::{LimitApiResp, LimitChangeReq, LimitChangeResponse, ConfigChangeRequest, LimitChangeFilter}, domain::{Currency, Language, Email, PhoneNumber, TgName, Unit, CurrencyUnit, UnitInfo, UserUnitInfo}};
 use rocket::{get, http::{CookieJar, Status}, State, serde::json::Json, response::Redirect, post};
 use rocket_okapi::openapi;
 use tokio::sync::{Mutex, mpsc};
-use hexstody_db::{state::{State as DbState, UserConfig}, update::{StateUpdate, limit::{LimitChangeUpd, LimitCancelData}, UpdateBody, misc::{SetLanguage, ConfigUpdateData, SetPublicKey}}};
+use hexstody_db::{state::{State as DbState, UserConfig}, update::{StateUpdate, limit::{LimitChangeUpd, LimitCancelData}, UpdateBody, misc::{SetLanguage, ConfigUpdateData, SetPublicKey, SetUnit}}};
 use hexstody_api::error;
 use p256::{pkcs8::DecodePublicKey, PublicKey};
 use super::auth::{require_auth_user, goto_signin};
 
-#[openapi(skip)]
+#[openapi(tag = "profile")]
 #[get("/profile/limits/get")]
 pub async fn get_user_limits(
     cookies: &CookieJar<'_>,
@@ -26,7 +26,7 @@ pub async fn get_user_limits(
     }).await.map_err(|_| goto_signin())
 }
 
-#[openapi(skip)]
+#[openapi(tag = "profile")]
 #[post("/profile/limits", data="<new_limits>")]
 pub async fn request_new_limits(
     cookies: &CookieJar<'_>,
@@ -71,7 +71,7 @@ pub async fn request_new_limits(
     }
 }
 
-#[openapi(skip)]
+#[openapi(tag = "profile")]
 #[get("/profile/limits/changes?<filter>")]
 pub async fn get_user_limit_changes(
     cookies: &CookieJar<'_>,
@@ -88,7 +88,7 @@ pub async fn get_user_limit_changes(
     }).await.map_err(|_| goto_signin())
 }
 
-#[openapi(skip)]
+#[openapi(tag = "profile")]
 #[post("/profile/limits/cancel", data="<currency>")]
 pub async fn cancel_user_change(
     cookies: &CookieJar<'_>,
@@ -118,7 +118,7 @@ pub async fn cancel_user_change(
     }
 }
 
-#[openapi(skip)]
+#[openapi(tag = "profile")]
 #[post("/profile/language", data="<lang>")]
 pub async fn set_language(
     cookies: &CookieJar<'_>,
@@ -137,7 +137,7 @@ pub async fn set_language(
     }).await
 }
 
-#[openapi(skip)]
+#[openapi(tag = "profile")]
 #[get("/profile/settings/config")]
 pub async fn get_user_config(
     cookies: &CookieJar<'_>,
@@ -147,7 +147,7 @@ pub async fn get_user_config(
         Ok(Json(user.config))
     }).await
 }
-#[openapi(skip)]
+#[openapi(tag = "profile")]
 #[post("/profile/settings/config", data="<request>")]
 pub async fn set_user_config(
     cookies: &CookieJar<'_>,
@@ -192,7 +192,7 @@ E: Debug
     Err(error::Error::GenericError(format!("{:?}", e)).into())
 }
 
-#[openapi(skip)]
+#[openapi(tag = "profile")]
 #[post("/profile/key", data="<key_b64>")]
 pub async fn set_user_public_key(
     cookies: &CookieJar<'_>,
@@ -217,5 +217,64 @@ pub async fn set_user_public_key(
     };
     let _ = updater.send(StateUpdate::new(UpdateBody::SetPublicKey(upd))).await;
     Ok(())
+    }).await
+}
+
+#[openapi(tag = "profile")]
+#[post("/profile/unit/set", data="<unit_reqs>")]
+pub async fn set_unit(
+    cookies: &CookieJar<'_>,
+    state: &State<Arc<Mutex<DbState>>>,
+    updater: &State<mpsc::Sender<StateUpdate>>,
+    unit_reqs: Json<Vec<Unit>>
+) -> error::Result<()> {
+    let unit_reqs = unit_reqs.into_inner();
+    require_auth_user(cookies, state, |_, user| async move {
+        for unit_req in unit_reqs {
+            let cur = unit_req.currency().ok_or(error::Error::UnknownCurrency(unit_req.name()))?;
+            let cinfo = user.currencies.get(&cur).ok_or(error::Error::NoUserCurrency(cur))?;
+            if cinfo.unit != unit_req {
+                let _ = updater.send(StateUpdate::new(UpdateBody::SetUnit(SetUnit{ user: user.username.clone(), unit: unit_req }))).await;
+            };
+        }
+        Ok(())
+    }).await
+}
+
+#[openapi(tag = "profile")]
+#[post("/profile/unit/get", data="<currency>")]
+pub async fn get_unit(
+    cookies: &CookieJar<'_>,
+    state: &State<Arc<Mutex<DbState>>>,
+    currency: Json<Currency>
+) -> error::Result<Json<Unit>> {
+    let currency = currency.into_inner();
+    require_auth_user(cookies, state, |_, user| async move {
+        let cinfo = user.currencies.get(&currency).ok_or(error::Error::NoUserCurrency(currency))?;
+        Ok(Json(cinfo.unit.clone()))
+    }).await
+}
+
+#[openapi(tag = "profile")]
+#[get("/profile/unit/all")]
+pub async fn get_all_units(
+    cookies: &CookieJar<'_>,
+    state: &State<Arc<Mutex<DbState>>>,
+) -> error::Result<Json<Vec<UserUnitInfo>>> {
+    require_auth_user(cookies, state, |_, user| async move {
+        let units: Vec<UnitInfo> =  user.currencies.values()
+            .filter_map(|cinfo|
+                if cinfo.unit.is_generic() {
+                    None
+                } else {
+                    Some(cinfo.unit.clone().into())
+                }
+            ).collect();
+        let mut info: Vec<UserUnitInfo> = units
+                .into_iter()
+                .map(|ui| (ui.unit.currency().unwrap(), ui).into())
+                .collect();
+        info.sort_by(|a,b| a.currency.cmp(&b.currency));
+        Ok(Json(info))
     }).await
 }

@@ -157,7 +157,7 @@ async fn profile_page(
             page_title,
             parent: "base_with_header",
             tabs: tabs.unwrap(),
-            selected: tab.unwrap_or("tokens".to_string()),
+            selected: tab.unwrap_or("currency".to_string()),
             username: &user.username,
             lang: context! {
                 selected_lang: user.config.language.to_alpha().to_uppercase(),
@@ -377,10 +377,20 @@ async fn swap(
     static_path: &State<StaticPath>,
 ) -> Result<Template, Redirect> {
     require_auth_user(cookies, state, |_, user| async move {
+        let mut currencies: Vec<Currency> = user.currencies.keys().cloned().collect();
+        currencies.sort();
+        let currencies: Vec<String> = currencies.into_iter().map(|c| c.symbol().symbol()).collect();
+        let from = currencies.get(0).cloned().unwrap_or("".to_string());
+        let to = currencies.get(1).cloned().unwrap_or("".to_string());
         let header_dict = get_dict_json(
             static_path.inner(),
             user.config.language,
             PathBuf::from_str("header.json").unwrap(),
+        )?;
+        let swap_dict = get_dict_json(
+            static_path.inner(),
+            user.config.language,
+            PathBuf::from_str("swap.json").unwrap(),
         )?;
         let context = context! {
             title:"swap",
@@ -389,7 +399,11 @@ async fn swap(
             lang: context! {
                 lang: user.config.language.to_alpha().to_uppercase(),
                 header: header_dict,
-            }
+                swap: swap_dict,
+            },
+            currencies: currencies,
+            from: from,
+            to: to
         };
         Ok(Template::render("swap", context))
     })
@@ -427,8 +441,7 @@ pub async fn serve_api(
                 get_balance,
                 get_balance_by_currency,
                 get_user_data,
-                ethfee,
-                btcfee,
+                get_fee,
                 get_history,
                 withdraw_eth,
                 post_withdraw,
@@ -454,7 +467,10 @@ pub async fn serve_api(
                 get_deposit_address_handle,
                 order_exchange,
                 list_my_orders,
-                get_network
+                get_network,
+                set_unit,
+                get_unit,
+                get_all_units
             ],
         )
         .mount("/ticker/", ticker_api)

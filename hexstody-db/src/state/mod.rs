@@ -21,7 +21,7 @@ pub use withdraw::*;
 use crate::update::limit::{LimitCancelData, LimitChangeData, LimitChangeDecision, LimitChangeUpd};
 use crate::update::misc::{
     ConfigUpdateData, InviteRec, PasswordChangeUpd, SetLanguage, SetPublicKey, TokenAction,
-    TokenUpdate,
+    TokenUpdate, SetUnit,
 };
 use crate::update::signup::SignupAuth;
 use crate::update::withdrawal::{WithdrawCompleteInfo, WithdrawalRejectInfo};
@@ -117,6 +117,8 @@ pub enum StateUpdateErr {
     ExchangeAlreadyConfirmed,
     #[error("Exchange request already rejected")]
     ExchangeAlreadyRejected,
+    #[error("Unknown currency: {0}")]
+    UnknownCurrency(String),
 }
 
 impl State {
@@ -288,6 +290,11 @@ impl State {
                 self.last_changed = update.created;
                 Ok(None)
             }
+            UpdateBody::SetUnit(req) => {
+                self.set_unit(req)?;
+                self.last_changed = update.created;
+                Ok(None)
+            },
         }
     }
 
@@ -1070,6 +1077,14 @@ impl State {
         self.exchange_state
             .addresses
             .insert(req.currency(), req.clone());
+        Ok(())
+    }
+
+    fn set_unit(&mut self, req: SetUnit) -> Result<(), StateUpdateErr> {
+        let cur = req.unit.currency().ok_or(StateUpdateErr::UnknownCurrency(req.unit.name()))?;
+        let unifo = self.users.get_mut(&req.user).ok_or(StateUpdateErr::UserNotFound(req.user.clone()))?;
+        let cinfo = unifo.currencies.get_mut(&cur).ok_or(StateUpdateErr::UserMissingCurrency(req.user.clone(), cur))?;
+        cinfo.unit = req.unit;
         Ok(())
     }
 }
