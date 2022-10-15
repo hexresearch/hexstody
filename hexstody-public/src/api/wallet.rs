@@ -709,7 +709,8 @@ pub async fn order_exchange(
             .symbol_to_symbol_adjusted(ticker_client, from_symbol.to_owned(), to_symbol.to_owned())
             .await
             .map_err(|e| error::Error::GenericError(e.to_string()))?;
-        let amount_to = (amount_from as f64 / from_symbol.exponent() * rate * to_symbol.exponent()) as u64;
+        let amount_to =
+            (amount_from as f64 / from_symbol.exponent() * rate * to_symbol.exponent()) as u64;
         if balance < amount_from {
             return Err(error::Error::InsufficientFunds(currency_from).into());
         } else {
