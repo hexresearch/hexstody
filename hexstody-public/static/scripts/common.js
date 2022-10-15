@@ -30,7 +30,7 @@ export const symbolEnum = Object.freeze({
     erc20_gtech: {
         "ERC20": "GTECH"
     }
-});
+})
 
 export function tickerToSymbol(ticker) {
     switch (ticker) {
@@ -54,7 +54,7 @@ export const tickerEnum = Object.freeze({
     erc20_usdt: "USDT",
     erc20_crv: "CRV",
     erc20_gtech: "GTECH"
-});
+})
 
 export const currencyEnum = Object.freeze({
     btc: tickerEnum.btc,
@@ -80,7 +80,7 @@ export const currencyEnum = Object.freeze({
             "contract": "0x866A4Da32007BA71aA6CcE9FD85454fCF48B140c"
         }
     }
-});
+})
 
 export function* getAllCurrencies() {
     for (const currencyKey in currencyEnum) {
@@ -354,11 +354,11 @@ export function indexArrayFromOne(array) {
 
 export function currencyToCurrencyName(currency) {
     if (typeof currency === "string") {
-        return currency;
+        return currency
     } else if (typeof currency === "object" && currency.ERC20) {
-        return currency.ERC20.name;
+        return currency.ERC20.name
     } else {
-        return null;
+        return null
     }
 }
 
