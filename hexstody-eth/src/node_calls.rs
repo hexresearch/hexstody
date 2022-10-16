@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_variables, non_snake_case)]
 use crate::types::*;
 use crate::conf::{NodeConfig, load_config};
 

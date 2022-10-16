@@ -2,13 +2,12 @@ use crate::types::*;
 use crate::utils::*;
 use crate::node_calls;
 use crate::db_functions;
-use crate::conf::{NodeConfig, load_config};
+use crate::conf::NodeConfig;
 
-use rocket::{get,post,State};
+use rocket::{get,State};
 use rocket::http::{Status, ContentType};
-use rocket::serde::json::Json;
-use rocket_db_pools::{Database, Connection};
-use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
+use rocket_db_pools::Connection;
+use rocket_okapi::openapi;
 
 #[openapi(tag = "balance")]
 #[get("/balance/eth/total")]
@@ -70,7 +69,7 @@ pub async fn balance_eth_login(login: &str,
                   return (Status::InternalServerError,(ContentType::JSON, "No result error".to_string()));
               }
               Some(res_str) => {
-                  let json_res = serde_json::to_string(&hxt_str_to_f64(res_str));
+                  let _json_res = serde_json::to_string(&hxt_str_to_f64(res_str));
                   log::warn!("=======================</BALANCE ETH>==========================");
                   return (Status::Ok, (ContentType::JSON, format!("{}",&hxt_str_to_f64(res_str))));
               }
@@ -83,7 +82,7 @@ pub async fn balance_eth_login(login: &str,
 #[get("/balance/eth/address/<address>")]
 pub async fn balance_eth_address(address: &str,
                   cfg: &State<NodeConfig>,
-                  db: Connection<MyDb>) -> (Status, (ContentType, String)) {
+                  _db: Connection<MyDb>) -> (Status, (ContentType, String)) {
   log::warn!("=======================<BALANCE ETH>==========================");
   log::warn!("address {:?}",address);
   let r_res = node_calls::balance_eth(cfg,address);
@@ -138,7 +137,7 @@ pub async fn balance_erc20_login(login: &str,
                   return (Status::InternalServerError,(ContentType::JSON, "No result error".to_string()));
               }
               Some(res_str) => {
-                  let json_res = serde_json::to_string(&hxt_str_to_f64(res_str));
+                  let _json_res = serde_json::to_string(&hxt_str_to_f64(res_str));
                   log::warn!("=======================</BALANCE ERC20>==========================");
                   return (Status::Ok, (ContentType::JSON, format!("{}",&hxt_str_to_f64(res_str))));
               }
@@ -152,7 +151,7 @@ pub async fn balance_erc20_login(login: &str,
 pub async fn balance_erc20_address(address: &str,
                   token_address: &str,
                   cfg: &State<NodeConfig>,
-                  db: Connection<MyDb>) -> (Status, (ContentType, String)) {
+                  _db: Connection<MyDb>) -> (Status, (ContentType, String)) {
   log::warn!("=======================<BALANCE ERC20>==========================");
   log::warn!("Address {:?}",address);
   log::warn!("TokenAddress {:?}",token_address);
@@ -175,7 +174,7 @@ pub async fn balance_erc20_address(address: &str,
                   return (Status::InternalServerError,(ContentType::JSON, "No result error".to_string()));
               }
               Some(res_str) => {
-                  let json_res = serde_json::to_string(&hxt_str_to_f64(res_str));
+                  let _json_res = serde_json::to_string(&hxt_str_to_f64(res_str));
                   log::warn!("=======================</BALANCE ERC20>==========================");
                   return (Status::Ok, (ContentType::JSON, format!("{}",&hxt_str_to_f64(res_str))));
               }
