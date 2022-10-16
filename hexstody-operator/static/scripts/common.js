@@ -344,3 +344,7 @@ export async function setMargin(privateKeyJwk, publicKeyDer, req) {
 export async function getFeeEstimates(privateKeyJwk, publicKeyDer){
     return makeSignedRequest(privateKeyJwk, publicKeyDer, null, "rstate/fees", "GET");
 }
+
+export async function postFeeEstimates(privateKeyJwk, publicKeyDer, req){
+    return makeSignedRequest(privateKeyJwk, publicKeyDer, req, "rstate/fees/set", "POST");
+}
