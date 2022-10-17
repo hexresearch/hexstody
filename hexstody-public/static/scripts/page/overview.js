@@ -1,12 +1,12 @@
-import { loadTemplate, formattedCurrencyValue, formattedElapsedTime, currencyNameToCurrency, displayUnitAmount, getObjByCurrency, displayUnitTickerAmount } from "../common.js";
+import { loadTemplate, formattedCurrencyValue, formattedElapsedTime, currencyNameToCurrency, displayUnitAmount, getObjByCurrency, displayUnitTickerAmount } from "../common.js"
 
-let balanceTemplate = null;
-let historyTemplate = null;
-let dict = null;
-const refreshInterval = 20000;
-const historyPageSize = 50;
-let historyPagesToLoad = 1;
-let currentBalances = null;
+let balanceTemplate = null
+let historyTemplate = null
+let dict = null
+const refreshInterval = 20000
+const historyPageSize = 50
+let historyPagesToLoad = 1
+let currentBalances = null
 
 async function getBalances() {
     return await fetch("/balance").then(r => r.json())
@@ -30,21 +30,19 @@ async function initTemplates() {
     historyTemplate = historyTemp.value
     dict = dictTemp.value
 
-    Handlebars.registerHelper('isDeposit', (historyItem) => historyItem.type === "deposit");
-    Handlebars.registerHelper('isWithdrawal', (historyItem) => historyItem.type === "withdrawal");
+    Handlebars.registerHelper('isDeposit', (historyItem) => historyItem.type === "deposit")
+    Handlebars.registerHelper('isWithdrawal', (historyItem) => historyItem.type === "withdrawal")
     Handlebars.registerHelper('displayUnitAmount', function () {
         return displayUnitAmount(this.value)
-    });
-    Handlebars.registerHelper('displayUsdValue', function (){
-        if (this.ticker){
+    })
+    Handlebars.registerHelper('displayUsdValue', function () {
+        if (this.ticker) {
             let numberFormat = Intl.NumberFormat('en', {
                 style: 'currency',
                 currency: 'USD',
-                currencyDisplay: 'code',
-                maximumFractionDigits: Math.log10(this.value.mul),
             })
-            let value = numberFormat.format(this.ticker.USD * this.value.amount / this.value.mul)
-            return "(" + value + ")";
+            let value = numberFormat.format(this.ticker.USD * this.value.amount / this.value.prec)
+            return "(" + value + ")"
         }
     })
     Handlebars.registerHelper('isDeposit', (historyItem) => historyItem.type === "deposit")
@@ -82,11 +80,11 @@ async function initTemplates() {
 }
 
 async function loadBalance() {
-    const balances = await getBalances();
-    currentBalances = balances;
-    const balanceDrawUpdate = balanceTemplate({ balances: balances.balances, lang: dict });
-    const balancesElem = document.getElementById("balances");
-    balancesElem.innerHTML = balanceDrawUpdate;
+    const balances = await getBalances()
+    currentBalances = balances
+    const balanceDrawUpdate = balanceTemplate({ balances: balances.balances, lang: dict })
+    const balancesElem = document.getElementById("balances")
+    balancesElem.innerHTML = balanceDrawUpdate
 }
 
 export function formatDepositStatus(confirmations) {
@@ -120,7 +118,7 @@ async function loadHistory() {
         const curBalance = getObjByCurrency(currentBalances.balances, currencyName)
         let unitVal = Object.assign({}, curBalance.value)
         unitVal.amount = historyItem.value
-        const valueDisplay = displayUnitTickerAmount(unitVal);
+        const valueDisplay = displayUnitTickerAmount(unitVal)
         if (isDeposit) {
             let explorerLink
             switch (currencyName) {
@@ -215,35 +213,36 @@ async function loadMoreHistory() {
     historyPagesToLoad += 1
 }
 
-function displayTotalBalance(){
-    var usdTotal = 0;
-    var rubTotal = 0;
+function displayTotalBalance() {
+    var usdTotal = 0
+    var rubTotal = 0
     currentBalances.balances.forEach(bal => {
-        if (bal.ticker){
-            usdTotal += bal.value.amount * bal.ticker.USD / bal.value.mul;
-            rubTotal += bal.value.amount * bal.ticker.RUB / bal.value.mul;
+        if (bal.ticker) {
+            usdTotal += bal.value.amount * bal.ticker.USD / bal.value.prec
+            rubTotal += bal.value.amount * bal.ticker.RUB / bal.value.prec
         }
     })
 
-    const usdNumberFormat = Intl.NumberFormat('ru-RU', {
+    const usdNumberFormat = Intl.NumberFormat('en', {
         style: 'currency',
-        currency: 'USD'
+        currency: 'USD',
     })
-    const rubNumberFormat = Intl.NumberFormat('ru-RU', {
+    const rubNumberFormat = Intl.NumberFormat('ru', {
         style: 'currency',
-        currency: 'RUB'
+        currency: 'RUB',
+        currencyDisplay: 'narrowSymbol'
     })
 
-    document.getElementById("total-balance-usd").textContent = `${usdNumberFormat.format(usdTotal)}`;
-    document.getElementById("total-balance-rub").textContent = `(${rubNumberFormat.format(rubTotal)})`;
+    document.getElementById("total-balance-usd").textContent = `${usdNumberFormat.format(usdTotal)}`
+    document.getElementById("total-balance-rub").textContent = `(${rubNumberFormat.format(rubTotal)})`
 }
 
 async function updateLoop() {
     await loadBalance()
-    await loadHistory();
+    await loadHistory()
     displayTotalBalance()
-    await new Promise((resolve) => setTimeout(resolve, refreshInterval));
-    updateLoop();
+    await new Promise((resolve) => setTimeout(resolve, refreshInterval))
+    updateLoop()
 }
 
 async function init() {
@@ -253,6 +252,5 @@ async function init() {
     loadMoreButton.onclick = loadMoreHistory
     updateLoop()
 };
-
 
 document.addEventListener("headerLoaded", init)
