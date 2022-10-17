@@ -20,7 +20,7 @@ use tokio::sync::{Mutex, Notify};
 
 use rocket::fairing::AdHoc;
 use rocket::fs::FileServer;
-use rocket::http::{CookieJar, Status};
+use rocket::http::CookieJar;
 use rocket::response::Redirect;
 use rocket::serde::json::Json;
 use rocket::uri;
@@ -30,8 +30,7 @@ use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
 
 use auth::*;
 use hexstody_api::{
-    domain::{Currency, Language},
-    error::{self, ErrorMessage},
+    domain::{Currency, Language, error},
     types::DepositInfo,
 };
 use hexstody_btc_client::client::BtcClient;
@@ -179,7 +178,7 @@ fn signup() -> Template {
 
 #[openapi(tag = "auth")]
 #[get("/logout")]
-pub async fn logout(cookies: &CookieJar<'_>) -> Result<Redirect, (Status, Json<ErrorMessage>)> {
+pub async fn logout(cookies: &CookieJar<'_>) -> error::Result<Redirect> {
     let resp = require_auth(cookies, |cookie| async move {
         cookies.remove(cookie);
         Ok(Json(()))
@@ -189,7 +188,7 @@ pub async fn logout(cookies: &CookieJar<'_>) -> Result<Redirect, (Status, Json<E
         Ok(_) => Ok(goto_signin()),
         // Error code 8 => NoUserFound (not logged in). 7 => Requires auth
         Err(err) => {
-            if err.1.code == 8 || err.1.code == 7 {
+            if err.code == 8 || err.code == 7 {
                 Ok(goto_signin())
             } else {
                 Err(err)
@@ -280,7 +279,7 @@ async fn deposit(
         Ok(v) => Ok(Ok(v)),
         // Error code 8 => NoUserFound (not logged in). 7 => Requires auth
         Err(err) => {
-            if err.1.code == 8 || err.1.code == 7 {
+            if err.code == 8 || err.code == 7 {
                 Err(goto_signin())
             } else {
                 Ok(Err(err))
@@ -346,7 +345,7 @@ async fn withdraw(
         Ok(v) => Ok(Ok(v)),
         // Error code 8 => NoUserFound (not logged in). 7 => Requires auth
         Err(err) => {
-            if err.1.code == 8 || err.1.code == 7 {
+            if err.code == 8 || err.code == 7 {
                 Err(goto_signin())
             } else {
                 Ok(Err(err))

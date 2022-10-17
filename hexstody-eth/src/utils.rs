@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_variables, non_snake_case)]
 use web3::{
     ethabi::ethereum_types::U256,
 };
@@ -37,7 +38,7 @@ pub fn to_U256(volume: &str) -> U256{
 
 pub fn hxt_str_to_f64(volume: &str) -> f64{
     let res1 : &str = &volume[2..volume.len()].trim_start_matches('0');
-    if (res1.len()==0){
+    if res1.is_empty() {
         return 0.0;
     } else{
         let res_dec = i128::from_str_radix(&res1, 16).unwrap();

@@ -1,8 +1,7 @@
 use std::sync::Arc;
 
-use hexstody_api::domain::{CurrencyAddress, EthAccount, BtcAddress, Erc20Token, Erc20};
+use hexstody_api::domain::{error, CurrencyAddress, EthAccount, BtcAddress, Erc20Token, Erc20};
 use hexstody_api::{types::SignatureData, domain::Currency};
-use hexstody_api::error;
 use hexstody_btc_client::client::BtcClient;
 use hexstody_db::update::{StateUpdate, UpdateBody};
 use hexstody_eth_client::client::EthClient;

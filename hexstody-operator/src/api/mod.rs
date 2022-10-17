@@ -21,8 +21,10 @@ use tokio::sync::{mpsc, Mutex, Notify};
 use uuid::Uuid;
 
 use hexstody_api::{
-    domain::Currency,
-    error,
+    domain::{
+        error,
+        Currency
+    },
     types::{
         ConfirmationData, ConfirmationsConfig, ExchangeAddress, ExchangeBalanceItem,
         ExchangeConfirmationData, ExchangeFilter, HotBalanceResponse, Invite, InviteRequest,
