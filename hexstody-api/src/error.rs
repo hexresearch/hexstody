@@ -1,174 +1,69 @@
-use crate::domain::{currency::Currency, Erc20Token};
-use rocket::http::Status;
-use rocket::serde::json::Json;
+use std::fmt::Display;
+
+use okapi::openapi3::Responses;
+use rocket::Response;
+use rocket::{http::Status, response::Responder};
 use rocket_okapi::okapi::schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
-use thiserror::Error;
+use rocket_okapi::response::OpenApiResponderInner;
+use rocket_okapi::util::add_schema_response;
+use serde::Serialize;
+use serde_json::json;
 
-pub const MIN_USER_NAME_LEN: usize = 3;
-pub const MAX_USER_NAME_LEN: usize = 320;
-pub const MIN_USER_PASSWORD_LEN: usize = 6;
-pub const MAX_USER_PASSWORD_LEN: usize = 1024;
+pub type Result<T> = std::result::Result<T, ErrorMessage>;
 
-#[derive(Debug, Error)]
-pub enum Error {
-    #[error("Failed to sign up new user. The user already exists.")]
-    SignupExistedUser,
-    #[error(
-        "Failed to signup user. The user name is too short. Need >= {MIN_USER_NAME_LEN} symbols"
-    )]
-    UserNameTooShort,
-    #[error(
-        "Failed to signup user. The user name is too long. Need <= {MAX_USER_NAME_LEN} symbols"
-    )]
-    UserNameTooLong,
-    #[error("Failed to signup user. The user password is too short. Need >= {MIN_USER_PASSWORD_LEN} symbols")]
-    UserPasswordTooShort,
-    #[error("Failed to signup user. The user password is too long. Need <= {MAX_USER_PASSWORD_LEN} symbols")]
-    UserPasswordTooLong,
-    #[error("Password hash failed: {0}")]
-    Pwhash(#[from] pwhash::error::Error),
-    #[error("Username of password is invalid")]
-    SigninFailed,
-    #[error("Action requires authentification")]
-    AuthRequired,
-    #[error("Authed user is not found in state!")]
-    NoUserFound,
-    #[error("Authed user doesn't have required currency {0}!")]
-    NoUserCurrency(Currency),
-    #[error("Failed to generate new deposit address for currency {0}")]
-    FailedGenAddress(Currency),
-    #[error("Failed to get fee for currency {0}")]
-    FailedGetFee(Currency),
-    #[error("Not enough {0}!")]
-    InsufficientFunds(Currency),
-    #[error("Failed to connect to ETH node: {0}")]
-    FailedETHConnection(String),
-    #[error("{0} is already enabled")]
-    TokenAlreadyEnabled(Erc20Token),
-    #[error("{0} is already disabled")]
-    TokenAlreadyDisabled(Erc20Token),
-    #[error("{0} has non-zero balance. Can not disable")]
-    TokenNonZeroBalance(Erc20Token),
-    #[error("Token action failed: {0}")]
-    TokenActionFailed(String),
-    #[error("Invite does not exist")]
-    InviteNotFound,
-    #[error("Limits are not changed by the update")]
-    LimitsNoChanges,
-    #[error("Limit change not found")]
-    LimChangeNotFound,
-    #[error("Signature error: {0}")]
-    SignatureError(String),
-    #[error("Internal server error: {0}")]
-    InternalServerError(String),
-    #[error("Error: {0}")]
-    GenericError(String),
-    #[error("Unknown currency: {0}")]
-    UnknownCurrency(String),
-    #[error("Language is not changed!")]
-    LangNotChanged,
-    #[error("Invalid e-mail")]
-    InvalidEmail,
-    #[error("Invalid phone number")]
-    InvalidPhoneNumber,
-    #[error("Failed to get {0} exchange rate")]
-    ExchangeRateError(Currency),
-    #[error("Malformed margin: {0}")]
-    MalformedMargin(String),
+pub trait HexstodyError {
+    /// Error subtype, defines concrete error enum: hexstody_api, invoice_api etc
+    fn subtype() -> &'static str; 
+    /// Internal error code. Paired with subtype uniquely defines the error
+    fn code(&self) -> u16;
+    /// Server status code: 400, 403, 500 etc
+    fn status(&self) -> u16;
 }
 
-impl Error {
-    pub fn code(&self) -> u16 {
-        match self {
-            Error::SignupExistedUser => 0,
-            Error::UserNameTooShort => 1,
-            Error::UserNameTooLong => 2,
-            Error::UserPasswordTooShort => 3,
-            Error::UserPasswordTooLong => 4,
-            Error::Pwhash(_) => 5,
-            Error::SigninFailed => 6,
-            Error::AuthRequired => 7,
-            Error::NoUserFound => 8,
-            Error::NoUserCurrency(_) => 9,
-            Error::FailedGenAddress(_) => 10,
-            Error::FailedGetFee(_) => 11,
-            Error::InsufficientFunds(_) => 12,
-            Error::FailedETHConnection(_) => 13,
-            Error::TokenAlreadyEnabled(_) => 14,
-            Error::TokenAlreadyDisabled(_) => 15,
-            Error::TokenNonZeroBalance(_) => 16,
-            Error::TokenActionFailed(_) => 17,
-            Error::InviteNotFound => 18,
-            Error::LimitsNoChanges => 19,
-            Error::LimChangeNotFound => 20,
-            Error::SignatureError(_) => 21,
-            Error::UnknownCurrency(_) => 22,
-            Error::InternalServerError(_) => 23,
-            Error::GenericError(_) => 24,
-            Error::LangNotChanged => 25,
-            Error::InvalidEmail => 26,
-            Error::InvalidPhoneNumber => 27,
-            Error::ExchangeRateError(_) => 28,
-            Error::MalformedMargin(_) => 29,
-        }
-    }
-
-    pub fn status(&self) -> Status {
-        match self {
-            Error::SignupExistedUser => Status::from_code(400).unwrap(),
-            Error::UserNameTooShort => Status::from_code(400).unwrap(),
-            Error::UserNameTooLong => Status::from_code(400).unwrap(),
-            Error::UserPasswordTooShort => Status::from_code(400).unwrap(),
-            Error::UserPasswordTooLong => Status::from_code(400).unwrap(),
-            Error::Pwhash(_) => Status::from_code(500).unwrap(),
-            Error::SigninFailed => Status::from_code(401).unwrap(),
-            Error::AuthRequired => Status::from_code(401).unwrap(),
-            Error::NoUserFound => Status::from_code(417).unwrap(),
-            Error::NoUserCurrency(_) => Status::from_code(500).unwrap(),
-            Error::FailedGenAddress(_) => Status::from_code(500).unwrap(),
-            Error::FailedGetFee(_) => Status::from_code(500).unwrap(),
-            Error::InsufficientFunds(_) => Status::from_code(417).unwrap(),
-            Error::FailedETHConnection(_) => Status::from_code(500).unwrap(),
-            Error::TokenAlreadyEnabled(_) => Status::from_code(500).unwrap(),
-            Error::TokenAlreadyDisabled(_) => Status::from_code(500).unwrap(),
-            Error::TokenNonZeroBalance(_) => Status::from_code(500).unwrap(),
-            Error::TokenActionFailed(_) => Status::from_code(500).unwrap(),
-            Error::InviteNotFound => Status::from_code(400).unwrap(),
-            Error::LimitsNoChanges => Status::from_code(500).unwrap(),
-            Error::LimChangeNotFound => Status::from_code(400).unwrap(),
-            Error::SignatureError(_) => Status::from_code(403).unwrap(),
-            Error::InternalServerError(_) => Status::from_code(500).unwrap(),
-            Error::GenericError(_) => Status::from_code(500).unwrap(),
-            Error::UnknownCurrency(_) => Status::from_code(400).unwrap(),
-            Error::LangNotChanged => Status::from_code(400).unwrap(),
-            Error::InvalidEmail => Status::from_code(400).unwrap(),
-            Error::InvalidPhoneNumber => Status::from_code(400).unwrap(),
-            Error::ExchangeRateError(_) => Status::from_code(404).unwrap(),
-            Error::MalformedMargin(_) => Status::from_code(400).unwrap(),
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Debug, Serialize, JsonSchema)]
 pub struct ErrorMessage {
-    pub message: String,
+    /// Internal code of the error. Paired with subtype uniquely defines the error
     pub code: u16,
+    /// Subtype
+    pub subtype: String,
+    /// Server code of the error: 400, 403, 500 etc
+    pub status: u16,
+    /// Error message
+    pub message: String,
 }
 
-pub type Result<T> = std::result::Result<T, (Status, Json<ErrorMessage>)>;
-
-impl From<Error> for ErrorMessage {
-    fn from(value: Error) -> Self {
-        ErrorMessage {
-            message: format!("{value}"),
-            code: value.code(),
+impl <E: HexstodyError + Display> From<E> for ErrorMessage {
+    fn from(err: E) -> ErrorMessage {
+        ErrorMessage { 
+            code: err.code(),
+            status: err.status(), 
+            message: format!("{err}"), 
+            subtype: E::subtype().to_string()
         }
     }
 }
 
-impl From<Error> for (Status, Json<ErrorMessage>) {
-    fn from(value: Error) -> Self {
-        (value.status(), Json(value.into()))
+impl<'r, 'o: 'r> Responder<'r, 'o>  for ErrorMessage {
+    fn respond_to(self, _: &'r rocket::Request<'_>) -> rocket::response::Result<'o> {
+        rocket::error_!("[{}:{}]: {}", self.subtype, self.code, self.message);
+        let resp = json!({
+            "id": format!("{}:{}", self.subtype, self.code),
+            "message": self.message
+        });
+        let resp = serde_json::to_string(&resp).unwrap_or_default();
+        Response::build()
+            .status(Status::from_code(self.code).unwrap_or_default())
+            .header(rocket::http::ContentType::JSON)
+            .sized_body(resp.len(), std::io::Cursor::new(resp))
+            .ok()
+    }
+}
+
+impl OpenApiResponderInner for ErrorMessage{
+    fn responses(gen: &mut rocket_okapi::gen::OpenApiGenerator) -> rocket_okapi::Result<okapi::openapi3::Responses> {
+        let mut responses = Responses::default();
+        let schema = gen.json_schema::<ErrorMessage>();
+        add_schema_response(&mut responses, 200, "application/json", schema.into())?;
+        Ok(responses)
     }
 }

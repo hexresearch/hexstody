@@ -5,9 +5,8 @@ use super::auth::require_auth_user;
 use chrono::prelude::*;
 use hexstody_api::domain::{
     filter_tokens, BtcAddress, Currency, CurrencyAddress, CurrencyTxId, ETHTxid, Erc20, Erc20Token,
-    EthAccount, Symbol, CurrencyUnit,
+    EthAccount, Symbol, error as error, CurrencyUnit
 };
-use hexstody_api::error;
 use hexstody_api::types::{
     self as api, BalanceItem, Erc20HistUnitU, ExchangeFilter, ExchangeRequest, GetTokensResponse,
     TokenActionRequest, TokenInfo, WithdrawalFilter, EthFeeResp, UnitTickedAmount
@@ -480,7 +479,7 @@ pub async fn get_deposit_address(
     state: &State<Arc<Mutex<DbState>>>,
     user_id: &str,
     currency: Currency,
-) -> Result<CurrencyAddress, error::Error> {
+) -> error::Result<CurrencyAddress> {
     match currency {
         Currency::BTC => allocate_address(btc_client, eth_client, updater, user_id, currency).await,
         Currency::ETH | Currency::ERC20(_) => {
@@ -509,7 +508,7 @@ async fn allocate_address(
     updater: &State<mpsc::Sender<StateUpdate>>,
     user_id: &str,
     currency: Currency,
-) -> Result<CurrencyAddress, error::Error> {
+) -> error::Result<CurrencyAddress> {
     match currency {
         Currency::BTC => allocate_btc_address(btc_client, updater, user_id).await,
         Currency::ETH => allocate_eth_address(eth_client, updater, user_id).await,
@@ -521,7 +520,7 @@ async fn allocate_btc_address(
     btc: &State<BtcClient>,
     updater: &State<mpsc::Sender<StateUpdate>>,
     user_id: &str,
-) -> Result<CurrencyAddress, error::Error> {
+) -> error::Result<CurrencyAddress> {
     let address = btc.deposit_address().await.map_err(|e| {
         error!("{}", e);
         error::Error::FailedGenAddress(Currency::BTC)
@@ -545,7 +544,7 @@ async fn allocate_eth_address(
     eth_client: &State<EthClient>,
     updater: &State<mpsc::Sender<StateUpdate>>,
     user_id: &str,
-) -> Result<CurrencyAddress, error::Error> {
+) -> error::Result<CurrencyAddress> {
     let addr = eth_client
         .allocate_address(&user_id)
         .await
@@ -568,7 +567,7 @@ async fn allocate_erc20_address(
     updater: &State<mpsc::Sender<StateUpdate>>,
     user_id: &str,
     token: Erc20Token,
-) -> Result<CurrencyAddress, error::Error> {
+) -> error::Result<CurrencyAddress> {
     let addr = eth_client
         .allocate_address(&user_id)
         .await

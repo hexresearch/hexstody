@@ -1,6 +1,6 @@
 use hexstody_api::domain::ChallengeResponse;
 use hexstody_api::domain::Currency;
-use hexstody_api::error;
+use hexstody_api::domain::error;
 use hexstody_api::types as api;
 use hexstody_api::types::PasswordChange;
 use hexstody_api::types::SignatureData;

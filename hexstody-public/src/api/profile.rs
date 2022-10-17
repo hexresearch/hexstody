@@ -1,11 +1,11 @@
 use std::{sync::Arc, fmt::Debug};
 use base64;
 use hexstody_api::{types::{LimitApiResp, LimitChangeReq, LimitChangeResponse, ConfigChangeRequest, LimitChangeFilter}, domain::{Currency, Language, Email, PhoneNumber, TgName, Unit, CurrencyUnit, UnitInfo, UserUnitInfo}};
-use rocket::{get, http::{CookieJar, Status}, State, serde::json::Json, response::Redirect, post};
+use rocket::{get, http::CookieJar, State, serde::json::Json, response::Redirect, post};
 use rocket_okapi::openapi;
 use tokio::sync::{Mutex, mpsc};
 use hexstody_db::{state::{State as DbState, UserConfig}, update::{StateUpdate, limit::{LimitChangeUpd, LimitCancelData}, UpdateBody, misc::{SetLanguage, ConfigUpdateData, SetPublicKey, SetUnit}}};
-use hexstody_api::error;
+use hexstody_api::domain::error;
 use p256::{pkcs8::DecodePublicKey, PublicKey};
 use super::auth::{require_auth_user, goto_signin};
 
@@ -63,7 +63,7 @@ pub async fn request_new_limits(
     match resp {
         Ok(v) => Ok(Ok(v)),
         // Error code 8 => NoUserFound (not logged in). 7 => Requires auth
-        Err(err) => if err.1.code == 8 || err.1.code == 7 {
+        Err(err) => if err.code == 8 || err.code == 7 {
             Err(goto_signin())
         } else {
             Ok(Err(err))
@@ -110,7 +110,7 @@ pub async fn cancel_user_change(
     match resp {
         Ok(v) => Ok(Ok(v)),
         // Error code 8 => NoUserFound (not logged in). 7 => Requires auth
-        Err(err) => if err.1.code == 8 || err.1.code == 7 {
+        Err(err) => if err.code == 8 || err.code == 7 {
             Err(goto_signin())
         } else {
             Ok(Err(err))
@@ -185,7 +185,7 @@ pub async fn set_user_config(
     }).await
 }
 
-fn to_generic_error<T, E>(e: E) -> Result<T,(Status, rocket::serde::json::Json<error::ErrorMessage>)>
+fn to_generic_error<T, E>(e: E) -> error::Result<T>
 where
 E: Debug
 {

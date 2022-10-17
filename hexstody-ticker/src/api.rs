@@ -2,8 +2,9 @@ use std::sync::Arc;
 
 use hexstody_api::{
     types::{TickerUsdRub, MarginData},
-    domain::{Currency, Symbol}};
-use hexstody_api::error;
+    domain::{Currency, Symbol}
+};
+use hexstody_api::domain::error as error;
 use hexstody_runtime_db::RuntimeState;
 use hexstody_ticker_provider::client::TickerClient;
 use rocket::{post, State, Route, serde::json::Json};
