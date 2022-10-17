@@ -7,6 +7,8 @@ pub mod withdraw;
 
 pub use btc::*;
 use chrono::prelude::*;
+use hexstody_auth::{HasUserInfo, HasAuth};
+use hexstody_auth::types::ApiKey;
 use log::*;
 pub use network::*;
 use p256::PublicKey;
@@ -63,6 +65,8 @@ pub struct State {
     pub invites: HashMap<Invite, InviteRec>,
     /// Special wallet for exchanges
     pub exchange_state: ExchangeState,
+    /// Map of api keys to user ids
+    pub api_keys: HashMap<ApiKey, UserId>
 }
 
 #[derive(Error, Debug, PartialEq)]
@@ -121,6 +125,18 @@ pub enum StateUpdateErr {
     UnknownCurrency(String),
 }
 
+impl HasUserInfo<UserInfo> for State{
+    fn get_user_info(&self, user_id: &str) -> Option<UserInfo> {
+        self.users.get(user_id).cloned()
+    }
+}
+
+impl HasAuth for State {
+    fn get_user_id_by_api_key(&self, api_key: ApiKey) -> Option<String> {
+        self.api_keys.get(&api_key).cloned()
+    }
+}
+
 impl State {
     pub fn new(network: Network) -> Self {
         State {
@@ -129,6 +145,7 @@ impl State {
             btc_state: BtcState::new(network.btc()),
             invites: HashMap::new(),
             exchange_state: ExchangeState::new(),
+            api_keys: HashMap::new()
         }
     }
 

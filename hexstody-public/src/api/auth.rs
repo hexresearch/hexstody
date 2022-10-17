@@ -4,6 +4,9 @@ use hexstody_api::domain::error;
 use hexstody_api::types as api;
 use hexstody_api::types::PasswordChange;
 use hexstody_api::types::SignatureData;
+use hexstody_auth::AUTH_COOKIE;
+use hexstody_auth::require_auth_user;
+use hexstody_auth::types::ApiKey;
 use hexstody_db::state::*;
 use hexstody_db::update::misc::PasswordChangeUpd;
 use hexstody_db::update::signup::*;
@@ -24,10 +27,9 @@ use rocket::State as RState;
 use rocket_dyn_templates::{context, Template};
 use rocket_okapi::openapi;
 
-use std::future::Future;
 use std::sync::Arc;
 use tokio::sync::mpsc;
-use tokio::sync::{Mutex, MutexGuard};
+use tokio::sync::Mutex;
 use uuid::Uuid;
 
 pub struct IsTestFlag(pub bool);
@@ -95,6 +97,7 @@ pub async fn signup_email(
 pub async fn change_password(
     state: &RState<Arc<Mutex<State>>>,
     cookies: &CookieJar<'_>,
+    api_key: Option<ApiKey>,
     updater: &RState<mpsc::Sender<StateUpdate>>,
     data: Json<api::PasswordChange>,
 ) -> error::Result<()> {
@@ -102,7 +105,7 @@ pub async fn change_password(
         old_password,
         new_password,
     } = data.into_inner();
-    require_auth_user(cookies, state, |_, user| async move {
+    require_auth_user(cookies, api_key, state, |_, user| async move {
         if let UserInfo {
             auth: SignupAuth::Password(pass_hash),
             ..
@@ -128,8 +131,6 @@ pub async fn change_password(
     })
     .await
 }
-
-const AUTH_COOKIE: &str = "user_id";
 
 #[openapi(tag = "auth")]
 #[post("/signin/email", data = "<data>")]
@@ -167,44 +168,6 @@ pub async fn signin_email(
             Err(error::Error::SigninFailed.into())
         }
     }
-}
-
-/// Helper for implementing endpoints that require authentication
-pub async fn require_auth<F, Fut, R>(cookies: &CookieJar<'_>, future: F) -> error::Result<R>
-where
-    F: FnOnce(Cookie<'static>) -> Fut,
-    Fut: Future<Output = error::Result<R>>,
-{
-    if let Some(cookie) = cookies.get_private(AUTH_COOKIE) {
-        future(cookie).await
-    } else {
-        Err(error::Error::AuthRequired.into())
-    }
-}
-
-/// More specific helper than 'require_auth' as it also locks state
-/// for read only and fetches user info.
-pub async fn require_auth_user<F, Fut, R>(
-    cookies: &CookieJar<'_>,
-    state: &RState<Arc<Mutex<State>>>,
-    future: F,
-) -> error::Result<R>
-where
-    F: FnOnce(MutexGuard<State>, UserInfo) -> Fut,
-    Fut: Future<Output = error::Result<R>>,
-{
-    require_auth(cookies, |cookie| async move {
-        let user_id = cookie.value();
-        {
-            let state = state.lock().await;
-            if let Some(user) = state.users.get(user_id).cloned() {
-                future(state, user).await
-            } else {
-                Err(error::Error::NoUserFound.into())
-            }
-        }
-    })
-    .await
 }
 
 #[openapi(skip)]
@@ -302,5 +265,6 @@ pub async fn redeem_challenge(
 
 /// Redirect to signin page
 pub fn goto_signin() -> Redirect {
+    log::info!("goto_signin");
     Redirect::to(uri!(signin_page))
 }
