@@ -17,4 +17,5 @@ members = [
     "hexstody-ticker-provider",
     "hexstody-ticker",
     "hexstody-runtime-db",
+    "hexstody-auth"
 ]
