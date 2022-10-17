@@ -104,7 +104,7 @@ export function convertToUnitJson(name, unit) {
             } else {
                 return null
             }
-        default: 
+        default:
             return { GenUnit: unit }
     }
 }
@@ -145,7 +145,6 @@ export function displayUnitTickerAmount(obj, cur = "USD") {
     let fiatFormat = Intl.NumberFormat('en', {
         style: 'currency',
         currency: cur,
-        currencyDisplay: 'code',
     })
     let cryptoValue = cryptoFormat.format(crypto)
     if (fiat) {
@@ -445,10 +444,10 @@ export function validateAmount(currency, amount, dict = {}) {
         case "GTECH":
             return validateEthAmount(amount, dict)
         default:
-            return { 
-                ok: false, 
-                error: dict.unknownCurrency ? dict.unknownCurrency : "Unknown currency", 
-                value: null 
+            return {
+                ok: false,
+                error: dict.unknownCurrency ? dict.unknownCurrency : "Unknown currency",
+                value: null
             }
     };
 }

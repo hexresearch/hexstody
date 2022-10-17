@@ -40,10 +40,8 @@ async function initTemplates() {
             let numberFormat = Intl.NumberFormat('en', {
                 style: 'currency',
                 currency: 'USD',
-                currencyDisplay: 'code',
-                maximumFractionDigits: Math.log10(this.value.mul),
             })
-            let value = numberFormat.format(this.ticker.USD * this.value.amount / this.value.mul)
+            let value = numberFormat.format(this.ticker.USD * this.value.amount / this.value.prec)
             return "(" + value + ")"
         }
     })
@@ -225,13 +223,14 @@ function displayTotalBalance() {
         }
     })
 
-    const usdNumberFormat = Intl.NumberFormat('ru-RU', {
+    const usdNumberFormat = Intl.NumberFormat('en', {
         style: 'currency',
         currency: 'USD',
     })
-    const rubNumberFormat = Intl.NumberFormat('ru-RU', {
+    const rubNumberFormat = Intl.NumberFormat('ru', {
         style: 'currency',
-        currency: 'RUB'
+        currency: 'RUB',
+        currencyDisplay: 'narrowSymbol'
     })
 
     document.getElementById("total-balance-usd").textContent = `${usdNumberFormat.format(usdTotal)}`
@@ -253,6 +252,5 @@ async function init() {
     loadMoreButton.onclick = loadMoreHistory
     updateLoop()
 };
-
 
 document.addEventListener("headerLoaded", init)
