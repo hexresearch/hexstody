@@ -8,7 +8,7 @@ const BTC_PRECISION = 10 ** 8
 // Amount of wei in 1 ETH
 const ETH_PRECISION = 10 ** 18
 // Generic token precision
-const TOKEN_PRECISION = 10 ** 8;
+const TOKEN_PRECISION = 10 ** 8
 const USDT_PRECISION = 10 ** 6
 const CRV_PRECISION = 10 ** 18
 const GTECH_PRECISION = 10 ** 18
@@ -90,22 +90,22 @@ export function* getAllCurrencies() {
     }
 }
 
-export function convertToUnitJson(name, unit){
-    switch(name){
+export function convertToUnitJson(name, unit) {
+    switch (name) {
         case "BTC":
             if (["Btc", "Mili", "Micro", "Sat"].includes(unit)) {
-                return {BtcUnit: unit}
+                return { BtcUnit: unit }
             } else {
                 return null
             }
         case "ETH":
             if (["Ether", "Gwei", "Wei"].includes(unit)) {
-                return {EthUnit: unit}
+                return { EthUnit: unit }
             } else {
                 return null
             }
         default: 
-            return {GenUnit: unit}
+            return { GenUnit: unit }
     }
 }
 export async function loadTemplate(path) {
@@ -118,28 +118,28 @@ export function displayUnitAmount(val) {
         maximumFractionDigits: Math.log10(val.mul),
     })
     let value = numberFormat.format(val.amount / val.mul)
-    return value + " " + val.name;
+    return value + " " + val.name
 }
 
-export function displayUnitTickerAmount(obj, cur = "USD"){
-    let crypto;
-    let fiat; 
-    let mul;
-    let name;
-    if(obj.value){
-        crypto = obj.value.amount / obj.value.mul;
+export function displayUnitTickerAmount(obj, cur = "USD") {
+    let crypto
+    let fiat
+    let mul
+    let name
+    if (obj.value) {
+        crypto = obj.value.amount / obj.value.mul
         if (obj.ticker) {
-            fiat = obj.value.amount * obj.ticker[cur] / obj.value.prec;
+            fiat = obj.value.amount * obj.ticker[cur] / obj.value.prec
         }
-        mul = obj.value.mul;
-        name = obj.value.name;
+        mul = obj.value.mul
+        name = obj.value.name
     } else {
-        crypto = obj.amount / obj.mul;
-        if(obj.ticker) {
-            fiat = obj.amount * obj.ticker[cur] / obj.prec;
+        crypto = obj.amount / obj.mul
+        if (obj.ticker) {
+            fiat = obj.amount * obj.ticker[cur] / obj.prec
         }
-        mul = obj.mul;
-        name = obj.name;
+        mul = obj.mul
+        name = obj.name
     };
     let cryptoFormat = Intl.NumberFormat('en')
     let fiatFormat = Intl.NumberFormat('en', {
@@ -148,7 +148,7 @@ export function displayUnitTickerAmount(obj, cur = "USD"){
         currencyDisplay: 'code',
     })
     let cryptoValue = cryptoFormat.format(crypto)
-    if(fiat){
+    if (fiat) {
         let fiatValue = fiatFormat.format(fiat)
         return `${cryptoValue} ${name} (${fiatValue})`
     } else {
@@ -250,9 +250,9 @@ export function initCollapsibles(autoopenId) {
             }
         })
     }
-    if(autoopenId){
-        const content = document.getElementById(autoopenId);
-        if (content){
+    if (autoopenId) {
+        const content = document.getElementById(autoopenId)
+        if (content) {
             content.style.display = "block"
         }
     }
@@ -380,11 +380,11 @@ export function currencyNameToCurrency(currencyName) {
 }
 
 // Extracts object from array of objects with field currency by currency name
-export function getObjByCurrency(objects, currencyName){
-    for (const obj of objects){
+export function getObjByCurrency(objects, currencyName) {
+    for (const obj of objects) {
         let cn = currencyToCurrencyName(obj.currency)
-        if (cn === currencyName){
-            return obj;
+        if (cn === currencyName) {
+            return obj
         }
     }
 }
