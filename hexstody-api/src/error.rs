@@ -52,7 +52,7 @@ impl<'r, 'o: 'r> Responder<'r, 'o>  for ErrorMessage {
         });
         let resp = serde_json::to_string(&resp).unwrap_or_default();
         Response::build()
-            .status(Status::from_code(self.code).unwrap_or_default())
+            .status(Status::from_code(self.status).unwrap_or_default())
             .header(rocket::http::ContentType::JSON)
             .sized_body(resp.len(), std::io::Cursor::new(resp))
             .ok()
