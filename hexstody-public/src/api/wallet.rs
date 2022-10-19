@@ -4,12 +4,12 @@ use std::sync::Arc;
 use super::auth::require_auth_user;
 use chrono::prelude::*;
 use hexstody_api::domain::{
-    filter_tokens, BtcAddress, Currency, CurrencyAddress, CurrencyTxId, ETHTxid, Erc20, Erc20Token,
-    EthAccount, Symbol, error as error, CurrencyUnit
+    error, filter_tokens, BtcAddress, Currency, CurrencyAddress, CurrencyTxId, CurrencyUnit,
+    ETHTxid, Erc20, Erc20Token, EthAccount, Symbol,
 };
 use hexstody_api::types::{
-    self as api, BalanceItem, Erc20HistUnitU, ExchangeFilter, ExchangeRequest, GetTokensResponse,
-    TokenActionRequest, TokenInfo, WithdrawalFilter, EthFeeResp, UnitTickedAmount
+    self as api, BalanceItem, Erc20HistUnitU, EthFeeResp, ExchangeFilter, ExchangeRequest,
+    GetTokensResponse, TokenActionRequest, TokenInfo, UnitTickedAmount, WithdrawalFilter,
 };
 use hexstody_btc_client::client::{BtcClient, BTC_BYTES_PER_TRANSACTION};
 use hexstody_db::state::exchange::ExchangeOrderUpd;
@@ -37,8 +37,7 @@ pub async fn get_balance(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
     rstate: &State<Arc<Mutex<RuntimeState>>>,
-    eth_client: &State<EthClient>,
-    ticker_client: &State<TickerClient>
+    ticker_client: &State<TickerClient>,
 ) -> error::Result<Json<api::Balance>> {
     require_auth_user(cookies, state, |_, user| async move {
         let user_data_resp = eth_client.get_user_data(&user.username).await;
@@ -160,20 +159,15 @@ pub async fn get_user_data(
     .await
 }
 
-
 /// Get eth fee from external provider
-pub async fn get_eth_fee() -> reqwest::Result<api::EthGasPrice>{
+pub async fn get_eth_fee() -> reqwest::Result<api::EthGasPrice> {
     let req_url = "https://api.etherscan.io/api?module=gastracker&action=gasoracle&apikey=P8AXZC7V71IJA4XPMFEIIYX9S2S4D8U3T6";
-    let fee_eth_res : EthFeeResp = 
-        reqwest::get(req_url)
-            .await?
-            .json()
-            .await?;
+    let fee_eth_res: EthFeeResp = reqwest::get(req_url).await?.json().await?;
     Ok(fee_eth_res.result)
 }
 
 #[openapi(tag = "wallet")]
-#[post("/fee/get?<ticker>", data="<currency>")]
+#[post("/fee/get?<ticker>", data = "<currency>")]
 pub async fn get_fee(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
@@ -181,13 +175,17 @@ pub async fn get_fee(
     btc_client: &State<BtcClient>,
     ticker_client: &State<TickerClient>,
     currency: Json<Currency>,
-    ticker: bool
-) -> error::Result<Json<UnitTickedAmount>>{
+    ticker: bool,
+) -> error::Result<Json<UnitTickedAmount>> {
     let currency = currency.into_inner();
     // symbol is used for fee ticker. For Eth and Erc20 we use Eth ticker
-    let symbol = if matches!(currency, Currency::BTC) {Symbol::BTC} else {Symbol::ETH};
+    let symbol = if matches!(currency, Currency::BTC) {
+        Symbol::BTC
+    } else {
+        Symbol::ETH
+    };
     let (fee, unit) = require_auth_user(cookies, state, |_, user| async move {
-        if matches!(currency, Currency::BTC){
+        if matches!(currency, Currency::BTC) {
             let bytes_estimate = rstate.lock().await.fee_estimates.btc_bytes_per_tx;
             let btc_fee_per_kilobyte = &btc_client
                 .get_fees()
@@ -196,26 +194,45 @@ pub async fn get_fee(
                 .fee_rate;
             let fee = (btc_fee_per_kilobyte * bytes_estimate) / 1024;
             let unit = user.get_unit_by_currency(Currency::BTC);
-            Ok((fee,unit))
+            Ok((fee, unit))
         } else {
             let gas_limit = {
                 let rstate = rstate.lock().await;
-                if currency.is_token() {rstate.fee_estimates.erc20_tx_gas_limit} else {rstate.fee_estimates.eth_tx_gas_limit}
+                if currency.is_token() {
+                    rstate.fee_estimates.erc20_tx_gas_limit
+                } else {
+                    rstate.fee_estimates.eth_tx_gas_limit
+                }
             };
             let gas_price = get_eth_fee()
                 .await
                 .map_err(|_| error::Error::FailedGetFee(currency))?
-                .ProposeGasPrice.round() as u64;
+                .ProposeGasPrice
+                .round() as u64;
             let fee = gas_limit * gas_price * 1_000_000_000; // 1_000_000_000 to convert gwei to wei
             let unit = user.get_unit_by_currency(Currency::ETH);
-            Ok((fee,unit))
+            Ok((fee, unit))
         }
-    }).await?;
+    })
+    .await?;
 
     let t = if ticker {
-        rstate.lock().await.symbol_to_symbols_generic(ticker_client, symbol, vec![Symbol::USD, Symbol::RUB]).await.ok()
-    } else {None};
-    Ok(Json(UnitTickedAmount{ amount: fee, name: unit.name(), mul: unit.mul(), prec: unit.precision(), ticker: t }))
+        rstate
+            .lock()
+            .await
+            .symbol_to_symbols_generic(ticker_client, symbol, vec![Symbol::USD, Symbol::RUB])
+            .await
+            .ok()
+    } else {
+        None
+    };
+    Ok(Json(UnitTickedAmount {
+        amount: fee,
+        name: unit.name(),
+        mul: unit.mul(),
+        prec: unit.precision(),
+        ticker: t,
+    }))
 }
 
 #[openapi(tag = "history")]
