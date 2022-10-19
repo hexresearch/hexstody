@@ -35,21 +35,18 @@ sqlx = { version = "0.5", features = [
 ] }
 thiserror = "1.0"
 tokio = { version = "1", features = ["full"] }
-reqwest = { version = "0.11", features = [ "json" ] }
+reqwest = { version = "0.11", features = ["json"] }
 rocket = { version = "0.5.0-rc.2", default-features = false, features = [
   "json",
   "secrets",
   "uuid",
 ] }
-rocket_okapi = { git = "https://github.com/GREsau/okapi", rev = "ddb07a709129b24ed8e106b0fbf576b6ded615ac", features = [
-  "rapidoc",
-  "swagger",
-] }
+rocket_okapi = { version = "0.8.0-rc.2", features = ["rapidoc", "swagger"] }
 rocket_dyn_templates = { version = "0.1.0-rc.2", features = ["handlebars"] }
 schemars = "0.8.8"
 pwhash = "1.0.0"
 figment = { version = "0.10", features = ["toml", "env"] }
-uuid = { version = "0.8.2", features = ["v4"]}
+uuid = { version = "0.8.2", features = ["v4"] }
 p256 = { version = "0.11.1", features = ["serde"] }
 hexstody-sig = { path = "../hexstody-sig" }
 qrcode-generator = "4.1.6"
