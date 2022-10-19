@@ -1,5 +1,7 @@
+use hexstody_invoices::types::InvoiceStatus;
 use p256::PublicKey;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 use super::signup::UserId;
 
 use hexstody_api::domain::{Erc20Token, Language, Email, PhoneNumber, TgName, Unit};
@@ -59,3 +61,16 @@ pub struct SetUnit{
     pub user: String,
     pub unit: Unit
 }
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+pub struct InvoiceStatusUpdate{
+    pub user: String,
+    pub id: Uuid,
+    pub status: InvoiceStatus
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+pub struct InvoiceStatusUpdates{ 
+    pub updates: Vec<InvoiceStatusUpdate>
+}
+

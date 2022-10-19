@@ -2,6 +2,7 @@ pub mod auth;
 pub mod helpers;
 pub mod profile;
 pub mod wallet;
+pub mod impls;
 
 use base64;
 use figment::Figment;
@@ -41,6 +42,8 @@ use hexstody_eth_client::client::EthClient;
 use hexstody_sig::SignatureVerificationConfig;
 use profile::*;
 use wallet::*;
+
+use self::impls::invoices_api;
 
 struct StaticPath(PathBuf);
 
@@ -438,6 +441,7 @@ pub async fn serve_api(
     let static_path: PathBuf = api_config.extract_inner("static_path").unwrap();
     let network: Network = api_config.extract_inner("network").unwrap();
     let ticker_api = ticker_api();
+    let invoices_api = invoices_api();
     let _ = rocket::custom(api_config)
         .mount("/", FileServer::from(static_path.clone()))
         .mount(
@@ -480,6 +484,7 @@ pub async fn serve_api(
             ],
         )
         .mount("/ticker/", ticker_api)
+        .mount("/invoice/", invoices_api)
         .mount(
             "/",
             routes![

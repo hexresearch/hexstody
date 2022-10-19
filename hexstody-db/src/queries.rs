@@ -3,6 +3,7 @@ use super::update::*;
 use super::Pool;
 use chrono::prelude::*;
 use futures::StreamExt;
+use hexstody_api::error::HexstodyError;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -14,7 +15,26 @@ pub enum Error {
     #[error("Failed to decode/encode JSON: {0}")]
     Encoding(#[from] serde_json::Error),
     #[error("Failed to reconstruct state: {0}")]
-    StateInvalid(#[from] StateUpdateErr),
+    StateInvalid(#[from] crate::error::StateUpdateErr),
+}
+
+impl HexstodyError for Error {
+    fn subtype() -> &'static str {
+        "hexstody-db:queries"
+    }
+
+    fn code(&self) -> u16 {
+        match self {
+            Error::Database(_) => 0,
+            Error::UpdateBody(_) => 1,
+            Error::Encoding(_) => 2,
+            Error::StateInvalid(_) => 3,
+        }
+    }
+
+    fn status(&self) -> u16 {
+        500
+    }
 }
 
 /// Alias for a `Result` with the error type `self::Error`.

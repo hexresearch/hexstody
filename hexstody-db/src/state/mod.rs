@@ -4,26 +4,30 @@ pub mod network;
 pub mod transaction;
 pub mod user;
 pub mod withdraw;
+pub mod error;
 
+use async_trait::async_trait;
 pub use btc::*;
 use chrono::prelude::*;
 use hexstody_auth::{HasUserInfo, HasAuth};
 use hexstody_auth::types::ApiKey;
+use hexstody_invoices::storage::InvoiceStorage;
+use hexstody_invoices::types::{Invoice, InvoiceStatus};
 use log::*;
 pub use network::*;
-use p256::PublicKey;
 use serde::{Deserialize, Serialize};
+use tokio::sync::mpsc::Sender;
 use std::collections::HashMap;
-use thiserror::Error;
 pub use transaction::*;
 pub use user::*;
 use uuid::Uuid;
 pub use withdraw::*;
 
+use error::StateUpdateErr;
 use crate::update::limit::{LimitCancelData, LimitChangeData, LimitChangeDecision, LimitChangeUpd};
 use crate::update::misc::{
     ConfigUpdateData, InviteRec, PasswordChangeUpd, SetLanguage, SetPublicKey, TokenAction,
-    TokenUpdate, SetUnit,
+    TokenUpdate, SetUnit, InvoiceStatusUpdates, InvoiceStatusUpdate,
 };
 use crate::update::signup::SignupAuth;
 use crate::update::withdrawal::{WithdrawCompleteInfo, WithdrawalRejectInfo};
@@ -69,62 +73,6 @@ pub struct State {
     pub api_keys: HashMap<ApiKey, UserId>
 }
 
-#[derive(Error, Debug, PartialEq)]
-pub enum StateUpdateErr {
-    #[error("User with ID {0} is already signed up")]
-    UserAlreadyExists(UserId),
-    #[error("User with ID {0} is not known")]
-    UserNotFound(UserId),
-    #[error("User {0} doesn't have currency {1}")]
-    UserMissingCurrency(UserId, Currency),
-    #[error("Deposit address {1} is already allocated for user {0}")]
-    DepositAddressAlreadyAllocated(UserId, CurrencyAddress),
-    #[error("User {0} doesn't have withdrawal request {1}")]
-    WithdrawalRequestNotFound(UserId, WithdrawalRequestId),
-    #[error("Withdrawal request {0} is already confirmed by {}", .1.to_string())]
-    WithdrawalRequestAlreadyConfirmedByThisKey(WithdrawalRequestId, PublicKey),
-    #[error("Withdrawal request {0} is already rejected by {}", .1.to_string())]
-    WithdrawalRequestAlreadyRejectedByThisKey(WithdrawalRequestId, PublicKey),
-    #[error("Withdrawal request {0} is already confirmed")]
-    WithdrawalRequestAlreadyConfirmed(WithdrawalRequestId),
-    #[error("Withdrawal request {0} is already rejected")]
-    WithdrawalRequestAlreadyRejected(WithdrawalRequestId),
-    #[error("{0} is already enabled")]
-    TokenAlreadyEnabled(Erc20Token),
-    #[error("{0} is already disabled")]
-    TokenAlreadyDisabled(Erc20Token),
-    #[error("{0} has non-zero balance. Can not disable")]
-    TokenNonZeroBalance(Erc20Token),
-    #[error("Failed to enable token {0} from {1}")]
-    TokenEnableFail(Erc20Token, UserId),
-    #[error("Invite already exist")]
-    InviteAlreadyExist,
-    #[error("Invite is not valid")]
-    InviteNotFound,
-    #[error("Limit request does not exist")]
-    LimitChangeNotFound,
-    #[error("Limit request already signed by the operator")]
-    LimitAlreadySigned,
-    #[error("Limit request already confirmed and finalized")]
-    LimitAlreadyConfirmed,
-    #[error("Limit request already rejected")]
-    LimitAlreadyRejected,
-    #[error("The spending is over the limit")]
-    LimitOverflow,
-    #[error("User {0} doesn't have enough of currency {1}")]
-    InsufficientFunds(UserId, Currency),
-    #[error("User {0} doesn't have outstanding exchange request for {1}")]
-    UserMissingExchange(String, Currency),
-    #[error("Exchange request already signed by the operator")]
-    ExchangeAlreadySigned,
-    #[error("Exchange request already confirmed and finalized")]
-    ExchangeAlreadyConfirmed,
-    #[error("Exchange request already rejected")]
-    ExchangeAlreadyRejected,
-    #[error("Unknown currency: {0}")]
-    UnknownCurrency(String),
-}
-
 impl HasUserInfo<UserInfo> for State{
     fn get_user_info(&self, user_id: &str) -> Option<UserInfo> {
         self.users.get(user_id).cloned()
@@ -134,6 +82,82 @@ impl HasUserInfo<UserInfo> for State{
 impl HasAuth for State {
     fn get_user_id_by_api_key(&self, api_key: ApiKey) -> Option<String> {
         self.api_keys.get(&api_key).cloned()
+    }
+}
+
+#[async_trait]
+impl InvoiceStorage for State {
+    type Update = StateUpdate;
+
+    fn get_invoice(&self, id: &Uuid) -> Option<hexstody_invoices::types::Invoice> {
+        for ui in self.users.values(){
+            if let Some(invoice) = ui.invoices.get(id) {
+                return Some(invoice.clone())
+            }
+        }
+        return None
+    }
+
+    fn get_user_invoice(&self, user: &String, id: &Uuid) -> Option<hexstody_invoices::types::Invoice> {
+        self.users.get(user).map(|ui| ui.invoices.get(id)).flatten().cloned()
+    }
+
+    fn get_user_invoices(&self, user: &String) -> Vec<hexstody_invoices::types::Invoice> {
+        self.users.get(user).map(|ui| ui.invoices.values().cloned().collect()).unwrap_or(Vec::default())
+    }
+
+    fn get_invoices_by_status(&self, status: hexstody_invoices::types::InvoiceStatusTag) -> Vec<hexstody_invoices::types::Invoice> {
+        self.users.values()
+            .flat_map(|ui| 
+                ui.invoices.values().filter(|invoice| invoice.status.to_tag() == status)
+            ).cloned()
+            .collect()
+    }
+
+    async fn store_invoice(&mut self, sender: &Sender<Self::Update>, invoice: hexstody_invoices::types::Invoice) -> hexstody_invoices::error::Result<()> {
+        sender.send(StateUpdate::new(UpdateBody::StoreInvoice(invoice)))
+            .await
+            .map_err(|e| StateUpdateErr::GenericError(e.to_string()).into())
+    }
+
+    async fn allocate_invoice_address(&mut self, _: &Sender<Self::Update>, user: &String, currency: &Currency) -> hexstody_invoices::error::Result<String> {
+       self.get_user_by_id(user)
+        .map(|ui| 
+            ui.currencies.get(currency).map(|c| 
+                c.deposit_info.last().map(|ca| 
+                    ca.address()
+                )
+            )
+        )
+        .flatten()
+        .flatten()
+        .ok_or(StateUpdateErr::GenericError("Something went wrong".to_string()).into())
+    }
+
+    async fn set_invoice_status(&mut self, sender: &Sender<Self::Update>, user: &String, id: Uuid, status: InvoiceStatus) -> hexstody_invoices::error::Result<()> {
+        let upd = StateUpdate::new(
+            UpdateBody::UpdInvoiceStatus(
+                InvoiceStatusUpdates{ 
+                    updates: vec![InvoiceStatusUpdate{ user: user.clone(), id, status }] 
+                }
+            )
+        );
+        sender.send(upd)
+            .await
+            .map_err(|e| StateUpdateErr::GenericError(e.to_string()).into())
+    }
+
+    async fn set_invoice_status_batch(&mut self, sender: &Sender<Self::Update>, vals: Vec<(String, Uuid, InvoiceStatus)>) -> hexstody_invoices::error::Result<()> {
+        let upd = StateUpdate::new(
+            UpdateBody::UpdInvoiceStatus(
+                InvoiceStatusUpdates{ 
+                    updates: vals.into_iter().map(|v| InvoiceStatusUpdate{ user: v.0, id: v.1, status: v.2 }).collect()
+                }
+            )
+        );
+        sender.send(upd)
+            .await
+            .map_err(|e| StateUpdateErr::GenericError(e.to_string()).into())
     }
 }
 
@@ -309,6 +333,16 @@ impl State {
             }
             UpdateBody::SetUnit(req) => {
                 self.set_unit(req)?;
+                self.last_changed = update.created;
+                Ok(None)
+            },
+            UpdateBody::StoreInvoice(req) => {
+                self.store_invoice_impl(req)?;
+                self.last_changed = update.created;
+                Ok(None)
+            },
+            UpdateBody::UpdInvoiceStatus(req) => {
+                self.set_invoices_status(req)?;
                 self.last_changed = update.created;
                 Ok(None)
             },
@@ -1102,6 +1136,22 @@ impl State {
         let unifo = self.users.get_mut(&req.user).ok_or(StateUpdateErr::UserNotFound(req.user.clone()))?;
         let cinfo = unifo.currencies.get_mut(&cur).ok_or(StateUpdateErr::UserMissingCurrency(req.user.clone(), cur))?;
         cinfo.unit = req.unit;
+        Ok(())
+    }
+
+    fn set_invoices_status(&mut self, req: InvoiceStatusUpdates) -> Result<(), StateUpdateErr> {
+        req.updates.into_iter().for_each(|InvoiceStatusUpdate{ user, id, status }| {
+            if let Some(invoice) = self.users.get_mut(&user).map(|ui| ui.invoices.get_mut(&id)).flatten() {
+                invoice.status = status
+            }
+        });
+        Ok(())
+    }
+
+    fn store_invoice_impl(&mut self, req: Invoice) -> Result<(), StateUpdateErr> {
+        self.users.get_mut(&req.user)
+            .ok_or(StateUpdateErr::UserNotFound(req.user.clone()))?
+            .invoices.insert(req.id.clone(), req);
         Ok(())
     }
 }

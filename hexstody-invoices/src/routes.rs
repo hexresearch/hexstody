@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use hexstody_auth::{HasAuth, require_auth, types::ApiKey};
 use rocket::{serde::json::Json, State, http::CookieJar};
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, mpsc::Sender};
 use uuid::Uuid;
 
 use crate::{storage::InvoiceStorage, types::{Invoice, InvoiceStatus, CreateInvoiceReq}, error};
@@ -19,7 +19,7 @@ where
     S: InvoiceStorage + HasAuth + Send 
 {
     require_auth(cookies, api_key, state, |user_id| async move {
-        let res = state.lock().await.get_user_invoices(&user_id).await;
+        let res = state.lock().await.get_user_invoices(&user_id);
         Ok(Json(res))
     }).await
 } 
@@ -34,7 +34,7 @@ where
     S: InvoiceStorage + HasAuth + Send
 {
     require_auth(cookies, api_key, state, |user_id| async move {
-        Ok(Json(state.lock().await.get_user_invoice(&user_id, &id).await))
+        Ok(Json(state.lock().await.get_user_invoice(&user_id, &id)))
     }).await
 }
 
@@ -42,15 +42,17 @@ pub async fn create_invoice<S>(
     cookies: &CookieJar<'_>,
     api_key: Option<ApiKey>,
     state: &State<Arc<Mutex<S>>>,
+    updater: &State<Sender<S::Update>>,
     req: Json<CreateInvoiceReq>
 ) -> error::Result<()> 
 where
-    S: InvoiceStorage + HasAuth + Send 
+    S: InvoiceStorage + HasAuth + Send,
+    S::Update: Send
 {
     require_auth(cookies, api_key, state, |user_id| async move {
         let CreateInvoiceReq { currency, payment_method, amount, due, order_id, callback, contact_info, description } = req.into_inner();
         let mut state = state.lock().await;
-        let address = state.allocate_invoice_address(&user_id, &currency).await?;
+        let address = state.allocate_invoice_address(&updater, &user_id, &currency).await?;
         let invoice =  Invoice {
             id:  Uuid::new_v4(),
             user: user_id,
@@ -67,6 +69,6 @@ where
             status: InvoiceStatus::Created,
         };
 
-        state.store_invoice(invoice).await
+        state.store_invoice(&updater, invoice).await
     }).await
 }

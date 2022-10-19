@@ -16,9 +16,11 @@ use hexstody_api::domain::{Currency, CurrencyAddress};
 use hexstody_api::types::ExchangeFilter;
 use hexstody_api::types::Invite;
 use hexstody_api::types::LimitInfo;
+use hexstody_invoices::types::Invoice;
 use p256::PublicKey;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
@@ -57,7 +59,9 @@ pub struct UserInfo {
     /// User's config
     pub config: UserConfig,
     /// User's public key for public key authroization
-    pub public_key: Option<PublicKey>
+    pub public_key: Option<PublicKey>,
+    /// User's invoices
+    pub invoices: HashMap<Uuid, Invoice>
 }
 
 impl UserInfo {
@@ -75,7 +79,8 @@ impl UserInfo {
                 .collect(),
             limit_change_requests: HashMap::new(),
             config: UserConfig::default(),
-            public_key: Option::default()
+            public_key: Option::default(),
+            invoices: HashMap::new(),
         }
     }
 

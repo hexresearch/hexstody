@@ -9,6 +9,7 @@ mod tests{
     use std::collections::HashMap;
     use async_trait::async_trait;
     use hexstody_api::domain::Currency;
+    use tokio::sync::mpsc::Sender;
     use uuid::Uuid;
 
     use crate::error;
@@ -21,7 +22,8 @@ mod tests{
     
     #[async_trait]
     impl InvoiceStorage for TestStorage{
-        async fn get_invoice(&self, id: &Uuid) -> Option<Invoice> {
+        type Update = Invoice;
+        fn get_invoice(&self, id: &Uuid) -> Option<Invoice> {
             for invs in self.invoices.values(){
                 let r = invs.get(id);
                 if r.is_some() {
@@ -31,11 +33,11 @@ mod tests{
             None
         }
 
-        async fn get_user_invoice(&self, user: &String, id: &Uuid) -> Option<Invoice> {
+        fn get_user_invoice(&self, user: &String, id: &Uuid) -> Option<Invoice> {
             self.invoices.get(user).map(|invs| invs.get(id)).flatten().cloned()
         }
 
-        async fn store_invoice(&mut self, invoice: Invoice) -> error::Result<()> {
+        async fn store_invoice(&mut self, _sender: &Sender<Self::Update>, invoice: Invoice) -> error::Result<()> {
             let user = invoice.user.clone();
             let id = invoice.id.clone();
             self.invoices
@@ -49,22 +51,22 @@ mod tests{
             Ok(())
         }
 
-        async fn get_user_invoices(&self, user: &String) -> Vec<Invoice> {
+        fn get_user_invoices(&self, user: &String) -> Vec<Invoice> {
             self.invoices.get(user)
                 .map(|invs| 
                     invs.values().cloned().collect()
                 ).unwrap_or(vec![])
         }
 
-        async fn allocate_invoice_address(&mut self, _: &String, _: &Currency) -> error::Result<String> {
+        async fn allocate_invoice_address(&mut self, _sender: &Sender<Self::Update>, _: &String, _: &Currency) -> error::Result<String> {
             Ok("testaddress".to_string())
         }
 
-        async fn get_invoices_by_status(&self, status: InvoiceStatusTag) -> Vec<Invoice> {
+        fn get_invoices_by_status(&self, status: InvoiceStatusTag) -> Vec<Invoice> {
             self.invoices.values().flat_map(|ivs| ivs.values().filter(|inv| inv.status.to_tag() == status)).cloned().collect()
         }
 
-        async fn set_invoice_status(&mut self, user: &String, id: Uuid, status: InvoiceStatus) -> error::Result<()> {
+        async fn set_invoice_status(&mut self, _sender: &Sender<Self::Update>, user: &String, id: Uuid, status: InvoiceStatus) -> error::Result<()> {
             self.invoices.get_mut(user)
                 .ok_or(crate::error::Error::GenericError("User not found".to_string()))?
                 .get_mut(&id)
@@ -73,7 +75,7 @@ mod tests{
             Ok(())
         }
 
-        async fn set_invoice_status_batch(&mut self, vals: Vec<(String, Uuid, InvoiceStatus)>) -> error::Result<()> {
+        async fn set_invoice_status_batch(&mut self, _sender: &Sender<Self::Update>, vals: Vec<(String, Uuid, InvoiceStatus)>) -> error::Result<()> {
             for (u, i, s) in vals{
                 if let Some(invs) = self.invoices.get_mut(&u) {
                     if let Some(inv) = invs.get_mut(&i) {
@@ -108,8 +110,9 @@ mod tests{
         let mut state = TestStorage{ invoices: HashMap::new()}; 
         let invoice = dummy_invoice();
         let invoice2 = invoice.clone();
-        state.store_invoice(invoice).await.expect("Failed to store invoice");
-        let resp = state.get_invoice(&invoice2.id).await;
+        let (sender, _) = tokio::sync::mpsc::channel(1);
+        state.store_invoice(&sender, invoice).await.expect("Failed to store invoice");
+        let resp = state.get_invoice(&invoice2.id);
         assert_eq!(resp,Some(invoice2));
     }
 
@@ -118,18 +121,19 @@ mod tests{
         let mut state = TestStorage{ invoices: HashMap::new()}; 
         let invoice = dummy_invoice();
         let invoice_orig = invoice.clone();
-        state.store_invoice(invoice).await.expect("Failed to store invoice");
-        let resp = state.get_invoices_by_status(InvoiceStatusTag::Created).await;
+        let (sender, _) = tokio::sync::mpsc::channel(1);
+        state.store_invoice(&sender, invoice).await.expect("Failed to store invoice");
+        let resp = state.get_invoices_by_status(InvoiceStatusTag::Created);
         assert_eq!(resp,vec![invoice_orig.clone()]);
 
-        state.set_invoice_status(&invoice_orig.user, invoice_orig.id.clone(), InvoiceStatus::Paid("()".to_string()))
+        state.set_invoice_status(&sender, &invoice_orig.user, invoice_orig.id.clone(), InvoiceStatus::Paid("()".to_string()))
             .await
             .expect("Failed to set status");
 
-        let resp = state.get_invoices_by_status(InvoiceStatusTag::Created).await;
+        let resp = state.get_invoices_by_status(InvoiceStatusTag::Created);
         assert_eq!(resp,vec![]);
         
-        let resp = state.get_invoices_by_status(InvoiceStatusTag::Paid).await;
+        let resp = state.get_invoices_by_status(InvoiceStatusTag::Paid);
         assert_eq!(resp.len(), 1);
     }
 }

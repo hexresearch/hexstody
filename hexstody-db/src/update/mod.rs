@@ -9,6 +9,7 @@ pub mod limit;
 use chrono::prelude::*;
 use hexstody_api::domain::CurrencyAddress;
 use hexstody_api::types::LimitSpan;
+use hexstody_invoices::types::Invoice;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::str::FromStr;
@@ -21,7 +22,7 @@ use self::deposit::DepositAddress;
 use self::limit::{LimitChangeUpd, LimitCancelData, LimitChangeDecision};
 use self::signup::SignupInfo;
 use self::withdrawal::{WithdrawalRequestDecisionInfo, WithdrawalRequestInfo, WithdrawCompleteInfo, WithdrawalRejectInfo};
-use self::misc::{InviteRec, TokenUpdate, SetLanguage, ConfigUpdateData, PasswordChangeUpd, SetPublicKey, SetUnit};
+use self::misc::{InviteRec, TokenUpdate, SetLanguage, ConfigUpdateData, PasswordChangeUpd, SetPublicKey, SetUnit, InvoiceStatusUpdates};
 use super::state::transaction::BtcTransaction;
 use super::state::State;
 
@@ -92,7 +93,11 @@ pub enum UpdateBody {
     /// Set up exchange deposit address
     ExchangeAddress(CurrencyAddress),
     /// Set user's unit info
-    SetUnit(SetUnit)
+    SetUnit(SetUnit),
+    /// Store invoice
+    StoreInvoice(Invoice),
+    /// Update invoice status
+    UpdInvoiceStatus(InvoiceStatusUpdates)
 }
 
 impl UpdateBody {
@@ -122,6 +127,8 @@ impl UpdateBody {
             UpdateBody::ExchangeDecision(_) => UpdateTag::ExchangeDecision,
             UpdateBody::ExchangeAddress(_) => UpdateTag::ExchangeAddress,
             UpdateBody::SetUnit(_) => UpdateTag::SetUnit,
+            UpdateBody::StoreInvoice(_) => UpdateTag::StoreInvoice,
+            UpdateBody::UpdInvoiceStatus(_) => UpdateTag::UpdInvoiceStatus,
         }
     }
 
@@ -151,6 +158,8 @@ impl UpdateBody {
             UpdateBody::ExchangeDecision(v) => serde_json::to_value(v),
             UpdateBody::ExchangeAddress(v) => serde_json::to_value(v),
             UpdateBody::SetUnit(v) => serde_json::to_value(v),
+            UpdateBody::StoreInvoice(v) => serde_json::to_value(v),
+            UpdateBody::UpdInvoiceStatus(v) => serde_json::to_value(v),
         }
     }
 }
@@ -181,6 +190,8 @@ pub enum UpdateTag {
     ExchangeDecision,
     ExchangeAddress,
     SetUnit,
+    StoreInvoice,
+    UpdInvoiceStatus,
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -221,6 +232,8 @@ impl fmt::Display for UpdateTag {
             UpdateTag::ExchangeDecision => write!(f, "exchange decision"),
             UpdateTag::ExchangeAddress => write!(f, "exchange address"),
             UpdateTag::SetUnit => write!(f, "set unit"),
+            UpdateTag::StoreInvoice => write!(f, "store invoice"),
+            UpdateTag::UpdInvoiceStatus => write!(f, "set invoice status"),
         }
     }
 }
@@ -254,6 +267,8 @@ impl FromStr for UpdateTag {
             "exchange decision" => Ok(UpdateTag::ExchangeDecision),
             "exchange address" => Ok(UpdateTag::ExchangeAddress),
             "set unit" => Ok(UpdateTag::SetUnit),
+            "store invoice" => Ok(UpdateTag::StoreInvoice),
+            "set invoice status" => Ok(UpdateTag::UpdInvoiceStatus),
             _ => Err(UnknownUpdateTag(s.to_owned())),
         }
     }
@@ -319,6 +334,8 @@ impl UpdateTag {
             UpdateTag::ExchangeDecision => Ok(UpdateBody::ExchangeDecision(serde_json::from_value(value)?)),
             UpdateTag::ExchangeAddress => Ok(UpdateBody::ExchangeAddress(serde_json::from_value(value)?)),
             UpdateTag::SetUnit => Ok(UpdateBody::SetUnit(serde_json::from_value(value)?)),
+            UpdateTag::StoreInvoice => Ok(UpdateBody::StoreInvoice(serde_json::from_value(value)?)),
+            UpdateTag::UpdInvoiceStatus => Ok(UpdateBody::UpdInvoiceStatus(serde_json::from_value(value)?)),
         }
     }
 }
