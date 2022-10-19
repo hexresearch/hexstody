@@ -115,9 +115,14 @@ impl InvoiceStorage for State {
     }
 
     async fn store_invoice(&mut self, sender: &Sender<Self::Update>, invoice: hexstody_invoices::types::Invoice) -> hexstody_invoices::error::Result<()> {
-        sender.send(StateUpdate::new(UpdateBody::StoreInvoice(invoice)))
+        let (upd, mut receiver) = StateUpdate::new_sync(UpdateBody::StoreInvoice(invoice));
+        sender.send(upd)
             .await
-            .map_err(|e| StateUpdateErr::GenericError(e.to_string()).into())
+            .map_err(|e| StateUpdateErr::GenericError(e.to_string()))?;
+        receiver.recv()
+            .await
+            .ok_or(StateUpdateErr::GenericError("Failed to recv UpdateResult".to_string()))??;
+        Ok(())
     }
 
     async fn allocate_invoice_address(&mut self, _: &Sender<Self::Update>, user: &String, currency: &Currency) -> hexstody_invoices::error::Result<String> {
@@ -135,7 +140,7 @@ impl InvoiceStorage for State {
     }
 
     async fn set_invoice_status(&mut self, sender: &Sender<Self::Update>, user: &String, id: Uuid, status: InvoiceStatus) -> hexstody_invoices::error::Result<()> {
-        let upd = StateUpdate::new(
+        let (upd, mut receiver) = StateUpdate::new_sync(
             UpdateBody::UpdInvoiceStatus(
                 InvoiceStatusUpdates{ 
                     updates: vec![InvoiceStatusUpdate{ user: user.clone(), id, status }] 
@@ -144,11 +149,15 @@ impl InvoiceStorage for State {
         );
         sender.send(upd)
             .await
-            .map_err(|e| StateUpdateErr::GenericError(e.to_string()).into())
+            .map_err(|e| StateUpdateErr::GenericError(e.to_string()))?;
+        receiver.recv()
+            .await
+            .ok_or(StateUpdateErr::GenericError("Failed to recv UpdateResult".to_string()))??;
+        Ok(())
     }
 
     async fn set_invoice_status_batch(&mut self, sender: &Sender<Self::Update>, vals: Vec<(String, Uuid, InvoiceStatus)>) -> hexstody_invoices::error::Result<()> {
-        let upd = StateUpdate::new(
+        let (upd, mut receiver) = StateUpdate::new_sync(
             UpdateBody::UpdInvoiceStatus(
                 InvoiceStatusUpdates{ 
                     updates: vals.into_iter().map(|v| InvoiceStatusUpdate{ user: v.0, id: v.1, status: v.2 }).collect()
@@ -157,7 +166,11 @@ impl InvoiceStorage for State {
         );
         sender.send(upd)
             .await
-            .map_err(|e| StateUpdateErr::GenericError(e.to_string()).into())
+            .map_err(|e| StateUpdateErr::GenericError(e.to_string()))?;
+        receiver.recv()
+            .await
+            .ok_or(StateUpdateErr::GenericError("Failed to recv UpdateResult".to_string()))??;
+        Ok(())
     }
 }
 

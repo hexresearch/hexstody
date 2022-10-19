@@ -11,15 +11,18 @@ use hexstody_api::domain::CurrencyAddress;
 use hexstody_api::types::LimitSpan;
 use hexstody_invoices::types::Invoice;
 use serde::{Deserialize, Serialize};
+use tokio::sync::mpsc::{Sender, Receiver, self};
 use std::fmt;
 use std::str::FromStr;
 use thiserror::Error;
 
+use crate::state::error::StateUpdateErr;
 use crate::state::exchange::{ExchangeOrderUpd, ExchangeDecision};
 
 use self::btc::{BestBtcBlock, BtcTxCancel};
 use self::deposit::DepositAddress;
 use self::limit::{LimitChangeUpd, LimitCancelData, LimitChangeDecision};
+use self::results::UpdateResult;
 use self::signup::SignupInfo;
 use self::withdrawal::{WithdrawalRequestDecisionInfo, WithdrawalRequestInfo, WithdrawCompleteInfo, WithdrawalRejectInfo};
 use self::misc::{InviteRec, TokenUpdate, SetLanguage, ConfigUpdateData, PasswordChangeUpd, SetPublicKey, SetUnit, InvoiceStatusUpdates};
@@ -29,17 +32,38 @@ use super::state::State;
 /// All database updates are collected to a single table that
 /// allows to reconstruct current state of the system by replaying
 /// all events until required timestamp.
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 pub struct StateUpdate {
     pub created: NaiveDateTime,
     pub body: UpdateBody,
+    pub callback_channel: Option<Sender<Result<UpdateResult, StateUpdateErr>>>
 }
 
 impl StateUpdate {
+    /// Create new async update from UpdateBody
     pub fn new(body: UpdateBody) -> Self {
         StateUpdate {
             created: Utc::now().naive_utc(),
             body,
+            callback_channel: None
+        }
+    }
+
+    /// Create new synchronous update from UpdateBody
+    /// Returns the update along with mpsc receiver, which should receive the result of applying the update
+    pub fn new_sync(body: UpdateBody) -> (Self, Receiver<Result<UpdateResult, StateUpdateErr>>) {
+        let (sender, receiver) = mpsc::channel(1);
+        (StateUpdate{
+            created: Utc::now().naive_utc(),
+            body,
+            callback_channel: Some(sender)
+        }, receiver)
+    }
+
+    /// Callback with the results. If Update is async, simply do nothing
+    pub async fn callback(&self, res: Result<UpdateResult, StateUpdateErr>){
+        if let Some(sender) = &self.callback_channel {
+            let _ = sender.send(res).await;
         }
     }
 }

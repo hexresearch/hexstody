@@ -186,6 +186,7 @@ pub async fn update_results_worker(
                         }
                     }
                 },
+                UpdateResult::Success => {},
             },
             None => break,
         }

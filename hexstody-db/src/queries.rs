@@ -57,7 +57,8 @@ pub async fn query_updates(pool: &Pool) -> Result<Vec<StateUpdate>> {
                     let body = UpdateTag::from_tag(&r.tag, r.version as u16, r.body.clone())?;
                     StateUpdate {
                         created: r.created,
-                        body
+                        body,
+                        callback_channel: None
                     }
                 } else {
                     break;
