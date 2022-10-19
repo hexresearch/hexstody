@@ -40,32 +40,20 @@ pub async fn get_balance(
     ticker_client: &State<TickerClient>,
 ) -> error::Result<Json<api::Balance>> {
     require_auth_user(cookies, state, |_, user| async move {
-        let user_data_resp = eth_client.get_user_data(&user.username).await;
-        if let Err(e) = user_data_resp {
-            return Err(error::Error::FailedETHConnection(e.to_string()).into());
-        };
-        let user_data = user_data_resp.unwrap();
         let mut rstate = rstate.lock().await;
-        let mut balances: Vec<api::BalanceItem>= vec![];
+        let mut balances: Vec<api::BalanceItem> = vec![];
         for (cur, info) in user.currencies.iter() {
-            let ticker = rstate.symbol_to_symbols_generic(ticker_client, cur.symbol(), vec![Symbol::USD, Symbol::RUB]).await.ok();
-            let mut bal = info.balance();
-            match cur {
-                Currency::BTC => {}
-                Currency::ETH => {
-                    bal = user_data.data.balanceEth.parse::<u64>().unwrap();
-                }
-                Currency::ERC20(token) => {
-                    for tok in &user_data.data.balanceTokens {
-                        if tok.tokenName == token.ticker {
-                            bal = tok.tokenBalance.parse::<u64>().unwrap_or(0);
-                        }
-                    }
-                }
-            }
+            let ticker = rstate
+                .symbol_to_symbols_generic(
+                    ticker_client,
+                    cur.symbol(),
+                    vec![Symbol::USD, Symbol::RUB],
+                )
+                .await
+                .ok();
             let bal = api::BalanceItem {
                 currency: cur.clone(),
-                value: (bal, &info.unit).into(),
+                value: (info.balance(), &info.unit).into(),
                 limit_info: info.limit_info.clone(),
                 ticker,
             };
@@ -84,62 +72,36 @@ pub async fn get_balance_by_currency(
     cookies: &CookieJar<'_>,
     state: &State<Arc<Mutex<DbState>>>,
     rstate: &State<Arc<Mutex<RuntimeState>>>,
-    eth_client: &State<EthClient>,
     ticker_client: &State<TickerClient>,
     currency: Json<Currency>,
 ) -> error::Result<Json<api::BalanceItem>> {
-    let cur = currency.into_inner();
-    let currency = cur.clone();
-    let nofound_err = Err(error::Error::NoUserCurrency(cur.clone()).into());
-    let resp = require_auth_user(cookies, state, |_, user| async move {
-        match user.currencies.get(&cur) {
+    require_auth_user(cookies, state, |_, user| async move {
+        let currency = currency.into_inner();
+        let nofound_err = Err(error::Error::NoUserCurrency(currency.clone()).into());
+        match user.currencies.get(&currency) {
             Some(info) => {
                 let limit_info = info.limit_info.clone();
                 let unit = info.unit.clone();
-                if cur == Currency::BTC {
-                    return Ok(((info.balance(), &unit).into(), limit_info));
-                } else {
-                    let user_data_resp = eth_client.get_user_data(&user.username).await;
-                    if let Err(e) = user_data_resp {
-                        return Err(error::Error::FailedETHConnection(e.to_string()).into());
-                    };
-                    let user_data = user_data_resp.unwrap();
-                    match cur.clone() {
-                        Currency::BTC => return nofound_err, // this should not happen
-                        Currency::ETH => {
-                            return Ok((
-                                (user_data.data.balanceEth.parse().unwrap(), &unit).into(),
-                                limit_info
-                            ))
-                        }
-                        Currency::ERC20(token) => {
-                            for tok in user_data.data.balanceTokens {
-                                if tok.tokenName == token.ticker {
-                                    return Ok((
-                                        (user_data.data.balanceEth.parse().unwrap(), &unit).into(),
-                                        limit_info,
-                                    ));
-                                }
-                            }
-                            return nofound_err;
-                        }
-                    }
-                }
+                let mut rstate = rstate.lock().await;
+                let ticker = rstate
+                    .symbol_to_symbols_generic(
+                        ticker_client,
+                        currency.clone().symbol(),
+                        vec![Symbol::USD, Symbol::RUB],
+                    )
+                    .await
+                    .ok();
+                Ok(Json(BalanceItem {
+                    currency,
+                    value: (info.balance(), &unit).into(),
+                    limit_info,
+                    ticker,
+                }))
             }
-            None => return nofound_err,
+            None => nofound_err,
         }
     })
-    .await;
-    let mut rstate = rstate.lock().await;
-    let ticker = rstate.symbol_to_symbols_generic(ticker_client, currency.symbol(), vec![Symbol::USD, Symbol::RUB]).await.ok();
-    resp.map(|(value, limit_info)| {
-        Json(BalanceItem {
-            currency,
-            value,
-            limit_info,
-            ticker
-        })
-    })
+    .await
 }
 
 #[openapi(tag = "wallet")]
