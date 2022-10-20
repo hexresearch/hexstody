@@ -196,7 +196,7 @@ async fn confirm(
         &confirmation_data,
     )?;
     let url = [config.domain.clone(), uri!(confirm).to_string()].join("");
-    let state_update = StateUpdate::new(UpdateBody::WithdrawalRequestDecision(
+    let (upd, mut receiver) = StateUpdate::new_sync(UpdateBody::WithdrawalRequestDecision(
         (
             confirmation_data,
             signature_data,
@@ -206,9 +206,12 @@ async fn confirm(
             .into(),
     ));
     update_sender
-        .send(state_update)
+        .send(upd)
         .await
-        .map_err(|e| error::Error::InternalServerError(format!("{:?}", e)).into())
+        .map_err(|e| error::Error::InternalServerError(format!("{:?}", e)))?;
+    receiver.recv().await
+        .ok_or(error::Error::InternalServerError("".to_string()))
+        .map(|_| ()).map_err(|e| e.into())
 }
 
 /// # Reject withdrawal request
@@ -228,7 +231,7 @@ async fn reject(
         &confirmation_data,
     )?;
     let url = [config.domain.clone(), uri!(reject).to_string()].join("");
-    let state_update = StateUpdate::new(UpdateBody::WithdrawalRequestDecision(
+    let (upd, mut receiver) = StateUpdate::new_sync(UpdateBody::WithdrawalRequestDecision(
         (
             confirmation_data,
             signature_data,
@@ -238,9 +241,12 @@ async fn reject(
             .into(),
     ));
     update_sender
-        .send(state_update)
+        .send(upd)
         .await
-        .map_err(|e| error::Error::InternalServerError(format!("{:?}", e)).into())
+        .map_err(|e| error::Error::InternalServerError(format!("{:?}", e)))?;
+    receiver.recv().await
+        .ok_or(error::Error::InternalServerError("".to_string()))
+        .map(|_| ()).map_err(|e| e.into())
 }
 
 /// Generate an invite
@@ -272,16 +278,19 @@ async fn gen_invite(
             };
         }
     }
-    let state_update = StateUpdate::new(UpdateBody::GenInvite(InviteRec {
+    let (upd, mut receiver) = StateUpdate::new_sync(UpdateBody::GenInvite(InviteRec {
         invite,
         invitor,
         label: label.clone(),
     }));
     update_sender
-        .send(state_update)
+        .send(upd)
         .await
-        .map_err(|e| error::Error::InternalServerError(format!("{:?}", e)).into())
+        .map_err(|e| error::Error::InternalServerError(format!("{:?}", e)))?;
+    receiver.recv().await
+        .ok_or(error::Error::InternalServerError("".to_string()))
         .map(|_| Json(InviteResp { invite, label }))
+        .map_err(|e| e.into())
 }
 
 /// List operator's invites
@@ -380,7 +389,7 @@ async fn confirm_limits(
         &confirmation_data,
     )?;
     let url = [config.domain.clone(), uri!(confirm_limits).to_string()].join("");
-    let state_update = StateUpdate::new(UpdateBody::LimitChangeDecision(
+    let (upd, mut receiver) = StateUpdate::new_sync(UpdateBody::LimitChangeDecision(
         (
             confirmation_data,
             signature_data,
@@ -390,9 +399,13 @@ async fn confirm_limits(
             .into(),
     ));
     update_sender
-        .send(state_update)
+        .send(upd)
         .await
-        .map_err(|e| error::Error::InternalServerError(format!("{:?}", e)).into())
+        .map_err(|e| error::Error::InternalServerError(format!("{:?}", e)))?;
+    receiver.recv().await
+        .ok_or(error::Error::InternalServerError("".to_string()))
+        .map(|_| ())
+        .map_err(|e| e.into())
 }
 
 #[openapi(skip)]
@@ -411,7 +424,7 @@ async fn reject_limits(
         &confirmation_data,
     )?;
     let url = [config.domain.clone(), uri!(reject_limits).to_string()].join("");
-    let state_update = StateUpdate::new(UpdateBody::LimitChangeDecision(
+    let (upd, mut receiver) = StateUpdate::new_sync(UpdateBody::LimitChangeDecision(
         (
             confirmation_data,
             signature_data,
@@ -421,9 +434,13 @@ async fn reject_limits(
             .into(),
     ));
     update_sender
-        .send(state_update)
+        .send(upd)
         .await
-        .map_err(|e| error::Error::InternalServerError(format!("{:?}", e)).into())
+        .map_err(|e| error::Error::InternalServerError(format!("{:?}", e)))?;
+    receiver.recv().await
+        .ok_or(error::Error::InternalServerError("".to_string()))
+        .map(|_| ())
+        .map_err(|e| e.into())
 }
 
 #[openapi(skip)]
@@ -442,7 +459,7 @@ async fn confirm_exchange(
         &confirmation_data,
     )?;
     let url = [config.domain.clone(), uri!(confirm_exchange).to_string()].join("");
-    let state_update = StateUpdate::new(UpdateBody::ExchangeDecision(
+    let (upd, mut receiver) = StateUpdate::new_sync(UpdateBody::ExchangeDecision(
         (
             confirmation_data,
             signature_data,
@@ -452,9 +469,13 @@ async fn confirm_exchange(
             .into(),
     ));
     update_sender
-        .send(state_update)
+        .send(upd)
         .await
-        .map_err(|e| error::Error::InternalServerError(format!("{:?}", e)).into())
+        .map_err(|e| error::Error::InternalServerError(format!("{:?}", e)))?;
+    receiver.recv().await
+        .ok_or(error::Error::InternalServerError("".to_string()))
+        .map(|_| ())
+        .map_err(|e| e.into())
 }
 
 #[openapi(skip)]
@@ -473,7 +494,7 @@ async fn reject_exchange(
         &confirmation_data,
     )?;
     let url = [config.domain.clone(), uri!(reject_exchange).to_string()].join("");
-    let state_update = StateUpdate::new(UpdateBody::ExchangeDecision(
+    let (upd, mut receiver) = StateUpdate::new_sync(UpdateBody::ExchangeDecision(
         (
             confirmation_data,
             signature_data,
@@ -483,9 +504,13 @@ async fn reject_exchange(
             .into(),
     ));
     update_sender
-        .send(state_update)
+        .send(upd)
         .await
-        .map_err(|e| error::Error::InternalServerError(format!("{:?}", e)).into())
+        .map_err(|e| error::Error::InternalServerError(format!("{:?}", e)))?;
+    receiver.recv().await
+        .ok_or(error::Error::InternalServerError("".to_string()))
+        .map(|_| ())
+        .map_err(|e| e.into())
 }
 
 #[openapi(skip)]

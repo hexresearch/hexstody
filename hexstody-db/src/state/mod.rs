@@ -216,47 +216,59 @@ impl State {
             .find_map(|(_, user)| user.find_completed_request(txid.clone()))
     }
 
+    pub async fn apply_update_async(
+        &mut self,
+        update: StateUpdate
+    ) -> Result<UpdateResult, StateUpdateErr>{
+        let channel = update.callback_channel.clone();
+        let res = self.apply_update(update);
+        if let Some(sender) = channel {
+            let _ = sender.send(res.clone()).await;
+        }
+        res
+    }
+
     /// Apply an update event from persistent store
     pub fn apply_update(
         &mut self,
         update: StateUpdate,
-    ) -> Result<Option<UpdateResult>, StateUpdateErr> {
-        match update.body {
+    ) -> Result<UpdateResult, StateUpdateErr> {
+        match update.body.clone() {
             UpdateBody::Signup(info) => {
                 self.with_signup(update.created, info)?;
                 self.last_changed = update.created;
-                Ok(None)
+                Ok(UpdateResult::Success)
             }
             UpdateBody::Snapshot(snaphsot) => {
                 *self = snaphsot;
                 self.last_changed = update.created;
-                Ok(None)
+                Ok(UpdateResult::Success)
             }
             UpdateBody::CreateWithdrawalRequest(withdrawal_request) => {
                 let res = self.with_new_withdrawal_request(withdrawal_request)?;
                 self.last_changed = update.created;
                 info!("Res: {:?}", res);
-                Ok(res)
+                Ok(res.unwrap_or(UpdateResult::Success))
             }
             UpdateBody::WithdrawalRequestDecision(withdrawal_request_decision) => {
                 let res = self.with_withdrawal_request_decision(withdrawal_request_decision)?;
                 self.last_changed = update.created;
-                Ok(res.map(UpdateResult::WithdrawConfirmed))
+                Ok(res.map(UpdateResult::WithdrawConfirmed).unwrap_or(UpdateResult::Success))
             }
             UpdateBody::WithdrawalRequestComplete(withdrawal_completed_info) => {
                 self.set_withdrawal_request_completed(withdrawal_completed_info)?;
                 self.last_changed = update.created;
-                Ok(None)
+                Ok(UpdateResult::Success)
             }
             UpdateBody::WithdrawalRequestNodeRejected(reject_info) => {
                 self.set_withdrawal_request_node_rejected(reject_info)?;
                 self.last_changed = update.created;
-                Ok(None)
+                Ok(UpdateResult::Success)
             }
             UpdateBody::DepositAddress(dep_address) => {
                 self.with_deposit_address(dep_address)?;
                 self.last_changed = update.created;
-                Ok(None)
+                Ok(UpdateResult::Success)
             }
             UpdateBody::BestBtcBlock(btc) => {
                 self.btc_state = BtcState {
@@ -264,72 +276,72 @@ impl State {
                     block_hash: btc.block_hash,
                 };
                 self.last_changed = update.created;
-                Ok(None)
+                Ok(UpdateResult::Success)
             }
             UpdateBody::UpdateBtcTx(tx) => {
                 self.with_btc_tx_update(tx)?;
                 self.last_changed = update.created;
-                Ok(None)
+                Ok(UpdateResult::Success)
             }
             UpdateBody::CancelBtcTx(tx) => {
                 self.with_btc_tx_cancel(tx)?;
                 self.last_changed = update.created;
-                Ok(None)
+                Ok(UpdateResult::Success)
             }
             UpdateBody::UpdateTokens(token_update) => {
                 self.update_tokens(token_update)?;
                 self.last_changed = update.created;
-                Ok(None)
+                Ok(UpdateResult::Success)
             }
             UpdateBody::GenInvite(invite_req) => {
                 self.gen_invite(invite_req)?;
                 self.last_changed = update.created;
-                Ok(None)
+                Ok(UpdateResult::Success)
             }
             UpdateBody::LimitsChangeRequest(req) => {
                 self.insert_limits_req(req)?;
                 self.last_changed = update.created;
-                Ok(None)
+                Ok(UpdateResult::Success)
             }
             UpdateBody::CancelLimitChange(cancel_req) => {
                 self.cancel_limit_change(cancel_req)?;
                 self.last_changed = update.created;
-                Ok(None)
+                Ok(UpdateResult::Success)
             }
             UpdateBody::LimitChangeDecision(limit_change_decision) => {
                 self.with_limit_change_decision(limit_change_decision)?;
                 self.last_changed = update.created;
-                Ok(None)
+                Ok(UpdateResult::Success)
             }
             UpdateBody::ClearLimits(span) => {
                 self.clear_limits(span)?;
                 self.last_changed = update.created;
-                Ok(None)
+                Ok(UpdateResult::Success)
             }
             UpdateBody::SetLanguage(req) => {
                 self.set_language(req)?;
                 self.last_changed = update.created;
-                Ok(None)
+                Ok(UpdateResult::Success)
             }
             UpdateBody::ConfigUpdate(req) => {
                 self.update_user_config(req)?;
                 self.last_changed = update.created;
-                Ok(None)
+                Ok(UpdateResult::Success)
             }
             UpdateBody::PasswordChange(req) => {
                 self.change_password(req)?;
                 self.last_changed = update.created;
-                Ok(None)
+                Ok(UpdateResult::Success)
             }
             UpdateBody::SetPublicKey(req) => {
                 self.set_user_public_key(req)?;
                 self.last_changed = update.created;
-                Ok(None)
+                Ok(UpdateResult::Success)
             }
             UpdateBody::ExchangeRequest(req) => {
                 self.add_exchange_request(req)?;
                 self.last_changed = update.created;
-                Ok(None)
+                Ok(UpdateResult::Success)
             }
             UpdateBody::ExchangeDecision(req) => {
                 let b = self.apply_exchange_decision(&req)?;
@@ -337,27 +349,27 @@ impl State {
                     self.add_incoming_exchange(req)?;
                 }
                 self.last_changed = update.created;
-                Ok(None)
+                Ok(UpdateResult::Success)
             }
             UpdateBody::ExchangeAddress(req) => {
                 self.set_exchange_address(req)?;
                 self.last_changed = update.created;
-                Ok(None)
+                Ok(UpdateResult::Success)
             }
             UpdateBody::SetUnit(req) => {
                 self.set_unit(req)?;
                 self.last_changed = update.created;
-                Ok(None)
+                Ok(UpdateResult::Success)
             },
             UpdateBody::StoreInvoice(req) => {
                 self.store_invoice_impl(req)?;
                 self.last_changed = update.created;
-                Ok(None)
+                Ok(UpdateResult::Success)
             },
             UpdateBody::UpdInvoiceStatus(req) => {
                 self.set_invoices_status(req)?;
                 self.last_changed = update.created;
-                Ok(None)
+                Ok(UpdateResult::Success)
             },
         }
     }

@@ -60,7 +60,7 @@ pub async fn get_deposit_address(
     updater: &State<mpsc::Sender<StateUpdate>>,
     state: &State<Arc<Mutex<DbState>>>,
     currency: Currency,
-) -> Result<CurrencyAddress, error::Error> {
+) -> error::Result<CurrencyAddress> {
     match currency {
         Currency::BTC => allocate_address(btc_client, eth_client, updater, currency).await,
         Currency::ETH | Currency::ERC20(_) => {
@@ -88,7 +88,7 @@ async fn allocate_address(
     eth_client: &State<EthClient>,
     updater: &State<mpsc::Sender<StateUpdate>>,
     currency: Currency,
-) -> Result<CurrencyAddress, error::Error> {
+) -> error::Result<CurrencyAddress> {
     match currency {
         Currency::BTC => allocate_btc_address(btc_client, updater).await,
         Currency::ETH => allocate_eth_address(eth_client, updater).await,
@@ -99,21 +99,22 @@ async fn allocate_address(
 async fn allocate_btc_address(
     btc: &State<BtcClient>,
     updater: &State<mpsc::Sender<StateUpdate>>,
-) -> Result<CurrencyAddress, error::Error> {
+) -> error::Result<CurrencyAddress> {
     let address = btc.deposit_address().await.map_err(|e| {
         error!("{}", e);
         error::Error::FailedGenAddress(Currency::BTC)
     })?;
     let packed_address = CurrencyAddress::BTC(BtcAddress{addr: format!("{}", address)});
-    updater.send(StateUpdate::new(UpdateBody::ExchangeAddress(packed_address.clone())))
+    let (upd, mut receiver) = StateUpdate::new_sync(UpdateBody::ExchangeAddress(packed_address.clone()));
+    updater.send(upd)
         .await.map_err(|e| error::Error::GenericError(e.to_string()))?;
-    Ok(packed_address)
+    receiver.recv().await.unwrap().map(|_| packed_address).map_err(|e| e.into())
 }
 
 async fn allocate_eth_address(
     eth_client: &State<EthClient>,
     updater: &State<mpsc::Sender<StateUpdate>>,
-) -> Result<CurrencyAddress, error::Error> {
+) -> error::Result<CurrencyAddress> {
     let user_data = eth_client
         .get_user_data(HEXSTODY_EXCHANGE_USER)
         .await
@@ -121,16 +122,17 @@ async fn allocate_eth_address(
     let packed_address = CurrencyAddress::ETH(EthAccount {
         account: user_data.address,
     });
-    updater.send(StateUpdate::new(UpdateBody::ExchangeAddress(packed_address.clone())))
+    let (upd, mut receiver) = StateUpdate::new_sync(UpdateBody::ExchangeAddress(packed_address.clone()));
+    updater.send(upd)
         .await.map_err(|e| error::Error::GenericError(e.to_string()))?;
-    Ok(packed_address)
+    receiver.recv().await.unwrap().map(|_| packed_address).map_err(|e| e.into())
 }
 
 async fn allocate_erc20_address(
     eth_client: &State<EthClient>,
     updater: &State<mpsc::Sender<StateUpdate>>,
     token: Erc20Token,
-) -> Result<CurrencyAddress, error::Error> {
+) -> error::Result<CurrencyAddress> {
     let user_data = eth_client
         .get_user_data(HEXSTODY_EXCHANGE_USER)
         .await
@@ -141,7 +143,8 @@ async fn allocate_erc20_address(
             account: user_data.address,
         },
     });
-    updater.send(StateUpdate::new(UpdateBody::ExchangeAddress(packed_address.clone())))
+    let (upd, mut receiver) = StateUpdate::new_sync(UpdateBody::ExchangeAddress(packed_address.clone()));
+    updater.send(upd)
         .await.map_err(|e| error::Error::GenericError(e.to_string()))?;
-    Ok(packed_address)
+    receiver.recv().await.unwrap().map(|_| packed_address).map_err(|e| e.into())
 }

@@ -82,12 +82,15 @@ pub async fn signup_email(
             return Err(error::Error::FailedETHConnection(e.to_string()).into());
         }
         let pass_hash = bcrypt::hash(&data.password).map_err(|e| error::Error::from(e))?;
-        let upd = StateUpdate::new(UpdateBody::Signup(SignupInfo {
+        let (upd, mut receiver) = StateUpdate::new_sync(UpdateBody::Signup(SignupInfo {
             username: data.user.clone(),
             invite: data.invite.clone(),
             auth: SignupAuth::Password(pass_hash),
         }));
         updater.send(upd).await.unwrap();
+        if let Err(e) = receiver.recv().await.unwrap(){
+            return Err(e.into())
+        }
     }
     Ok(Json(()))
 }
@@ -122,11 +125,14 @@ pub async fn change_password(
             return Err(error::Error::UserPasswordTooLong.into());
         }
         let new_pass_hash = bcrypt::hash(&new_password).map_err(|e| error::Error::from(e))?;
-        let upd = StateUpdate::new(UpdateBody::PasswordChange(PasswordChangeUpd {
+        let (upd, mut receiver) = StateUpdate::new_sync(UpdateBody::PasswordChange(PasswordChangeUpd {
             user: user.username,
             new_password: new_pass_hash,
         }));
         updater.send(upd).await.unwrap();
+        if let Err(e) = receiver.recv().await.unwrap(){
+            return Err(e.into())
+        }
         Ok(())
     })
     .await

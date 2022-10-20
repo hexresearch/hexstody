@@ -382,13 +382,14 @@ pub async fn post_withdraw(
                     amount: withdraw_request.amount,
                     request_type: WithdrawalRequestType::OverLimit,
                 };
-                let state_update =
-                    StateUpdate::new(UpdateBody::CreateWithdrawalRequest(withdrawal_request));
-                info!("state_update: {:?}", state_update);
+                let (upd, mut receiver) =
+                    StateUpdate::new_sync(UpdateBody::CreateWithdrawalRequest(withdrawal_request));
+                info!("state_update: {:?}", upd);
                 updater
-                    .send(state_update)
+                    .send(upd)
                     .await
-                    .map_err(|_| error::Error::NoUserFound.into())
+                    .map_err(|_| error::Error::NoUserFound)?;
+                receiver.recv().await.unwrap().map(|_| ()).map_err(|e| e.into())
             }
             CurrencyAddress::ERC20(_) => {
                 let withdrawal_request = WithdrawalRequestInfo {
@@ -398,13 +399,14 @@ pub async fn post_withdraw(
                     amount: withdraw_request.amount,
                     request_type: WithdrawalRequestType::OverLimit,
                 };
-                let state_update =
-                    StateUpdate::new(UpdateBody::CreateWithdrawalRequest(withdrawal_request));
-                info!("state_update: {:?}", state_update);
+                let (upd, mut receiver) =
+                    StateUpdate::new_sync(UpdateBody::CreateWithdrawalRequest(withdrawal_request));
+                info!("state_update: {:?}", upd);
                 updater
-                    .send(state_update)
+                    .send(upd)
                     .await
-                    .map_err(|_| error::Error::NoUserFound.into())
+                    .map_err(|_| error::Error::NoUserFound)?;
+                receiver.recv().await.unwrap().map(|_| ()).map_err(|e| e.into())
             }
             CurrencyAddress::BTC(_) => {
                 let btc_cur = Currency::BTC;
@@ -436,13 +438,14 @@ pub async fn post_withdraw(
                         amount: withdraw_request.amount,
                         request_type: req_type,
                     };
-                    let state_update =
-                        StateUpdate::new(UpdateBody::CreateWithdrawalRequest(withdrawal_request));
-                    info!("state_update: {:?}", state_update);
+                    let (upd, mut receiver) =
+                        StateUpdate::new_sync(UpdateBody::CreateWithdrawalRequest(withdrawal_request));
+                    info!("state_update: {:?}", upd);
                     updater
-                        .send(state_update)
+                        .send(upd)
                         .await
-                        .map_err(|_| error::Error::NoUserFound.into())
+                        .map_err(|_| error::Error::NoUserFound)?;
+                    receiver.recv().await.unwrap().map(|_| ()).map_err(|e| e.into())
                 } else {
                     Err(error::Error::InsufficientFunds(btc_cur))?
                 }
@@ -450,7 +453,6 @@ pub async fn post_withdraw(
         }
     })
     .await
-    .map_err(|e| e.into())
 }
 
 #[openapi(tag = "deposit")]
@@ -537,16 +539,17 @@ async fn allocate_btc_address(
     let packed_address = CurrencyAddress::BTC(BtcAddress {
         addr: format!("{}", address),
     });
+    let (upd, mut receiver) = StateUpdate::new_sync(UpdateBody::DepositAddress(
+        DepositAddress {
+            user_id: user_id.to_owned(),
+            address: packed_address.clone(),
+        },
+    ));
     updater
-        .send(StateUpdate::new(UpdateBody::DepositAddress(
-            DepositAddress {
-                user_id: user_id.to_owned(),
-                address: packed_address.clone(),
-            },
-        )))
+        .send(upd)
         .await
         .unwrap();
-    Ok(packed_address)
+    receiver.recv().await.unwrap().map(|_| packed_address).map_err(|e| e.into())
 }
 
 async fn allocate_eth_address(
@@ -559,16 +562,17 @@ async fn allocate_eth_address(
         .await
         .map_err(|e| error::Error::FailedETHConnection(e.to_string()))?;
     let packed_address = CurrencyAddress::ETH(EthAccount { account: addr });
+    let (upd, mut receiver) = StateUpdate::new_sync(UpdateBody::DepositAddress(
+        DepositAddress {
+            user_id: user_id.to_owned(),
+            address: packed_address.clone(),
+        },
+    ));
     updater
-        .send(StateUpdate::new(UpdateBody::DepositAddress(
-            DepositAddress {
-                user_id: user_id.to_owned(),
-                address: packed_address.clone(),
-            },
-        )))
+        .send(upd)
         .await
         .unwrap();
-    Ok(packed_address)
+    receiver.recv().await.unwrap().map(|_| packed_address).map_err(|e| e.into())
 }
 
 async fn allocate_erc20_address(
@@ -585,16 +589,17 @@ async fn allocate_erc20_address(
         token: token,
         account: EthAccount { account: addr },
     });
+    let (upd, mut receiver) = StateUpdate::new_sync(UpdateBody::DepositAddress(
+        DepositAddress {
+            user_id: user_id.to_owned(),
+            address: packed_address.clone(),
+        },
+    ));
     updater
-        .send(StateUpdate::new(UpdateBody::DepositAddress(
-            DepositAddress {
-                user_id: user_id.to_owned(),
-                address: packed_address.clone(),
-            },
-        )))
+        .send(upd)
         .await
         .unwrap();
-    Ok(packed_address)
+    receiver.recv().await.unwrap().map(|_| packed_address).map_err(|e| e.into())
 }
 
 #[openapi(tag = "profile")]
@@ -646,14 +651,15 @@ pub async fn enable_token(
         match user.currencies.get(&c) {
             Some(_) => Err(error::Error::TokenAlreadyEnabled(token).into()),
             None => {
-                let state_update = StateUpdate::new(UpdateBody::UpdateTokens(TokenUpdate {
+                let (upd, mut receiver) = StateUpdate::new_sync(UpdateBody::UpdateTokens(TokenUpdate {
                     user: user.username.clone(),
                     token: token.clone(),
                     action: TokenAction::Enable,
                 }));
-                let upd = updater.send(state_update).await;
+                let upd = updater.send(upd).await;
                 match upd {
                     Ok(_) => {
+                        receiver.recv().await.unwrap()?;
                         let mut tokens = filter_tokens(user.currencies.keys().cloned().collect());
                         tokens.push(token);
                         eth_client
@@ -688,14 +694,15 @@ pub async fn disable_token(
                 if info.balance() > 0 {
                     Err(error::Error::TokenNonZeroBalance(token).into())
                 } else {
-                    let state_update = StateUpdate::new(UpdateBody::UpdateTokens(TokenUpdate {
+                    let (upd, mut receiver) = StateUpdate::new_sync(UpdateBody::UpdateTokens(TokenUpdate {
                         user: user.username.clone(),
                         token: token.clone(),
                         action: TokenAction::Disable,
                     }));
-                    let upd = updater.send(state_update).await;
+                    let upd = updater.send(upd).await;
                     match upd {
                         Ok(_) => {
+                            receiver.recv().await.unwrap()?;
                             let tokens: Vec<Erc20Token> = user
                                 .currencies
                                 .keys()
@@ -772,11 +779,12 @@ pub async fn order_exchange(
                 id,
                 created_at,
             };
-            let upd = StateUpdate::new(UpdateBody::ExchangeRequest(req));
+            let (upd, mut receiver) = StateUpdate::new_sync(UpdateBody::ExchangeRequest(req));
             updater
                 .send(upd)
                 .await
-                .map_err(|e| error::Error::GenericError(e.to_string()).into())
+                .map_err(|e| error::Error::GenericError(e.to_string()))?;
+            receiver.recv().await.unwrap().map(|_| ()).map_err(|e| e.into())
         }
     })
     .await

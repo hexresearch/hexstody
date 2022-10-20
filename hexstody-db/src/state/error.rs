@@ -5,7 +5,7 @@ use uuid::Uuid;
 
 use crate::{update::signup::UserId, state::withdraw::WithdrawalRequestId};
 
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug, Clone, PartialEq)]
 pub enum StateUpdateErr {
     #[error("User with ID {0} is already signed up")]
     UserAlreadyExists(UserId),

@@ -58,8 +58,11 @@ pub async fn request_new_limits(
             Err(error::Error::InviteNotFound.into())
         } else {
            for req in filtered_limits {
-            let state_update = StateUpdate::new(UpdateBody::LimitsChangeRequest(req));
-            let _ = updater.send(state_update).await;
+                let (upd, mut receiver) = StateUpdate::new_sync(UpdateBody::LimitsChangeRequest(req));
+                let _ = updater.send(upd).await;
+                if let Err(e) = receiver.recv().await.unwrap(){
+                    return Err(e.into())
+                }
             }
             Ok(())
         }
@@ -105,9 +108,12 @@ pub async fn cancel_user_change(
     let resp = require_auth_user(cookies, api_key, state, |_, user| async move {
         match user.limit_change_requests.get(&currency){
             Some(v) => {
-                let state_update = StateUpdate::new(UpdateBody::CancelLimitChange(
+                let (upd, mut receiver) = StateUpdate::new_sync(UpdateBody::CancelLimitChange(
                     LimitCancelData{ id: v.id.clone(), user: user.username.clone(), currency: currency.into_inner().clone() }));
-                let _ = updater.send(state_update).await;
+                let _ = updater.send(upd).await;
+                if let Err(e) = receiver.recv().await.unwrap(){
+                    return Err(e.into())
+                }
                 Ok(())
             },
             None => return Err(error::Error::LimChangeNotFound.into()),
@@ -138,7 +144,11 @@ pub async fn set_language(
         if user.config.language == lang {
             Err(error::Error::LimitsNoChanges.into())
         } else {
-            let _ = updater.send(StateUpdate::new(UpdateBody::SetLanguage(SetLanguage{ user: user.username, language: lang }))).await;
+            let (upd, mut receiver) = StateUpdate::new_sync(UpdateBody::SetLanguage(SetLanguage{ user: user.username, language: lang }));
+            let _ = updater.send(upd).await;
+            if let Err(e) = receiver.recv().await.unwrap(){
+                return Err(e.into())
+            }
             Ok(())
         }
     }).await
@@ -189,8 +199,9 @@ pub async fn set_user_config(
             }
         }
         upd_data.tg_name = req.tg_name.map(|tg_name| if tg_name.is_empty() {Err(())} else {Ok(TgName{tg_name})});
-        let _ = updater.send(StateUpdate::new(UpdateBody::ConfigUpdate(upd_data))).await;
-        Ok(())
+        let (upd, mut receiver) = StateUpdate::new_sync(UpdateBody::ConfigUpdate(upd_data));
+        let _ = updater.send(upd).await;
+        receiver.recv().await.unwrap().map_err(|e| e.into()).map(|_| ())
     }).await
 }
 
@@ -225,8 +236,9 @@ pub async fn set_user_public_key(
             Err(e) => return to_generic_error(e),
         }
     };
-    let _ = updater.send(StateUpdate::new(UpdateBody::SetPublicKey(upd))).await;
-    Ok(())
+    let (upd, mut receiver) = StateUpdate::new_sync(UpdateBody::SetPublicKey(upd));
+    let _ = updater.send(upd).await;
+    receiver.recv().await.unwrap().map_err(|e| e.into()).map(|_| ())  
     }).await
 }
 
@@ -245,7 +257,11 @@ pub async fn set_unit(
             let cur = unit_req.currency().ok_or(error::Error::UnknownCurrency(unit_req.name()))?;
             let cinfo = user.currencies.get(&cur).ok_or(error::Error::NoUserCurrency(cur))?;
             if cinfo.unit != unit_req {
-                let _ = updater.send(StateUpdate::new(UpdateBody::SetUnit(SetUnit{ user: user.username.clone(), unit: unit_req }))).await;
+                let (upd, mut receiver) = StateUpdate::new_sync(UpdateBody::SetUnit(SetUnit{ user: user.username.clone(), unit: unit_req }));
+                let _ = updater.send(upd).await;
+                if let Err(e) = receiver.recv().await.unwrap(){
+                    return Err(e.into())
+                }
             };
         }
         Ok(())

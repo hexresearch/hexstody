@@ -40,15 +40,13 @@ pub async fn update_worker(
         {
             let mut mstate = state.lock().await;
             let mut copy_state = mstate.clone();
-            match copy_state.apply_update(i.clone()) {
-                Ok(res) => match insert_update(&pool, i.body, Some(i.created)).await {
+            match copy_state.apply_update_async(i.clone()).await {
+                Ok(update_result) => match insert_update(&pool, i.body, Some(i.created)).await {
                     Ok(_) => {
                         *mstate = copy_state;
-                        if let Some(update_result) = res {
-                            if let Err(e) = update_resp_sender.send(update_result).await{
-                                error!("Failed to send an update result: {e}");
-                            }
-                        };
+                        if let Err(e) = update_resp_sender.send(update_result).await{
+                            error!("Failed to send an update result: {e}");
+                        }
                     }
                     Err(e) => {
                         error!("Failed to store state update, reverting: {:?}", e);
