@@ -1,0 +1,14 @@
+[package]
+name = "hexstody-eth-api"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+bitcoin = "0.28.1"
+bitcoin_hashes = "0.10.0"
+rocket_okapi = { git = "https://github.com/GREsau/okapi", rev = "ddb07a709129b24ed8e106b0fbf576b6ded615ac", features = ["rapidoc", "swagger"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+rocket = { version = "=0.5.0-rc.2", default-features = false, features = ["json"] }

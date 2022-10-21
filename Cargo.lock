@@ -1474,6 +1474,7 @@ dependencies = [
  "tokio",
  "uuid 0.8.2",
 ]
+
 [[package]]
 name = "hexstody-btc"
 version = "0.1.0"
@@ -1624,10 +1625,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "hexstody-eth-api"
+version = "0.1.0"
+dependencies = [
+ "bitcoin",
+ "bitcoin_hashes",
+ "rocket",
+ "rocket_okapi 0.8.0-rc.2 (git+https://github.com/GREsau/okapi?rev=ddb07a709129b24ed8e106b0fbf576b6ded615ac)",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "hexstody-eth-client"
 version = "0.1.0"
 dependencies = [
  "hexstody-api",
+ "hexstody-eth-api",
  "log",
  "reqwest",
  "schemars",

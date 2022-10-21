@@ -6,6 +6,8 @@ use hexstody_api::{
 };
 use log::*;
 use thiserror::Error;
+use hexstody_eth_api::events::*;
+
 
 #[derive(Error, Debug)]
 pub enum Error {
@@ -34,6 +36,21 @@ impl EthClient {
             client: reqwest::Client::new(),
             server: url.to_owned(),
         }
+    }
+
+    pub async fn poll_events(&self) -> Result<EthEvents> {
+        let path = "/events";
+        let endpoint = format!("{}{}", self.server, path);
+        let request = self.client.post(endpoint).build()?;
+        let response = self
+            .client
+            .execute(request)
+            .await?
+            .error_for_status()?
+            .text()
+            .await?;
+        debug!("Response {path}: {}", response);
+        Ok(serde_json::from_str(&response)?)
     }
 
     pub async fn createuser(&self, user: &str) -> Result<()> {

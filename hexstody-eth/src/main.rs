@@ -117,6 +117,8 @@ async fn rocket() -> _ {
                     handlers::sending::senddummy_eth_from_login,
                     handlers::sending::signsend,
                     handlers::sending::signsend_erc20
+
+                    handlers::events::poll_events
                     ])
                     .mount(
                         "/swagger/",
