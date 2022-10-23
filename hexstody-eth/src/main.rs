@@ -15,6 +15,8 @@ use clap::Parser;
 use types::*;
 
 use std::time::Duration;
+use std::sync::Arc;
+
 use rocket_db_pools::Database;
 use rocket_okapi::{openapi_get_routes, swagger_ui::*};
 
@@ -77,13 +79,15 @@ async fn rocket() -> _ {
 
     let dbconnect = cfg.dburl.clone();
     let pool = db_functions::create_db_pool(&dbconnect).await.unwrap();
-
+    let state = Arc::new(Mutex::new(ScanState::new(network)));
+    let state_notify = Arc::new(Notify::new());
+    let tx_notify = Arc::new(Notify::new());
 
 
     tokio::spawn({
     let polling_duration = Duration::from_secs(cfg.api_call_timeout);
         async move {
-            node_worker(polling_duration, &pool).await;
+            node_worker(polling_duration, &pool, &state).await;
         }
     });
     rocket::build()
