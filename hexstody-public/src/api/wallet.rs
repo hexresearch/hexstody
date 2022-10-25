@@ -80,8 +80,6 @@ pub async fn get_balance_by_currency(
         let nofound_err = Err(error::Error::NoUserCurrency(currency.clone()).into());
         match user.currencies.get(&currency) {
             Some(info) => {
-                let limit_info = info.limit_info.clone();
-                let unit = info.unit.clone();
                 let mut rstate = rstate.lock().await;
                 let ticker = rstate
                     .symbol_to_symbols_generic(
@@ -93,8 +91,8 @@ pub async fn get_balance_by_currency(
                     .ok();
                 Ok(Json(BalanceItem {
                     currency,
-                    value: (info.balance(), &unit).into(),
-                    limit_info,
+                    value: (info.balance(), &info.unit).into(),
+                    limit_info: info.limit_info.clone(),
                     ticker,
                 }))
             }
