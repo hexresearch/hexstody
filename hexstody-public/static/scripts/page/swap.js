@@ -1,4 +1,4 @@
-import { getObjByCurrency, validateAmount, displayUnitTickerAmount } from "../common.js";
+import { getObjByCurrency, validateAmount, displayUnitTickerAmount, currencyToCurrencyName } from "../common.js";
 
 let balanceFrom = null;
 let balanceTo = null;
@@ -82,7 +82,7 @@ async function displayEnv(){
 
 function displayExchangeRate(rate){
     if(rate) {
-        return `1 ${rate.from} = ${rate.rate} ${rate.to}`
+        return `1 ${rate.from} = ${rate.rate} ${currencyToCurrencyName(rate.to)}`
     } else {
         return ""
     }
