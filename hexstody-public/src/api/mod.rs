@@ -385,7 +385,16 @@ async fn swap(
     require_auth_user(cookies, None, state, |_, user| async move {
         let mut currencies: Vec<Currency> = user.currencies.keys().cloned().collect();
         currencies.sort();
-        let currencies: Vec<String> = currencies.into_iter().map(|c| c.symbol().symbol()).collect();
+        let currencies: Vec<String> = currencies
+        .into_iter()
+        .filter_map(|c| {
+            if c.is_have_exchange_rate() {
+                Some(c.symbol().symbol())
+            } else {
+                None
+            }
+        })
+        .collect();
         let from = currencies.get(0).cloned().unwrap_or("".to_string());
         let to = currencies.get(1).cloned().unwrap_or("".to_string());
         let header_dict = get_dict_json(

@@ -192,6 +192,10 @@ impl Currency {
             Currency::ERC20(_) => 100_000_000,
         }
     }
+
+    pub fn is_have_exchange_rate(&self) -> bool {
+        self != &Self::gtech_erc20()
+    }
 }
 
 pub fn filter_tokens(curs: Vec<Currency>) -> Vec<Erc20Token> {
