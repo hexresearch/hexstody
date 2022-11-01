@@ -1,7 +1,7 @@
-pub mod types;
-pub mod utils;
-pub mod node_calls;
-pub mod handlers;
-pub mod db_functions;
-pub mod conf;
+pub mod api;
+pub mod state;
+pub mod constants;
+
+#[cfg(test)]
+pub mod tests;
 pub mod worker;

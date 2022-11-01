@@ -1,0 +1,10 @@
+{
+  "nodeurl":"http://localhost",
+  "nodeport":8545,
+  "dbname":"accs.db",
+  "dburl":"postgres://hexstody:hexstody@localhost:5432/hexstody",
+  "etherscan_api_key":"P8AXZC7V71IJA4XPMFEIIYX9S2S4D8U3T6",
+  "etherscan_api_prefix":"api",
+  "alchemy_api_key":"BZqEzKfIa6KJwWUYEum4ENKcqwMpPm7Z",
+  "api_call_timeout":60
+}

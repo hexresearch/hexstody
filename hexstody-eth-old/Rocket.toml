@@ -1,0 +1,6 @@
+## defaults for _all_ profiles
+[default]
+port = 8540
+
+[default.databases.hexstody]
+url = "postgres://hexstody:hexstody@localhost/hexstody"

@@ -1,9 +1,9 @@
 [package]
 name = "hexstody-eth"
 version = "0.1.0"
-authors = ["nazgull08 <nazgull08@protonmail.com"]
 edition = "2021"
 
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
 name = "hexstody_eth"
@@ -14,25 +14,28 @@ name = "hexstody-eth"
 path = "src/main.rs"
 
 [dependencies]
+bitcoin = "0.28.1"
+bitcoin_hashes = "0.10.0"
+bitcoincore-rpc = "0.15.0"
+bitcoincore-rpc-json = "0.15.0"
 chrono = { version = "0.4.19", features = [ "serde" ] }
-clap = { version = "^3.1.18", features = ["derive", "env"] }
-log = { version = "^0.4.17"}
-env_logger = { version = "^0.9.0"}
-hex-literal = { version = "^0.3.4"}
-schemars = { version = "0.8.10", features = ["chrono", "uuid"] }
-secp256k1 = { version = "^0.21", features = ["recovery"]}
-serde = { version = "^1.0.137", features = ["derive"] }
-serde_json = {version = "^1.0.81", features = ["preserve_order"]}
-reqwest = { version = "^0.11", features = [ "json" ] }
-rocket = { version = "^0.5.0-rc.2", features = ["default", "json"]}
-rocket_db_pools = { version = "^0.1.0-rc.2", features = ["sqlx_postgres"]}
-rocket_okapi = { git = "https://github.com/GREsau/okapi", rev = "5cb59b3fddcf24294b4c6110882d89a68eaf01c1", features = [
-  "rapidoc",
-  "swagger",
-  "uuid",
-  "rocket_db_pools"
-] }
-sqlx = { version = "0.5", features = [ "runtime-tokio-rustls", "migrate", "macros", "postgres", "json", "chrono", "offline" ] }
+clap = { version = "3.0.0-rc.4", features = ["derive", "env"] }
+ctrlc = "3.2.2"
+env_logger = { version = "0.9.0" }
+futures = "0.3.19"
+futures-channel = "0.3"
+futures-util = "0.3.19"
+hexstody-api = { path = "../hexstody-api" }
+hexstody-sig = { path = "../hexstody-sig" }
+hexstody-btc-api = { path = "../hexstody-btc-api" }
+log = "0.4.14"
+rocket = { version = "=0.5.0-rc.2", default-features = false, features = ["json"] }
+rocket_okapi = { git = "https://github.com/GREsau/okapi", rev = "ddb07a709129b24ed8e106b0fbf576b6ded615ac", features = ["rapidoc", "swagger"] }
+schemars = "0.8.8"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "1.0"
 tokio = { version = "1", features = ["full"] }
-ureq = { version = "^2.4.0", features = ["json", "charset"] }
-web3 = {version = "^0.18.0"}
+uuid = { version = "0.8.2", features = ["v4"]}
+p256 = { version = "0.11.1", features = ["serde"] }
+rand_core = { version = "0.6.3", features = ["std"] }
