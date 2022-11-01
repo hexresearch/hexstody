@@ -1,23 +1,21 @@
+#![allow(dead_code, unused_variables, non_snake_case)]
 use crate::types::*;
 use crate::utils::*;
 use crate::node_calls;
 use crate::db_functions;
-use crate::conf::{NodeConfig, load_config};
+use crate::conf::NodeConfig;
 
 use rocket::{
-    get,post,State,
+    get,State,
     http::{Status, ContentType},
-    serde::json::Json
 };
 
-use rocket_db_pools::{Database, Connection};
-use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
+use rocket_db_pools::Connection;
+use rocket_okapi::openapi;
 
 use web3::{
-    contract::{Contract, Options},
     ethabi::ethereum_types::U256,
     types::{Address, TransactionParameters,TransactionRequest, H160},
-    api::{Web3Api}
 };
 
 use std::str::FromStr;

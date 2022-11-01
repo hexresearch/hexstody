@@ -1,14 +1,14 @@
-var lang = "en";
+var lang = "en"
 
 export function setPageLang(language) {
-    const l = language.toLowerCase();
+    const l = language.toLowerCase()
     if (l === "en" || l === "ru") {
-        lang = l;
+        lang = l
     }
 }
 
 export function getLang() {
-    const langSpan = document.getElementById("lang-span");
+    const langSpan = document.getElementById("lang-span")
     if (langSpan) {
         return langSpan.innerText.toLowerCase()
     } else {
@@ -18,7 +18,7 @@ export function getLang() {
 
 export function localizeSpan(span) {
     switch (lang) {
-        case "en": return span;
+        case "en": return span
         case "ru": switch (span) {
             case "Day": return "день"
             case "Week": return "неделю"
@@ -30,19 +30,23 @@ export function localizeSpan(span) {
 export function localizeChangeStatus(status) {
     switch (Object.keys(status)[0]) {
         case "InProgress":
-            let body = status["InProgress"];
+            // let body = status["InProgress"]
             switch (lang) {
-                case "en": return "In progress (+" + body.confirmations + "/-" + body.rejections + " of 2)";
-                case "ru": return "В процессе (+" + body.confirmations + "/-" + body.rejections + " из 2)";
+                case "en": return "In progress"
+                case "ru": return "В обработке"
             }
         case "Confirmed":
-        case "en": return "Confirmed";
-        case "ru": return "Принято";
+            switch (lang) {
+                case "en": return "Confirmed"
+                case "ru": return "Принято"
+            }
         case "Rejected":
-        case "en": return "Rejected by operators";
-        case "ru": return "Отвергнуто операторами";
+            switch (lang) {
+                case "en": return "Rejected by operators"
+                case "ru": return "Отклонено операторами"
+            }
         default:
-            "Unknown";
+            "Unknown"
     };
 }
 
@@ -50,31 +54,31 @@ export function localizeWithdrawalStatus(status) {
     switch (lang) {
         case "en": switch (status.type) {
             case "InProgress":
-                return "In progress";
+                return "In progress"
             case "Confirmed":
-                return "Confirmed";
+                return "Confirmed"
             case "Completed":
-                return "Completed";
+                return "Completed"
             case "OpRejected":
-                return "Rejected by operators";
+                return "Rejected by operators"
             case "NodeRejected":
-                return "Rejected by node";
+                return "Rejected by node"
             default:
-                return "Unknown";
+                return "Unknown"
         };
         case "ru": switch (status.type) {
             case "InProgress":
-                return "В процессе";
+                return "В процессе"
             case "Confirmed":
-                return "Подтверждено";
+                return "Подтверждено"
             case "Completed":
-                return "Завершено";
+                return "Завершено"
             case "OpRejected":
-                return "Отклонено оператором";
+                return "Отклонено оператором"
             case "NodeRejected":
-                return "Отклонено нодой";
+                return "Отклонено нодой"
             default:
-                return "Unknown";
+                return "Unknown"
         };
     }
 }
@@ -87,16 +91,16 @@ function languageCodeToLanguage(language) {
     switch (language.toLowerCase()) {
         case "ru":
         case "ru-ru":
-            return "ru";
+            return "ru"
         case "en":
         case "en-us":
         case "en-gb":
         default:
-            return "en";
+            return "en"
     };
 }
 
 export function getBrowserLanguage() {
-    let browserLanguage = navigator.language || navigator.userLanguage;
-    return languageCodeToLanguage(browserLanguage);
+    let browserLanguage = navigator.language || navigator.userLanguage
+    return languageCodeToLanguage(browserLanguage)
 }

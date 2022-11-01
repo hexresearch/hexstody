@@ -1,4 +1,4 @@
-use crate::constants::{WITHDRAWAL_CONFIRM_URI, WITHDRAWAL_REJECT_URI};
+use crate::constants::{ConfirmationsConfig, WITHDRAWAL_CONFIRM_URI, WITHDRAWAL_REJECT_URI};
 use crate::state::ScanState;
 use bitcoin::{consensus::encode, network::constants::Network, Address, Amount, Transaction};
 use bitcoincore_rpc::{Client, RpcApi};
@@ -77,7 +77,7 @@ async fn get_fees(client: &State<Client>) -> Json<FeeResponse> {
         .estimate_smart_fee(2, None)
         .map_err(|e| error::Error::from(e));
     let res = FeeResponse {
-        fee_rate: 5, // default 5 sat/byte
+        fee_rate: 5 * 1024, // default 5 sat/byte
         block: None,
     };
     match est {
@@ -94,7 +94,7 @@ async fn get_fees(client: &State<Client>) -> Json<FeeResponse> {
 
 // Configuration for /withdraw handler
 struct WithdrawCfg {
-    min_confirmations: i16,
+    confirmations_config: ConfirmationsConfig,
     op_public_keys: Vec<PublicKey>,
     hot_domain: String,
     network: Network,
@@ -109,14 +109,14 @@ async fn withdraw_btc(
 ) -> error::Result<WithdrawalResponse> {
     debug!("{:?}", cw);
     let WithdrawCfg {
-        min_confirmations,
+        confirmations_config,
         op_public_keys,
         hot_domain,
         network,
     } = cfg.inner();
     let mut valid_confirms = 0;
     let mut valid_rejections = 0;
-    let min_confirmations = min_confirmations.clone();
+    let min_confirmations = confirmations_config.withdraw.clone();
     let confirmation_data = ConfirmationData {
         id: cw.id,
         user: cw.user.clone(),
@@ -434,7 +434,7 @@ pub async fn serve_public_api(
     polling_duration: Duration,
     secret_key: Option<&str>,
     op_public_keys: Vec<PublicKey>,
-    min_confirmations: i16,
+    confirmations_config: ConfirmationsConfig,
     hot_domain: String,
     network: Network,
 ) -> Result<(), rocket::Error> {
@@ -456,7 +456,7 @@ pub async fn serve_public_api(
     });
 
     let withdraw_cfg = WithdrawCfg {
-        min_confirmations,
+        confirmations_config,
         op_public_keys,
         hot_domain,
         network,

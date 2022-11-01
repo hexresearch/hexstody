@@ -17,16 +17,23 @@
                     </div>
                 </td>
                 <td class="history-col-2">
+                    {{status}}
+                </td>
+                <td class="history-col-3">
                     <div>
-                        <a href="{{explorerLink}}">{{hash}}</a>
+                        {{#if txid }}
+                        <a href="{{explorerLink}}">{{txid}}</a>
                         <button class="button is-small is-ghost">
                             <span class="icon">
                                 <i class="mdi mdi-content-copy"></i>
                             </span>
                         </button>
+                        {{else}}
+                        -
+                        {{/if}}
                     </div>
                 </td>
-                <td class="history-col-3">
+                <td class="history-col-4">
                     <div>
                         <span class="{{flowClass}}">{{valueToShow}}</span>
                     </div>

@@ -1,7 +1,7 @@
 use std::fmt;
 
 use base64;
-use chrono::NaiveDateTime;
+use chrono::prelude::*;
 use hexstody_btc_api::bitcoin::txid::BtcTxid;
 use okapi::openapi3::*;
 use p256::{ecdsa::Signature, pkcs8::DecodePublicKey, PublicKey};
@@ -22,13 +22,13 @@ use rocket_okapi::{
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::domain::{CurrencyTxId, Email, PhoneNumber, TgName};
+use crate::domain::{CurrencyTxId, Email, PhoneNumber, TgName, Unit, CurrencyUnit};
 
 use super::domain::currency::{BtcAddress, Currency, CurrencyAddress, Erc20Token};
 
 #[allow(non_snake_case)]
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct TickerETH {
+#[derive(Debug, PartialEq, Serialize, Clone, Copy, Deserialize, JsonSchema)]
+pub struct TickerUsdRub {
     pub USD: f32,
     pub RUB: f32,
 }
@@ -178,22 +178,58 @@ pub struct EthFeeResp {
 }
 
 #[allow(non_snake_case)]
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, JsonSchema)]
 pub struct EthGasPrice {
-    pub LastBlock: String,
-    pub SafeGasPrice: String,
-    pub ProposeGasPrice: String,
-    pub FastGasPrice: String,
-    pub suggestBaseFee: String,
+    pub LastBlock: u64,
+    pub SafeGasPrice: f64,
+    pub ProposeGasPrice: f64,
+    pub FastGasPrice: f64,
+    pub suggestBaseFee: f64,
     pub gasUsedRatio: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema, Eq, PartialEq)]
+impl<'de> Deserialize<'de> for EthGasPrice {
+    #[allow(non_snake_case)]
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+        D::Error: serde::de::Error {
+        use serde::de::Error;
+        use serde_json::Value;
+        let v = Value::deserialize(deserializer)?;
+        let parsef64 = |fname: &str| -> Result<f64, D::Error> {
+            v.get(fname)
+            .map(|v| v.as_str().map(|s| s.parse::<f64>()))
+            .flatten()
+            .ok_or(D::Error::custom(format!("failed to parse {}", fname)))?
+            .map_err(D::Error::custom)
+        };
+        let gasUsedRatio = v.get("gasUsedRatio")
+            .map(|v| v.as_str().map(|s| s.to_string()))
+            .flatten()
+            .ok_or(D::Error::custom("failed to parse gasUsedRatio"))?;
+        let LastBlock = v.get("LastBlock")
+            .map(|v| v.as_str().map(|s| s.parse::<u64>()))
+            .flatten()
+            .ok_or(D::Error::custom("failed to parse LastBlock"))?
+            .map_err(D::Error::custom)?;
+        let SafeGasPrice = parsef64("SafeGasPrice")?;
+        let ProposeGasPrice = parsef64("ProposeGasPrice")?;
+        let FastGasPrice = parsef64("FastGasPrice")?;
+        let suggestBaseFee = parsef64("suggestBaseFee")?;
+        Ok(EthGasPrice{ LastBlock, SafeGasPrice, ProposeGasPrice, FastGasPrice, suggestBaseFee, gasUsedRatio})
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, PartialEq)]
 pub struct BalanceItem {
     pub currency: Currency,
-    pub value: u64,
+    pub value: UnitAmount,
     pub limit_info: LimitInfo,
+    pub ticker: Option<TickerUsdRub>
 }
+
+impl Eq for BalanceItem{ }
 
 impl PartialOrd for BalanceItem {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
@@ -210,7 +246,7 @@ impl Ord for BalanceItem {
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
 pub struct DepositHistoryItem {
     pub currency: Currency,
-    pub date: NaiveDateTime,
+    pub date: DateTime<Utc>,
     pub value: u64,
     pub number_of_confirmations: u64,
     pub txid: CurrencyTxId,
@@ -220,7 +256,7 @@ pub struct DepositHistoryItem {
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
 pub struct WithdrawalHistoryItem {
     pub currency: Currency,
-    pub date: NaiveDateTime,
+    pub date: DateTime<Utc>,
     pub value: u64,
     pub status: WithdrawalRequestStatus,
     //temp field to give txid for ETH and tokens while status not working
@@ -235,7 +271,7 @@ pub enum HistoryItem {
     Withdrawal(WithdrawalHistoryItem),
 }
 
-pub fn history_item_time(h: &HistoryItem) -> &NaiveDateTime {
+pub fn history_item_time(h: &HistoryItem) -> &DateTime<Utc> {
     match h {
         HistoryItem::Deposit(d) => &d.date,
         HistoryItem::Withdrawal(w) => &w.date,
@@ -255,7 +291,7 @@ impl Balance {
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct History {
-    pub target_number_of_confirmations: i16,
+    pub confirmations_config: ConfirmationsConfig,
     pub history_items: Vec<HistoryItem>,
 }
 
@@ -354,14 +390,16 @@ fn example_amount() -> u64 {
 }
 
 fn example_confirmation_status() -> WithdrawalRequestStatus {
-    WithdrawalRequestStatus::InProgress { confirmations: 1 }
+    WithdrawalRequestStatus::InProgress {
+        confirmations_minus_rejections: 1,
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
 #[serde(tag = "type")]
 pub enum WithdrawalRequestStatus {
-    /// Number of confirmations received
-    InProgress { confirmations: i16 },
+    /// Number of confirmations minus number of rejections received
+    InProgress { confirmations_minus_rejections: i16 },
     /// Confirmed by operators, but not yet sent to the node
     Confirmed,
     /// Tx sent to the node
@@ -393,7 +431,7 @@ pub enum WithdrawalFilter {
     Confirmed,
     Completed,
     OpRejected,
-    NodeRejected
+    NodeRejected,
 }
 
 impl ToString for WithdrawalFilter {
@@ -742,7 +780,10 @@ pub struct LimitChangeReq {
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
 #[serde(tag = "type")]
 pub enum LimitChangeStatus {
-    InProgress { confirmations: i16, rejections: i16 },
+    /// Number of confirmations minus number of rejections received
+    InProgress {
+        confirmations_minus_rejections: i16,
+    },
     Completed,
     Rejected,
 }
@@ -752,7 +793,7 @@ pub enum LimitChangeFilter {
     All,
     Pending,
     Completed,
-    Rejected
+    Rejected,
 }
 
 impl ToString for LimitChangeFilter {
@@ -761,7 +802,7 @@ impl ToString for LimitChangeFilter {
             LimitChangeFilter::All => "all".to_owned(),
             LimitChangeFilter::Completed => "completed".to_owned(),
             LimitChangeFilter::Rejected => "rejected".to_owned(),
-            LimitChangeFilter::Pending => "pending".to_owned()
+            LimitChangeFilter::Pending => "pending".to_owned(),
         }
     }
 }
@@ -779,7 +820,6 @@ impl<'a> FromUriParam<Query, &LimitChangeFilter> for LimitChangeFilter {
         filt.clone()
     }
 }
-
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
 pub struct LimitChangeResponse {
@@ -869,7 +909,6 @@ pub struct ExchangeRequest {
     pub currency_from: Currency,
     pub currency_to: Currency,
     pub amount_from: u64,
-    pub amount_to: u64,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy, JsonSchema)]
@@ -877,7 +916,10 @@ pub struct ExchangeRequest {
 pub enum ExchangeStatus {
     Completed,
     Rejected,
-    InProgress { confirmations: i16, rejections: i16 },
+    /// Number of confirmations minus number of rejections received
+    InProgress {
+        confirmations_minus_rejections: i16,
+    },
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
@@ -961,4 +1003,78 @@ pub struct ExchangeAddress {
     pub currency: String,
     pub address: String,
     pub qr_code_base64: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct MarginData {
+    pub currency_from: Currency,
+    pub currency_to: Currency,
+    pub margin: f64,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct ConfirmationsConfig {
+    // Number of confirmations from operators required for funds withdrawal above the limit
+    pub withdraw: i16,
+    // Number of confirmations from operators required for change withdrawal limits
+    pub change_limit: i16,
+    // Number of confirmations from operators required for exchange
+    pub exchange: i16,
+}
+
+impl ConfirmationsConfig {
+    // Returns maximum value among fields
+    pub fn max(&self) -> i16 {
+        let items = [self.withdraw, self.change_limit, self.exchange];
+        items
+            .iter()
+            .copied()
+            .reduce(|accum, item| if accum >= item { accum } else { item })
+            .unwrap()
+    }
+}
+
+#[derive(
+    Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
+)]
+pub struct UnitAmount {
+    /// Amount
+    pub amount: u64,
+    /// Unit name. e.g mBTC, gwei, sat, etc
+    pub name: String,
+    /// Unit multiplier. To display the amount in units: amount / mul
+    pub mul: u64,
+    /// Currency precision. To convet the amount to whole units: amount / prec
+    pub prec: u64,
+}
+
+impl From<(u64, Unit)> for UnitAmount {
+    fn from((amount, unit): (u64, Unit)) -> Self {
+        UnitAmount { 
+            amount, 
+            name: unit.name(), 
+            mul: unit.mul(),
+            prec: unit.precision(), 
+        }
+    }
+}
+
+impl From<(u64, &Unit)> for UnitAmount {
+    fn from((amount, unit): (u64, &Unit)) -> Self {
+        UnitAmount { 
+            amount, 
+            name: unit.name(), 
+            mul: unit.mul(),
+            prec: unit.precision(), 
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq)]
+pub struct UnitTickedAmount{
+    pub amount: u64,
+    pub name: String,
+    pub mul: u64,
+    pub prec: u64,
+    pub ticker: Option<TickerUsdRub>
 }

@@ -1,10 +1,10 @@
-import { tickerEnum, formattedCurrencyValue, currencyPrecision, currencyNameToCurrency } from "../common.js";
-import { getBalance, postOrderExchange } from "../request.js";
+import { getObjByCurrency, validateAmount, displayUnitTickerAmount } from "../common.js";
 
-let currencyFrom = null;
-let currencyTo = null;
-let valueFrom = null;
-let valueTo = null;
+let balanceFrom = null;
+let balanceTo = null;
+let pairRate = null;
+let amountFrom = null;
+let balances = null;
 
 function displayError(error) {
     const validationDisplay = document.getElementById("validation-error");
@@ -12,125 +12,139 @@ function displayError(error) {
     validationDisplay.hidden = false;
 }
 
-function calcAvailableBalance(balanceObj) {
-    const lim = balanceObj.limit_info.limit.amount;
-    const spent = balanceObj.limit_info.spent;
-    const value = balanceObj.value;
-    if (value < (lim - spent)) {
-        return value;
-    } else {
-        return (lim - spent);
-    };
+async function getBalances() {
+    return await fetch("/balance").then(r => r.json());
 }
 
-function parseInput(currency, value) {
-    switch (currency) {
-        case tickerEnum.btc:
-            return parseInt(value);
-        default:
-            const asFloat = parseFloat(value);
-            return asFloat ? Math.round(asFloat * currencyPrecision(currency)) : null;
-    }
-};
-
-async function convertAmount(from, to, amount) {
-    const ticker = await fetch(`https://min-api.cryptocompare.com/data/price?fsym=${from}&tsyms=${to}`)
-        .then(r => r.json());
-    const tickerNorm = ticker[to] * currencyPrecision(to) / currencyPrecision(from);
-    return Math.round(amount * tickerNorm);
+async function postOrderExchange(request) {
+    return fetch("/exchange/order", { method: "POST", body: JSON.stringify(request) });
 }
 
-function initDrop(idPostfix, options) {
-    document.getElementById(`currency-${idPostfix}`).innerHTML = options;
-    const optionElements = Array
-        .from(document.getElementById(`currency-${idPostfix}`)
-            .getElementsByClassName("dropdown-item"));
-
-    for (const opt of optionElements) {
-        opt.addEventListener("click", async event => {
-            document.getElementById("from_value").value = 0;
-            document.getElementById("to_value").value = 0;
-            const currency = event.target.innerText;
-            document.getElementById(`currency-selection-${idPostfix}`).innerText = currency;
-
-            switch (idPostfix) {
-                case "from":
-                    currencyFrom = currency;
-                    break;
-                case "to":
-                    currencyTo = currency;
-                    break;
-            }
-
-            if (currencyFrom) {
-                const balance = await getBalance(currencyNameToCurrency(currencyFrom)).then(r => r.json());
-                const availableBalance = calcAvailableBalance(balance);
-                const formattedBalance = formattedCurrencyValue(currencyFrom, availableBalance);
-                document.getElementById("from_max").innerText = `Max ${formattedBalance}`;
-                if (currencyTo) {
-                    const convertedAmount = await convertAmount(currencyFrom, currencyTo, availableBalance);
-                    const formattedAmount = formattedCurrencyValue(currencyTo, convertedAmount);
-                    document.getElementById("to_max").innerText = `Max ${formattedAmount}`;
-                }
-            }
+async function getAdjustedRate(from, to) {
+    return fetch("/ticker/pair/adjusted",
+        {
+            method: "POST",
+            body: JSON.stringify({ from: from, to: to })
         });
-    }
-
 }
 
-async function tryTrans(from, to, event) {
-    if (from && to) {
-        const inputValue = event.target.value;
-        const valueFrom = parseInput(from, inputValue);
-        if (valueFrom) {
-            return convertAmount(from, to, valueFrom);
-        }
-    }
-    return null;
+function wipeEnv(){
+    balances = null;
+    balanceFrom = null;
+    balanceTo = null;
+    pairRate = null;
+    amountFrom = null;
+    document.getElementById("from-avaliable").hidden = true;
 }
 
-async function init() {
-    const allCurrencies = Object.values(tickerEnum);
-    const optionTemplate = Handlebars.compile('<a href="#" class="dropdown-item"> {{this}} </a>');
-    const renderedOptions = allCurrencies.reduce((acc, opt) => acc + optionTemplate(opt), "");
-
-    document.getElementById("from_value").value = 0;
-    document.getElementById("to_value").value = 0;
-
-    document.getElementById("from_value").addEventListener("keyup", async event => {
-        valueTo = await tryTrans(currencyFrom, currencyTo, event);
-        if (valueTo) {
-            document.getElementById("to_value").value = formattedCurrencyValue(currencyTo, valueTo);
-        }
-    });
-
-    document.getElementById("to_value").addEventListener("keyup", async event => {
-        valueFrom = await tryTrans(currencyTo, currencyFrom, event);
-        if (valueFrom) {
-            document.getElementById("from_value").value = formattedCurrencyValue(currencyFrom, valueFrom);
-        }
-    });
-
-    document.getElementById("swap").addEventListener("click", async _ => {
-        if (currencyFrom && currencyTo && valueFrom && valueTo) {
-            const request = {
-                currency_from: currencyNameToCurrency(currencyFrom),
-                currency_to: currencyNameToCurrency(currencyTo),
-                amount_from: valueFrom,
-                amount_to: valueTo
-            }
-
-            const result = await postOrderExchange(request);
-            if (result.ok) {
-                window.location.href = "/overview"
-            } else {
-                displayError((await result.json()).message);
+async function initEnv(){
+    wipeEnv()
+    balances = await getBalances()
+    const selectFrom = document.getElementById("select-from")
+    const selectTo = document.getElementById("select-to")
+    
+    selectFrom.onchange = function(){
+        balanceFrom = null;
+        let curName = selectFrom.value;
+        balanceFrom = getObjByCurrency(balances.balances, curName)
+        if(balanceFrom && balanceTo) {
+            if (balanceFrom != balanceTo){
+                displayEnv()
             }
         }
-    });
+    }
 
-    initDrop("from", renderedOptions);
-    initDrop("to", renderedOptions);
+    selectTo.onchange = function(){
+        balanceTo = null;
+        let curName = selectTo.value;
+        balanceTo = getObjByCurrency(balances.balances, curName)
+        if(balanceFrom && balanceTo) {
+            if (balanceFrom != balanceTo){
+                displayEnv()
+            }
+        }
+    }
 }
 
-document.addEventListener("DOMContentLoaded", init);
+async function displayEnv(){
+    pairRate = await getAdjustedRate(balanceFrom.currency, balanceTo.currency).then(r => r.json());
+    document.getElementById("from-balance").innerText = displayUnitTickerAmount(balanceFrom);
+    document.getElementById("from-unit").innerText = balanceFrom.value.name;
+    document.getElementById("to-unit").innerText = balanceTo.value.name;
+    document.getElementById("from-avaliable").hidden = false;
+    document.getElementById("rate-span").innerText = displayExchangeRate(pairRate)
+    document.getElementById("from-max-btn").style.display = "block";
+    document.getElementById("from-max-btn").onclick = maxAmountBtn;
+    document.getElementById("from_value").onkeyup = fromChangedHandler;
+    document.getElementById("to_value").onkeyup = toChangedHandler;
+    document.getElementById("swap").onclick = handleSwapButton;
+}
+
+function displayExchangeRate(rate){
+    if(rate) {
+        return `1 ${rate.from} = ${rate.rate} ${rate.to}`
+    } else {
+        return ""
+    }
+}
+
+function maxAmountBtn(){
+    const fromEl = document.getElementById("from_value") 
+    fromEl.value = balanceFrom.value.amount / balanceFrom.value.mul;
+    fromEl.onkeyup()
+}
+
+function fromChangedHandler(){
+    const rawValue = document.getElementById("from_value").value;
+    const convertedAmount = Math.floor(rawValue * balanceFrom.value.mul)
+    let val = validateAmount(balanceFrom.currency, convertedAmount);
+    if (val.ok){
+        // Split calc for easy understanding
+        amountFrom = val.value
+        const wholeUnitsFrom = val.value / balanceFrom.value.prec;
+        const wholeUnitsTo = wholeUnitsFrom * pairRate.rate;
+        const amountTo = wholeUnitsTo * balanceTo.value.prec;
+        const displayUnitsTo = amountTo / balanceTo.value.mul;
+        document.getElementById("to_value").value = displayUnitsTo
+
+    } else {
+        document.getElementById("to_value").value = null
+    }
+}
+
+function toChangedHandler(){
+    const rawValue = document.getElementById("to_value").value;
+    const convertedAmount = Math.floor(rawValue * balanceTo.value.mul)
+    let val = validateAmount(balanceTo.currency, convertedAmount);
+    if (val.ok) {
+        // Split calc for easy understanding
+        const wholeUnitsTo = val.value / balanceTo.value.prec
+        const wholeUnitsFrom = wholeUnitsTo / pairRate.rate
+        amountFrom = wholeUnitsFrom * balanceFrom.value.prec
+        const displayUnitsFrom = amountFrom / balanceFrom.value.mul
+        document.getElementById("from_value").value = displayUnitsFrom
+    } else {
+        document.getElementById("from_value").value = null
+    }
+}
+
+async function handleSwapButton(){
+    const val = validateAmount(balanceFrom.currency, amountFrom)
+    if(val.ok){
+        const request = {
+            currency_from: balanceFrom.currency,
+            currency_to: balanceTo.currency,
+            amount_from: val.value
+        }
+        const result = await postOrderExchange(request);
+        if (result.ok) {
+            window.location.href = "/overview"
+        } else {
+            displayError((await result.json()).message);
+        }
+    } else {
+        displayError(val.error)
+    }
+}
+
+document.addEventListener("DOMContentLoaded", initEnv);

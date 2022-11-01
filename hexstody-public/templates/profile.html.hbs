@@ -34,9 +34,9 @@
         <div class="box balance-box">
             {{#each tabs}}
             {{#if eq this.id ../selected}}
-                <div class="row is-center fit-content" id="{{this.id}}-tab-body" style="display:block"></div>
+                <div class="row is-center" id="{{this.id}}-tab-body" style="display:block"></div>
             {{else}}
-                <div class="row is-center fit-content" id="{{this.id}}-tab-body" style="display:none"></div>
+                <div class="row is-center" id="{{this.id}}-tab-body" style="display:none"></div>
             {{/if}}
             {{/each}}
         </div>

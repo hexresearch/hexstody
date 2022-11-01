@@ -176,6 +176,22 @@ impl Currency {
             },
         }
     }
+
+    pub fn default_unit(&self) -> Unit {
+        match self {
+            Currency::BTC => Unit::BtcUnit(BtcUnit::Btc),
+            Currency::ETH => Unit::EthUnit(EthUnit::Ether),
+            Currency::ERC20(token) => Unit::GenUnit(token.ticker.clone()),
+        }
+    }
+
+    pub fn precision(&self) -> u64 {
+        match self {
+            Currency::BTC => BtcUnit::Btc.mul(),
+            Currency::ETH => EthUnit::Ether.mul(),
+            Currency::ERC20(_) => 100_000_000,
+        }
+    }
 }
 
 pub fn filter_tokens(curs: Vec<Currency>) -> Vec<Erc20Token> {
@@ -466,6 +482,192 @@ impl Symbol {
                 "GTECH" => 1.0,
                 _ => 1.0
             },
+        }
+    }
+}
+
+pub trait CurrencyUnit {
+    /// Display name of the unit
+    fn name(&self) -> String;
+    /// Multiplier of minimal unit
+    fn mul(&self) -> u64;
+    /// Gen currency by unit
+    fn currency(&self) -> Option<Currency>;
+    /// List all avaliable units
+    fn supported(&self) -> Vec<Self> where Self: Sized;
+}
+
+/// Currency units
+#[derive(
+    Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
+)]
+pub enum Unit {
+    BtcUnit(BtcUnit),
+    EthUnit(EthUnit),
+    /// Tokens have only fixed units: whole token with multiplier of 10^8
+    GenUnit(String)
+}
+
+impl Unit {
+    pub fn is_generic(&self) -> bool {
+        match self {
+            Unit::GenUnit(_) => true,
+            _ => false
+        }
+    }
+
+    pub fn precision(&self) -> u64 {
+        match self {
+            Unit::BtcUnit(_) => BtcUnit::Btc.mul(),
+            Unit::EthUnit(_) => EthUnit::Ether.mul(),
+            Unit::GenUnit(_) => 100_000_000,
+        }
+    }
+}
+
+impl CurrencyUnit for Unit {
+    fn name(&self) -> String {
+        match self {
+            Unit::BtcUnit(u) => u.name(),
+            Unit::EthUnit(u) => u.name(),
+            Unit::GenUnit(u) => u.clone(),
+        }
+    }
+
+    fn mul(&self) -> u64 {
+        match self {
+            Unit::BtcUnit(u) => u.mul(),
+            Unit::EthUnit(u) => u.mul(),
+            Unit::GenUnit(_) => 100_000_000,
+        }
+    }
+
+    fn currency(&self) -> Option<Currency> {
+        match self {
+            Unit::BtcUnit(_) => Some(Currency::BTC),
+            Unit::EthUnit(_) => Some(Currency::ETH),
+            Unit::GenUnit(u) => Currency::get_by_name(u),
+        }
+    }
+
+    fn supported(&self) -> Vec<Self> where Self: Sized {
+        match self {
+            Unit::BtcUnit(unit) => unit.supported().into_iter().map(|u| Unit::BtcUnit(u)).collect(),
+            Unit::EthUnit(unit) => unit.supported().into_iter().map(|u| Unit::EthUnit(u)).collect(),
+            Unit::GenUnit(name) => vec![Unit::GenUnit(name.clone())],
+        }
+    }
+}
+
+/// Supported BTC units
+#[derive(
+    Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
+)]
+pub enum BtcUnit {
+    Sat,
+    Micro,
+    Mili,
+    Btc
+}
+
+impl CurrencyUnit for BtcUnit {
+    fn name(&self) -> String {
+        match self {
+            BtcUnit::Sat => "sat",
+            BtcUnit::Micro => "μBTC",
+            BtcUnit::Mili => "mBTC",
+            BtcUnit::Btc => "BTC",
+        }.to_owned()
+    }
+
+    fn mul(&self) -> u64 {
+        match self {
+            BtcUnit::Sat => 1,
+            BtcUnit::Micro => 100,
+            BtcUnit::Mili => 100_000,
+            BtcUnit::Btc => 100_000_000,
+        }
+    }
+
+    fn currency(&self) -> Option<Currency> {
+        Some(Currency::BTC)
+    }
+
+    fn supported(&self) -> Vec<Self> where Self: Sized {
+        vec![BtcUnit::Btc, BtcUnit::Mili, BtcUnit::Micro, BtcUnit::Sat]
+    }
+}
+
+/// Supported ETH units
+#[derive(
+    Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
+)]
+pub enum EthUnit {
+    Wei,
+    Gwei,
+    Ether
+}
+
+impl CurrencyUnit for EthUnit {
+    fn name(&self) -> String {
+        match self {
+            EthUnit::Wei => "Wei",
+            EthUnit::Gwei => "Gwei",
+            EthUnit::Ether => "ETH",
+        }.to_owned()
+    }
+
+    fn mul(&self) -> u64 {
+        match self {
+            EthUnit::Wei => 1,
+            EthUnit::Gwei => 1_000_000_000,
+            EthUnit::Ether => 1_000_000_000_000_000_000,
+        }
+    }
+
+    fn currency(&self) -> Option<Currency> {
+        Some(Currency::ETH)
+    }
+
+    fn supported(&self) -> Vec<Self> where Self: Sized {
+        vec![EthUnit::Ether, EthUnit::Gwei, EthUnit::Wei]
+    }
+}
+
+#[derive(
+    Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
+)]
+pub struct UnitInfo {
+    pub unit: Unit,
+    pub name: String,
+    pub mul: u64,
+}
+
+impl From<Unit> for UnitInfo {
+    fn from(u: Unit) -> Self {
+        UnitInfo { 
+            unit: u.clone(), 
+            name: u.name(), 
+            mul: u.mul() 
+        }
+    }
+}
+
+#[derive(
+    Debug, Serialize, Deserialize, JsonSchema, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
+)]
+pub struct UserUnitInfo{
+    pub currency: Currency,
+    pub unit: Unit,
+    pub supported_units: Vec<UnitInfo>
+}
+
+impl From<(Currency, UnitInfo)> for UserUnitInfo{
+    fn from((currency, uinfo): (Currency, UnitInfo)) -> Self {
+        UserUnitInfo { 
+            currency: currency, 
+            unit: uinfo.unit.clone(), 
+            supported_units: uinfo.unit.supported().into_iter().map(|u| u.into()).collect()
         }
     }
 }

@@ -1,23 +1,19 @@
 import {
     initTabs,
-    currencyPrecision,
-    convertToSmallest,
     currencyNameToCurrency,
-    formattedCurrencyValue,
-    feeCurrency,
     isErc20Token,
-    ETH_TX_GAS_LIMIT,
-    ERC20_TX_GAS_LIMIT,
-    GWEI
+    displayUnitTickerAmount,
+    validateAmount
 } from "../common.js"
-
-import { localizeSpan } from "../localize.js"
-
 
 var tabs = []
 const refreshInterval = 3_000_000
 let withdrawTranslations
 let network
+let activeCurrency;
+let activeCurrencyName;
+let balance;
+let fee;
 
 function networkToBtcNetwork() {
     switch (network) {
@@ -107,52 +103,6 @@ function validateAddress(currency, address) {
     };
 }
 
-function validateBtcAmout(amount) {
-    let result = {
-        ok: true,
-        error: null,
-        value: null
-    }
-    let value = Number(amount)
-    if (isNaN(value) || value <= 0 || !Number.isInteger(value)) {
-        result.ok = false
-        result.error = withdrawTranslations.error.invalidAmount
-    } else {
-        result.value = value
-    }
-    return result
-}
-
-function validateEthAmount(currency, amount) {
-    let result = {
-        ok: true,
-        error: null,
-        value: null
-    }
-    let value = Number(amount)
-    if (isNaN(value) || value <= 0) {
-        result.ok = false
-        result.error = withdrawTranslations.error.invalidAmount
-    } else {
-        result.value = Math.round(convertToSmallest(currency, value))
-    }
-    return result
-}
-
-function validateAmount(currency, amount) {
-    switch (currency.toUpperCase()) {
-        case "BTC":
-            return validateBtcAmout(amount)
-        case "ETH":
-        case "USDT":
-        case "CRV":
-        case "GTECH":
-            return validateEthAmount(currency, amount)
-        default:
-            return { ok: false, error: withdrawTranslations.error.unknownCurrency, value: null }
-    };
-}
-
 async function trySubmit(currency, address, amount) {
     // Address elements
     const addressInput = document.getElementById(`${currency}-address`)
@@ -190,7 +140,9 @@ async function trySubmit(currency, address, amount) {
     }
 
     // Amount validation
-    const amountValidationResult = validateAmount(currency, amount)
+    
+    const convertedAmount = Math.floor(amount * balance.value.mul);
+    const amountValidationResult = validateAmount(currency, convertedAmount)
     if (!amountValidationResult.ok) {
         amountInput.classList.add("is-danger")
         maxAmountBtn.classList.add("is-danger", "is-outlined")
@@ -205,13 +157,9 @@ async function trySubmit(currency, address, amount) {
 
     try {
         const response = await postWithdrawRequest(currency, addressValidationResult.value, amountValidationResult.value)
-        try {
-            const responseJson = await response.json()
-            if (!response.ok) {
-                otherErrorEl.innerText = `Error: ${responseJson.message}`
-                otherErrorEl.style.display = "block"
-            }
-        } catch {
+        if (response.ok) {
+            window.location.href = "/overview"
+        } else {
             otherErrorEl.innerText = `Error: status code ${response.status}`
             otherErrorEl.style.display = "block"
         }
@@ -226,122 +174,51 @@ async function getBalance(currency) {
         .then(r => r.json())
 }
 
-async function getFee(currencyName) {
-    let fee
-    switch (currencyName) {
-        case "btc":
-            // amount of fee in satoshi
-            fee = await fetch("/btcfee").then(r => r.json())
-            return fee
-        case "eth":
-            fee = await fetch("/ethfee").then(r => r.json())
-            return fee.ProposeGasPrice * GWEI * ETH_TX_GAS_LIMIT
-        case "usdt":
-        case "crv":
-        case "gtech":
-            fee = await fetch("/ethfee").then(r => r.json())
-            return fee.ProposeGasPrice * GWEI * ERC20_TX_GAS_LIMIT
-    };
+async function getFee(currency) {
+    return await fetch("fee/get?ticker=true", { method: "POST", body: JSON.stringify(currency) })
+        .then(r => r.json())
 }
 
-async function getCurrencyExchangeRate(currency) {
-    return await fetch("/ticker/ticker",
-        {
-            method: "POST",
-            body: JSON.stringify(currency)
-        }).then(r => r.json())
-};
-
-function calcAvailableBalance(balanceObj) {
-    const lim = balanceObj.limit_info.limit.amount
-    const spent = balanceObj.limit_info.spent
-    const value = balanceObj.value
-    if (value < (lim - spent)) {
-        return value
-    } else {
-        return (lim - spent)
-    };
+async function changeActiveCurrency(currencyName){
+    activeCurrency = null;
+    activeCurrencyName = currencyName;
+    const currencyNameUppercase = currencyName.toUpperCase()
+    activeCurrency = currencyNameToCurrency(currencyNameUppercase);
+    updateActiveTab()
 }
 
-function withdrawalUnits(currency) {
-    switch (currency) {
-        case "btc":
-            return "sat"
-        default:
-            return currency.toUpperCase()
-    }
-}
+async function updateActiveTab(){
+    balance = await getBalance(activeCurrency)
+    fee = await getFee(activeCurrency)
+    document.getElementById(`${activeCurrencyName}-balance`).innerText = displayUnitTickerAmount(balance);
+    document.getElementById(`${activeCurrencyName}-fee`).innerText = displayUnitTickerAmount(fee)
+    document.getElementById(`${activeCurrencyName}-units`).innerText = balance.value.name;
 
-function cryptoToFiat(currencyName, value, rate) {
-    // This means ticker is not available
-    if (!rate || 'code' in rate) {
-        return "-"
-    };
-    const val = value * rate.USD / currencyPrecision(currencyName)
-    const numberFormat = Intl.NumberFormat('ru-RU', {
-        style: 'currency',
-        currency: 'USD'
-    })
-    return numberFormat.format(val)
-}
+    // Copy value object to carry unit info, switch amount to display spent amount
+    let tmp = Object.assign({}, balance.value);
+    tmp.amount = balance.limit_info.spent;
+    tmp.ticker = balance.ticker;
 
-async function updateActiveTab() {
-    const activeTab = document.querySelector(`#tabs-ul li.is-active`)
-    const activeCurrencyName = activeTab.id.replace("-tab", "")
-    const currencyNameUppercase = activeCurrencyName.toUpperCase()
-    const currency = currencyNameToCurrency(currencyNameUppercase)
-    const balanceObj = await getBalance(currencyNameToCurrency(activeCurrencyName))
-    const fee = await getFee(activeCurrencyName)
-    // GTECH is not listed on any exchange for now
-    let tikerResponse
-    if (activeCurrencyName === "gtech") {
-        tikerResponse = null
-    } else {
-        tikerResponse = await getCurrencyExchangeRate(currency)
-    };
-    let feeCurrencyTickerResponse
-    // For ERC20 tokens fee is paid in ETH
-    if (isErc20Token(activeCurrencyName)) {
-        feeCurrencyTickerResponse = await getCurrencyExchangeRate(feeCurrency(activeCurrencyName))
-    } else {
-        feeCurrencyTickerResponse = tikerResponse
-    };
+    document.getElementById(`${activeCurrencyName}-spent`).innerText = displayUnitTickerAmount(tmp)
 
-    const availableBalance = calcAvailableBalance(balanceObj)
-
-    const fiatAvailableBalance = cryptoToFiat(activeCurrencyName, availableBalance, tikerResponse)
-    const fiatFee = cryptoToFiat(feeCurrency(activeCurrencyName), fee, feeCurrencyTickerResponse)
-    const fiatLimit = cryptoToFiat(activeCurrencyName, balanceObj.limit_info.limit.amount, tikerResponse)
-    const fiatSpent = cryptoToFiat(activeCurrencyName, balanceObj.limit_info.spent, tikerResponse)
-
-    const availableBalanceElement = document.getElementById(`${activeCurrencyName}-balance`)
-    availableBalanceElement.innerHTML = `${formattedCurrencyValue(currencyNameUppercase, availableBalance)} ${currencyNameUppercase} (${fiatAvailableBalance})`
-
-    const feeElement = document.getElementById(`${activeCurrencyName}-fee`)
-    feeElement.innerHTML = `${formattedCurrencyValue(feeCurrency(activeCurrencyName), fee)} ${feeCurrency(activeCurrencyName)} (${fiatFee})`
-
-    const limitElement = document.getElementById(`${activeCurrencyName}-limit`)
-    limitElement.innerHTML = `${formattedCurrencyValue(currencyNameUppercase, balanceObj.limit_info.limit.amount)} ${currencyNameUppercase} (${fiatLimit}) / ${localizeSpan(balanceObj.limit_info.limit.span)}`
-
-    const spentElement = document.getElementById(`${activeCurrencyName}-spent`)
-    spentElement.innerHTML = `${formattedCurrencyValue(currencyNameUppercase, balanceObj.limit_info.spent)} ${currencyNameUppercase} (${fiatSpent})`
-
-    const unitsElement = document.getElementById(`${activeCurrencyName}-units`)
-    unitsElement.innerHTML = withdrawalUnits(activeCurrencyName)
-
+    // Switch amount to display limit
+    tmp.amount = balance.limit_info.limit.amount;
+    document.getElementById(`${activeCurrencyName}-limit`).innerText = displayUnitTickerAmount(tmp)
+    
     const maxAmountBtn = document.getElementById(`max-${activeCurrencyName}`)
     const sendBtn = document.getElementById(`send-${activeCurrencyName}`)
     const sendAmountInput = document.getElementById(`${activeCurrencyName}-send-amount`)
     const addressInput = document.getElementById(`${activeCurrencyName}-address`)
 
+    // Limits are not applied, since over limit spending is possible with operator's approval
     maxAmountBtn.onclick = () => {
         if (isErc20Token(activeCurrencyName)) {
-            sendAmountInput.value = availableBalance
+            sendAmountInput.value = balance.value.amount / balance.value.mul;
         } else {
-            sendAmountInput.value = Math.max(0, availableBalance - fee)
+            sendAmountInput.value = Math.max(0, balance.value.amount - fee.amount) / balance.value.mul;
         };
     }
-
+        
     sendBtn.onclick = () => trySubmit(
         activeCurrencyName,
         addressInput.value,
@@ -349,6 +226,7 @@ async function updateActiveTab() {
     )
 }
 
+    
 async function updateLoop() {
     await new Promise((resolve) => setTimeout(resolve, refreshInterval))
     await updateActiveTab()
@@ -358,7 +236,7 @@ async function updateLoop() {
 async function tabUrlHook(tabId) {
     const tab = tabId.replace("-tab", "")
     window.history.pushState("", "", `/withdraw?tab=${tab}`)
-    await updateActiveTab()
+    await changeActiveCurrency(tab)
 }
 
 function preInitTabs() {

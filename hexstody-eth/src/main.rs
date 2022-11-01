@@ -8,32 +8,15 @@ mod worker;
 
 #[macro_use] extern crate rocket;
 
-use hex_literal::hex;
 use worker::*;
 use conf::load_config;
-use conf::NodeConfig;
 use clap::Parser;
 
 use types::*;
-use utils::*;
-
-use std::str::FromStr;
-
-use secp256k1::SecretKey;
-
-use web3::{
-    contract::{Contract, Options},
-    ethabi::ethereum_types::U256,
-    types::{Address, TransactionParameters, H160},
-    api::{Web3Api}
-};
 
 use std::time::Duration;
-use rocket::http::{Status, ContentType};
-use rocket::serde::json::Json;
-use rocket::State;
-use rocket_db_pools::{Database, Connection};
-use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
+use rocket_db_pools::Database;
+use rocket_okapi::{openapi_get_routes, swagger_ui::*};
 
 
 use std::io::Write;

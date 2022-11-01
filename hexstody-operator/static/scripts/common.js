@@ -117,10 +117,20 @@ export function formatAddress(address) {
     };
 }
 
+export function formatTime(timeString) {
+    const time = new Date(timeString)
+    const options = {
+        year: 'numeric', month: 'numeric', day: 'numeric',
+        hour: 'numeric', minute: 'numeric', second: 'numeric',
+        hour12: false,
+    }
+    return new Intl.DateTimeFormat('default', options).format(time)
+}
+
 export function formatWithdrawalRequestStatus(status, requiredConfirmations) {
     switch (status.type) {
         case "InProgress":
-            return "In progress (" + status.confirmations + " of " + requiredConfirmations + ")"
+            return `In progress (${status.confirmations_minus_rejections} of ${requiredConfirmations})`
         case "Confirmed":
             return "Confirmed"
         case "OpRejected":
@@ -129,6 +139,19 @@ export function formatWithdrawalRequestStatus(status, requiredConfirmations) {
             return "Rejected by node"
         case "Completed":
             return "Completed"
+        default:
+            return "Unknown"
+    };
+}
+
+export function formatExchangeRequestStatus(status, requiredConfirmations) {
+    switch (status.type) {
+        case "InProgress":
+            return `In progress (${status.confirmations_minus_rejections} of ${requiredConfirmations})`
+        case "Completed":
+            return "Confirmed"
+        case "Rejected":
+            return "Rejected by operators"
         default:
             return "Unknown"
     };
@@ -145,25 +168,14 @@ export function formatExplorerLink(txid) {
     };
 }
 
-export function formatLimitTime(datetime) {
-    const time = new Date(datetime)
-    const dateStr = `${time.getFullYear()}-${String(time.getMonth() + 1).padStart(2, '0')}-${String(time.getDate()).padStart(2, '0')}`
-    const timeStr = time.toLocaleTimeString()
-    if (time instanceof Date && !isNaN(time)) {
-        return `${dateStr} ${timeStr}`
-    } else {
-        return "Invalid time"
-    }
-}
-
 export function formatLimitValue(limit) {
     return limit.amount + " / " + limit.span
 }
 
-export function formatLimitStatus(status) {
+export function formatLimitStatus(status, requiredConfirmations) {
     switch (status.type) {
         case "InProgress":
-            return "In progress (+" + status.confirmations + " / -" + status.rejections + " of 2)"
+            return `In progress (${status.confirmations_minus_rejections} of ${requiredConfirmations})`
         case "Confirmed":
             return "Confirmed"
         case "Rejected":
@@ -209,6 +221,12 @@ export async function makeSignedRequest(privateKeyJwk, publicKeyDer, requestBody
         }
     const response = await fetch(url, params)
     return response
+}
+
+export function isNumeric(str) {
+    if (typeof str != "string") return false // we only process strings!  
+    return !isNaN(str) && // use type coercion to parse the _entirety_ of the string (`parseFloat` alone does not do this)...
+        !isNaN(parseFloat(str)) // ...and ensure strings of whitespace fail
 }
 
 export async function getSupportedCurrencies(privateKeyJwk, publicKeyDer) {
@@ -297,4 +315,28 @@ export async function getTicker(currency) {
         method: "POST",
         body: JSON.stringify(currency)
     })
+}
+
+export async function getPairRate(currency_from, currency_to) {
+    return await fetch("/ticker/pair", {
+        method: "POST",
+        body: JSON.stringify({
+            from: currency_from,
+            to: currency_to
+        })
+    })
+}
+
+export async function getMargin(currency_from, currency_to) {
+    return await fetch("/ticker/margin", {
+        method: "POST",
+        body: JSON.stringify({
+            from: currency_from,
+            to: currency_to
+        })
+    })
+}
+
+export async function setMargin(privateKeyJwk, publicKeyDer, req) {
+    return await makeSignedRequest(privateKeyJwk, publicKeyDer, req, "margin/set", "POST")
 }

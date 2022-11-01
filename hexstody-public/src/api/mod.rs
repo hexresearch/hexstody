@@ -5,6 +5,8 @@ pub mod wallet;
 
 use base64;
 use figment::Figment;
+use hexstody_api::error::HexstodyError;
+use hexstody_auth::{require_auth, require_auth_user, AUTH_COOKIE};
 use hexstody_db::state::Network;
 use hexstody_runtime_db::RuntimeState;
 use hexstody_ticker::api::ticker_api;
@@ -20,7 +22,7 @@ use tokio::sync::{Mutex, Notify};
 
 use rocket::fairing::AdHoc;
 use rocket::fs::FileServer;
-use rocket::http::{CookieJar, Status};
+use rocket::http::{CookieJar, Cookie};
 use rocket::response::Redirect;
 use rocket::serde::json::Json;
 use rocket::uri;
@@ -30,8 +32,7 @@ use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
 
 use auth::*;
 use hexstody_api::{
-    domain::{Currency, Language},
-    error::{self, ErrorMessage},
+    domain::{Currency, Language, error},
     types::DepositInfo,
 };
 use hexstody_btc_client::client::BtcClient;
@@ -74,8 +75,11 @@ fn ping() -> Json<()> {
 
 #[openapi(skip)]
 #[get("/")]
-async fn index(cookies: &CookieJar<'_>) -> Redirect {
-    require_auth(cookies, |_| async { Ok(()) })
+async fn index(
+    cookies: &CookieJar<'_>,
+    state: &State<Arc<Mutex<DbState>>>,
+) -> Redirect {
+    require_auth(cookies, None, state, |_| async { Ok(()) })
         .await
         .map_or(goto_signin(), |_| Redirect::to(uri!(overview)))
 }
@@ -87,7 +91,7 @@ async fn overview(
     state: &State<Arc<Mutex<DbState>>>,
     static_path: &State<StaticPath>,
 ) -> Result<Template, Redirect> {
-    require_auth_user(cookies, state, |_, user| async move {
+    require_auth_user(cookies, None, state, |_, user| async move {
         let page_title = match user.config.language {
             Language::English => "Overview",
             Language::Russian => "Главная",
@@ -132,7 +136,7 @@ async fn profile_page(
     static_path: &State<StaticPath>,
     tab: Option<String>,
 ) -> Result<Template, Redirect> {
-    require_auth_user(cookies, state, |_, user| async move {
+    require_auth_user(cookies, None, state, |_, user| async move {
         let page_title = match user.config.language {
             Language::English => "Profile",
             Language::Russian => "Профиль",
@@ -157,7 +161,7 @@ async fn profile_page(
             page_title,
             parent: "base_with_header",
             tabs: tabs.unwrap(),
-            selected: tab.unwrap_or("tokens".to_string()),
+            selected: tab.unwrap_or("currency".to_string()),
             username: &user.username,
             lang: context! {
                 selected_lang: user.config.language.to_alpha().to_uppercase(),
@@ -179,17 +183,21 @@ fn signup() -> Template {
 
 #[openapi(tag = "auth")]
 #[get("/logout")]
-pub async fn logout(cookies: &CookieJar<'_>) -> Result<Redirect, (Status, Json<ErrorMessage>)> {
-    let resp = require_auth(cookies, |cookie| async move {
-        cookies.remove(cookie);
+pub async fn logout(
+    cookies: &CookieJar<'_>,
+    state: &State<Arc<Mutex<DbState>>>,
+) -> error::Result<Redirect> {
+    let resp = require_auth(cookies, None, state, |_| async move {
+        cookies.remove_private(Cookie::named(AUTH_COOKIE));
         Ok(Json(()))
     })
     .await;
     match resp {
-        Ok(_) => Ok(goto_signin()),
-        // Error code 8 => NoUserFound (not logged in). 7 => Requires auth
+        Ok(_) => {
+            Ok(goto_signin())
+        },
         Err(err) => {
-            if err.1.code == 8 || err.1.code == 7 {
+            if err.subtype == hexstody_auth::error::Error::subtype() {
                 Ok(goto_signin())
             } else {
                 Err(err)
@@ -209,7 +217,7 @@ async fn deposit(
     update_sender: &State<mpsc::Sender<StateUpdate>>,
     tab: Option<String>,
 ) -> Result<error::Result<Template>, Redirect> {
-    let resp = require_auth_user(cookies, state, |_, user| async move {
+    let resp = require_auth_user(cookies, None, state, |_, user| async move {
         let page_title = match user.config.language {
             Language::English => "Deposit",
             Language::Russian => "Депозит",
@@ -278,9 +286,8 @@ async fn deposit(
     .await;
     match resp {
         Ok(v) => Ok(Ok(v)),
-        // Error code 8 => NoUserFound (not logged in). 7 => Requires auth
         Err(err) => {
-            if err.1.code == 8 || err.1.code == 7 {
+            if err.subtype == hexstody_auth::error::Error::subtype() {
                 Err(goto_signin())
             } else {
                 Ok(Err(err))
@@ -297,7 +304,7 @@ async fn withdraw(
     static_path: &State<StaticPath>,
     tab: Option<String>,
 ) -> Result<error::Result<Template>, Redirect> {
-    let resp = require_auth_user(cookies, state, |_, user| async move {
+    let resp = require_auth_user(cookies, None, state, |_, user| async move {
         let page_title = match user.config.language {
             Language::English => "Withdraw",
             Language::Russian => "Вывод",
@@ -344,9 +351,8 @@ async fn withdraw(
     .await;
     match resp {
         Ok(v) => Ok(Ok(v)),
-        // Error code 8 => NoUserFound (not logged in). 7 => Requires auth
         Err(err) => {
-            if err.1.code == 8 || err.1.code == 7 {
+            if err.subtype == hexstody_auth::error::Error::subtype() {
                 Err(goto_signin())
             } else {
                 Ok(Err(err))
@@ -363,7 +369,7 @@ async fn get_dict(
     static_path: &State<StaticPath>,
     path: PathBuf,
 ) -> error::Result<serde_json::Value> {
-    require_auth_user(cookies, state, |_, user| async move {
+    require_auth_user(cookies, None, state, |_, user| async move {
         get_dict_json(static_path.inner(), user.config.language, path)
     })
     .await
@@ -376,11 +382,21 @@ async fn swap(
     state: &State<Arc<Mutex<DbState>>>,
     static_path: &State<StaticPath>,
 ) -> Result<Template, Redirect> {
-    require_auth_user(cookies, state, |_, user| async move {
+    require_auth_user(cookies, None, state, |_, user| async move {
+        let mut currencies: Vec<Currency> = user.currencies.keys().cloned().collect();
+        currencies.sort();
+        let currencies: Vec<String> = currencies.into_iter().map(|c| c.symbol().symbol()).collect();
+        let from = currencies.get(0).cloned().unwrap_or("".to_string());
+        let to = currencies.get(1).cloned().unwrap_or("".to_string());
         let header_dict = get_dict_json(
             static_path.inner(),
             user.config.language,
             PathBuf::from_str("header.json").unwrap(),
+        )?;
+        let swap_dict = get_dict_json(
+            static_path.inner(),
+            user.config.language,
+            PathBuf::from_str("swap.json").unwrap(),
         )?;
         let context = context! {
             title:"swap",
@@ -389,7 +405,11 @@ async fn swap(
             lang: context! {
                 lang: user.config.language.to_alpha().to_uppercase(),
                 header: header_dict,
-            }
+                swap: swap_dict,
+            },
+            currencies: currencies,
+            from: from,
+            to: to
         };
         Ok(Template::render("swap", context))
     })
@@ -427,8 +447,7 @@ pub async fn serve_api(
                 get_balance,
                 get_balance_by_currency,
                 get_user_data,
-                ethfee,
-                btcfee,
+                get_fee,
                 get_history,
                 withdraw_eth,
                 post_withdraw,
@@ -454,7 +473,10 @@ pub async fn serve_api(
                 get_deposit_address_handle,
                 order_exchange,
                 list_my_orders,
-                get_network
+                get_network,
+                set_unit,
+                get_unit,
+                get_all_units
             ],
         )
         .mount("/ticker/", ticker_api)

@@ -2,5 +2,13 @@
     "deposit": "Депозит",
     "withdraw": "Вывод",
     "copied": "Скопировано",
-    "txdoesntexist": "Транзакция ещё не создана"
+    "confirmed": "Подтверждён",
+    "confirmations": "Подтверждений",
+    "of": "из",
+    "inProgress": "В обработке",
+    "confirmedByOperators": "Подтверждён операторами",
+    "completed": "Завершён",
+    "opRejected": "Отклонён операторами",
+    "nodeRejected": "Отклонён узлом",
+    "unknownStatus": "Неизвестный статус"
 }

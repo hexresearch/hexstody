@@ -1,26 +1,28 @@
 use std::str::FromStr;
 use std::sync::Arc;
 
-use super::auth::{require_auth, require_auth_user};
-use chrono::NaiveDateTime;
+use chrono::prelude::*;
 use hexstody_api::domain::{
     filter_tokens, BtcAddress, Currency, CurrencyAddress, CurrencyTxId, ETHTxid, Erc20, Erc20Token,
-    EthAccount,
+    EthAccount, Symbol, error as error, CurrencyUnit
 };
-use hexstody_api::error;
 use hexstody_api::types::{
     self as api, BalanceItem, Erc20HistUnitU, ExchangeFilter, ExchangeRequest, GetTokensResponse,
-    TokenActionRequest, TokenInfo, WithdrawalFilter,
+    TokenActionRequest, TokenInfo, WithdrawalFilter, EthFeeResp, UnitTickedAmount
 };
+use hexstody_auth::require_auth_user;
+use hexstody_auth::types::ApiKey;
 use hexstody_btc_client::client::{BtcClient, BTC_BYTES_PER_TRANSACTION};
 use hexstody_db::state::exchange::ExchangeOrderUpd;
 use hexstody_db::state::{Network, State as DbState, WithdrawalRequestType};
-use hexstody_db::state::{Transaction, WithdrawalRequest, REQUIRED_NUMBER_OF_CONFIRMATIONS};
+use hexstody_db::state::{Transaction, WithdrawalRequest, CONFIRMATIONS_CONFIG};
 use hexstody_db::update::deposit::DepositAddress;
 use hexstody_db::update::misc::{TokenAction, TokenUpdate};
 use hexstody_db::update::withdrawal::WithdrawalRequestInfo;
 use hexstody_db::update::{StateUpdate, UpdateBody};
 use hexstody_eth_client::client::EthClient;
+use hexstody_runtime_db::RuntimeState;
+use hexstody_ticker_provider::client::TickerClient;
 use log::*;
 use reqwest;
 use rocket::http::CookieJar;
@@ -34,40 +36,44 @@ use uuid::Uuid;
 #[get("/balance")]
 pub async fn get_balance(
     cookies: &CookieJar<'_>,
+    api_key: Option<ApiKey>,
     state: &State<Arc<Mutex<DbState>>>,
+    rstate: &State<Arc<Mutex<RuntimeState>>>,
     eth_client: &State<EthClient>,
+    ticker_client: &State<TickerClient>
 ) -> error::Result<Json<api::Balance>> {
-    require_auth_user(cookies, state, |_, user| async move {
+    require_auth_user(cookies, api_key, state, |_, user| async move {
         let user_data_resp = eth_client.get_user_data(&user.username).await;
         if let Err(e) = user_data_resp {
             return Err(error::Error::FailedETHConnection(e.to_string()).into());
         };
         let user_data = user_data_resp.unwrap();
-        let mut balances: Vec<api::BalanceItem> = user
-            .currencies
-            .iter()
-            .map(|(cur, info)| {
-                let mut bal = info.balance();
-                match cur {
-                    Currency::BTC => {}
-                    Currency::ETH => {
-                        bal = user_data.data.balanceEth.parse::<u64>().unwrap();
-                    }
-                    Currency::ERC20(token) => {
-                        for tok in &user_data.data.balanceTokens {
-                            if tok.tokenName == token.ticker {
-                                bal = tok.tokenBalance.parse::<u64>().unwrap_or(0);
-                            }
+        let mut rstate = rstate.lock().await;
+        let mut balances: Vec<api::BalanceItem>= vec![];
+        for (cur, info) in user.currencies.iter() {
+            let ticker = rstate.symbol_to_symbols_generic(ticker_client, cur.symbol(), vec![Symbol::USD, Symbol::RUB]).await.ok();
+            let mut bal = info.balance();
+            match cur {
+                Currency::BTC => {}
+                Currency::ETH => {
+                    bal = user_data.data.balanceEth.parse::<u64>().unwrap();
+                }
+                Currency::ERC20(token) => {
+                    for tok in &user_data.data.balanceTokens {
+                        if tok.tokenName == token.ticker {
+                            bal = tok.tokenBalance.parse::<u64>().unwrap_or(0);
                         }
                     }
                 }
-                api::BalanceItem {
-                    currency: cur.clone(),
-                    value: bal,
-                    limit_info: info.limit_info.clone(),
-                }
-            })
-            .collect();
+            }
+            let bal = api::BalanceItem {
+                currency: cur.clone(),
+                value: (bal, &info.unit).into(),
+                limit_info: info.limit_info.clone(),
+                ticker,
+            };
+            balances.push(bal);
+        }
         balances.sort();
         // balances.sort_by(|b1, b2| b1.currency.cmp(&b2.currency));
         Ok(Json(api::Balance { balances }))
@@ -79,19 +85,23 @@ pub async fn get_balance(
 #[post("/balance", data = "<currency>")]
 pub async fn get_balance_by_currency(
     cookies: &CookieJar<'_>,
+    api_key: Option<ApiKey>,
     state: &State<Arc<Mutex<DbState>>>,
+    rstate: &State<Arc<Mutex<RuntimeState>>>,
     eth_client: &State<EthClient>,
+    ticker_client: &State<TickerClient>,
     currency: Json<Currency>,
 ) -> error::Result<Json<api::BalanceItem>> {
     let cur = currency.into_inner();
     let currency = cur.clone();
     let nofound_err = Err(error::Error::NoUserCurrency(cur.clone()).into());
-    let resp = require_auth_user(cookies, state, |_, user| async move {
+    let resp = require_auth_user(cookies, api_key, state, |_, user| async move {
         match user.currencies.get(&cur) {
             Some(info) => {
                 let limit_info = info.limit_info.clone();
+                let unit = info.unit.clone();
                 if cur == Currency::BTC {
-                    return Ok((info.balance(), limit_info));
+                    return Ok(((info.balance(), &unit).into(), limit_info));
                 } else {
                     let user_data_resp = eth_client.get_user_data(&user.username).await;
                     if let Err(e) = user_data_resp {
@@ -101,13 +111,16 @@ pub async fn get_balance_by_currency(
                     match cur.clone() {
                         Currency::BTC => return nofound_err, // this should not happen
                         Currency::ETH => {
-                            return Ok((user_data.data.balanceEth.parse().unwrap(), limit_info))
+                            return Ok((
+                                (user_data.data.balanceEth.parse().unwrap(), &unit).into(),
+                                limit_info
+                            ))
                         }
                         Currency::ERC20(token) => {
                             for tok in user_data.data.balanceTokens {
                                 if tok.tokenName == token.ticker {
                                     return Ok((
-                                        tok.tokenBalance.parse::<u64>().unwrap(),
+                                        (user_data.data.balanceEth.parse().unwrap(), &unit).into(),
                                         limit_info,
                                     ));
                                 }
@@ -121,11 +134,14 @@ pub async fn get_balance_by_currency(
         }
     })
     .await;
+    let mut rstate = rstate.lock().await;
+    let ticker = rstate.symbol_to_symbols_generic(ticker_client, currency.symbol(), vec![Symbol::USD, Symbol::RUB]).await.ok();
     resp.map(|(value, limit_info)| {
         Json(BalanceItem {
             currency,
             value,
             limit_info,
+            ticker
         })
     })
 }
@@ -134,10 +150,11 @@ pub async fn get_balance_by_currency(
 #[get("/userdata")]
 pub async fn get_user_data(
     cookies: &CookieJar<'_>,
+    api_key: Option<ApiKey>,
     state: &State<Arc<Mutex<DbState>>>,
     eth_client: &State<EthClient>,
 ) -> error::Result<Json<api::UserEth>> {
-    require_auth_user(cookies, state, |_, user| async move {
+    require_auth_user(cookies, api_key, state, |_, user| async move {
         eth_client
             .get_user_data(&user.username)
             .await
@@ -147,43 +164,70 @@ pub async fn get_user_data(
     .await
 }
 
-#[openapi(tag = "wallet")]
-#[get("/ethfee")]
-pub async fn ethfee(cookies: &CookieJar<'_>) -> error::Result<Json<api::EthGasPrice>> {
-    require_auth(cookies, |_| async move {
-        let resurl = "https://api.etherscan.io/api?module=gastracker&action=gasoracle&apikey=P8AXZC7V71IJA4XPMFEIIYX9S2S4D8U3T6";
 
-        let fee_eth_res = reqwest::get(resurl)
-                                            .await
-                                            .unwrap()
-                                            .text()
-                                            .await
-                                            .unwrap();
-
-        let fee_eth : api::EthFeeResp = (serde_json::from_str(&fee_eth_res)).unwrap();
-        Ok(Json(fee_eth.result))
-    })
-    .await
+/// Get eth fee from external provider
+pub async fn get_eth_fee() -> reqwest::Result<api::EthGasPrice>{
+    let req_url = "https://api.etherscan.io/api?module=gastracker&action=gasoracle&apikey=P8AXZC7V71IJA4XPMFEIIYX9S2S4D8U3T6";
+    let fee_eth_res : EthFeeResp = 
+        reqwest::get(req_url)
+            .await?
+            .json()
+            .await?;
+    Ok(fee_eth_res.result)
 }
 
 #[openapi(tag = "wallet")]
-#[get("/btcfee")]
-pub async fn btcfee(cookies: &CookieJar<'_>, btc: &State<BtcClient>) -> error::Result<Json<u64>> {
-    require_auth(cookies, |_| async move {
-        let btc_fee_per_byte = &btc
-            .get_fees()
-            .await
-            .map_err(|_| error::Error::FailedGetFee(Currency::BTC))?
-            .fee_rate;
-        Ok(Json(btc_fee_per_byte * BTC_BYTES_PER_TRANSACTION))
-    })
-    .await
+#[post("/fee/get?<ticker>", data="<currency>")]
+pub async fn get_fee(
+    cookies: &CookieJar<'_>,
+    api_key: Option<ApiKey>,
+    state: &State<Arc<Mutex<DbState>>>,
+    rstate: &State<Arc<Mutex<RuntimeState>>>,
+    btc_client: &State<BtcClient>,
+    ticker_client: &State<TickerClient>,
+    currency: Json<Currency>,
+    ticker: bool
+) -> error::Result<Json<UnitTickedAmount>>{
+    let currency = currency.into_inner();
+    // symbol is used for fee ticker. For Eth and Erc20 we use Eth ticker
+    let symbol = if matches!(currency, Currency::BTC) {Symbol::BTC} else {Symbol::ETH};
+    let (fee, unit) = require_auth_user(cookies, api_key, state, |_, user| async move {
+        if matches!(currency, Currency::BTC){
+            let bytes_estimate = rstate.lock().await.fee_estimates.btc_bytes_per_tx;
+            let btc_fee_per_kilobyte = &btc_client
+                .get_fees()
+                .await
+                .map_err(|_| error::Error::FailedGetFee(currency))?
+                .fee_rate;
+            let fee = (btc_fee_per_kilobyte * bytes_estimate) / 1024;
+            let unit = user.get_unit_by_currency(Currency::BTC);
+            Ok((fee,unit))
+        } else {
+            let gas_limit = {
+                let rstate = rstate.lock().await;
+                if currency.is_token() {rstate.fee_estimates.erc20_tx_gas_limit} else {rstate.fee_estimates.eth_tx_gas_limit}
+            };
+            let gas_price = get_eth_fee()
+                .await
+                .map_err(|_| error::Error::FailedGetFee(currency))?
+                .ProposeGasPrice.round() as u64;
+            let fee = gas_limit * gas_price * 1_000_000_000; // 1_000_000_000 to convert gwei to wei
+            let unit = user.get_unit_by_currency(Currency::ETH);
+            Ok((fee,unit))
+        }
+    }).await?;
+
+    let t = if ticker {
+        rstate.lock().await.symbol_to_symbols_generic(ticker_client, symbol, vec![Symbol::USD, Symbol::RUB]).await.ok()
+    } else {None};
+    Ok(Json(UnitTickedAmount{ amount: fee, name: unit.name(), mul: unit.mul(), prec: unit.precision(), ticker: t }))
 }
 
 #[openapi(tag = "history")]
 #[get("/history/<skip>/<take>?<filter>")]
 pub async fn get_history(
     cookies: &CookieJar<'_>,
+    api_key: Option<ApiKey>,
     state: &State<Arc<Mutex<DbState>>>,
     eth_client: &State<EthClient>,
     skip: usize,
@@ -222,7 +266,7 @@ pub async fn get_history(
 
     fn to_eth_history(h: &Erc20HistUnitU) -> api::HistoryItem {
         let curr = Currency::from_str(&h.tokenName).unwrap();
-        let time = NaiveDateTime::from_timestamp(h.timeStamp.parse().unwrap(), 0);
+        let time = Utc.timestamp(h.timeStamp.parse().unwrap(), 0);
         let val = h.value.parse().unwrap_or(u64::MAX); // MAX for strange entries with value bigger than u64
         if h.addr.to_uppercase() != h.from.to_ascii_uppercase() {
             api::HistoryItem::Deposit(api::DepositHistoryItem {
@@ -241,7 +285,9 @@ pub async fn get_history(
             api::HistoryItem::Withdrawal(api::WithdrawalHistoryItem {
                 currency: curr,
                 date: time,
-                status: api::WithdrawalRequestStatus::InProgress { confirmations: 0 },
+                status: api::WithdrawalRequestStatus::InProgress {
+                    confirmations_minus_rejections: 0,
+                },
                 value: val,
                 txid: Some(CurrencyTxId::ETH(ETHTxid {
                     txid: h.hash.to_owned(),
@@ -250,7 +296,7 @@ pub async fn get_history(
         }
     }
 
-    require_auth_user(cookies, state, |_, user| async move {
+    require_auth_user(cookies, api_key, state, |_, user| async move {
         let mut history = user
             .currencies
             .iter()
@@ -290,7 +336,7 @@ pub async fn get_history(
         let history_slice = history.iter().skip(skip).take(take).cloned().collect();
 
         Ok(Json(api::History {
-            target_number_of_confirmations: REQUIRED_NUMBER_OF_CONFIRMATIONS,
+            confirmations_config: CONFIRMATIONS_CONFIG,
             history_items: history_slice,
         }))
     })
@@ -301,12 +347,13 @@ pub async fn get_history(
 #[get("/withdraweth/<addr>/<amount>")]
 pub async fn withdraw_eth(
     cookies: &CookieJar<'_>,
+    api_key: Option<ApiKey>,
     state: &State<Arc<Mutex<DbState>>>,
     eth_client: &State<EthClient>,
     addr: String,
     amount: String,
 ) -> error::Result<()> {
-    require_auth_user(cookies, state, |_, _| async move {
+    require_auth_user(cookies, api_key, state, |_, _| async move {
         eth_client
             .send_tx("testlogin", &addr, &amount)
             .await
@@ -319,12 +366,13 @@ pub async fn withdraw_eth(
 #[post("/withdraw", data = "<withdraw_request>")]
 pub async fn post_withdraw(
     cookies: &CookieJar<'_>,
+    api_key: Option<ApiKey>,
     btc: &State<BtcClient>,
     updater: &State<mpsc::Sender<StateUpdate>>,
     state: &State<Arc<Mutex<DbState>>>,
     withdraw_request: Json<api::UserWithdrawRequest>,
 ) -> error::Result<()> {
-    require_auth_user(cookies, state, |_, user| async move {
+    require_auth_user(cookies, api_key, state, |_, user| async move {
         match &withdraw_request.address {
             CurrencyAddress::ETH(_) => {
                 let withdrawal_request = WithdrawalRequestInfo {
@@ -367,13 +415,13 @@ pub async fn post_withdraw(
                 let btc_balance = btc_info.finalized_balance();
                 let spent = btc_info.limit_info.spent;
                 let limit = btc_info.limit_info.limit.amount;
-                let btc_fee_per_byte = &btc
+                let btc_fee_per_kilobyte = &btc
                     .get_fees()
                     .await
                     .map_err(|_| error::Error::FailedGetFee(Currency::BTC))?
                     .fee_rate;
-                let required_amount =
-                    withdraw_request.amount + btc_fee_per_byte * BTC_BYTES_PER_TRANSACTION;
+                let required_amount = withdraw_request.amount
+                    + (btc_fee_per_kilobyte * BTC_BYTES_PER_TRANSACTION) / 1024;
                 if required_amount <= btc_balance {
                     let req_type = if limit - spent >= required_amount {
                         WithdrawalRequestType::UnderLimit
@@ -411,11 +459,12 @@ pub async fn get_deposit_address_handle(
     btc_client: &State<BtcClient>,
     eth_client: &State<EthClient>,
     cookies: &CookieJar<'_>,
+    api_key: Option<ApiKey>,
     state: &State<Arc<Mutex<DbState>>>,
     updater: &State<mpsc::Sender<StateUpdate>>,
     currency: Json<Currency>,
 ) -> error::Result<Json<CurrencyAddress>> {
-    require_auth_user(cookies, state, |_, user| async move {
+    require_auth_user(cookies, api_key, state, |_, user| async move {
         let currency = currency.into_inner();
         get_deposit_address(
             btc_client,
@@ -439,7 +488,7 @@ pub async fn get_deposit_address(
     state: &State<Arc<Mutex<DbState>>>,
     user_id: &str,
     currency: Currency,
-) -> Result<CurrencyAddress, error::Error> {
+) -> error::Result<CurrencyAddress> {
     match currency {
         Currency::BTC => allocate_address(btc_client, eth_client, updater, user_id, currency).await,
         Currency::ETH | Currency::ERC20(_) => {
@@ -468,7 +517,7 @@ async fn allocate_address(
     updater: &State<mpsc::Sender<StateUpdate>>,
     user_id: &str,
     currency: Currency,
-) -> Result<CurrencyAddress, error::Error> {
+) -> error::Result<CurrencyAddress> {
     match currency {
         Currency::BTC => allocate_btc_address(btc_client, updater, user_id).await,
         Currency::ETH => allocate_eth_address(eth_client, updater, user_id).await,
@@ -480,7 +529,7 @@ async fn allocate_btc_address(
     btc: &State<BtcClient>,
     updater: &State<mpsc::Sender<StateUpdate>>,
     user_id: &str,
-) -> Result<CurrencyAddress, error::Error> {
+) -> error::Result<CurrencyAddress> {
     let address = btc.deposit_address().await.map_err(|e| {
         error!("{}", e);
         error::Error::FailedGenAddress(Currency::BTC)
@@ -504,7 +553,7 @@ async fn allocate_eth_address(
     eth_client: &State<EthClient>,
     updater: &State<mpsc::Sender<StateUpdate>>,
     user_id: &str,
-) -> Result<CurrencyAddress, error::Error> {
+) -> error::Result<CurrencyAddress> {
     let addr = eth_client
         .allocate_address(&user_id)
         .await
@@ -527,7 +576,7 @@ async fn allocate_erc20_address(
     updater: &State<mpsc::Sender<StateUpdate>>,
     user_id: &str,
     token: Erc20Token,
-) -> Result<CurrencyAddress, error::Error> {
+) -> error::Result<CurrencyAddress> {
     let addr = eth_client
         .allocate_address(&user_id)
         .await
@@ -552,9 +601,10 @@ async fn allocate_erc20_address(
 #[get("/profile/tokens/list")]
 pub async fn list_tokens(
     cookies: &CookieJar<'_>,
+    api_key: Option<ApiKey>,
     state: &State<Arc<Mutex<DbState>>>,
 ) -> error::Result<Json<GetTokensResponse>> {
-    require_auth_user(cookies, state, |_, user| async move {
+    require_auth_user(cookies, api_key, state, |_, user| async move {
         let mut info: Vec<TokenInfo> = Currency::supported_tokens()
             .into_iter()
             .map(
@@ -584,12 +634,13 @@ pub async fn list_tokens(
 #[post("/profile/tokens/enable", data = "<req>")]
 pub async fn enable_token(
     cookies: &CookieJar<'_>,
+    api_key: Option<ApiKey>,
     state: &State<Arc<Mutex<DbState>>>,
     updater: &State<mpsc::Sender<StateUpdate>>,
     eth_client: &State<EthClient>,
     req: Json<TokenActionRequest>,
 ) -> error::Result<()> {
-    require_auth_user(cookies, state, |_, user| async move {
+    require_auth_user(cookies, api_key, state, |_, user| async move {
         let token = req.into_inner().token;
         let c = Currency::ERC20(token.clone());
         match user.currencies.get(&c) {
@@ -622,12 +673,13 @@ pub async fn enable_token(
 #[post("/profile/tokens/disable", data = "<req>")]
 pub async fn disable_token(
     cookies: &CookieJar<'_>,
+    api_key: Option<ApiKey>,
     state: &State<Arc<Mutex<DbState>>>,
     updater: &State<mpsc::Sender<StateUpdate>>,
     eth_client: &State<EthClient>,
     req: Json<TokenActionRequest>,
 ) -> error::Result<()> {
-    require_auth_user(cookies, state, |_, user| async move {
+    require_auth_user(cookies, api_key, state, |_, user| async move {
         let token = req.into_inner().token;
         let cur = Currency::ERC20(token.clone());
         match user.currencies.get(&cur) {
@@ -679,22 +731,33 @@ pub async fn disable_token(
 #[post("/exchange/order", data = "<req>")]
 pub async fn order_exchange(
     cookies: &CookieJar<'_>,
+    api_key: Option<ApiKey>,
     state: &State<Arc<Mutex<DbState>>>,
     updater: &State<mpsc::Sender<StateUpdate>>,
+    ticker_client: &State<TickerClient>,
+    rstate: &State<Arc<Mutex<RuntimeState>>>,
     req: Json<ExchangeRequest>,
 ) -> error::Result<()> {
-    require_auth_user(cookies, state, |_, user| async move {
+    require_auth_user(cookies, api_key, state, |_, user| async move {
         let ExchangeRequest {
             currency_from,
             currency_to,
             amount_from,
-            amount_to,
         } = req.into_inner();
         let cinfo = user
             .currencies
             .get(&currency_from)
             .ok_or(error::Error::NoUserCurrency(currency_from.clone()))?;
         let balance = cinfo.balance();
+        let mut rstate = rstate.lock().await;
+        let from_symbol = currency_from.symbol();
+        let to_symbol = currency_to.symbol();
+        let rate = rstate
+            .symbol_to_symbol_adjusted(ticker_client, from_symbol.to_owned(), to_symbol.to_owned())
+            .await
+            .map_err(|e| error::Error::GenericError(e.to_string()))?;
+        let amount_to =
+            (amount_from as f64 / from_symbol.exponent() * rate * to_symbol.exponent()) as u64;
         if balance < amount_from {
             return Err(error::Error::InsufficientFunds(currency_from).into());
         } else {
@@ -723,10 +786,11 @@ pub async fn order_exchange(
 #[get("/exchange/list?<filter>")]
 pub async fn list_my_orders(
     cookies: &CookieJar<'_>,
+    api_key: Option<ApiKey>,
     state: &State<Arc<Mutex<DbState>>>,
     filter: ExchangeFilter,
 ) -> error::Result<Json<Vec<hexstody_api::types::ExchangeOrder>>> {
-    require_auth_user(cookies, state, |_, user| async move {
+    require_auth_user(cookies, api_key, state, |_, user| async move {
         let res = user.get_exchange_requests(filter);
         Ok(Json(res))
     })

@@ -7,19 +7,54 @@ const DAY = 24 * HOUR
 const BTC_PRECISION = 10 ** 8
 // Amount of wei in 1 ETH
 const ETH_PRECISION = 10 ** 18
+// Generic token precision
+const TOKEN_PRECISION = 10 ** 8
 const USDT_PRECISION = 10 ** 6
 const CRV_PRECISION = 10 ** 18
 const GTECH_PRECISION = 10 ** 18
 
 export const GWEI = 10 ** 9
 
+
+export const symbolEnum = Object.freeze({
+    usd: "USD",
+    rub: "RUB",
+    btc: "BTC",
+    eth: "ETH",
+    erc20_usdt: {
+        "ERC20": "USDT"
+    },
+    erc20_crv: {
+        "ERC20": "CRV"
+    },
+    erc20_gtech: {
+        "ERC20": "GTECH"
+    }
+})
+
+export function tickerToSymbol(ticker) {
+    switch (ticker) {
+        case tickerEnum.btc:
+            return symbolEnum.btc
+        case tickerEnum.eth:
+            return symbolEnum.eth
+        case tickerEnum.erc20_crv:
+            return symbolEnum.erc20_crv
+        case tickerEnum.erc20_usdt:
+            return symbolEnum.erc20_usdt
+        case tickerEnum.erc20_gtech:
+            return symbolEnum.erc20_gtech
+    }
+}
+
+
 export const tickerEnum = Object.freeze({
     btc: "BTC",
     eth: "ETH",
     erc20_usdt: "USDT",
     erc20_crv: "CRV",
-    erc20_gtech:"GTECH"
-});
+    erc20_gtech: "GTECH"
+})
 
 export const currencyEnum = Object.freeze({
     btc: tickerEnum.btc,
@@ -45,7 +80,7 @@ export const currencyEnum = Object.freeze({
             "contract": "0x866A4Da32007BA71aA6CcE9FD85454fCF48B140c"
         }
     }
-});
+})
 
 export function* getAllCurrencies() {
     for (const currencyKey in currencyEnum) {
@@ -55,14 +90,69 @@ export function* getAllCurrencies() {
     }
 }
 
-// Gas limit for ETH transfer transaction
-export const ETH_TX_GAS_LIMIT = 21_000
-// Gas limit for ERC20 transfer transaction
-export const ERC20_TX_GAS_LIMIT = 150_000
-
+export function convertToUnitJson(name, unit) {
+    switch (name) {
+        case "BTC":
+            if (["Btc", "Mili", "Micro", "Sat"].includes(unit)) {
+                return { BtcUnit: unit }
+            } else {
+                return null
+            }
+        case "ETH":
+            if (["Ether", "Gwei", "Wei"].includes(unit)) {
+                return { EthUnit: unit }
+            } else {
+                return null
+            }
+        default:
+            return { GenUnit: unit }
+    }
+}
 export async function loadTemplate(path) {
     const template = await (await fetch(path)).text()
     return Handlebars.compile(template)
+}
+
+export function displayUnitAmount(val) {
+    let numberFormat = Intl.NumberFormat('en', {
+        maximumFractionDigits: Math.log10(val.mul),
+    })
+    let value = numberFormat.format(val.amount / val.mul)
+    return value + " " + val.name
+}
+
+export function displayUnitTickerAmount(obj, cur = "USD") {
+    let crypto
+    let fiat
+    let mul
+    let name
+    if (obj.value) {
+        crypto = obj.value.amount / obj.value.mul
+        if (obj.ticker) {
+            fiat = obj.value.amount * obj.ticker[cur] / obj.value.prec
+        }
+        mul = obj.value.mul
+        name = obj.value.name
+    } else {
+        crypto = obj.amount / obj.mul
+        if (obj.ticker) {
+            fiat = obj.amount * obj.ticker[cur] / obj.prec
+        }
+        mul = obj.mul
+        name = obj.name
+    };
+    let cryptoFormat = Intl.NumberFormat('en')
+    let fiatFormat = Intl.NumberFormat('en', {
+        style: 'currency',
+        currency: cur,
+    })
+    let cryptoValue = cryptoFormat.format(crypto)
+    if (fiat) {
+        let fiatValue = fiatFormat.format(fiat)
+        return `${cryptoValue} ${name} (${fiatValue})`
+    } else {
+        return `${cryptoValue} ${name}`
+    }
 }
 
 export function formattedCurrencyValue(currency, value) {
@@ -146,10 +236,8 @@ export function initTabs(tabIds, hook, selected) {
     tabClicked(tabIds[i])
 }
 
-export function initCollapsibles() {
-    console.log("A")
+export function initCollapsibles(autoopenId) {
     const cols = document.getElementsByClassName("collapsible")
-    console.log(cols)
     for (let col of cols) {
         col.addEventListener("click", function () {
             this.classList.toggle("active")
@@ -161,9 +249,12 @@ export function initCollapsibles() {
             }
         })
     }
-    // .forEach(function (coll) {
-
-    // });
+    if (autoopenId) {
+        const content = document.getElementById(autoopenId)
+        if (content) {
+            content.style.display = "block"
+        }
+    }
 }
 
 export function initDropDowns() {
@@ -260,6 +351,16 @@ export function indexArrayFromOne(array) {
     return res
 }
 
+export function currencyToCurrencyName(currency) {
+    if (typeof currency === "string") {
+        return currency
+    } else if (typeof currency === "object" && currency.ERC20) {
+        return currency.ERC20.name
+    } else {
+        return null
+    }
+}
+
 export function currencyNameToCurrency(currencyName) {
     switch (currencyName.toUpperCase()) {
         case "BTC":
@@ -277,43 +378,14 @@ export function currencyNameToCurrency(currencyName) {
     }
 }
 
-export function currencyPrecision(currencyName) {
-    switch (currencyName.toUpperCase()) {
-        case "BTC":
-            return BTC_PRECISION
-        case "ETH":
-            return ETH_PRECISION
-        case "USDT":
-            return USDT_PRECISION
-        case "CRV":
-            return CRV_PRECISION
-        case "GTECH":
-            return GTECH_PRECISION
-        default:
-            return null
-    };
-}
-
-// Converts amounts in whole units to smallest units.
-// E.g. ETH to WEI, BTC to sats and so on.
-export function convertToSmallest(currency, value) {
-    return value * currencyPrecision(currency)
-}
-
-// The currency in which transaction fees are paid
-export function feeCurrency(currencyName) {
-    switch (currencyName.toUpperCase()) {
-        case "BTC":
-            return "BTC"
-        case "ETH":
-            return "ETH"
-        case "USDT":
-        case "CRV":
-        case "GTECH":
-            return "ETH"
-        default:
-            return null
-    };
+// Extracts object from array of objects with field currency by currency name
+export function getObjByCurrency(objects, currencyName) {
+    for (const obj of objects) {
+        let cn = currencyToCurrencyName(obj.currency)
+        if (cn === currencyName) {
+            return obj
+        }
+    }
 }
 
 export function isErc20Token(currencyName) {
@@ -327,5 +399,55 @@ export function isErc20Token(currencyName) {
             return true
         default:
             return null
+    };
+}
+
+function validateBtcAmout(amount, dict) {
+    let result = {
+        ok: true,
+        error: null,
+        value: null
+    }
+    let value = Number(amount)
+    if (isNaN(value) || value <= 0 || !Number.isInteger(value)) {
+        result.ok = false
+        result.error = dict.invalidAmount ? dict.invalidAmount : "Invalid amount"
+    } else {
+        result.value = value
+    }
+    return result
+}
+
+function validateEthAmount(amount, dict) {
+    let result = {
+        ok: true,
+        error: null,
+        value: null
+    }
+    let value = Number(amount)
+    if (isNaN(value) || value <= 0) {
+        result.ok = false
+        result.error = dict.invalidAmount ? dict.invalidAmount : "Invalid amount"
+    } else {
+        result.value = value
+    }
+    return result
+}
+
+export function validateAmount(currency, amount, dict = {}) {
+    switch (currency.toUpperCase()) {
+        case "BTC":
+            return validateBtcAmout(amount, dict)
+        case "ETH":
+        case "USDT":
+        case "CRV":
+        case "GTECH":
+            return validateEthAmount(amount, dict)
+        default:
+            return {
+                ok: false,
+                error: dict.unknownCurrency ? dict.unknownCurrency : "Unknown currency",
+                value: null
+            }
     };
 }

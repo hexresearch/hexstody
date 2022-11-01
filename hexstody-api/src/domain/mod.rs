@@ -1,4 +1,5 @@
 pub mod currency;
+pub mod error;
 
 use std::str::FromStr;
 pub use currency::*;

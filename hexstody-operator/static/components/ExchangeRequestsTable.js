@@ -4,6 +4,10 @@ import {
     confirmExchangeRequest,
     rejectExchangeRequest,
     copyToClipboard,
+    formatExchangeRequestStatus,
+    getUserInfo,
+    getCurrencyName,
+    formatTime,
     truncate
 } from "../scripts/common.js"
 
@@ -32,7 +36,7 @@ export const ExchangeRequestsTable = {
                     </thead>
                     <tbody>
                         <tr v-for="exchangeRequest in exchangeRequests">
-                            <td>{{exchangeRequest.created_at}}</td>
+                            <td>{{formatTime(exchangeRequest.created_at)}}</td>
                             <td>
                                 <div class="flex-row">
                                     <span v-tippy="exchangeRequest.id">
@@ -47,9 +51,11 @@ export const ExchangeRequestsTable = {
                                 </div>
                             </td>
                             <td>{{exchangeRequest.user}}</td>
-                            <td>{{exchangeRequest.currency_from}}/{{exchangeRequest.currency_to}}</td>
+                            <td>{{getCurrencyName(exchangeRequest.currency_from)}}/{{getCurrencyName(exchangeRequest.currency_to)}}</td>
                             <td>{{exchangeRequest.amount_from}}/{{exchangeRequest.amount_to}}</td>
-                            <td>{{exchangeRequest.status}}</td>
+                            <td>
+                                {{formatExchangeRequestStatus(exchangeRequest.status, requiredConfirmations)}}
+                            </td>
                             <td>
                                 <div class="action-buttons-wrapper justify-center">
                                     <button class="button primary" @click="confirmRequest(exchangeRequest)" :disabled="exchangeRequest.status.type !== 'InProgress'">Confirm</button>
@@ -63,14 +69,14 @@ export const ExchangeRequestsTable = {
             </div>
             <Modal v-show="isModalVisible" @close="closeModal">
                 <template v-slot:header>
-                    <h4>Exchange request details</h4>
+                    <h4>Exchange request info</h4>
                 </template>
                 <template v-slot:body v-if="userInfo">
-                    <p><b>First name:</b> {{userInfo.firstName}}</p>
-                    <p><b>Last name:</b> {{userInfo.lastName}}</p>
+                    <p><b>First name:</b> {{userInfo.firstName ? userInfo.firstName : ""}}</p>
+                    <p><b>Last name:</b> {{userInfo.lastName ? userInfo.lastName : ""}}</p>
                     <p><b>Email:</b> {{userInfo.email ? userInfo.email.email : ""}}</p>
                     <p><b>Phone:</b> {{userInfo.phone ? userInfo.phone.number : ""}}</p>
-                    <p><b>Telegram:</b> {{userInfo.tgName}}</p>
+                    <p><b>Telegram:</b> {{userInfo.tgName ? userInfo.tgName.tg_name : ""}}</p>
                 </template>
                 <template v-slot:footer>
                 </template>
@@ -88,6 +94,9 @@ export const ExchangeRequestsTable = {
     methods: {
         copyToClipboard,
         truncate,
+        formatExchangeRequestStatus,
+        getCurrencyName,
+        formatTime,
         async fetchData() {
             const exchangeRequestsResponse = await getExchangeRequests(this.privateKeyJwk, this.publicKeyDer, this.filter)
             // Get exchange requests and sort them by date
@@ -99,7 +108,7 @@ export const ExchangeRequestsTable = {
                 }
             )
             const requiredConfirmationsResponse = await getRequiredConfirmations(this.privateKeyJwk, this.publicKeyDer)
-            this.requiredConfirmations = await requiredConfirmationsResponse.json()
+            this.requiredConfirmations = (await requiredConfirmationsResponse.json()).exchange
         },
         confirmRequest(exchangeRequest) {
             // Here we copy exchangeRequest and remove status feild
@@ -126,20 +135,21 @@ export const ExchangeRequestsTable = {
         },
         closeModal() {
             this.isModalVisible = false
-        }
+        },
+        hideTooltip(instance) {
+            setTimeout(() => {
+                instance.hide()
+            }, 1000)
+        },
     },
     async created() {
-        await this.fetchData()
+        this.fetchData()
+    },
+    watch: {
+        eventToggle: 'fetchData'
     },
     props: {
-        privateKeyJwk: {
-            type: Object,
-            required: true
-        },
-        publicKeyDer: {
-            type: Object,
-            required: true
-        },
         currency: {}
-    }
+    },
+    inject: ['eventToggle', 'privateKeyJwk', 'publicKeyDer'],
 }

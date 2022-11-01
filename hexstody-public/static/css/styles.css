@@ -7780,40 +7780,48 @@ a.has-text-danger-dark:hover, a.has-text-danger-dark:focus {
         color: #77778C;
         white-space: nowrap; }
     .history-box #history-table .history-col-2 {
+      padding-left: 0;
+      padding-right: 12px;
+      width: 20%;
+      font-weight: 500;
+      font-size: 16px;
+      line-height: 24px;
+      color: #77778C; }
+    .history-box #history-table .history-col-3 {
       padding-left: 12px;
       padding-right: 12px;
       max-width: 100px; }
-      .history-box #history-table .history-col-2 > div {
+      .history-box #history-table .history-col-3 > div {
         display: flex;
         align-items: center;
         font-weight: 500;
         font-size: 16px;
         line-height: 24px; }
-      .history-box #history-table .history-col-2 button .icon {
+      .history-box #history-table .history-col-3 button .icon {
         color: #77778C;
         font-size: 20px; }
-      .history-box #history-table .history-col-2 button:hover .icon {
+      .history-box #history-table .history-col-3 button:hover .icon {
         color: #409EFF; }
-      .history-box #history-table .history-col-2 button:focus {
+      .history-box #history-table .history-col-3 button:focus {
         box-shadow: none !important; }
-      .history-box #history-table .history-col-2 a,
-      .history-box #history-table .history-col-2 span {
+      .history-box #history-table .history-col-3 a,
+      .history-box #history-table .history-col-3 span {
         color: #77778C;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis; }
-      .history-box #history-table .history-col-2 a:hover {
+      .history-box #history-table .history-col-3 a:hover {
         color: #409EFF; }
-    .history-box #history-table .history-col-3 {
+    .history-box #history-table .history-col-4 {
       padding-left: 12px;
       padding-right: 0px;
       width: 20%;
       font-weight: 600;
       color: #77778C; }
-      .history-box #history-table .history-col-3 > div {
+      .history-box #history-table .history-col-4 > div {
         text-align: right;
         white-space: nowrap; }
-        .history-box #history-table .history-col-3 > div .is-deposit {
+        .history-box #history-table .history-col-4 > div .is-deposit {
           color: #409EFF; }
 
 .header {
@@ -7964,6 +7972,9 @@ a.has-text-danger-dark:hover, a.has-text-danger-dark:focus {
 .mr-2em {
   margin-right: 2em; }
 
+.mr-1em {
+  margin-right: 1em; }
+
 .font-big-size {
   font-weight: 600;
   font-size: 28px;
@@ -8018,6 +8029,17 @@ span.is-danger {
 .m-b-1em {
   margin-bottom: 1em; }
 
+.mtb-auto {
+  margin-top: auto;
+  margin-bottom: auto; }
+
+.ptb-0 {
+  padding-top: 0;
+  padding-bottom: 0; }
+
+.height-2-5rem {
+  height: 2.5rem; }
+
 /* Style the button that is used to open and close the collapsible content */
 .collapsible {
   background-color: #eee;
@@ -8029,7 +8051,6 @@ span.is-danger {
   outline: none;
   font-size: 15px; }
 
-/* Add a background color to the button if it is clicked on (add the .active class with JS), and when you move the mouse over it (hover) */
 /* Style the collapsible content. Note: hidden by default */
 .collapsible-content {
   padding: 1rem;
@@ -8062,6 +8083,9 @@ span.is-danger {
 
 .display-flex {
   display: flex; }
+
+.display-inline-flex {
+  display: inline-flex; }
 
 .m-l-a {
   margin-left: auto; }

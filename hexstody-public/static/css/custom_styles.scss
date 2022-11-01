@@ -73,6 +73,17 @@
         }
 
         .history-col-2 {
+            padding-left: 0;
+            padding-right: 12px;
+            width: 20%;
+
+            font-weight: 500;
+            font-size: 16px;
+            line-height: 24px;
+            color: $custom-grey-light;
+        }
+
+        .history-col-3 {
             padding-left: 12px;
             padding-right: 12px;
             max-width: 100px;
@@ -115,7 +126,7 @@
             }
         }
 
-        .history-col-3 {
+        .history-col-4 {
             padding-left: 12px;
             padding-right: 0px;
             width: 20%;
@@ -137,7 +148,7 @@
 }
 
 .header {
-    background-color: $custom-grey-lightest  !important;
+    background-color: $custom-grey-lightest !important;
     padding: 12px 20px;
     margin-bottom: 24px;
     display: flex;
@@ -346,6 +357,10 @@
     margin-right: 2em;
 }
 
+.mr-1em {
+    margin-right: 1em;
+}
+
 .font-big-size {
     font-weight: 600;
     font-size: 28px;
@@ -416,6 +431,20 @@ span.is-danger {
     margin-bottom: 1em;
 }
 
+.mtb-auto{
+    margin-top: auto;
+    margin-bottom: auto;
+}
+
+.ptb-0{
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+.height-2-5rem{
+    height: 2.5rem;
+}
+
 /* Style the button that is used to open and close the collapsible content */
 .collapsible {
     background-color: #eee;
@@ -426,12 +455,6 @@ span.is-danger {
     text-align: left;
     outline: none;
     font-size: 15px;
-}
-
-/* Add a background color to the button if it is clicked on (add the .active class with JS), and when you move the mouse over it (hover) */
-.active,
-.collapsible:hover {
-    // background-color: #ccc;
 }
 
 /* Style the collapsible content. Note: hidden by default */
@@ -473,6 +496,10 @@ span.is-danger {
 
 .display-flex {
     display: flex;
+}
+
+.display-inline-flex{
+    display: inline-flex;
 }
 
 .m-l-a {

@@ -4,9 +4,31 @@ use std::fmt::Debug;
 use hexstody_api::domain::Symbol;
 use hexstody_ticker_provider::client::TickerClient;
 use hexstody_ticker_provider::client::Result as TickerResult;
+use serde::Deserialize;
+use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 use serde_json::Map;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FeeEstimates {
+    /// Estimate of bytes per tx for BTC
+    pub btc_bytes_per_tx: u64,
+    /// Gas limit for Ethereum transfer transaction
+    pub eth_tx_gas_limit: u64,
+    /// Gas limit for ERC20 transfer transaction
+    pub erc20_tx_gas_limit: u64
+}
+
+impl FeeEstimates {
+    pub fn new() -> Self{
+        FeeEstimates{
+            btc_bytes_per_tx: 1024,
+            eth_tx_gas_limit: 21_000,
+            erc20_tx_gas_limit: 150_000,
+        }
+    }
+}
 
 pub struct RuntimeState {
     /// Runtime cache of challenges to log in with a key
@@ -14,14 +36,21 @@ pub struct RuntimeState {
     /// Cached ticker info
     /// We store tikers refering by Symbol
     /// since we want to uniformely store both Crypto and Fiat tickers in the same map 
-    pub cached_tickers: HashMap<Symbol, HashMap<Symbol, f64>>
+    pub cached_tickers: HashMap<Symbol, HashMap<Symbol, f64>>,
+    /// Exchange margins, applied to cached_tickers
+    /// Store separately to make storing tickers easier and allow ops to see original rates
+    pub margins: HashMap<Symbol, HashMap<Symbol, f64>>,
+    /// Fee config
+    pub fee_estimates: FeeEstimates
 }
 
 impl RuntimeState {
     pub fn new() -> Self{
         RuntimeState{
             challenges: HashMap::new(),
-            cached_tickers: HashMap::new()
+            cached_tickers: HashMap::new(),
+            margins: HashMap::new(),
+            fee_estimates: FeeEstimates::new()
         }
     }
 
@@ -97,5 +126,29 @@ impl RuntimeState {
             .iter()
             .map(|(k,v)| (k.clone(), v.keys().cloned().collect()))
             .collect()
+    }
+
+    /// Returns 0 if the margin is not set
+    pub fn get_margin(&self, from: &Symbol, to: &Symbol) -> f64 {
+        self.margins.get(from).map(|m| m.get(to)).flatten().cloned().unwrap_or(0.0)
+    }
+
+    /// Sets pair's margin
+    pub fn set_margin(&mut self, from: Symbol, to:Symbol, margin: f64) {
+        let margin = margin.abs();
+        self.margins.entry(from).and_modify(|m| {
+            m.insert(to.clone(), margin);
+        }).or_insert(
+            HashMap::from([(to, margin)])
+        );
+    }
+
+    /// Get pair rate, adjusted for margin
+    pub async fn symbol_to_symbol_adjusted(&mut self, client: &TickerClient, from: Symbol, to: Symbol) -> TickerResult<f64> {
+        let margin = self.get_margin(&from, &to);
+        let rate = self.symbol_to_symbol(client, from, to).await?;
+        // We receive and store margins in whole percents, so we have to divide by 100
+        let adjusted_rate = rate * (1.0 - margin / 100.0);
+        Ok(adjusted_rate)
     }
 }
