@@ -141,7 +141,10 @@ export function displayUnitTickerAmount(obj, cur = "USD") {
         mul = obj.mul
         name = obj.name
     };
-    let cryptoFormat = Intl.NumberFormat('en')
+    let cryptoFormat = Intl.NumberFormat('en', {
+        maximumFractionDigits: Math.log10(mul)
+    },
+    )
     let fiatFormat = Intl.NumberFormat('en', {
         style: 'currency',
         currency: cur,
