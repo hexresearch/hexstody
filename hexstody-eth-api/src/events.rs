@@ -1,4 +1,5 @@
 use super::ethereum::*;
+use web3::types::H256;
 use rocket_okapi::okapi::schemars;
 use rocket_okapi::okapi::schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -8,13 +9,13 @@ pub struct EthEvents {
     /// New block height
     pub height: u64,
     /// Hash of block
-    pub hash: BtcBlockHash,
+    pub hash: H256,
     /// New updates on transactions in that block
-    pub events: Vec<BtcEvent>,
+    pub events: Vec<EthEvent>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-pub enum BtcEvent {
+pub enum EthEvent {
     Update(TxUpdate),
     Cancel(TxCancel),
 }

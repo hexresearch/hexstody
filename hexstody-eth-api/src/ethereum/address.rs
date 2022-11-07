@@ -1,3 +1,4 @@
+use ethereum::Account;
 use bitcoin::Address;
 use rocket::data::ToByteUnit;
 use rocket::form::error::ErrorKind;
@@ -81,26 +82,26 @@ impl JsonSchema for BtcAddress {
 
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct EthAddress(pub Address);
+pub struct EthAccount(pub Account);
 
-impl From<Address> for EthAddress {
-    fn from(value: Address) -> Self {
-        EthAddress(value)
+impl From<Account> for EthAccount {
+    fn from(value: Account) -> Self {
+        EthAccount(value)
     }
 }
 
-impl From<EthAddress> for Address {
-    fn from(value: EthAddress) -> Self {
+impl From<EthAccount> for Account {
+    fn from(value: EthAccount) -> Self {
         value.0
     }
 }
 
 #[rocket::async_trait]
-impl<'r> FromFormField<'r> for EthAddress {
+impl<'r> FromFormField<'r> for EthAccount {
     fn from_value(field: ValueField<'r>) -> form::Result<'r, Self> {
         Address::from_str(field.value)
             .map_err(|e| ErrorKind::Custom(Box::new(e)).into())
-            .map(EthAddress)
+            .map(EthAccount)
     }
 
     async fn from_data(field: DataField<'r, '_>) -> form::Result<'r, Self> {
@@ -121,11 +122,11 @@ impl<'r> FromFormField<'r> for EthAddress {
         let hash_str = std::str::from_utf8(bytes)?;
         Address::from_str(hash_str)
             .map_err(|e| ErrorKind::Custom(Box::new(e)).into())
-            .map(EthAddress)
+            .map(EthAccount)
     }
 }
 
-impl JsonSchema for EthAddress {
+impl JsonSchema for EthAccount {
     fn schema_name() -> String {
         "bitcoin-address".to_owned()
     }

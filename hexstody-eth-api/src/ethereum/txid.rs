@@ -1,4 +1,4 @@
-use bitcoin::Txid;
+use web3::types::H256;
 use rocket::data::ToByteUnit;
 use rocket::form::error::ErrorKind;
 use rocket::form::{self, DataField, FromFormField, ValueField};
@@ -11,27 +11,30 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::str::FromStr;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct BtcTxid(pub Txid);
 
-impl From<Txid> for BtcTxid {
-    fn from(value: Txid) -> Self {
-        BtcTxid(value)
+
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct EthTxid(pub H256);
+
+impl From<H256> for EthTxid {
+    fn from(value: H256) -> Self {
+        EthTxid(value)
     }
 }
 
-impl From<BtcTxid> for Txid {
-    fn from(value: BtcTxid) -> Self {
+impl From<EthTxid> for H256 {
+    fn from(value: EthTxid) -> Self {
         value.0
     }
 }
 
 #[rocket::async_trait]
-impl<'r> FromFormField<'r> for BtcTxid {
+impl<'r> FromFormField<'r> for EthTxid {
     fn from_value(field: ValueField<'r>) -> form::Result<'r, Self> {
-        Txid::from_str(field.value)
+        H256::from_str(field.value)
             .map_err(|e| ErrorKind::Custom(Box::new(e)).into())
-            .map(BtcTxid)
+            .map(H256)
     }
 
     async fn from_data(field: DataField<'r, '_>) -> form::Result<'r, Self> {
@@ -50,9 +53,9 @@ impl<'r> FromFormField<'r> for BtcTxid {
 
         // Try to parse the name as UTF-8 or return an error if it fails.
         let hash_str = std::str::from_utf8(bytes)?;
-        Txid::from_str(hash_str)
+        H256::from_str(hash_str)
             .map_err(|e| ErrorKind::Custom(Box::new(e)).into())
-            .map(BtcTxid)
+            .map(H256)
     }
 }
 

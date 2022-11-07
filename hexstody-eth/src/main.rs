@@ -38,13 +38,13 @@ struct Args {
 enum SubCommand {
     /// Start listening incoming API requests
     Serve {
-        #[clap(long, short, default_value = "8180", env = "HEXSTODY_BTC_API_PORT")]
+        #[clap(long, short, default_value = "8540", env = "HEXSTODY_ETH_API_PORT")]
         port: u16,
         #[clap(
             long,
             short,
             default_value = "127.0.0.1",
-            env = "HEXSTODY_BTC_API_ADDRESS"
+            env = "HEXSTODY_ETH_API_ADDRESS"
         )]
         address: IpAddr,
         #[clap(
