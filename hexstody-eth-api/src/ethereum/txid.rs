@@ -13,7 +13,6 @@ use std::str::FromStr;
 
 
 
-
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct EthTxid(pub H256);
 
@@ -34,7 +33,7 @@ impl<'r> FromFormField<'r> for EthTxid {
     fn from_value(field: ValueField<'r>) -> form::Result<'r, Self> {
         H256::from_str(field.value)
             .map_err(|e| ErrorKind::Custom(Box::new(e)).into())
-            .map(H256)
+            .map(EthTxid)
     }
 
     async fn from_data(field: DataField<'r, '_>) -> form::Result<'r, Self> {
@@ -55,19 +54,42 @@ impl<'r> FromFormField<'r> for EthTxid {
         let hash_str = std::str::from_utf8(bytes)?;
         H256::from_str(hash_str)
             .map_err(|e| ErrorKind::Custom(Box::new(e)).into())
-            .map(H256)
+            .map(EthTxid)
     }
 }
 
-impl JsonSchema for BtcTxid {
+impl JsonSchema for EthTxid {
     fn schema_name() -> String {
-        "bitcoin-txid".to_owned()
+        "ethereum-txid".to_owned()
     }
 
     fn json_schema(_: &mut SchemaGenerator) -> Schema {
         SchemaObject {
             instance_type: Some(InstanceType::String.into()),
-            format: Some("bitcoin transaction id".to_owned()),
+            format: Some("ethereum transaction id".to_owned()),
+            metadata: Some(Box::new(Metadata {
+                examples: vec![
+                    json!("3FZbgi29cpjq2GjdwV8eyHuJJnkLtktZc5"),
+                    json!("bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq"),
+                    json!("bc1pmzfrwwndsqmk5yh69yjr5lfgfg4ev8c0tsc06e"),
+                ],
+                ..Metadata::default()
+            })),
+            ..Default::default()
+        }
+        .into()
+    }
+}
+
+impl JsonSchema for web3::types::H256 {
+    fn schema_name() -> String {
+        "h256".to_owned()
+    }
+
+    fn json_schema(_: &mut SchemaGenerator) -> Schema {
+        SchemaObject {
+            instance_type: Some(InstanceType::String.into()),
+            format: Some("h256 transaction hash".to_owned()),
             metadata: Some(Box::new(Metadata {
                 examples: vec![
                     json!("3FZbgi29cpjq2GjdwV8eyHuJJnkLtktZc5"),

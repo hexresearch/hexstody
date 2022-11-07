@@ -33,11 +33,11 @@ pub struct TxUpdate {
     /// Direction of tx (in or out)
     pub direction: TxDirection,
     /// Transaction ID (txid)
-    pub txid: BtcTxid,
+    pub txid: EthTxid,
     /// Which output of the transaction
     pub vout: u32,
     /// Address that tx tops up
-    pub address: BtcAddress,
+    pub address: EthAddress,
     /// Sats amount
     pub amount: u64,
     /// 0 means unconfirmed
@@ -47,7 +47,7 @@ pub struct TxUpdate {
     /// Other transaction that are in conflict with the tx
     /// That means that they are RBF transactions and one
     /// eventually will replace the others.
-    pub conflicts: Vec<BtcTxid>,
+    pub conflicts: Vec<EthTxid>,
     /// Fee paid in sats.
     /// Only available for outgoing transactions.
     pub fee: Option<u64>,
@@ -59,11 +59,11 @@ pub struct TxCancel {
     /// Direction of tx (in or out)
     pub direction: TxDirection,
     /// Transaction ID (txid)
-    pub txid: BtcTxid,
+    pub txid: EthTxid,
     /// Which output of the transaction
     pub vout: u32,
     /// Address that tx tops up
-    pub address: BtcAddress,
+    pub address: EthAddress,
     /// Sats amount
     pub amount: u64,
     /// UNIX timestamp when the event occured
@@ -71,5 +71,5 @@ pub struct TxCancel {
     /// Other transaction that are in conflict with the tx
     /// That means that they are RBF transactions and one
     /// eventually will replace the others.
-    pub conflicts: Vec<BtcTxid>,
+    pub conflicts: Vec<EthTxid>,
 }
