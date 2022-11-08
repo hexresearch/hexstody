@@ -9,7 +9,7 @@ pub struct EthEvents {
     /// New block height
     pub height: u64,
     /// Hash of block
-    pub hash: H256,
+    pub hash: EthTxid,
     /// New updates on transactions in that block
     pub events: Vec<EthEvent>,
 }

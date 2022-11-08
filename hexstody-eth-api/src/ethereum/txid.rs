@@ -80,7 +80,7 @@ impl JsonSchema for EthTxid {
         .into()
     }
 }
-
+/*
 impl JsonSchema for web3::types::H256 {
     fn schema_name() -> String {
         "h256".to_owned()
@@ -102,4 +102,4 @@ impl JsonSchema for web3::types::H256 {
         }
         .into()
     }
-}
+}*/

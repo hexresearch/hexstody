@@ -1,5 +1,4 @@
-use bitcoin::BlockHash;
-use bitcoin_hashes::hex::FromHex;
+use web3::types::H256;
 use rocket::data::ToByteUnit;
 use rocket::form::error::ErrorKind;
 use rocket::form::{self, DataField, FromFormField, ValueField};
@@ -12,26 +11,26 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct BtcBlockHash(pub BlockHash);
+pub struct EthBlockHash(pub H256);
 
-impl From<BlockHash> for BtcBlockHash {
-    fn from(value: BlockHash) -> Self {
-        BtcBlockHash(value)
+impl From<H256> for EthBlockHash {
+    fn from(value: H256) -> Self {
+        EthBlockHash(value)
     }
 }
 
-impl From<BtcBlockHash> for BlockHash {
-    fn from(value: BtcBlockHash) -> Self {
+impl From<EthBlockHash> for H256{
+    fn from(value: EthBlockHash) -> Self {
         value.0
     }
 }
 
 #[rocket::async_trait]
-impl<'r> FromFormField<'r> for BtcBlockHash {
+impl<'r> FromFormField<'r> for EthBlockHash {
     fn from_value(field: ValueField<'r>) -> form::Result<'r, Self> {
-        BlockHash::from_hex(field.value)
+        H256::from_hex(field.value)
             .map_err(|e| ErrorKind::Custom(Box::new(e)).into())
-            .map(BtcBlockHash)
+            .map(EthBlockHash)
     }
 
     async fn from_data(field: DataField<'r, '_>) -> form::Result<'r, Self> {
@@ -54,21 +53,21 @@ impl<'r> FromFormField<'r> for BtcBlockHash {
 
         // Try to parse the name as UTF-8 or return an error if it fails.
         let hash_str = std::str::from_utf8(bytes)?;
-        BlockHash::from_hex(hash_str)
+        H256::from_hex(hash_str)
             .map_err(|e| ErrorKind::Custom(Box::new(e)).into())
-            .map(BtcBlockHash)
+            .map(EthBlockHash)
     }
 }
 
-impl JsonSchema for BtcBlockHash {
+impl JsonSchema for EthBlockHash {
     fn schema_name() -> String {
-        "bitcoin-block-hash".to_owned()
+        "ethereum-block-hash".to_owned()
     }
 
     fn json_schema(_: &mut SchemaGenerator) -> Schema {
         SchemaObject {
             instance_type: Some(InstanceType::String.into()),
-            format: Some("bitcoin block hash".to_owned()),
+            format: Some("ethereum block hash".to_owned()),
             metadata: Some(Box::new(Metadata {
                 examples: vec![json!(
                     "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"
