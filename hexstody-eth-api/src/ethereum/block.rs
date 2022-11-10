@@ -9,6 +9,7 @@ use rocket_okapi::okapi::schemars::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use std::str::FromStr;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct EthBlockHash(pub H256);
@@ -28,11 +29,10 @@ impl From<EthBlockHash> for H256{
 #[rocket::async_trait]
 impl<'r> FromFormField<'r> for EthBlockHash {
     fn from_value(field: ValueField<'r>) -> form::Result<'r, Self> {
-        H256::from_hex(field.value)
+        H256::from_str(field.value)
             .map_err(|e| ErrorKind::Custom(Box::new(e)).into())
             .map(EthBlockHash)
     }
-
     async fn from_data(field: DataField<'r, '_>) -> form::Result<'r, Self> {
         // Retrieve the configured data limit or use `256KiB` as default.
         let limit = field
@@ -53,7 +53,7 @@ impl<'r> FromFormField<'r> for EthBlockHash {
 
         // Try to parse the name as UTF-8 or return an error if it fails.
         let hash_str = std::str::from_utf8(bytes)?;
-        H256::from_hex(hash_str)
+        H256::from_str(hash_str)
             .map_err(|e| ErrorKind::Custom(Box::new(e)).into())
             .map(EthBlockHash)
     }

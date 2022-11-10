@@ -1,5 +1,4 @@
 use super::ethereum::*;
-use web3::types::H256;
 use rocket_okapi::okapi::schemars;
 use rocket_okapi::okapi::schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
