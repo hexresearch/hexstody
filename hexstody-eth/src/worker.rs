@@ -3,10 +3,12 @@ use bitcoin::{hash_types::BlockHash, Address, Amount};
 use bitcoincore_rpc::{Client, RpcApi};
 use bitcoincore_rpc_json::{GetTransactionResultDetailCategory, ListTransactionResult};
 use hexstody_btc_api::events::*;
+use hexstody_eth_api::events::{EthEvents,EthEvent};
 use log::*;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::{Mutex, Notify};
+use web3::types::{BlockId, BlockNumber};
 
 pub async fn node_worker(
     client: &Client,
@@ -19,6 +21,12 @@ pub async fn node_worker(
         {
             let mut state_rw = state.lock().await;
             let old_block = state_rw.last_block;
+            let evs = scan_from_eth().await;
+            debug!("==============================");
+            debug!("eth_node_worker");
+            debug!("eth_block:{:?}", state_rw.last_block_eth);
+            debug!("eth_events:{:?}", evs);
+            debug!("==============================");
             match scan_from(client, old_block).await {
                 Ok((mut events, next_hash)) => {
                     if !events.is_empty() || old_block != next_hash {
@@ -42,6 +50,7 @@ pub async fn node_worker(
                 }
             }
         }
+
         debug!("Sleeping for next {:?}", polling_sleep);
         tokio::time::sleep(polling_sleep).await;
     }
@@ -80,10 +89,34 @@ pub async fn cold_wallet_worker(
     }
 }
 
+pub async fn scan_from_eth() -> Vec<EthEvent> {
+    let mut events = vec![];
+
+    let nurl: &str = "http://127.0.0.1:8545";
+    let transport = web3::transports::Http::new(nurl).unwrap();
+    let web3 = web3::Web3::new(transport);
+    let latest_block = web3
+        .eth()
+        .block(BlockId::Number(BlockNumber::Latest))
+        .await
+        .unwrap()
+        .unwrap();
+
+    info!("=========================");
+    info!("haha, debug, {:?}",latest_block);
+    info!("=========================");
+    debug!(
+        "Scanned events: {:?}",
+        events
+    );
+    return events;
+}
+
 pub async fn scan_from(
     client: &Client,
     blockhash: BlockHash,
 ) -> bitcoincore_rpc::Result<(Vec<BtcEvent>, BlockHash)> {
+
     let result = client.list_since_block(Some(&blockhash), None, Some(false), Some(true))?;
     let mut events = vec![];
     for tx in result.removed {

@@ -108,6 +108,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
             cold_address,
             cold_sat,
         } => loop {
+            info!("-=-=-=-=-=-=-=-=-=-=-=-=-=-");
+            info!("mainloop");
+            info!("-=-=-=-=-=-=-=-=-=-=-=-=-=-");
             let mut op_public_keys = vec![];
             for p in &operator_public_keys {
                 let full_path =

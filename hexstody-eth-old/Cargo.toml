@@ -1,16 +1,16 @@
 [package]
-name = "hexstody-eth"
+name = "hexstody-eth-old"
 version = "0.1.0"
 authors = ["nazgull08 <nazgull08@protonmail.com"]
 edition = "2021"
 
 
 [lib]
-name = "hexstody_eth"
+name = "hexstody_eth_old"
 path = "src/lib.rs"
 
 [[bin]]
-name = "hexstody-eth"
+name = "hexstody-eth-old"
 path = "src/main.rs"
 
 [dependencies]
