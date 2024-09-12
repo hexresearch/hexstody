@@ -340,3 +340,11 @@ export async function getMargin(currency_from, currency_to) {
 export async function setMargin(privateKeyJwk, publicKeyDer, req) {
     return await makeSignedRequest(privateKeyJwk, publicKeyDer, req, "margin/set", "POST")
 }
+
+export async function getFeeEstimates(privateKeyJwk, publicKeyDer){
+    return makeSignedRequest(privateKeyJwk, publicKeyDer, null, "rstate/fees", "GET");
+}
+
+export async function postFeeEstimates(privateKeyJwk, publicKeyDer, req){
+    return makeSignedRequest(privateKeyJwk, publicKeyDer, req, "rstate/fees/set", "POST");
+}
